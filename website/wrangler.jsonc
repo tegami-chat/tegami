@@ -1,0 +1,8 @@
+{
+  // The tegami.chat website. Static files only, served by Cloudflare Workers.
+  // Deploy: npx wrangler deploy (run in this folder)
+  "name": "tegami-site",
+  "compatibility_date": "2026-11-11",
+  "assets": { "directory": "./public" },
+  "routes": [{ "pattern": "tegami.chat", "custom_domain": true }]
+}

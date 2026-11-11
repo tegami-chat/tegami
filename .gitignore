@@ -1,0 +1,7 @@
+.wrangler/
+node_modules/
+.env*
+.dev.vars*
+client/dist/
+client/.expo/
+client/expo-env.d.ts
