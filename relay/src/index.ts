@@ -41,7 +41,7 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const FILE_RATE = { ip: { burst: 100e6, perSecond: 100e3 }, key: { burst: 50e6, perSecond: 50e3 } };
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, HEAD, PUT, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, HEAD, PUT, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-SHA-256',
   'Access-Control-Max-Age': '86400',
 };
@@ -80,6 +80,11 @@ export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+    if (url.pathname === '/crash' && req.method === 'POST') {
+      const headers = new Headers(req.headers);
+      headers.set('X-Tegami-IP', req.headers.get('CF-Connecting-IP') ?? 'unknown');
+      return env.RELAY.get(env.RELAY.idFromName('main')).fetch(new Request(req, { headers }));
+    }
     if (url.pathname === '/stats' && req.method === 'GET') {
       return env.RELAY.get(env.RELAY.idFromName('main')).fetch(req);
     }
@@ -152,6 +157,7 @@ export class Relay extends DurableObject<Env> {
     const ip = req.headers.get('X-Tegami-IP') ?? 'unknown';
     const path = new URL(req.url).pathname;
     if (path === '/upload') return this.upload(req, ip);
+    if (path === '/crash') return this.crash(req, ip);
     if (path === '/stats') {
       return Response.json({ ...STATS_DESCRIPTION, days: this.stats.recent() }, { headers: { ...CORS, 'Cache-Control': 'public, max-age=300' } });
     }
@@ -169,6 +175,35 @@ export class Relay extends DurableObject<Env> {
 
   ipBytes = new Buckets(FILE_RATE.ip.burst, FILE_RATE.ip.perSecond);
   keyBytes = new Buckets(FILE_RATE.key.burst, FILE_RATE.key.perSecond);
+
+  crashRate = new Buckets(20, 0.05); // per address: 20 at once, then one every 20 seconds
+
+  /**
+   * A crash report from an app whose user allowed it. Only written to Workers Logs
+   * (kept a few days); nothing is stored by the relay. No key, no message text.
+   */
+  async crash(req: Request, ip: string): Promise<Response> {
+    if (!this.crashRate.take(ip)) return new Response(null, { status: 429, headers: CORS });
+    const text = await req.text();
+    if (text.length > 8192) return new Response(null, { status: 413, headers: CORS });
+    let r: Record<string, unknown>;
+    try {
+      r = JSON.parse(text);
+    } catch {
+      return new Response(null, { status: 400, headers: CORS });
+    }
+    const str = (v: unknown, n: number) => (typeof v === 'string' ? v.slice(0, n) : '');
+    console.log(
+      JSON.stringify({
+        crash: true,
+        message: str(r.message, 500),
+        stack: str(r.stack, 4000),
+        version: str(r.version, 80),
+        platform: str(r.platform, 40),
+      }),
+    );
+    return new Response(null, { status: 204, headers: CORS });
+  }
 
   /** Blossom upload. The file is already encrypted on the sender's device. */
   async upload(req: Request, ip: string): Promise<Response> {
