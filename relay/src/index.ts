@@ -19,6 +19,8 @@
 import { DurableObject } from 'cloudflare:workers';
 import { verifyEvent, type NostrEvent } from 'nostr-tools/pure';
 
+import { STATS_DESCRIPTION, Stats } from './stats';
+
 type Filter = { kinds?: number[]; '#p'?: string[]; since?: number; until?: number; limit?: number; ids?: string[] };
 type Attachment = { challenge: string; ip: string; pubkey?: string; subs: Record<string, Filter[]> };
 
@@ -78,6 +80,9 @@ export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+    if (url.pathname === '/stats' && req.method === 'GET') {
+      return env.RELAY.get(env.RELAY.idFromName('main')).fetch(req);
+    }
     if (url.pathname === '/upload' && req.method === 'PUT') {
       const headers = new Headers(req.headers);
       headers.set('X-Tegami-IP', req.headers.get('CF-Connecting-IP') ?? 'unknown');
@@ -132,6 +137,7 @@ export class Relay extends DurableObject<Env> {
   sql: SqlStorage;
   ipRate = new Buckets(RATE.ip.burst, RATE.ip.perSecond);
   keyRate = new Buckets(RATE.key.burst, RATE.key.perSecond);
+  stats: Stats;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -139,11 +145,16 @@ export class Relay extends DurableObject<Env> {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS events (
       id TEXT PRIMARY KEY, kind INTEGER, created_at INTEGER, received_at INTEGER, p TEXT, raw TEXT)`);
     this.sql.exec('CREATE INDEX IF NOT EXISTS events_p ON events (p, created_at)');
+    this.stats = new Stats(this.sql);
   }
 
   async fetch(req: Request): Promise<Response> {
     const ip = req.headers.get('X-Tegami-IP') ?? 'unknown';
-    if (new URL(req.url).pathname === '/upload') return this.upload(req, ip);
+    const path = new URL(req.url).pathname;
+    if (path === '/upload') return this.upload(req, ip);
+    if (path === '/stats') {
+      return Response.json({ ...STATS_DESCRIPTION, days: this.stats.recent() }, { headers: { ...CORS, 'Cache-Control': 'public, max-age=300' } });
+    }
     const open = this.ctx.getWebSockets().filter((w) => (w.deserializeAttachment() as Attachment)?.ip === ip).length;
     if (open >= MAX_CONNECTIONS_PER_IP) return new Response('Too many connections', { status: 429 });
     const pair = new WebSocketPair();
@@ -185,7 +196,10 @@ export class Relay extends DurableObject<Env> {
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
     if (!auth.tags.some((t) => t[0] === 'x' && t[1] === hash)) return fail(401, 'auth-required: hash not authorized');
-    await this.env.FILES.put(hash, body, { customMetadata: { uploader: auth.pubkey } });
+    // Nothing about the uploader is stored with the file.
+    await this.env.FILES.put(hash, body);
+    this.stats.add('files');
+    this.stats.addBytes(size);
     const base = new URL(req.url).origin;
     return Response.json(
       { url: `${base}/${hash}`, sha256: hash, size, type: 'application/octet-stream', uploaded: now() },
@@ -247,6 +261,8 @@ export class Relay extends DurableObject<Env> {
     att.pubkey = ev.pubkey;
     ws.serializeAttachment(att);
     ws.send(JSON.stringify(['OK', id, true, '']));
+    this.stats.add('logins');
+    void this.stats.addKey(ev.pubkey);
   }
 
   onEvent(ws: WebSocket, att: Attachment, ev: NostrEvent) {
@@ -275,6 +291,7 @@ export class Relay extends DurableObject<Env> {
     );
     reply(true, res.rowsWritten === 0 ? 'duplicate: already have this event' : '');
     if (res.rowsWritten === 0) return;
+    this.stats.add('envelopes');
 
     for (const other of this.ctx.getWebSockets()) {
       const o = other.deserializeAttachment() as Attachment;
