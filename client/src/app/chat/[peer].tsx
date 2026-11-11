@@ -1,7 +1,9 @@
+import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { Photo } from '@/components/photo';
 import { Palette, usePalette } from '@/constants/theme';
 import { chatName, isGroup, personName, shortId, useTegami } from '@/lib/tegami';
 
@@ -9,7 +11,7 @@ export default function Chat() {
   const c = usePalette();
   const s = styles(c);
   const { peer } = useLocalSearchParams<{ peer: string }>();
-  const { me, contacts, groups, messages, send, addContact } = useTegami();
+  const { me, contacts, groups, messages, send, sendPhoto, addContact } = useTegami();
   const [newName, setNewName] = useState('');
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
@@ -19,6 +21,23 @@ export default function Chat() {
   const group = !!peer && isGroup(peer);
   const contact = contacts.find((x) => x.pubkey === peer);
   const thread = useMemo(() => messages.filter((m) => m.peer === peer).reverse(), [messages, peer]);
+
+  async function pickPhoto() {
+    if (!peer || sending) return;
+    const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+    const asset = picked.canceled ? null : picked.assets[0];
+    if (!asset) return;
+    setSending(true);
+    setFailed(false);
+    try {
+      const blob = asset.file ?? (await (await fetch(asset.uri)).blob());
+      await sendPhoto(peer, blob);
+    } catch {
+      setFailed(true);
+    } finally {
+      setSending(false);
+    }
+  }
 
   async function submit() {
     const text = draft.trim();
@@ -80,9 +99,13 @@ export default function Chat() {
           return (
             <View style={[s.bubble, mine ? s.mine : s.theirs]}>
               {group && !mine && <Text style={s.author}>{personName(item.from, contacts)}</Text>}
-              <Text style={s.text} selectable>
-                {item.text}
-              </Text>
+              {item.file ? (
+                <Photo id={item.id} file={item.file} />
+              ) : (
+                <Text style={s.text} selectable>
+                  {item.text}
+                </Text>
+              )}
               <Text style={s.time}>
                 {new Date(item.at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </Text>
@@ -92,6 +115,9 @@ export default function Chat() {
       />
       {failed && <Text style={s.error}>送れませんでした。もう一度送ってください</Text>}
       <View style={s.composer}>
+        <Pressable style={[s.attach, sending && s.disabled]} onPress={pickPhoto} disabled={sending} role="button">
+          <Text style={s.attachText}>写真</Text>
+        </Pressable>
         <TextInput
           style={s.input}
           value={draft}
@@ -175,6 +201,8 @@ const styles = (c: Palette) =>
       color: c.text,
     },
     send: { backgroundColor: c.accent, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10 },
+    attach: { paddingHorizontal: 6, paddingVertical: 10 },
+    attachText: { color: c.accent, fontSize: 15, fontWeight: '600' },
     disabled: { opacity: 0.4 },
     sendText: { color: c.onAccent, fontSize: 15, fontWeight: '600' },
   });

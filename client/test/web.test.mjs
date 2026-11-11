@@ -145,6 +145,7 @@ async function main() {
   if (!process.env.SKIP_BUILD) {
     await sh('npx', ['expo', 'export', '--platform', 'web', '--output-dir', 'dist-test', '--clear'], {
       EXPO_PUBLIC_TEGAMI_RELAYS: `ws://localhost:${RELAY_PORT}`,
+      EXPO_PUBLIC_TEGAMI_FILES: `http://localhost:${RELAY_PORT}`,
     });
   }
   const relay = spawn(process.execPath, ['dev/relay.mjs'], { cwd: ROOT, env: { ...process.env, PORT: String(RELAY_PORT) }, stdio: 'ignore' });
@@ -316,6 +317,66 @@ async function main() {
       await a.context.close();
       await b.context.close();
     });
+    await test('Photo: made smaller, encrypted before upload, shown to the other person', async () => {
+      async function person(name) {
+        const u = await newUser(browser, { prf: false });
+        await button(u.page, 'はじめる').click();
+        await button(u.page, 'パスキーを使わずに始める').click();
+        await waitOpen(u.page);
+        await u.page.goto(ORIGIN + '/add');
+        await u.page.getByPlaceholder('相手に表示される名前').fill(name);
+        u.link = (await text(u.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
+        return u;
+      }
+      async function befriend(u, other) {
+        await u.page.goto(ORIGIN + '/add');
+        await waitText(u.page, '自分の招待リンク');
+        await u.page.getByPlaceholder('https://app.tegami.chat/i#npub…').fill(other.link);
+        await button(u.page, '追加').click();
+        await u.page.getByPlaceholder('メッセージ').waitFor();
+      }
+      const a = await person('あゆみ');
+      const b = await person('ばんり');
+      await befriend(b, a);
+      await befriend(a, b); // a is now in the chat with b
+
+      // A 3000 x 2000 PNG drawn in the page, so it has to be made smaller.
+      const png = Buffer.from(
+        await a.page.evaluate(() => {
+          const c = document.createElement('canvas');
+          c.width = 3000;
+          c.height = 2000;
+          const g = c.getContext('2d');
+          g.fillStyle = '#b5452f';
+          g.fillRect(0, 0, 3000, 2000);
+          g.fillStyle = '#ffffff';
+          g.fillRect(500, 500, 1000, 600);
+          return c.toDataURL('image/png').split(',')[1];
+        }),
+        'base64',
+      );
+      const chooser = a.page.waitForEvent('filechooser');
+      await button(a.page, '写真').click();
+      await (await chooser).setFiles({ name: 'test.png', mimeType: 'image/png', buffer: png });
+      await a.page.locator('img[alt="写真"]').first().waitFor({ timeout: 15000 });
+
+      const sent = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages')).find((m) => m.file)?.file);
+      assert(sent && sent.dim === '1600x1067', `photo not made smaller: ${sent?.dim}`);
+      const stored = Buffer.from(await (await fetch(sent.url)).arrayBuffer());
+      assert(stored.length > 0 && stored[0] !== 0xff && stored[0] !== 0x89, 'the server holds an unencrypted image');
+
+      await b.page.goto(ORIGIN + '/');
+      await waitText(b.page, '写真'); // chat list preview
+      await b.page.getByText('あゆみ').click();
+      const img = b.page.locator('img[alt="写真"]').first();
+      await img.waitFor({ timeout: 15000 });
+      await b.page.waitForFunction(() => {
+        const i = document.querySelector('img[alt="写真"]');
+        return i && i.complete && i.naturalWidth === 1600;
+      }, null, { timeout: 15000 });
+      for (const u of [a, b]) await u.context.close();
+    });
+
     await test('Group of three: everyone sees the group name and who said what', async () => {
       // Each person starts without a passkey (fast) and sets a name.
       async function person(name) {
