@@ -90,7 +90,7 @@ export function Gate({ locked }: { locked: boolean }) {
         <>
           <Text style={s.notice}>
             {passkeysAvailable()
-              ? 'このパスキーの保存先では、鍵を守れませんでした。パスワード管理アプリの画面が出た時は、ブラウザや端末（Windows、iPhone、Google など）に保存する方を選んでください。'
+              ? 'このパスキーの保存先では、鍵を守れませんでした。下の「保存できる場所」を選んでください。iPhone では「設定」→「一般」→「自動入力とパスワード」で「パスワード」を入れると選べるようになります。'
               : 'このブラウザはパスキーを使えません。'}
           </Text>
           {passkeysAvailable() && (
@@ -111,6 +111,7 @@ export function Gate({ locked }: { locked: boolean }) {
           <Text style={s.primaryText}>{locked ? 'ひらく' : moved ? 'この端末で使う' : 'はじめる'}</Text>
         </Pressable>
       )}
+      {!locked && passkeysAvailable() && <PasskeyStores />}
       {failed && <Text style={s.notice}>パスキーを使えませんでした。もう一度押してください</Text>}
       {missed && (
         <Text style={s.notice}>
@@ -122,6 +123,28 @@ export function Gate({ locked }: { locked: boolean }) {
   );
 }
 
+// Where a passkey can keep Tegami's key. Only stores tried on real devices are listed.
+// A store must return the WebAuthn PRF value; Bitwarden saves the passkey but does not.
+// Tried: iPhone (Safari, 2026-11-12), Windows Hello (Chrome, 2026-11-11), Bitwarden (Chrome and iPhone, 2026-11-11/12).
+const STORES_OK = ['iPhone（iCloud キーチェーン）', 'Windows（Windows Hello）'];
+const STORES_NOT_YET = ['Bitwarden'];
+
+function PasskeyStores() {
+  const c = usePalette();
+  const s = styles(c);
+  return (
+    <View style={s.stores}>
+      <Text style={s.storesHeading}>パスキーを保存できる場所</Text>
+      {STORES_OK.map((name) => (
+        <Text key={name} style={s.storesItem}>・{name}</Text>
+      ))}
+      <Text style={[s.storesHeading, s.storesGap]}>まだ保存できない場所</Text>
+      {STORES_NOT_YET.map((name) => (
+        <Text key={name} style={s.storesItem}>・{name}</Text>
+      ))}
+    </View>
+  );
+}
 
 const styles = (c: Palette) =>
   StyleSheet.create({
@@ -135,4 +158,8 @@ const styles = (c: Palette) =>
     secondaryText: { color: c.accent, fontSize: 16, fontWeight: '600' },
     small: { fontSize: 12, color: c.muted, textAlign: 'center', maxWidth: 320 },
     notice: { fontSize: 14, color: c.muted, textAlign: 'center', maxWidth: 320, lineHeight: 22 },
+    stores: { marginTop: 24, width: '100%', maxWidth: 280 },
+    storesHeading: { fontSize: 12, color: c.muted, marginBottom: 2 },
+    storesGap: { marginTop: 10 },
+    storesItem: { fontSize: 13, color: c.muted, lineHeight: 20 },
   });
