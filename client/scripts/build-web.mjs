@@ -14,7 +14,7 @@ const RELAY = 'wss://relay.tegami.chat';
 execSync('npx expo export --platform web --output-dir dist --clear', {
   cwd: ROOT,
   stdio: 'inherit',
-  env: { ...process.env, NODE_ENV: 'production', EXPO_PUBLIC_TEGAMI_RELAYS: RELAY },
+  env: { ...process.env, NODE_ENV: 'production', EXPO_PUBLIC_TEGAMI_RELAYS: RELAY, EXPO_PUBLIC_TEGAMI_FILES: 'https://relay.tegami.chat' },
 });
 
 const dir = join(ROOT, 'dist/_expo/static/js/web');
@@ -25,6 +25,15 @@ for (const f of readdirSync(dir)) {
 const wrong = [...relays].filter((r) => r !== RELAY);
 if (!relays.has(RELAY) || wrong.length) {
   console.error(`\nThe bundle talks to ${[...relays].join(', ') || 'no relay'}; expected only ${RELAY}. Do not deploy.`);
+  process.exit(1);
+}
+// The file server (photos) must not point at a development address either.
+const local = new Set();
+for (const f of readdirSync(dir)) {
+  for (const m of readFileSync(join(dir, f), 'utf8').matchAll(/https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?/g)) local.add(m[0]);
+}
+if (local.size) {
+  console.error(`\nThe bundle points at ${[...local].join(', ')}. Do not deploy.`);
   process.exit(1);
 }
 console.log(`\nOK: the bundle talks only to ${RELAY}.`);
