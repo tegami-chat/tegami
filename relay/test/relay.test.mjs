@@ -95,15 +95,15 @@ const flooder = generateSecretKey();
 const f = await connect();
 await login(f, flooder);
 const target = getPublicKey(generateSecretKey());
-const wraps = Array.from({ length: 80 }, (_, i) =>
+const wraps = Array.from({ length: 200 }, (_, i) =>
   nip59.createWrap(nip59.createSeal(nip59.createRumor({ kind: 14, content: `spam ${i}`, tags: [['p', target]] }, flooder), flooder, target), target),
 );
 for (const w of wraps) f.send(['EVENT', w]);
 const answers = await Promise.all(wraps.map((w) => f.next((m) => m[0] === 'OK' && m[1] === w.id, 10000)));
 const accepted = answers.filter((m) => m[2] === true).length;
 const limited = answers.filter((m) => m[2] === false && String(m[3]).startsWith('rate-limited')).length;
-check(`a burst is accepted (${accepted} of 80)`, accepted >= 50);
-check(`a flood is slowed down (${limited} of 80 refused)`, limited >= 10 && accepted + limited === 80);
+check(`a burst is accepted (${accepted} of 200)`, accepted >= 110);
+check(`a flood is slowed down (${limited} of 200 refused)`, limited >= 50 && accepted + limited === 200);
 
 for (const c of [a, b, e, b2, f]) c.ws.close();
 console.log(failures ? `${failures} failed` : 'all passed');

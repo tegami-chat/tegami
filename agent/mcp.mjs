@@ -13,8 +13,9 @@ const text = (value) => ({ content: [{ type: 'text', text: typeof value === 'str
 export async function startMcp(agent) {
   const server = new McpServer({ name: 'tegami', version: '0.1.0' });
   const nameOf = (pubkey) => (pubkey === agent.pubkey ? agent.profile.name : agent.contacts.find((c) => c.pubkey === pubkey)?.name ?? shortId(pubkey));
-  const known = (pubkey) => agent.contacts.some((c) => c.pubkey === pubkey);
-  const view = (m) => ({ from: nameOf(m.from), with: nameOf(m.peer), text: m.text, at: new Date(m.at * 1000).toISOString() });
+  // A chat is known when every other participant is a contact (groups included).
+  const known = (room) => room.split(',').every((k) => agent.contacts.some((c) => c.pubkey === k));
+  const view = (m) => ({ from: nameOf(m.from), with: m.peer.split(',').map(nameOf).join(', '), text: m.text, at: new Date(m.at * 1000).toISOString() });
 
   server.registerTool(
     'tegami_contacts',

@@ -84,6 +84,8 @@ const commands = {
     let busy = false;
     agent.listeners.add((m) => {
       if (m.from === agent.pubkey || m.at < started || !agent.isTrusted(m.from)) return;
+      // Groups: an AI joins a group only when every member agrees (not built yet), so no replies there.
+      if (m.peer.includes(',')) return;
       if (agent.state.replied.includes(m.id)) return;
       queue.push(m);
       void drain();

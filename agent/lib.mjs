@@ -160,8 +160,12 @@ export class Agent {
       return;
     }
     if (rumor.kind !== 14) return;
-    const to = rumor.tags.find((t) => t[0] === 'p' && t[1] !== this.pubkey)?.[1];
-    const peer = rumor.pubkey === this.pubkey ? to : rumor.pubkey;
+    // The chat is everyone except this agent (author and p tags), sorted and joined
+    // with ','. One person means a 1:1 chat; more means a group (same as the app).
+    const others = [...new Set([rumor.pubkey, ...rumor.tags.filter((t) => t[0] === 'p').map((t) => t[1])])]
+      .filter((k) => /^[0-9a-f]{64}$/.test(k) && k !== this.pubkey)
+      .sort();
+    const peer = others.join(',');
     if (!peer || this.messages.some((m) => m.id === rumor.id)) return;
     const m = { id: rumor.id, from: rumor.pubkey, peer, text: rumor.content, at: rumor.created_at };
     this.messages = [...this.messages, m].sort((a, b) => a.at - b.at);

@@ -26,8 +26,9 @@ const MAX_EVENT_BYTES = 128 * 1024;
 const MAX_SUBS = 20;
 const RETENTION_SECONDS = 30 * 24 * 60 * 60;
 const AUTH_WINDOW_SECONDS = 10 * 60;
-// One message is two envelopes (one for the recipient, one for the sender's other devices).
-const RATE = { ip: { burst: 120, perSecond: 2 }, key: { burst: 60, perSecond: 1 } };
+// One message is one envelope per member plus one for the sender's other devices,
+// so a message to a group of five is six envelopes.
+const RATE = { ip: { burst: 300, perSecond: 5 }, key: { burst: 120, perSecond: 3 } };
 const MAX_CONNECTIONS_PER_IP = 50;
 const MAX_MAILBOX = 10_000;
 

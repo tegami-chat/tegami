@@ -20,6 +20,7 @@ function Shell() {
       }}>
       <Stack.Screen name="index" options={{ title: 'Tegami' }} />
       <Stack.Screen name="add" options={{ title: '友達を追加' }} />
+      <Stack.Screen name="group" options={{ title: 'グループを作る' }} />
       <Stack.Screen name="i" options={{ headerShown: false }} />
       <Stack.Screen name="strangers" options={{ title: '知らない人から' }} />
       <Stack.Screen name="chat/[peer]" options={{ title: '' }} />

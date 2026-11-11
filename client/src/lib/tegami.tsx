@@ -16,13 +16,26 @@ const RELAYS = (process.env.EXPO_PUBLIC_TEGAMI_RELAYS ?? 'wss://relay.tegami.cha
 export type Message = {
   id: string;
   from: string; // hex pubkey of the author
-  peer: string; // hex pubkey of the other person in this 1:1 chat
+  // The chat this message belongs to: the other participants' hex pubkeys, sorted and
+  // joined with ','. For a 1:1 chat that is just the other person's pubkey.
+  peer: string;
   text: string;
   at: number; // unix seconds
 };
 
 /** model: for an AI friend, which company's which model (always shown, philosophy #93). */
 export type Contact = { pubkey: string; name: string; model?: string };
+
+/** A group chat (NIP-17): a fixed set of people. A different set is a different chat. */
+export type Group = { id: string; name: string; members: string[] };
+
+/** The chat id for a set of other participants. */
+export function roomOf(members: string[]) {
+  return [...new Set(members)].sort().join(',');
+}
+export function isGroup(room: string) {
+  return room.includes(',');
+}
 
 // Legacy, unprotected account. Moved into a device vault on first load;
 // still used only when this browser has no IndexedDB or Web Crypto.
@@ -36,7 +49,10 @@ type TegamiState = {
   protectedByPasskey: boolean;
   npub: string | null;
   contacts: Contact[];
+  groups: Group[];
   messages: Message[];
+  /** Makes a group with these contacts and returns its chat id. */
+  createGroup: (name: string, members: string[]) => string;
   /** My own name, shared through my invite link. Stays on this device otherwise. */
   myName: string;
   setMyName: (name: string) => void;
@@ -104,9 +120,21 @@ export function shortId(pubkey: string) {
   return `${npub.slice(0, 9)}…${npub.slice(-4)}`;
 }
 
-/** People who wrote to me but are not in my contacts, newest first. */
-export function strangers(contacts: Contact[], messages: Message[]) {
-  const known = new Set(contacts.map((c) => c.pubkey));
+/** What to call a person: their contact name, or a short id. */
+export function personName(pubkey: string, contacts: Contact[]) {
+  return contacts.find((c) => c.pubkey === pubkey)?.name ?? shortId(pubkey);
+}
+
+/** What to call a chat: the contact, the group's name, or its members' names. */
+export function chatName(room: string, contacts: Contact[], groups: Group[]) {
+  if (!isGroup(room)) return personName(room, contacts);
+  const g = groups.find((x) => x.id === room);
+  return g?.name || room.split(',').map((k) => personName(k, contacts)).join('、');
+}
+
+/** Chats that are neither a contact nor a group I know, newest first. */
+export function strangers(contacts: Contact[], messages: Message[], groups: Group[] = []) {
+  const known = new Set([...contacts.map((c) => c.pubkey), ...groups.map((g) => g.id)]);
   const last = new Map<string, Message>();
   for (const m of messages) if (!known.has(m.peer)) last.set(m.peer, m);
   return [...last.entries()].map(([peer, m]) => ({ peer, last: m })).sort((a, b) => b.last.at - a.last.at);
@@ -131,11 +159,13 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const [secret, setSecret] = useState<Uint8Array | null>(null);
   const [vault, setVault] = useState<Vault | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [myName, setMyNameState] = useState('');
   const [loaded, setLoaded] = useState(false);
   const pool = useRef<SimplePool | null>(null);
   const authRef = useRef<((t: EventTemplate) => Promise<ReturnType<typeof finalizeEvent>>) | null>(null);
+
 
   useEffect(() => {
     let alive = true;
@@ -166,6 +196,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       setVault(v);
       if (sk) setSecret(sk);
       setContacts(load<Contact[]>('tegami.contacts', []));
+      setGroups(load<Group[]>('tegami.groups', []));
       setMessages(load<Message[]>('tegami.messages', []));
       setMyNameState(load<string>('tegami.myName', ''));
       setLoaded(true);
@@ -177,6 +208,45 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
 
   const status: Status = !loaded ? 'loading' : secret ? 'open' : vault ? 'locked' : 'new';
   const me = useMemo(() => (secret ? getPublicKey(secret) : null), [secret]);
+
+  const saveGroups = useCallback((update: (prev: Group[]) => Group[]) => {
+    setGroups((prev) => {
+      const next = update(prev);
+      if (next !== prev) save('tegami.groups', next);
+      return next;
+    });
+  }, []);
+
+  // A group shows up in my list when someone I know writes in it (or I made it).
+  // Its name follows the latest subject tag. Groups started by strangers stay in
+  // the strangers box.
+  const contactsRef = useRef<Contact[]>([]);
+  contactsRef.current = contacts;
+  const groupsRef = useRef<Group[]>([]);
+  groupsRef.current = groups;
+  const rememberGroup = useCallback(
+    (id: string, subject: string | undefined, author: string) => {
+      saveGroups((prev) => {
+        const known = prev.find((g) => g.id === id);
+        if (known) {
+          if (!subject || subject === known.name) return prev;
+          return prev.map((g) => (g.id === id ? { ...g, name: subject } : g));
+        }
+        if (author !== me && !contactsRef.current.some((c) => c.pubkey === author)) return prev;
+        return [...prev, { id, name: subject ?? '', members: id.split(',') }];
+      });
+    },
+    [me, saveGroups],
+  );
+
+  const createGroup = useCallback(
+    (name: string, members: string[]) => {
+      const id = roomOf(members);
+      saveGroups((prev) => [...prev.filter((g) => g.id !== id), { id, name: name.trim().slice(0, 60), members: id.split(',') }]);
+      return id;
+    },
+    [saveGroups],
+  );
 
   const addMessage = useCallback((m: Message) => {
     setMessages((prev) => {
@@ -202,10 +272,16 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
         try {
           const rumor = nip17.unwrapEvent(wrap, secret);
           if (rumor.kind !== 14) return;
-          // The rumor's p tags can include the sender, so skip my own key.
-          const to = rumor.tags.find((t) => t[0] === 'p' && t[1] !== me)?.[1];
-          const peer = rumor.pubkey === me ? to : rumor.pubkey;
-          if (!peer) return;
+          // Everyone in the chat except me: the author and every p tag.
+          const others = [rumor.pubkey, ...rumor.tags.filter((t) => t[0] === 'p').map((t) => t[1])].filter(
+            (k) => /^[0-9a-f]{64}$/.test(k) && k !== me,
+          );
+          if (!others.length) return;
+          const peer = roomOf(others);
+          if (isGroup(peer)) {
+            const subject = rumor.tags.find((t) => t[0] === 'subject')?.[1]?.slice(0, 60);
+            rememberGroup(peer, subject, rumor.pubkey);
+          }
           addMessage({ id: rumor.id, from: rumor.pubkey, peer, text: rumor.content, at: rumor.created_at });
         } catch {
           // Not for us or malformed. Ignore.
@@ -217,7 +293,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       p.destroy();
       pool.current = null;
     };
-  }, [secret, me, addMessage]);
+  }, [secret, me, addMessage, rememberGroup]);
 
   const start = useCallback(async () => {
     const sk = generateSecretKey();
@@ -259,14 +335,15 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const send = useCallback(
     async (peer: string, text: string) => {
       if (!secret || !me || !pool.current) return;
-      // One rumor (kind 14) addressed to the peer, sealed and wrapped twice:
-      // once for the peer and once for myself, so my other devices see it too.
-      // (nip17.wrapManyEvents gives the self copy a different rumor without the peer's p tag.)
-      const rumor = nip59.createRumor(
-        { kind: 14, content: text, tags: [['p', peer]], created_at: Math.floor(Date.now() / 1000) },
-        secret,
-      );
-      const wraps = [peer, me].map((to) => nip59.createWrap(nip59.createSeal(rumor, secret, to), to));
+      // One rumor (kind 14) with a p tag for everyone in the chat, sealed and wrapped once
+      // per person and once for myself, so my other devices see it too.
+      // (nip17.wrapManyEvents gives the self copy a different rumor without the p tags.)
+      const members = peer.split(',');
+      const tags = members.map((m) => ['p', m]);
+      const subject = groupsRef.current.find((g) => g.id === peer)?.name;
+      if (isGroup(peer) && subject) tags.push(['subject', subject]);
+      const rumor = nip59.createRumor({ kind: 14, content: text, tags, created_at: Math.floor(Date.now() / 1000) }, secret);
+      const wraps = [...members, me].map((to) => nip59.createWrap(nip59.createSeal(rumor, secret, to), to));
       await Promise.any(wraps.flatMap((w) => pool.current!.publish(RELAYS, w, { onauth: authRef.current ?? undefined })));
       addMessage({ id: rumor.id, from: me, peer, text, at: rumor.created_at });
     },
@@ -279,6 +356,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     protectedByPasskey: !!vault,
     npub: me ? nip19.npubEncode(me) : null,
     contacts,
+    groups,
+    createGroup,
     messages,
     start,
     startWithoutPasskey,
