@@ -90,6 +90,29 @@ b2.send(['REQ', 'again', { kinds: [1059], '#p': [bobPub] }]);
 const stored = await b2.next((m) => m[0] === 'EVENT' && m[1] === 'again' && m[2].id === wrap.id);
 check('stored envelope is delivered later', !!stored);
 
+// Envelopes with an expiration tag (NIP-40): refused when already expired, not handed
+// out after they expire. Moving an account to another device uses a 10-minute envelope.
+const timed = (exp) =>
+  finalizeEvent({ kind: 1059, created_at: Math.floor(Date.now() / 1000), tags: [['p', bobPub], ['expiration', String(exp)]], content: 'sealed' }, generateSecretKey());
+const late = timed(Math.floor(Date.now() / 1000) - 1);
+a.send(['EVENT', late]);
+const lateOk = await a.next((m) => m[0] === 'OK' && m[1] === late.id);
+check('an already expired envelope is refused', lateOk[2] === false && String(lateOk[3]).includes('expired'));
+const soon = timed(Math.floor(Date.now() / 1000) + 3);
+a.send(['EVENT', soon]);
+check('an envelope that expires later is accepted', (await a.next((m) => m[0] === 'OK' && m[1] === soon.id))[2] === true);
+const b3 = await connect();
+await login(b3, bob);
+b3.send(['REQ', 'before', { kinds: [1059], '#p': [bobPub] }]);
+check('it is handed out before it expires', !!(await b3.next((m) => m[0] === 'EVENT' && m[1] === 'before' && m[2].id === soon.id)));
+await new Promise((r) => setTimeout(r, 4000));
+b3.send(['REQ', 'after', { kinds: [1059], '#p': [bobPub] }]);
+await b3.next((m) => m[0] === 'EOSE' && m[1] === 'after');
+await new Promise((r) => setTimeout(r, 300));
+const stale = await b3.next((m) => m[0] === 'EVENT' && m[1] === 'after' && m[2].id === soon.id, 500).catch(() => null);
+check('it is not handed out after it expires', !stale);
+b3.ws.close();
+
 // One key sending far too fast is slowed down, after a normal burst goes through.
 const flooder = generateSecretKey();
 const f = await connect();

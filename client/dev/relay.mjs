@@ -10,7 +10,14 @@ const PORT = Number(process.env.PORT || 7447);
 const events = [];
 const subs = new Map(); // ws -> Map(subId -> filters[])
 
+// NIP-40, like the real relay: expired envelopes are refused and not handed out.
+const expired = (ev) => {
+  const exp = ev.tags?.find((t) => t[0] === 'expiration')?.[1];
+  return exp !== undefined && Number(exp) <= Math.floor(Date.now() / 1000);
+};
+
 function matches(filter, ev) {
+  if (expired(ev)) return false;
   if (filter.ids && !filter.ids.includes(ev.id)) return false;
   if (filter.kinds && !filter.kinds.includes(ev.kind)) return false;
   if (filter.authors && !filter.authors.includes(ev.pubkey)) return false;
@@ -93,6 +100,10 @@ wss.on('connection', (ws) => {
       const ev = msg[1];
       if (!ev || !verifyEvent(ev)) {
         ws.send(JSON.stringify(['OK', ev?.id ?? '', false, 'invalid: bad signature']));
+        return;
+      }
+      if (expired(ev)) {
+        ws.send(JSON.stringify(['OK', ev.id, false, 'invalid: expired']));
         return;
       }
       if (!events.some((e) => e.id === ev.id)) {

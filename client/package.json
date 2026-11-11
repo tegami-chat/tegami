@@ -19,6 +19,7 @@
     "expo-system-ui": "~57.0.4",
     "expo-web-browser": "~57.0.3",
     "nostr-tools": "^2.26.0",
+    "qrcode-generator": "2.0.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
@@ -31,6 +32,8 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~57.0.2",
     "playwright-core": "^1.65.0",
     "typescript": "~6.0.3",
     "ws": "^8.22.2"

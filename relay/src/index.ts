@@ -6,6 +6,8 @@
 // - You can only read envelopes addressed to yourself (#p = your key), so nobody can
 //   list who receives messages from whom.
 // - Envelopes are deleted after 30 days. Messages live on people's devices.
+// - An envelope with an expiration tag (NIP-40) is refused once expired and never handed
+//   out after that time (used to move an account to another device: a 10-minute envelope).
 //
 // - Limits: each network address and each key can send only so fast, each address can
 //   hold only so many connections, and each mailbox holds at most MAX_MAILBOX envelopes.
@@ -129,7 +131,13 @@ function randomHex(n: number) {
   return [...crypto.getRandomValues(new Uint8Array(n))].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+function expired(ev: NostrEvent) {
+  const exp = ev.tags.find((t) => t[0] === 'expiration')?.[1];
+  return exp !== undefined && Number(exp) <= now();
+}
+
 function matches(f: Filter, ev: NostrEvent) {
+  if (expired(ev)) return false;
   if (f.ids && !f.ids.includes(ev.id)) return false;
   if (f.kinds && !f.kinds.includes(ev.kind)) return false;
   if (f.since && ev.created_at < f.since) return false;
@@ -311,6 +319,7 @@ export class Relay extends DurableObject<Env> {
       return reply(false, 'rate-limited: slow down');
     }
     if (!verifyEvent(ev)) return reply(false, 'invalid: bad signature');
+    if (expired(ev)) return reply(false, 'invalid: expired');
 
     const p = ps[0][1];
     const held = this.sql.exec('SELECT COUNT(*) AS n FROM events WHERE p = ?', p).one().n as number;
