@@ -287,9 +287,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     const p = new SimplePool({ enableReconnect: true });
     p.automaticallyAuth = () => onauth;
     pool.current = p;
-    const sub = p.subscribe(RELAYS, { kinds: [1059], '#p': [me] }, {
-      onauth,
-      onevent(wrap) {
+    const onevent = (wrap: Parameters<typeof nip17.unwrapEvent>[0]) => {
+      {
         try {
           const rumor = nip17.unwrapEvent(wrap, secret);
           if (rumor.kind !== 14 && rumor.kind !== 15) return;
@@ -313,10 +312,48 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
         } catch {
           // Not for us or malformed. Ignore.
         }
-      },
-    });
+      }
+    };
+
+    // Keep receiving. When the connection drops (a phone puts the browser away), the
+    // library reconnects and asks again before logging in, the relay refuses, and the
+    // subscription ends for good. So whenever it ends, and whenever the app comes back
+    // to the screen or the network returns, subscribe again (the pool logs in first).
+    let sub: { close: () => void } | null = null;
+    let disposed = false;
+    let first = true;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const open = () => {
+      if (disposed) return;
+      clearTimeout(retry);
+      const old = sub;
+      sub = null;
+      old?.close();
+      // After the first time, only what is new: envelopes carry a random time up to 2 days back.
+      const filter = first ? { kinds: [1059], '#p': [me] } : { kinds: [1059], '#p': [me], since: Math.floor(Date.now() / 1000) - 3 * 86400 };
+      first = false;
+      const s = p.subscribe(RELAYS, filter, {
+        onauth,
+        onevent,
+        onclose: () => {
+          if (disposed || sub !== s) return;
+          retry = setTimeout(open, 2000);
+        },
+      });
+      sub = s;
+    };
+    open();
+    const onVisible = () => {
+      if (globalThis.document?.visibilityState === 'visible') open();
+    };
+    globalThis.document?.addEventListener?.('visibilitychange', onVisible);
+    globalThis.addEventListener?.('online', open);
     return () => {
-      sub.close();
+      disposed = true;
+      clearTimeout(retry);
+      globalThis.document?.removeEventListener?.('visibilitychange', onVisible);
+      globalThis.removeEventListener?.('online', open);
+      sub?.close();
       p.destroy();
       pool.current = null;
     };
