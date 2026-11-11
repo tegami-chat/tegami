@@ -7,6 +7,7 @@ import { bytesToHex, hexToBytes } from 'nostr-tools/utils';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { createDeviceVault, deviceVaultAvailable, openDeviceVault, type DeviceVault } from './device-vault';
+import { setCrashReports } from './crash';
 import { encryptAndUpload, fileFromRumor, fileTags, keepSent, shrinkImage, type FileRef } from './files';
 import { load, save } from './storage';
 import { createVault, unlockVault, type Vault } from './vault';
@@ -67,6 +68,11 @@ type TegamiState = {
   unlock: () => Promise<void>;
   addContact: (pubkey: string, name: string, model?: string) => void;
   send: (peer: string, text: string) => Promise<void>;
+  /** Whether crash reports are sent (off unless the person turns it on). */
+  crashReports: boolean;
+  setCrashReportsOn: (on: boolean) => void;
+  /** Everything on this device except the key, as JSON (philosophy #88). */
+  exportChats: () => string;
   /** Makes the photo smaller, encrypts it on this device, uploads it and sends it. */
   sendPhoto: (peer: string, photo: Blob) => Promise<void>;
 };
@@ -167,6 +173,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const [groups, setGroups] = useState<Group[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [myName, setMyNameState] = useState('');
+  const [crashReports, setCrashReportsState] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const pool = useRef<SimplePool | null>(null);
   const authRef = useRef<((t: EventTemplate) => Promise<ReturnType<typeof finalizeEvent>>) | null>(null);
@@ -204,6 +211,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       setGroups(load<Group[]>('tegami.groups', []));
       setMessages(load<Message[]>('tegami.messages', []));
       setMyNameState(load<string>('tegami.myName', ''));
+      const crash = load<boolean>('tegami.crashReports', false);
+      setCrashReportsState(crash);
+      setCrashReports(crash);
       setLoaded(true);
     })();
     return () => {
@@ -326,6 +336,12 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     setSecret(await unlockVault(vault));
   }, [vault]);
 
+  const setCrashReportsOn = useCallback((on: boolean) => {
+    save('tegami.crashReports', on);
+    setCrashReportsState(on);
+    setCrashReports(on);
+  }, []);
+
   const setMyName = useCallback((name: string) => {
     const n = name.slice(0, 40);
     save('tegami.myName', n);
@@ -400,6 +416,23 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     setMyName,
     send,
     sendPhoto,
+    crashReports,
+    setCrashReportsOn,
+    exportChats: () =>
+      JSON.stringify(
+        {
+          app: 'Tegami',
+          format: 1,
+          exported_at: new Date().toISOString(),
+          me: me ? nip19.npubEncode(me) : null,
+          my_name: myName,
+          contacts,
+          groups,
+          messages,
+        },
+        null,
+        2,
+      ),
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -26,9 +26,10 @@ function matches(filter, ev) {
 }
 
 const files = new Map(); // sha256 -> Buffer
+const crashes = [];
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, HEAD, PUT, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, HEAD, PUT, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-SHA-256',
 };
 const http = createServer((req, res) => {
@@ -42,6 +43,19 @@ const http = createServer((req, res) => {
     const f = files.get(blob[1]);
     return f ? send(200, f, 'application/octet-stream') : send(404, 'Not found');
   }
+  // Crash reports: kept in memory so tests can read them at GET /_crashes.
+  if (req.url === '/crash' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (c) => (body += c));
+    req.on('end', () => {
+      try {
+        crashes.push(JSON.parse(body));
+      } catch {}
+      send(204);
+    });
+    return;
+  }
+  if (req.url === '/_crashes' && req.method === 'GET') return send(200, JSON.stringify(crashes), 'application/json');
   if (req.url === '/upload' && req.method === 'PUT') {
     const chunks = [];
     req.on('data', (c) => chunks.push(c));

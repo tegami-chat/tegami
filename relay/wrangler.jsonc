@@ -10,5 +10,7 @@
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Relay"] }],
   // Encrypted photos and files (Blossom). The bucket deletes objects after 30 days.
   "r2_buckets": [{ "binding": "FILES", "bucket_name": "tegami-files" }],
+  // Crash reports (sent only when the person allows it) go to Workers Logs, kept a few days.
+  "observability": { "enabled": true },
   "routes": [{ "pattern": "relay.tegami.chat", "custom_domain": true }]
 }

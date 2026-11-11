@@ -25,6 +25,11 @@ export default function Chats() {
         options={{
           headerRight: () => (
             <View style={s.headerButtons}>
+              <Link href="/settings" asChild>
+                <Pressable role="button" style={s.headerButton}>
+                  <Text style={s.headerLink}>設定</Text>
+                </Pressable>
+              </Link>
               {contacts.length >= 2 && (
                 <Link href="/group" asChild>
                   <Pressable role="button" style={s.headerButton}>

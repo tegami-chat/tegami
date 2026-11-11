@@ -9,7 +9,7 @@
 // Needs Google Chrome installed. Set CHROME_PATH to use another Chromium build.
 
 import { execFileSync, spawn } from 'node:child_process';
-import { createReadStream, existsSync, mkdtempSync, rmSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createServer } from 'node:http';
 import { extname, join, resolve } from 'node:path';
@@ -375,6 +375,52 @@ async function main() {
         return i && i.complete && i.naturalWidth === 1600;
       }, null, { timeout: 15000 });
       for (const u of [a, b]) await u.context.close();
+    });
+
+    await test('Settings: key protection shown, crash reports only when allowed and scrubbed, export has no key', async () => {
+      const u = await newUser(browser);
+      await button(u.page, 'はじめる').click();
+      await waitOpen(u.page);
+      await u.page.getByText('設定', { exact: true }).click();
+      await waitText(u.page, 'パスキーで守っています');
+      const crashes = async () => (await fetch(`http://localhost:${RELAY_PORT}/_crashes`)).json();
+      const throwSoon = (tag) =>
+        u.page.evaluate((tag) => setTimeout(() => { throw new Error(`boom-${tag} "my secret text" ${'ab'.repeat(32)}`); }), tag);
+
+      // Off by default: nothing is sent.
+      assert(!(await u.page.getByRole('switch').isChecked()), 'crash reports are on by default');
+      await throwSoon('off');
+      await u.page.waitForTimeout(800);
+      assert(!(await crashes()).some((r) => r.message.includes('boom-off')), 'a report was sent while off');
+
+      // On: sent, without the quoted text or the long hex.
+      await u.page.getByRole('switch').click();
+      await throwSoon('on');
+      let got;
+      for (let i = 0; i < 30 && !got; i++) {
+        await u.page.waitForTimeout(100);
+        got = (await crashes()).find((r) => r.message.includes('boom-on'));
+      }
+      assert(got, 'no report after turning it on');
+      assert(!JSON.stringify(got).includes('my secret text') && !JSON.stringify(got).includes('abab'.repeat(8)), `not scrubbed: ${got.message}`);
+      assert(got.platform === 'web', 'platform missing');
+
+      // The choice is remembered.
+      // Reloading /settings shows the lock first, then the same screen again.
+      await u.page.reload();
+      await button(u.page, 'ひらく').click();
+      await waitText(u.page, '鍵の守り方');
+      assert(await u.page.getByRole('switch').isChecked(), 'the choice was not remembered');
+
+      // Export: a JSON file with the chats, never the key.
+      const dl = u.page.waitForEvent('download');
+      await u.page.getByText('会話を書き出す').click();
+      const file = await (await dl).path();
+      const data = JSON.parse(readFileSync(file, 'utf8'));
+      assert(data.app === 'Tegami' && Array.isArray(data.messages) && data.me.startsWith('npub1'), 'export shape');
+      const vault = await u.page.evaluate(() => localStorage.getItem('tegami.vault'));
+      assert(!readFileSync(file, 'utf8').includes(JSON.parse(vault).ciphertext), 'export contains the vault');
+      await u.context.close();
     });
 
     await test('Group of three: everyone sees the group name and who said what', async () => {

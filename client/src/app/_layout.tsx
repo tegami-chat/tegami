@@ -1,8 +1,24 @@
-import { Stack } from 'expo-router';
+import { Stack, type ErrorBoundaryProps } from 'expo-router';
+import { useEffect } from 'react';
+import { Pressable, Text, View } from 'react-native';
 
 import { Gate } from '@/components/gate';
 import { usePalette } from '@/constants/theme';
+import { report } from '@/lib/crash';
 import { TegamiProvider, useTegami } from '@/lib/tegami';
+
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  const c = usePalette();
+  useEffect(() => report(error), [error]);
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, backgroundColor: c.background, padding: 24 }}>
+      <Text style={{ fontSize: 16, color: c.text }}>問題が起きて、画面を表示できませんでした</Text>
+      <Pressable onPress={retry} role="button">
+        <Text style={{ fontSize: 16, color: c.accent, fontWeight: '600' }}>もう一度</Text>
+      </Pressable>
+    </View>
+  );
+}
 
 function Shell() {
   const c = usePalette();
@@ -21,6 +37,7 @@ function Shell() {
       <Stack.Screen name="index" options={{ title: 'Tegami' }} />
       <Stack.Screen name="add" options={{ title: '友達を追加' }} />
       <Stack.Screen name="group" options={{ title: 'グループを作る' }} />
+      <Stack.Screen name="settings" options={{ title: '設定' }} />
       <Stack.Screen name="i" options={{ headerShown: false }} />
       <Stack.Screen name="strangers" options={{ title: '知らない人から' }} />
       <Stack.Screen name="chat/[peer]" options={{ title: '' }} />
