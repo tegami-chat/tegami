@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Palette, usePalette } from '@/constants/theme';
 import { RELAYS, useTegami } from '@/lib/tegami';
-import { arrival, receiveTransfer, takeLinkKey, type Bundle } from '@/lib/transfer';
+import { arrival, receiveTransfer, takeLinkKey, transferKey, type Bundle } from '@/lib/transfer';
 import { PasskeyUnsupportedError, passkeysAvailable } from '@/lib/vault';
 
 // A cancelled or timed-out passkey prompt is not an error worth showing.
@@ -18,8 +18,21 @@ export function Gate({ locked }: { locked: boolean }) {
   const c = usePalette();
   const s = styles(c);
   const { start, startWithoutPasskey, unlock } = useTegami();
-  const [key] = useState(() => (locked ? null : takeLinkKey()));
+  const [key, setKey] = useState(() => (locked ? null : takeLinkKey()));
   const [moving, setMoving] = useState<Moving | null>(key ? { state: 'fetching' } : null);
+  // Pasting the link by hand: an iPhone Home Screen app keeps its own storage, and a
+  // scanned QR code opens Safari, so the link has to be pasted into the app itself.
+  const [pasting, setPasting] = useState(false);
+  const [pasted, setPasted] = useState('');
+
+  function receivePasted() {
+    const k = transferKey(pasted);
+    setPasting(false);
+    setPasted('');
+    if (!k) return setMoving({ state: 'failed' });
+    setKey(k);
+    setMoving({ state: 'fetching' });
+  }
   const moved = moving?.state === 'ready' ? moving.bundle : undefined;
   const [busy, setBusy] = useState(false);
   const [unsupported, setUnsupported] = useState(false);
@@ -111,6 +124,28 @@ export function Gate({ locked }: { locked: boolean }) {
           <Text style={s.primaryText}>{locked ? 'ひらく' : moved ? 'この端末で使う' : 'はじめる'}</Text>
         </Pressable>
       )}
+      {!locked && !moved && !unsupported &&
+        (pasting ? (
+          <View style={s.paste}>
+            <TextInput
+              style={s.pasteInput}
+              value={pasted}
+              onChangeText={setPasted}
+              placeholder="別の端末で作ったリンクを貼る"
+              placeholderTextColor={c.muted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoFocus
+            />
+            <Pressable style={s.secondary} onPress={receivePasted} disabled={!pasted.trim()} role="button">
+              <Text style={s.secondaryText}>受け取る</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable style={s.secondary} onPress={() => setPasting(true)} role="button">
+            <Text style={s.secondaryText}>別の端末から受け取る</Text>
+          </Pressable>
+        ))}
       {!locked && passkeysAvailable() && <PasskeyStores />}
       {failed && <Text style={s.notice}>パスキーを使えませんでした。もう一度押してください</Text>}
       {missed && (
@@ -158,6 +193,18 @@ const styles = (c: Palette) =>
     secondaryText: { color: c.accent, fontSize: 16, fontWeight: '600' },
     small: { fontSize: 12, color: c.muted, textAlign: 'center', maxWidth: 320 },
     notice: { fontSize: 14, color: c.muted, textAlign: 'center', maxWidth: 320, lineHeight: 22 },
+    paste: { width: '100%', maxWidth: 320, alignItems: 'center', gap: 4 },
+    pasteInput: {
+      width: '100%',
+      backgroundColor: c.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: c.line,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 14,
+      color: c.text,
+    },
     stores: { marginTop: 24, width: '100%', maxWidth: 280 },
     storesHeading: { fontSize: 12, color: c.muted, marginBottom: 2 },
     storesGap: { marginTop: 10 },

@@ -509,6 +509,18 @@ async function main() {
       await waitText(a.page, '新しい端末から');
       await waitText(b.page, '新しい端末から');
 
+      // Pasting the link (an iPhone Home Screen app cannot be reached by scanning).
+      const a3 = await newUser(browser, { prf: false });
+      await button(a3.page, '別の端末から受け取る').click();
+      await a3.page.getByPlaceholder('別の端末で作ったリンクを貼る').fill(moveLink);
+      await button(a3.page, '受け取る').click();
+      await waitText(a3.page, 'えーさんのアカウントを受け取りました');
+      await button(a3.page, 'この端末で使う').click();
+      await button(a3.page, 'パスキーを使わずに始める').click();
+      await waitOpen(a3.page);
+      await waitText(a3.page, 'びー');
+      await a3.context.close();
+
       // The same link on a device that already has an account replaces nothing.
       await b.page.goto(moveLink);
       await waitText(b.page, 'もう Tegami のアカウントを使っています');
