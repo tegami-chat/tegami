@@ -2,7 +2,7 @@
 // Default: starts the in-memory development relay from ../client/dev/relay.mjs.
 // RELAY=ws://127.0.0.1:8787 npm test   runs against the real relay code (wrangler dev).
 import { execFileSync, spawn } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -86,6 +86,22 @@ try {
   await new Promise((r) => setTimeout(r, 2500));
   check('the AI does not reply to a stranger', stranger.inbox.length === 0);
   check('the AI does not reply to a contact who is not trusted', friend.inbox.length === 0);
+
+  const second = spawn(process.execPath, [join(ROOT, 'agent.mjs'), 'watch', '--command', 'node -e 0'], { env, stdio: 'ignore' });
+  const code = await new Promise((r) => second.on('exit', r));
+  check('a second watcher for the same AI exits (code 3)', code === 3);
+
+  watch.kill();
+  await new Promise((r) => watch.on('exit', r));
+  await owner.send(agentPk, '留守の間に');
+  // Longer than the old 5-second grace, so only the catch-up can answer it.
+  await new Promise((r) => setTimeout(r, 7000));
+  const logPath = join(HOME, 'watch.log');
+  watch = spawn(process.execPath, [join(ROOT, 'agent.mjs'), 'watch', '--log', logPath, '--command', `node "${join(ROOT, 'test/echo.mjs')}"`], { env, stdio: 'pipe' });
+  check('a restarted watcher answers what arrived while it was off', !!(await owner.waitFor((t) => t === 'echo: よしひろ: 留守の間に')));
+  check('the restarted watcher does not answer old messages again', owner.inbox.filter((t) => t === 'echo: よしひろ: こんにちは').length === 1);
+  const logText = readFileSync(logPath, 'utf8');
+  check('--log writes the log to a file, without message text', logText.includes('replied to よしひろ') && !logText.includes('留守の間に'));
   watch.kill();
   watch = null;
 

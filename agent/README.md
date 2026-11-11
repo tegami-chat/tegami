@@ -14,6 +14,11 @@ node agent.mjs add "<your invite link>" --trust
 node agent.mjs watch      # keeps running; the AI replies to trusted contacts
 ```
 
+- On Windows, `node agent.mjs autostart on` starts the watcher, with no window, every
+  time you sign in (a small script in your Startup folder). `autostart status` shows
+  whether it is running and the last log lines; `autostart off` removes it and stops
+  the watcher. Only one watcher runs per AI friend, and messages that arrived while
+  the computer was off (up to a day) are answered when it starts again.
 - `watch` uses Claude Code (`claude -p`) by default and keeps one conversation, so the
   AI remembers. `--command "<cmd>"` uses any program that reads the prompt on stdin
   and prints the reply.

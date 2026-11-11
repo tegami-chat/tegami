@@ -11,16 +11,26 @@
 //       Keeps running. Each message from a trusted contact is answered by the AI.
 //       Default: Claude Code (`claude -p`), one conversation that continues over time.
 //       --command: any program that reads the prompt on stdin and prints the reply.
+//       --log <file>: also write the log to a file (used when started at login).
+//       Only one watcher runs per AI friend; a second one exits (code 3).
+//       Messages that arrived while the watcher was off (up to a day) are answered.
+//   tegami-agent autostart on | off | status
+//       Windows: start the watcher, hidden, every time you sign in.
 //   tegami-agent mcp
 //       MCP server over stdio, so Claude Code (or any MCP client) can read and send
 //       Tegami messages during a conversation.
 //
 // Options: --agent <folder name> (default "claude") picks which AI friend to use.
 
-import { spawn } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { spawn, execFileSync } from 'node:child_process';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Agent, needsInit, parseInvite, shortId } from './lib.mjs';
+
+const SCRIPT = fileURLToPath(import.meta.url);
+const DAY = 86400;
+let logFile = null;
 
 const argv = process.argv.slice(2);
 const flag = (name) => {
@@ -78,18 +88,42 @@ const commands = {
   async watch() {
     needsInit(agent);
     const command = flag('command');
-    await agent.connect();
-    const started = Math.floor(Date.now() / 1000) - 5;
+    const logTo = flag('log');
+    if (typeof logTo === 'string') logFile = logTo;
+    if (!takeLock()) {
+      log('another watcher is already running for this AI friend');
+      process.exit(3);
+    }
+    process.on('uncaughtException', (e) => {
+      log(`stopped: ${e.stack ?? e.message}`);
+      process.exit(1);
+    });
+    // Answer what arrived while the watcher was off (the PC was shut down), up to a day back.
+    const now = Math.floor(Date.now() / 1000);
+    const started = agent.state.alive ? Math.max(agent.state.alive - 60, now - DAY) : now - 5;
+    const beat = () => {
+      agent.state.alive = Math.floor(Date.now() / 1000);
+      agent.saveState();
+    };
+    beat();
+    setInterval(beat, 60_000);
     const queue = [];
+    const seen = new Set();
     let busy = false;
-    agent.listeners.add((m) => {
+    const consider = (m) => {
       if (m.from === agent.pubkey || m.at < started || !agent.isTrusted(m.from)) return;
       // Groups: an AI joins a group only when every member agrees (not built yet), so no replies there.
       if (m.peer.includes(',')) return;
-      if (agent.state.replied.includes(m.id)) return;
+      if (agent.state.replied.includes(m.id) || seen.has(m.id)) return;
+      seen.add(m.id);
       queue.push(m);
       void drain();
-    });
+    };
+    // Listen before connecting: the relay hands over waiting messages right after login.
+    agent.listeners.add(consider);
+    await agent.connect();
+    // Messages saved earlier (by `send` or the MCP server) but never answered.
+    for (const m of agent.messages) consider(m);
     async function drain() {
       if (busy) return;
       busy = true;
@@ -113,6 +147,45 @@ const commands = {
     }
     log(`${agent.profile.name} is listening. Trusted: ${agent.contacts.filter((c) => c.trusted).map((c) => c.name).join(', ') || 'nobody yet'}`);
   },
+  autostart() {
+    needsInit(agent);
+    const action = argv[0] ?? 'status';
+    if (process.platform !== 'win32') {
+      throw new Error('autostart is only built for Windows so far. Run `watch` under launchd (macOS) or systemd (Linux).');
+    }
+    const startup = join(process.env.APPDATA, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup');
+    const vbs = join(startup, `tegami-agent-${agentName}.vbs`);
+    const logPath = join(agent.dir, 'watch.log');
+    if (action === 'on') {
+      writeFileSync(vbs, '﻿' + startupScript(vbs, logPath), 'utf16le');
+      // Start it now too, so there is no need to sign out and in.
+      spawn('wscript.exe', [vbs], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+      console.log(`On. ${agent.profile.name} starts hidden every time you sign in.`);
+      console.log(`Log: ${logPath}`);
+    } else if (action === 'off') {
+      rmSync(vbs, { force: true });
+      const pid = runningPid();
+      if (pid) {
+        try {
+          execFileSync('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: 'ignore' });
+        } catch {
+          // already gone
+        }
+      }
+      console.log(`Off. ${agent.profile.name} no longer starts at sign-in${pid ? ', and the running watcher was stopped' : ''}.`);
+    } else if (action === 'status') {
+      const pid = runningPid();
+      console.log(`Starts at sign-in: ${existsSync(vbs) ? 'yes' : 'no'}`);
+      console.log(`Running now:       ${pid ? `yes (process ${pid})` : 'no'}`);
+      if (agent.state.alive) console.log(`Last heartbeat:    ${new Date(agent.state.alive * 1000).toLocaleString()}`);
+      if (existsSync(logPath)) {
+        const tail = readFileSync(logPath, 'utf8').trimEnd().split('\n').slice(-5);
+        console.log(`\nLast log lines (${logPath}):\n${tail.join('\n')}`);
+      }
+    } else {
+      throw new Error('Use: autostart on | off | status');
+    }
+  },
   async mcp() {
     needsInit(agent);
     const { startMcp } = await import('./mcp.mjs');
@@ -121,14 +194,82 @@ const commands = {
 };
 
 function log(text) {
-  console.log(`[${new Date().toLocaleTimeString()}] ${text}`);
+  const line = `[${new Date().toLocaleString()}] ${text}`;
+  console.log(line);
+  if (!logFile) return;
+  try {
+    // Keep the log small: one older copy, about 1 MB each.
+    if (existsSync(logFile) && statSync(logFile).size > 1_000_000) renameSync(logFile, `${logFile}.old`);
+    appendFileSync(logFile, line + '\n');
+  } catch {
+    // A log that cannot be written must not stop the replies.
+  }
+}
+
+// ---------- one watcher per AI friend ----------
+
+const lockFile = () => join(agent.dir, 'watch.pid');
+
+function alive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    return e.code === 'EPERM';
+  }
+}
+
+function runningPid() {
+  try {
+    const pid = Number(readFileSync(lockFile(), 'utf8'));
+    return pid && pid !== process.pid && alive(pid) ? pid : null;
+  } catch {
+    return null;
+  }
+}
+
+function takeLock() {
+  if (runningPid()) return false;
+  writeFileSync(lockFile(), String(process.pid));
+  const release = () => {
+    try {
+      if (readFileSync(lockFile(), 'utf8') === String(process.pid)) rmSync(lockFile());
+    } catch {
+      // nothing to release
+    }
+  };
+  process.on('exit', release);
+  for (const s of ['SIGINT', 'SIGTERM', 'SIGBREAK']) process.on(s, () => process.exit(0));
+  return true;
+}
+
+/**
+ * The script Windows runs at sign-in (Startup folder). It starts the watcher with no
+ * window and starts it again 10 seconds after it stops, until this file is deleted
+ * (autostart off) or another watcher is already running (exit code 3).
+ */
+function startupScript(self, logPath) {
+  const q = (s) => `""${s}""`;
+  const cmd = `${q(process.execPath)} ${q(SCRIPT)} watch --agent ${q(agentName)} --log ${q(logPath)}`;
+  return [
+    "' tegami-agent: starts the AI friend's watcher at sign-in. Delete this file to stop.",
+    'Set sh = CreateObject("WScript.Shell")',
+    'Set fs = CreateObject("Scripting.FileSystemObject")',
+    'Do',
+    `  code = sh.Run("${cmd}", 0, True)`,
+    '  If code = 3 Then WScript.Quit',
+    '  WScript.Sleep 10000',
+    `  If Not fs.FileExists("${self}") Then WScript.Quit`,
+    'Loop',
+    '',
+  ].join('\r\n');
 }
 
 /** Runs a shell command line, feeding `input` on stdin. Resolves with the exit code and output. */
-function run(commandLine, input, cwd) {
+function run(commandLine, input, cwd, env = process.env) {
   return new Promise((resolve, reject) => {
     // One command line through the shell, so `claude` (claude.cmd on Windows) is found.
-    const p = spawn(commandLine, { cwd, shell: true, stdio: ['pipe', 'pipe', 'pipe'] });
+    const p = spawn(commandLine, { cwd, env, shell: true, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
     let out = '';
     let err = '';
     p.stdout.on('data', (d) => (out += d));
@@ -145,6 +286,22 @@ async function runCommand(command, prompt) {
   return r.out;
 }
 
+/**
+ * The environment for the AI's own Claude Code. When the watcher was started from inside
+ * a Claude Code session (CLAUDECODE is set), that session's variables point Claude Code at
+ * the session's own connection instead of the owner's sign-in, so they are removed.
+ */
+export function ownEnv(env = process.env) {
+  if (!env.CLAUDECODE) return env;
+  const clean = {};
+  for (const [k, v] of Object.entries(env)) {
+    if (k === 'CLAUDECODE' || k.startsWith('CLAUDE_CODE_') || k.startsWith('CLAUDE_AGENT_SDK_') || k === 'ANTHROPIC_BASE_URL') continue;
+    if (['CLAUDE_PID', 'CLAUDE_EFFORT', 'CLAUDE_PREVIEW_CLASSIFIER_FLOOR'].includes(k)) continue;
+    clean[k] = v;
+  }
+  return clean;
+}
+
 /** Claude Code, headless. One conversation continues across messages (the AI remembers). */
 async function runClaude(prompt) {
   const work = join(agent.dir, 'work');
@@ -152,7 +309,7 @@ async function runClaude(prompt) {
   // SYSTEM has no double quotes, so quoting it is safe in both cmd.exe and sh.
   let line = `claude -p --output-format json --append-system-prompt "${SYSTEM}"`;
   if (agent.state.claudeSession) line += ` --resume ${agent.state.claudeSession}`;
-  const r = await run(line, prompt, work);
+  const r = await run(line, prompt, work, ownEnv());
   let out;
   try {
     out = JSON.parse(r.out);
@@ -169,7 +326,7 @@ async function runClaude(prompt) {
 
 const fn = commands[cmd];
 if (!fn) {
-  console.log('Commands: init, invite, add, contacts, send, watch, mcp');
+  console.log('Commands: init, invite, add, contacts, send, watch, autostart, mcp');
   process.exit(cmd ? 1 : 0);
 }
 Promise.resolve(fn()).catch((e) => {
