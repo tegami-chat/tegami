@@ -13,6 +13,7 @@ import { createReadStream, existsSync, mkdtempSync, readFileSync, rmSync, statSy
 import { tmpdir } from 'node:os';
 import { createServer } from 'node:http';
 import { extname, join, resolve } from 'node:path';
+import * as nip19 from 'nostr-tools/nip19';
 import { chromium } from 'playwright-core';
 
 const ROOT = resolve(import.meta.dirname, '..');
@@ -112,10 +113,24 @@ async function waitOpen(page) {
   await page.waitForFunction(() => {
     const t = document.body.innerText;
     return t.includes('＋') && !t.includes('はじめる') && !t.includes('ひらく');
-  }, null, { timeout: 15000 });
+  }, null, { timeout: 15000 }).catch(async () => {
+    throw new Error(`account did not open (page: ${(await text(page)).replace(/\s+/g, ' ').slice(0, 160)})`);
+  });
+}
+/** The moving link's key leaves the address bar (within a moment of loading). */
+async function keyLeavesAddressBar(page) {
+  for (let i = 0; i < 30; i++) {
+    if (!page.url().includes('k=')) return true;
+    await page.waitForTimeout(100);
+  }
+  return false;
 }
 async function waitText(page, s) {
-  await page.waitForFunction((s) => document.body.innerText.includes(s), s, { timeout: 15000 });
+  try {
+    await page.waitForFunction((s) => document.body.innerText.includes(s), s, { timeout: 15000 });
+  } catch {
+    throw new Error(`text not shown: ${s} (page: ${(await text(page)).replace(/\s+/g, ' ').slice(0, 160)})`);
+  }
 }
 /** No 64-character hex string (a raw secret key) anywhere in localStorage. */
 async function noRawKey(page) {
@@ -363,7 +378,9 @@ async function main() {
       const sent = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages')).find((m) => m.file)?.file);
       assert(sent && sent.dim === '1600x1067', `photo not made smaller: ${sent?.dim}`);
       const stored = Buffer.from(await (await fetch(sent.url)).arrayBuffer());
-      assert(stored.length > 0 && stored[0] !== 0xff && stored[0] !== 0x89, 'the server holds an unencrypted image');
+      // Ciphertext looks random, so check the image signatures, not one byte (1 in 128 by chance).
+      const head = stored.subarray(0, 4).toString('hex');
+      assert(stored.length > 0 && !head.startsWith('ffd8ff') && head !== '89504e47', 'the server holds an unencrypted image');
 
       await b.page.goto(ORIGIN + '/');
       await waitText(b.page, '写真'); // chat list preview
@@ -421,6 +438,91 @@ async function main() {
       const vault = await u.page.evaluate(() => localStorage.getItem('tegami.vault'));
       assert(!readFileSync(file, 'utf8').includes(JSON.parse(vault).ciphertext), 'export contains the vault');
       await u.context.close();
+    });
+
+    await test('Another device: a 10-minute link moves the key, name and contacts; both devices then send and receive', async () => {
+      // After a page load the lock screen (passkey) or the screen itself comes up; open if locked.
+      const openIfLocked = async (page, expect) => {
+        await page.waitForFunction((e) => document.body.innerText.includes('ひらく') || document.body.innerText.includes(e), expect, { timeout: 15000 });
+        if ((await text(page)).includes('ひらく')) await button(page, 'ひらく').click();
+      };
+      const inviteOf = async (page) => {
+        await page.goto(ORIGIN + '/add');
+        await openIfLocked(page, '自分の招待リンク');
+        await waitText(page, '自分の招待リンク');
+        return (await text(page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
+      };
+      // A uses a passkey and has a friend B.
+      const a = await newUser(browser);
+      await button(a.page, 'はじめる').click();
+      await waitOpen(a.page);
+      const b = await newUser(browser, { prf: false });
+      await button(b.page, 'はじめる').click();
+      await button(b.page, 'パスキーを使わずに始める').click();
+      await waitOpen(b.page);
+      await b.page.goto(ORIGIN + '/add');
+      await waitText(b.page, '自分の招待リンク');
+      await b.page.getByPlaceholder('相手に表示される名前').fill('びー');
+      const bLink = (await text(b.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
+      await a.page.goto(bLink.replace('https://app.tegami.chat', ORIGIN));
+      await button(a.page, 'ひらく').click();
+      await waitText(a.page, '自分の招待リンク');
+      await a.page.getByPlaceholder('相手に表示される名前').fill('えー');
+      await button(a.page, '追加').click();
+      await waitText(a.page, 'びー');
+      const aInvite = await inviteOf(a.page);
+      const aHex = nip19.decode(aInvite.match(/npub1[0-9a-z]+/)[0]).data;
+
+      // A makes the link in settings.
+      await a.page.goto(ORIGIN + '/settings');
+      await openIfLocked(a.page, '別の端末でも使う');
+      await a.page.getByText('別の端末でも使う').click();
+      await waitText(a.page, 'まで使えます');
+      const moveLink = (await text(a.page)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)?.[0];
+      assert(moveLink, 'no link on the settings screen');
+      assert(await a.page.getByLabel('別の端末で読み取る QR コード').isVisible(), 'no QR code');
+
+      // A second device opens it, gets the same account, name and friend.
+      const a2 = await newUser(browser);
+      await a2.page.goto(moveLink);
+      await waitText(a2.page, 'えーさんのアカウントを受け取りました');
+      assert(await keyLeavesAddressBar(a2.page), `the key stayed in the address bar: ${a2.page.url()}`);
+      await button(a2.page, 'この端末で使う').click();
+      await waitOpen(a2.page);
+      await waitText(a2.page, 'びー');
+      assert((await inviteOf(a2.page)).includes(aInvite.match(/npub1[0-9a-z]+/)[0]), 'not the same account');
+      assert(await noRawKey(a2.page), 'raw key stored on the new device');
+      assert((await storage(a2.page))['tegami.vault'], 'the new device did not protect the key with its passkey');
+
+      // B writes to A: both devices get it. A2 writes to B: A sees its own message too.
+      await b.page.goto(`${ORIGIN}/chat/${aHex}`);
+      await b.page.getByPlaceholder('メッセージ').fill('両方に届く？');
+      await button(b.page, '送る').click();
+      for (const p of [a.page, a2.page]) {
+        await p.goto(ORIGIN + '/');
+        await openIfLocked(p, 'びー');
+        await p.getByText('びー').first().click();
+        await waitText(p, '両方に届く？');
+      }
+      await a2.page.getByPlaceholder('メッセージ').fill('新しい端末から');
+      await button(a2.page, '送る').click();
+      await waitText(a.page, '新しい端末から');
+      await waitText(b.page, '新しい端末から');
+
+      // The same link on a device that already has an account replaces nothing.
+      await b.page.goto(moveLink);
+      await waitText(b.page, 'もう Tegami のアカウントを使っています');
+      assert(await keyLeavesAddressBar(b.page), 'the key stayed in the address bar of a device with an account');
+
+      // A broken or expired link explains itself and lets the person start fresh.
+      const c = await newUser(browser, { prf: false });
+      await c.page.goto(ORIGIN + '/link#k=' + 'A'.repeat(43));
+      await waitText(c.page, 'このリンクは使えません');
+      await button(c.page, '新しく始める').click();
+      await button(c.page, 'はじめる').click();
+      await button(c.page, 'パスキーを使わずに始める').click();
+      await waitOpen(c.page);
+      for (const u of [a, a2, b, c]) await u.context.close();
     });
 
     await test('Group of three: everyone sees the group name and who said what', async () => {

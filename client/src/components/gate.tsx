@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Palette, usePalette } from '@/constants/theme';
-import { useTegami } from '@/lib/tegami';
+import { RELAYS, useTegami } from '@/lib/tegami';
+import { arrival, receiveTransfer, takeLinkKey, type Bundle } from '@/lib/transfer';
 import { PasskeyUnsupportedError, passkeysAvailable } from '@/lib/vault';
 
 // A cancelled or timed-out passkey prompt is not an error worth showing.
@@ -10,11 +11,16 @@ function isCancel(e: unknown) {
   return e instanceof DOMException && (e.name === 'NotAllowedError' || e.name === 'AbortError');
 }
 
+type Moving = { state: 'fetching' } | { state: 'ready'; bundle: Bundle } | { state: 'failed' };
+
 /** First screen (no account yet) and the unlock screen (account protected by a passkey). */
 export function Gate({ locked }: { locked: boolean }) {
   const c = usePalette();
   const s = styles(c);
   const { start, startWithoutPasskey, unlock } = useTegami();
+  const [key] = useState(() => (locked ? null : takeLinkKey()));
+  const [moving, setMoving] = useState<Moving | null>(key ? { state: 'fetching' } : null);
+  const moved = moving?.state === 'ready' ? moving.bundle : undefined;
   const [busy, setBusy] = useState(false);
   const [unsupported, setUnsupported] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -22,12 +28,25 @@ export function Gate({ locked }: { locked: boolean }) {
   // find a passkey saved by the OS. After one miss, say where the passkey lives.
   const [missed, setMissed] = useState(false);
 
+  useEffect(() => {
+    if (!key) return;
+    let alive = true;
+    receiveTransfer(RELAYS, key).then(
+      (bundle) => alive && setMoving({ state: 'ready', bundle }),
+      () => alive && setMoving({ state: 'failed' }),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [key]);
+
   async function go() {
     setBusy(true);
     setFailed(false);
     setUnsupported(false);
     try {
-      await (locked ? unlock() : start());
+      if (moved) arrival.moved = true;
+      await (locked ? unlock() : start(moved));
     } catch (e) {
       if (e instanceof PasskeyUnsupportedError && !locked) setUnsupported(true);
       else if (!isCancel(e)) setFailed(true);
@@ -37,10 +56,36 @@ export function Gate({ locked }: { locked: boolean }) {
     }
   }
 
+  if (moving && moving.state !== 'ready') {
+    return (
+      <View style={s.start}>
+        <Text style={s.brand}>Tegami</Text>
+        {moving.state === 'fetching' ? (
+          <Text style={s.notice}>別の端末から受け取っています</Text>
+        ) : (
+          <>
+            <Text style={s.notice}>このリンクは使えません。リンクは作ってから10分で使えなくなります。元の端末の設定で、もう一度作ってください。</Text>
+            <Pressable style={s.secondary} onPress={() => {
+                // Starting fresh from a dead link: after starting, go to the chats, not /link.
+                arrival.moved = true;
+                setMoving(null);
+              }} role="button">
+              <Text style={s.secondaryText}>新しく始める</Text>
+            </Pressable>
+          </>
+        )}
+      </View>
+    );
+  }
+
   return (
     <View style={s.start}>
       <Text style={s.brand}>Tegami</Text>
-      <Text style={s.promise}>言葉は、自由だ。</Text>
+      {moved ? (
+        <Text style={s.promise}>{moved.myName ? `${moved.myName}さんのアカウントを受け取りました` : 'アカウントを受け取りました'}</Text>
+      ) : (
+        <Text style={s.promise}>言葉は、自由だ。</Text>
+      )}
       {unsupported ? (
         <>
           <Text style={s.notice}>
@@ -53,14 +98,17 @@ export function Gate({ locked }: { locked: boolean }) {
               <Text style={s.primaryText}>保存先を選び直す</Text>
             </Pressable>
           )}
-          <Pressable style={s.secondary} onPress={() => void startWithoutPasskey()} disabled={busy} role="button">
+          <Pressable style={s.secondary} onPress={() => {
+              if (moved) arrival.moved = true;
+              void startWithoutPasskey(moved);
+            }} disabled={busy} role="button">
             <Text style={s.secondaryText}>パスキーを使わずに始める</Text>
           </Pressable>
           <Text style={s.small}>パスキーを使わない時は、鍵をこのブラウザの中だけに保存します。</Text>
         </>
       ) : (
         <Pressable style={[s.primary, busy && s.busy]} onPress={go} disabled={busy} role="button">
-          <Text style={s.primaryText}>{locked ? 'ひらく' : 'はじめる'}</Text>
+          <Text style={s.primaryText}>{locked ? 'ひらく' : moved ? 'この端末で使う' : 'はじめる'}</Text>
         </Pressable>
       )}
       {failed && <Text style={s.notice}>パスキーを使えませんでした。もう一度押してください</Text>}

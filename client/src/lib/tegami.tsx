@@ -10,10 +10,11 @@ import { createDeviceVault, deviceVaultAvailable, openDeviceVault, type DeviceVa
 import { setCrashReports } from './crash';
 import { encryptAndUpload, fileFromRumor, fileTags, keepSent, shrinkImage, type FileRef } from './files';
 import { load, save } from './storage';
+import { bundleSecret, sendTransfer, type Bundle } from './transfer';
 import { createVault, unlockVault, type Vault } from './vault';
 
 // Tegami relays. In development: the relay in app/relay started with `npm run dev`.
-const RELAYS = (process.env.EXPO_PUBLIC_TEGAMI_RELAYS ?? 'wss://relay.tegami.chat').split(',');
+export const RELAYS = (process.env.EXPO_PUBLIC_TEGAMI_RELAYS ?? 'wss://relay.tegami.chat').split(',');
 
 export type Message = {
   id: string;
@@ -60,10 +61,15 @@ type TegamiState = {
   /** My own name, shared through my invite link. Stays on this device otherwise. */
   myName: string;
   setMyName: (name: string) => void;
-  /** Creates a key protected by a new passkey. Throws PasskeyUnsupportedError when not possible. */
-  start: () => Promise<void>;
+  /**
+   * Creates a key protected by a new passkey. Throws PasskeyUnsupportedError when not possible.
+   * With a bundle (an account moved from another device), uses that key, name and contacts.
+   */
+  start: (moved?: Bundle) => Promise<void>;
   /** Creates a key kept on this device only (no passkey can protect it). */
-  startWithoutPasskey: () => Promise<void>;
+  startWithoutPasskey: (moved?: Bundle) => Promise<void>;
+  /** Sends this account to another device. Returns a 10-minute link to open there. */
+  makeTransferLink: () => Promise<{ link: string; expiresAt: number }>;
   /** Asks for the passkey and opens the account. */
   unlock: () => Promise<void>;
   addContact: (pubkey: string, name: string, model?: string) => void;
@@ -316,20 +322,44 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     };
   }, [secret, me, addMessage, rememberGroup]);
 
-  const start = useCallback(async () => {
-    const sk = generateSecretKey();
-    const v = await createVault(sk as Uint8Array<ArrayBuffer>);
-    save('tegami.vault', v);
-    setVault(v);
-    setSecret(sk);
+  // An account moved from another device brings its name, contacts and groups.
+  const adopt = useCallback((moved: Bundle) => {
+    save('tegami.myName', moved.myName);
+    save('tegami.contacts', moved.contacts);
+    save('tegami.groups', moved.groups);
+    setMyNameState(moved.myName);
+    setContacts(moved.contacts);
+    setGroups(moved.groups);
   }, []);
 
-  const startWithoutPasskey = useCallback(async () => {
-    const sk = generateSecretKey();
-    if (deviceVaultAvailable()) save('tegami.device', await createDeviceVault(sk as Uint8Array<ArrayBuffer>));
-    else save('tegami.account', { secretHex: bytesToHex(sk) });
-    setSecret(sk);
-  }, []);
+  const start = useCallback(
+    async (moved?: Bundle) => {
+      const sk = moved ? bundleSecret(moved) : generateSecretKey();
+      const v = await createVault(sk as Uint8Array<ArrayBuffer>);
+      if (moved) adopt(moved);
+      save('tegami.vault', v);
+      setVault(v);
+      setSecret(sk);
+    },
+    [adopt],
+  );
+
+  const startWithoutPasskey = useCallback(
+    async (moved?: Bundle) => {
+      const sk = moved ? bundleSecret(moved) : generateSecretKey();
+      if (deviceVaultAvailable()) save('tegami.device', await createDeviceVault(sk as Uint8Array<ArrayBuffer>));
+      else save('tegami.account', { secretHex: bytesToHex(sk) });
+      if (moved) adopt(moved);
+      setSecret(sk);
+    },
+    [adopt],
+  );
+
+  const makeTransferLink = useCallback(async () => {
+    if (!secret || !pool.current || !authRef.current) throw new Error('not open');
+    const bundle: Bundle = { v: 1, secretHex: bytesToHex(secret), myName, contacts, groups };
+    return sendTransfer(pool.current, RELAYS, authRef.current, bundle, globalThis.location?.origin ?? APP_ORIGIN);
+  }, [secret, myName, contacts, groups]);
 
   const unlock = useCallback(async () => {
     if (!vault) return;
@@ -410,6 +440,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     messages,
     start,
     startWithoutPasskey,
+    makeTransferLink,
     unlock,
     addContact,
     myName,

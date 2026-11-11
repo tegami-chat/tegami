@@ -6,6 +6,10 @@ import { Gate } from '@/components/gate';
 import { usePalette } from '@/constants/theme';
 import { report } from '@/lib/crash';
 import { TegamiProvider, useTegami } from '@/lib/tegami';
+import { captureLinkKey } from '@/lib/transfer';
+
+// Before the router reads the address: take a moving link's key out of it.
+captureLinkKey();
 
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   const c = usePalette();
@@ -39,6 +43,7 @@ function Shell() {
       <Stack.Screen name="group" options={{ title: 'グループを作る' }} />
       <Stack.Screen name="settings" options={{ title: '設定' }} />
       <Stack.Screen name="i" options={{ headerShown: false }} />
+      <Stack.Screen name="link" options={{ title: "" }} />
       <Stack.Screen name="strangers" options={{ title: '知らない人から' }} />
       <Stack.Screen name="chat/[peer]" options={{ title: '' }} />
     </Stack>
