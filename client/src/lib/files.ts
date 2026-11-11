@@ -104,7 +104,8 @@ export function fileFromRumor(content: string, tags: string[][]): FileRef | null
   const nonce = tag('decryption-nonce');
   const sha256 = tag('x');
   if (tag('encryption-algorithm') !== 'aes-gcm' || !key || !nonce || !sha256) return null;
-  if (!/^https:\/\/|^http:\/\/localhost[:/]/.test(content)) return null;
+  // Only https, or this app's own file server (a development address in tests).
+  if (!content.startsWith('https://') && !content.startsWith(`${FILE_SERVER}/`)) return null;
   return {
     url: content,
     type: tag('file-type') ?? 'application/octet-stream',
