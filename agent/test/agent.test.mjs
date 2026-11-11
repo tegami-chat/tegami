@@ -36,13 +36,19 @@ function user() {
   const onauth = async (t) => finalizeEvent(t, sk);
   pool.automaticallyAuth = () => onauth;
   const inbox = [];
-  pool.subscribe([RELAY], { kinds: [1059], '#p': [pk] }, {
-    onauth,
-    onevent(w) {
-      const r = nip17.unwrapEvent(w, sk);
-      if (r.pubkey !== pk) inbox.push(r.content);
-    },
-  });
+  const seen = new Set();
+  // Called again after the test drops connections (this simple user does not resubscribe).
+  const listen = () =>
+    pool.subscribe([RELAY], { kinds: [1059], '#p': [pk] }, {
+      onauth,
+      onevent(w) {
+        if (seen.has(w.id)) return;
+        seen.add(w.id);
+        const r = nip17.unwrapEvent(w, sk);
+        if (r.pubkey !== pk) inbox.push(r.content);
+      },
+    });
+  listen();
   const send = async (to, text) => {
     const rumor = nip59.createRumor({ kind: 14, content: text, tags: [['p', to]] }, sk);
     await Promise.any(pool.publish([RELAY], nip59.createWrap(nip59.createSeal(rumor, sk, to), to), { onauth }));
@@ -56,7 +62,7 @@ function user() {
     }
     return null;
   };
-  return { sk, pk, npub: nip19.npubEncode(pk), pool, inbox, send, waitFor };
+  return { sk, pk, npub: nip19.npubEncode(pk), pool, inbox, send, waitFor, listen };
 }
 
 const relay = process.env.RELAY ? null : spawn(process.execPath, [join(ROOT, '../client/dev/relay.mjs')], { env: { ...process.env, PORT: String(PORT) }, stdio: 'ignore' });
@@ -100,6 +106,14 @@ try {
   watch = spawn(process.execPath, [join(ROOT, 'agent.mjs'), 'watch', '--log', logPath, '--command', `node "${join(ROOT, 'test/echo.mjs')}"`], { env, stdio: 'pipe' });
   check('a restarted watcher answers what arrived while it was off', !!(await owner.waitFor((t) => t === 'echo: よしひろ: 留守の間に')));
   check('the restarted watcher does not answer old messages again', owner.inbox.filter((t) => t === 'echo: よしひろ: こんにちは').length === 1);
+  if (!process.env.RELAY) {
+    // The relay drops every connection (a network blip): the watcher must keep receiving.
+    await fetch(`http://localhost:${PORT}/_drop`, { method: 'POST' });
+    await new Promise((r) => setTimeout(r, 5000));
+    owner.listen();
+    await owner.send(agentPk, '切れた後');
+    check('the watcher keeps receiving after the connection drops', !!(await owner.waitFor((t) => t === 'echo: よしひろ: 切れた後', 12000)));
+  }
   const logText = readFileSync(logPath, 'utf8');
   check('--log writes the log to a file, without message text', logText.includes('replied to よしひろ') && !logText.includes('留守の間に'));
   watch.kill();

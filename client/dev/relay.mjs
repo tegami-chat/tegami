@@ -1,7 +1,7 @@
 // A tiny Nostr relay for local development only.
 // Keeps events and uploaded files in memory. Run: npm run relay  (listens on ws://localhost:7447)
 // Files: PUT /upload and GET /<sha256> on the same port, like relay.tegami.chat (Blossom).
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
 import { verifyEvent } from 'nostr-tools/pure';
@@ -63,6 +63,11 @@ const http = createServer((req, res) => {
     return;
   }
   if (req.url === '/_crashes' && req.method === 'GET') return send(200, JSON.stringify(crashes), 'application/json');
+  // Tests: drop every connection, like a phone that puts the browser in the background.
+  if (req.url === '/_drop' && req.method === 'POST') {
+    for (const c of wss.clients) c.terminate();
+    return send(204);
+  }
   if (req.url === '/upload' && req.method === 'PUT') {
     const chunks = [];
     req.on('data', (c) => chunks.push(c));
@@ -88,6 +93,10 @@ http.listen(PORT);
 const wss = new WebSocketServer({ server: http });
 wss.on('connection', (ws) => {
   subs.set(ws, new Map());
+  // Like relay.tegami.chat: log in first (NIP-42), or reading and writing are refused.
+  const challenge = randomBytes(16).toString('hex');
+  let pubkey = null;
+  ws.send(JSON.stringify(['AUTH', challenge]));
   ws.on('message', (raw) => {
     let msg;
     try {
@@ -96,6 +105,18 @@ wss.on('connection', (ws) => {
       return;
     }
     const [type] = msg;
+    if (type === 'AUTH') {
+      const ev = msg[1];
+      const ok = ev?.kind === 22242 && verifyEvent(ev) && ev.tags.some((t) => t[0] === 'challenge' && t[1] === challenge);
+      if (ok) pubkey = ev.pubkey;
+      ws.send(JSON.stringify(['OK', ev?.id ?? '', ok, ok ? '' : 'auth-required: invalid auth event']));
+      return;
+    }
+    if (!pubkey) {
+      if (type === 'EVENT') ws.send(JSON.stringify(['OK', msg[1]?.id ?? '', false, 'auth-required: log in first']));
+      if (type === 'REQ') ws.send(JSON.stringify(['CLOSED', msg[1], 'auth-required: log in first']));
+      return;
+    }
     if (type === 'EVENT') {
       const ev = msg[1];
       if (!ev || !verifyEvent(ev)) {

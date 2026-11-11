@@ -144,11 +144,28 @@ export class Agent {
     this.pool.automaticallyAuth = () => onauth;
     let eose;
     const synced = new Promise((r) => (eose = r));
-    this.sub = this.pool.subscribe(RELAYS, { kinds: [1059], '#p': [this.pubkey] }, {
-      onauth,
-      oneose: () => eose(),
-      onevent: (wrap) => this.receive(wrap),
-    });
+    // When the connection drops, the library reconnects and asks again before logging
+    // in; the relay refuses and the subscription ends for good. So subscribe again
+    // whenever it ends (the pool logs in first). Envelopes carry a random time up to
+    // 2 days back, so a new subscription looks 3 days back; known messages are skipped.
+    let first = true;
+    const open = () => {
+      if (!this.pool) return;
+      const filter = { kinds: [1059], '#p': [this.pubkey] };
+      if (!first) filter.since = Math.floor(Date.now() / 1000) - 3 * 86400;
+      first = false;
+      const sub = this.pool.subscribe(RELAYS, filter, {
+        onauth,
+        oneose: () => eose(),
+        onevent: (wrap) => this.receive(wrap),
+        onclose: () => {
+          if (this.sub !== sub || !this.pool) return;
+          this.retry = setTimeout(open, 2000);
+        },
+      });
+      this.sub = sub;
+    };
+    open();
     await Promise.race([synced, new Promise((r) => setTimeout(r, 8000))]);
   }
 
@@ -197,7 +214,10 @@ export class Agent {
   }
 
   close() {
-    this.sub?.close();
+    clearTimeout(this.retry);
+    const sub = this.sub;
+    this.sub = null;
+    sub?.close();
     this.pool?.destroy();
     this.pool = null;
   }

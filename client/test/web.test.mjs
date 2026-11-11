@@ -525,6 +525,38 @@ async function main() {
       for (const u of [a, a2, b, c]) await u.context.close();
     });
 
+    await test('Connection dropped (phone put the browser away): messages still arrive after reconnecting', async () => {
+      const make = async (name) => {
+        const u = await newUser(browser, { prf: false });
+        await button(u.page, 'はじめる').click();
+        await button(u.page, 'パスキーを使わずに始める').click();
+        await waitOpen(u.page);
+        await u.page.goto(ORIGIN + '/add');
+        await waitText(u.page, '自分の招待リンク');
+        await u.page.getByPlaceholder('相手に表示される名前').fill(name);
+        u.link = (await text(u.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
+        return u;
+      };
+      const a = await make('えー');
+      const b = await make('びー');
+      await b.page.goto(a.link.replace('https://app.tegami.chat', ORIGIN));
+      await button(b.page, '追加').click();
+      await a.page.goto(b.link.replace('https://app.tegami.chat', ORIGIN));
+      await button(a.page, '追加').click();
+      await a.page.getByPlaceholder('メッセージ').waitFor();
+      await b.page.getByPlaceholder('メッセージ').fill('切れる前');
+      await button(b.page, '送る').click();
+      await waitText(a.page, '切れる前');
+
+      await fetch(`http://localhost:${RELAY_PORT}/_drop`, { method: 'POST' });
+      await a.page.waitForTimeout(4000); // the library reconnects after a short wait
+      await b.page.getByPlaceholder('メッセージ').fill('つなぎ直した後');
+      await button(b.page, '送る').click();
+      await waitText(a.page, 'つなぎ直した後');
+      await a.context.close();
+      await b.context.close();
+    });
+
     await test('Group of three: everyone sees the group name and who said what', async () => {
       // Each person starts without a passkey (fast) and sets a name.
       async function person(name) {
