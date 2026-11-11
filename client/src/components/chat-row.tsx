@@ -42,7 +42,7 @@ export function ChatRow({
         </View>
         {last && (
           <Text style={s.preview} numberOfLines={1}>
-            {last.text}
+            {last.file ? '写真' : last.text}
           </Text>
         )}
       </View>

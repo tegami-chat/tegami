@@ -7,6 +7,7 @@ import { bytesToHex, hexToBytes } from 'nostr-tools/utils';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { createDeviceVault, deviceVaultAvailable, openDeviceVault, type DeviceVault } from './device-vault';
+import { encryptAndUpload, fileFromRumor, fileTags, keepSent, shrinkImage, type FileRef } from './files';
 import { load, save } from './storage';
 import { createVault, unlockVault, type Vault } from './vault';
 
@@ -21,6 +22,8 @@ export type Message = {
   peer: string;
   text: string;
   at: number; // unix seconds
+  /** A photo or file (NIP-17 kind 15). text is empty then. */
+  file?: FileRef;
 };
 
 /** model: for an AI friend, which company's which model (always shown, philosophy #93). */
@@ -64,6 +67,8 @@ type TegamiState = {
   unlock: () => Promise<void>;
   addContact: (pubkey: string, name: string, model?: string) => void;
   send: (peer: string, text: string) => Promise<void>;
+  /** Makes the photo smaller, encrypts it on this device, uploads it and sends it. */
+  sendPhoto: (peer: string, photo: Blob) => Promise<void>;
 };
 
 const Ctx = createContext<TegamiState | null>(null);
@@ -271,7 +276,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       onevent(wrap) {
         try {
           const rumor = nip17.unwrapEvent(wrap, secret);
-          if (rumor.kind !== 14) return;
+          if (rumor.kind !== 14 && rumor.kind !== 15) return;
+          const file = rumor.kind === 15 ? fileFromRumor(rumor.content, rumor.tags) : undefined;
+          if (file === null) return;
           // Everyone in the chat except me: the author and every p tag.
           const others = [rumor.pubkey, ...rumor.tags.filter((t) => t[0] === 'p').map((t) => t[1])].filter(
             (k) => /^[0-9a-f]{64}$/.test(k) && k !== me,
@@ -282,7 +289,11 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
             const subject = rumor.tags.find((t) => t[0] === 'subject')?.[1]?.slice(0, 60);
             rememberGroup(peer, subject, rumor.pubkey);
           }
-          addMessage({ id: rumor.id, from: rumor.pubkey, peer, text: rumor.content, at: rumor.created_at });
+          addMessage(
+            file
+              ? { id: rumor.id, from: rumor.pubkey, peer, text: '', at: rumor.created_at, file }
+              : { id: rumor.id, from: rumor.pubkey, peer, text: rumor.content, at: rumor.created_at },
+          );
         } catch {
           // Not for us or malformed. Ignore.
         }
@@ -332,22 +343,44 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const send = useCallback(
-    async (peer: string, text: string) => {
-      if (!secret || !me || !pool.current) return;
-      // One rumor (kind 14) with a p tag for everyone in the chat, sealed and wrapped once
+  /** Sends one rumor to everyone in the chat. Returns its id. */
+  const deliver = useCallback(
+    async (peer: string, kind: 14 | 15, content: string, extra: string[][] = []) => {
+      if (!secret || !me || !pool.current) throw new Error('not open');
+      // One rumor with a p tag for everyone in the chat, sealed and wrapped once
       // per person and once for myself, so my other devices see it too.
       // (nip17.wrapManyEvents gives the self copy a different rumor without the p tags.)
       const members = peer.split(',');
       const tags = members.map((m) => ['p', m]);
       const subject = groupsRef.current.find((g) => g.id === peer)?.name;
       if (isGroup(peer) && subject) tags.push(['subject', subject]);
-      const rumor = nip59.createRumor({ kind: 14, content: text, tags, created_at: Math.floor(Date.now() / 1000) }, secret);
+      tags.push(...extra);
+      const rumor = nip59.createRumor({ kind, content, tags, created_at: Math.floor(Date.now() / 1000) }, secret);
       const wraps = [...members, me].map((to) => nip59.createWrap(nip59.createSeal(rumor, secret, to), to));
       await Promise.any(wraps.flatMap((w) => pool.current!.publish(RELAYS, w, { onauth: authRef.current ?? undefined })));
-      addMessage({ id: rumor.id, from: me, peer, text, at: rumor.created_at });
+      return rumor;
     },
-    [secret, me, addMessage],
+    [secret, me],
+  );
+
+  const send = useCallback(
+    async (peer: string, text: string) => {
+      const rumor = await deliver(peer, 14, text);
+      addMessage({ id: rumor.id, from: me!, peer, text, at: rumor.created_at });
+    },
+    [deliver, me, addMessage],
+  );
+
+  const sendPhoto = useCallback(
+    async (peer: string, photo: Blob) => {
+      if (!secret) throw new Error('not open');
+      const small = await shrinkImage(photo);
+      const file = await encryptAndUpload(small.bytes, small.type, secret, `${small.width}x${small.height}`);
+      const rumor = await deliver(peer, 15, file.url, fileTags(file));
+      await keepSent(rumor.id, small.bytes, small.type);
+      addMessage({ id: rumor.id, from: me!, peer, text: '', at: rumor.created_at, file });
+    },
+    [secret, deliver, me, addMessage],
   );
 
   const value: TegamiState = {
@@ -366,6 +399,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     myName,
     setMyName,
     send,
+    sendPhoto,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

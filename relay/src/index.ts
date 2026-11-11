@@ -11,6 +11,9 @@
 //   hold only so many connections, and each mailbox holds at most MAX_MAILBOX envelopes.
 //   Keys cost nothing to make, so the address limit is the one that stops floods.
 //
+// Files (Blossom, BUD-01/02): PUT /upload stores an already-encrypted file, GET /<sha256>
+// returns it. Uploads need a signed kind 24242 event; files are deleted after 30 days.
+//
 // TODO: accept writes only from registered Tegami accounts.
 
 import { DurableObject } from 'cloudflare:workers';
@@ -19,7 +22,7 @@ import { verifyEvent, type NostrEvent } from 'nostr-tools/pure';
 type Filter = { kinds?: number[]; '#p'?: string[]; since?: number; until?: number; limit?: number; ids?: string[] };
 type Attachment = { challenge: string; ip: string; pubkey?: string; subs: Record<string, Filter[]> };
 
-type Env = { RELAY: DurableObjectNamespace<Relay> };
+type Env = { RELAY: DurableObjectNamespace<Relay>; FILES: R2Bucket };
 
 const ALLOWED_KINDS = new Set([1059]);
 const MAX_EVENT_BYTES = 128 * 1024;
@@ -31,20 +34,29 @@ const AUTH_WINDOW_SECONDS = 10 * 60;
 const RATE = { ip: { burst: 300, perSecond: 5 }, key: { burst: 120, perSecond: 3 } };
 const MAX_CONNECTIONS_PER_IP = 50;
 const MAX_MAILBOX = 10_000;
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+// Bytes: an address may upload 100 MB at once, then 100 KB per second; a key 50 MB, then 50 KB/s.
+const FILE_RATE = { ip: { burst: 100e6, perSecond: 100e3 }, key: { burst: 50e6, perSecond: 50e3 } };
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, HEAD, PUT, OPTIONS',
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-SHA-256',
+  'Access-Control-Max-Age': '86400',
+};
 
 /** Token bucket: `burst` sends at once, refilling at `perSecond`. */
 class Buckets {
   private b = new Map<string, { tokens: number; at: number }>();
   constructor(private burst: number, private perSecond: number) {}
-  take(key: string): boolean {
+  take(key: string, cost = 1): boolean {
     const t = Date.now() / 1000;
     const cur = this.b.get(key) ?? { tokens: this.burst, at: t };
     cur.tokens = Math.min(this.burst, cur.tokens + (t - cur.at) * this.perSecond);
     cur.at = t;
     if (this.b.size > 50_000) this.b.clear(); // memory guard; buckets only ever err towards allowing
     this.b.set(key, cur);
-    if (cur.tokens < 1) return false;
-    cur.tokens -= 1;
+    if (cur.tokens < cost) return false;
+    cur.tokens -= cost;
     return true;
   }
 }
@@ -64,6 +76,26 @@ const INFO = {
 
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
+    const url = new URL(req.url);
+    if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+    if (url.pathname === '/upload' && req.method === 'PUT') {
+      const headers = new Headers(req.headers);
+      headers.set('X-Tegami-IP', req.headers.get('CF-Connecting-IP') ?? 'unknown');
+      return env.RELAY.get(env.RELAY.idFromName('main')).fetch(new Request(req, { headers }));
+    }
+    const blob = url.pathname.match(/^\/([0-9a-f]{64})(\.[a-z0-9]+)?$/);
+    if (blob && (req.method === 'GET' || req.method === 'HEAD')) {
+      const obj = await env.FILES.get(blob[1]);
+      if (!obj) return new Response('Not found', { status: 404, headers: CORS });
+      return new Response(req.method === 'HEAD' ? null : obj.body, {
+        headers: {
+          ...CORS,
+          'Content-Type': 'application/octet-stream',
+          'Content-Length': String(obj.size),
+          'Cache-Control': 'public, max-age=2592000, immutable',
+        },
+      });
+    }
     if (req.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
       // Cloudflare sets CF-Connecting-IP; a client cannot forge it through the edge.
       const headers = new Headers(req.headers);
@@ -111,6 +143,7 @@ export class Relay extends DurableObject<Env> {
 
   async fetch(req: Request): Promise<Response> {
     const ip = req.headers.get('X-Tegami-IP') ?? 'unknown';
+    if (new URL(req.url).pathname === '/upload') return this.upload(req, ip);
     const open = this.ctx.getWebSockets().filter((w) => (w.deserializeAttachment() as Attachment)?.ip === ip).length;
     if (open >= MAX_CONNECTIONS_PER_IP) return new Response('Too many connections', { status: 429 });
     const pair = new WebSocketPair();
@@ -121,6 +154,43 @@ export class Relay extends DurableObject<Env> {
     server.send(JSON.stringify(['AUTH', att.challenge]));
     if ((await this.ctx.storage.getAlarm()) == null) await this.ctx.storage.setAlarm(Date.now() + 60 * 60 * 1000);
     return new Response(null, { status: 101, webSocket: client });
+  }
+
+  ipBytes = new Buckets(FILE_RATE.ip.burst, FILE_RATE.ip.perSecond);
+  keyBytes = new Buckets(FILE_RATE.key.burst, FILE_RATE.key.perSecond);
+
+  /** Blossom upload. The file is already encrypted on the sender's device. */
+  async upload(req: Request, ip: string): Promise<Response> {
+    const fail = (status: number, reason: string) =>
+      new Response(reason, { status, headers: { ...CORS, 'X-Reason': reason } });
+    let auth: NostrEvent;
+    try {
+      auth = JSON.parse(atob((req.headers.get('Authorization') ?? '').replace(/^Nostr /, '')));
+    } catch {
+      return fail(401, 'auth-required: missing upload authorization');
+    }
+    const tag = (name: string) => auth?.tags?.find((t) => t[0] === name)?.[1];
+    const expiration = Number(tag('expiration') ?? 0);
+    if (auth?.kind !== 24242 || tag('t') !== 'upload' || expiration < now() || !verifyEvent(auth)) {
+      return fail(401, 'auth-required: invalid upload authorization');
+    }
+    const size = Number(req.headers.get('Content-Length') ?? 0);
+    if (!size || size > MAX_FILE_BYTES) return fail(413, 'too large: files up to 10 MB');
+    if (!this.ipBytes.take(ip, size) || !this.keyBytes.take(auth.pubkey, size)) {
+      return fail(429, 'rate-limited: slow down');
+    }
+    const body = await req.arrayBuffer();
+    if (body.byteLength !== size || body.byteLength > MAX_FILE_BYTES) return fail(400, 'invalid: size mismatch');
+    const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', body))]
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+    if (!auth.tags.some((t) => t[0] === 'x' && t[1] === hash)) return fail(401, 'auth-required: hash not authorized');
+    await this.env.FILES.put(hash, body, { customMetadata: { uploader: auth.pubkey } });
+    const base = new URL(req.url).origin;
+    return Response.json(
+      { url: `${base}/${hash}`, sha256: hash, size, type: 'application/octet-stream', uploaded: now() },
+      { headers: CORS },
+    );
   }
 
   async alarm() {
