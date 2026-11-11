@@ -6,10 +6,13 @@ import { Gate } from '@/components/gate';
 import { usePalette } from '@/constants/theme';
 import { report } from '@/lib/crash';
 import { TegamiProvider, useTegami } from '@/lib/tegami';
+import { registerServiceWorker } from '@/lib/push';
 import { captureLinkKey } from '@/lib/transfer';
 
 // Before the router reads the address: take a moving link's key out of it.
 captureLinkKey();
+// Notifications need the service worker in place even while the app is closed.
+registerServiceWorker();
 
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   const c = usePalette();

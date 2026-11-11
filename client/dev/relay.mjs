@@ -33,10 +33,11 @@ function matches(filter, ev) {
 }
 
 const files = new Map(); // sha256 -> Buffer
+const pushDevices = []; // { endpoint, pubkey }
 const crashes = [];
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, HEAD, PUT, POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, HEAD, PUT, POST, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-SHA-256',
 };
 const http = createServer((req, res) => {
@@ -63,6 +64,34 @@ const http = createServer((req, res) => {
     return;
   }
   if (req.url === '/_crashes' && req.method === 'GET') return send(200, JSON.stringify(crashes), 'application/json');
+  // Web Push, like relay.tegami.chat: a public key, and registrations signed with NIP-98.
+  // Registered devices are listed at GET /_push for tests (no push is sent).
+  if (req.url === '/push/key' && req.method === 'GET') {
+    return send(200, JSON.stringify({ key: Buffer.concat([Buffer.from([4]), randomBytes(64)]).toString('base64url') }), 'application/json');
+  }
+  if (req.url === '/_push' && req.method === 'GET') return send(200, JSON.stringify(pushDevices), 'application/json');
+  if (req.url === '/push' && (req.method === 'POST' || req.method === 'DELETE')) {
+    let body = '';
+    req.on('data', (c) => (body += c));
+    req.on('end', () => {
+      try {
+        const ev = JSON.parse(Buffer.from((req.headers.authorization ?? '').replace(/^Nostr /, ''), 'base64').toString());
+        const tag = (n) => ev.tags.find((t) => t[0] === n)?.[1];
+        const hash = createHash('sha256').update(body).digest('hex');
+        const ok = ev.kind === 27235 && verifyEvent(ev) && tag('u') === `http://localhost:${PORT}/push` && tag('method') === req.method && tag('payload') === hash;
+        if (!ok) return send(401, 'auth-required');
+        const { endpoint } = JSON.parse(body);
+        const rest = pushDevices.filter((d) => d.endpoint !== endpoint);
+        pushDevices.length = 0;
+        pushDevices.push(...rest);
+        if (req.method === 'POST') pushDevices.push({ endpoint, pubkey: ev.pubkey });
+        send(204);
+      } catch {
+        send(400, 'invalid');
+      }
+    });
+    return;
+  }
   // Tests: drop every connection, like a phone that puts the browser in the background.
   if (req.url === '/_drop' && req.method === 'POST') {
     for (const c of wss.clients) c.terminate();

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Image, Linking, Pressable, ScrollView, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { Palette, usePalette } from '@/constants/theme';
+import { pushState, type PushState } from '@/lib/push';
 import { useTegami } from '@/lib/tegami';
 
 const STATS_URL = 'https://relay.tegami.chat/stats';
@@ -10,11 +11,27 @@ const STATS_URL = 'https://relay.tegami.chat/stats';
 export default function Settings() {
   const c = usePalette();
   const s = styles(c);
-  const { myName, setMyName, protectedByPasskey, crashReports, setCrashReportsOn, exportChats, makeTransferLink } = useTegami();
+  const { myName, setMyName, protectedByPasskey, crashReports, setCrashReportsOn, exportChats, makeTransferLink, setNotifications } = useTegami();
   const [exported, setExported] = useState(false);
   const [transfer, setTransfer] = useState<{ link: string; expiresAt: number; qr: string } | null>(null);
   const [transferFailed, setTransferFailed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [push, setPush] = useState<PushState>(() => pushState());
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushFailed, setPushFailed] = useState(false);
+
+  async function togglePush(on: boolean) {
+    setPushBusy(true);
+    setPushFailed(false);
+    try {
+      setPush(await setNotifications(on));
+    } catch {
+      setPushFailed(true);
+      setPush(pushState());
+    } finally {
+      setPushBusy(false);
+    }
+  }
 
   // The link stops working after 10 minutes; take it off the screen then.
   useEffect(() => {
@@ -75,6 +92,22 @@ export default function Settings() {
       <View style={s.card}>
         <Text style={s.value}>{protectedByPasskey ? 'パスキーで守っています' : 'このブラウザの中だけに保存しています'}</Text>
       </View>
+
+      <Text style={s.heading}>通知</Text>
+      {push === 'needs-home-screen' ? (
+        <Text style={s.note}>iPhone では、Safari の共有ボタンから「ホーム画面に追加」を選び、ホーム画面の Tegami から開くと通知を使えます。</Text>
+      ) : push === 'unsupported' ? (
+        <Text style={s.note}>このブラウザは通知を使えません。</Text>
+      ) : (
+        <>
+          <View style={[s.card, s.row]}>
+            <Text style={s.label}>新しいメッセージを知らせる</Text>
+            <Switch value={push === 'on'} onValueChange={togglePush} disabled={pushBusy} aria-label="新しいメッセージを知らせる" />
+          </View>
+          {push === 'denied' && <Text style={s.note}>通知が許可されていません。ブラウザか端末の設定で、Tegami の通知を許可してください。</Text>}
+          {pushFailed && <Text style={s.note}>通知を設定できませんでした。通信を確かめて、もう一度切り替えてください。</Text>}
+        </>
+      )}
 
       <Text style={s.heading}>別の端末</Text>
       {transfer ? (

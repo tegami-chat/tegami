@@ -11,6 +11,7 @@ import { setCrashReports } from './crash';
 import { encryptAndUpload, fileFromRumor, fileTags, keepSent, shrinkImage, type FileRef } from './files';
 import { load, save } from './storage';
 import { bundleSecret, sendTransfer, type Bundle } from './transfer';
+import { disablePush, enablePush, type PushState } from './push';
 import { createVault, unlockVault, type Vault } from './vault';
 
 // Tegami relays. In development: the relay in app/relay started with `npm run dev`.
@@ -81,6 +82,8 @@ type TegamiState = {
   exportChats: () => string;
   /** Makes the photo smaller, encrypts it on this device, uploads it and sends it. */
   sendPhoto: (peer: string, photo: Blob) => Promise<void>;
+  /** Turns notifications for this device on or off. Returns the new state. */
+  setNotifications: (on: boolean) => Promise<PushState>;
 };
 
 const Ctx = createContext<TegamiState | null>(null);
@@ -466,7 +469,16 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     [secret, deliver, me, addMessage],
   );
 
+  const setNotifications = useCallback(
+    async (on: boolean) => {
+      if (!secret) throw new Error('not open');
+      return on ? enablePush(secret) : disablePush(secret);
+    },
+    [secret],
+  );
+
   const value: TegamiState = {
+    setNotifications,
     status,
     me,
     protectedByPasskey: !!vault,

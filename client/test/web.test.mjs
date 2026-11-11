@@ -405,13 +405,13 @@ async function main() {
         u.page.evaluate((tag) => setTimeout(() => { throw new Error(`boom-${tag} "my secret text" ${'ab'.repeat(32)}`); }), tag);
 
       // Off by default: nothing is sent.
-      assert(!(await u.page.getByRole('switch').isChecked()), 'crash reports are on by default');
+      assert(!(await u.page.getByRole('switch', { name: 'Tegami に報告を送る' }).isChecked()), 'crash reports are on by default');
       await throwSoon('off');
       await u.page.waitForTimeout(800);
       assert(!(await crashes()).some((r) => r.message.includes('boom-off')), 'a report was sent while off');
 
       // On: sent, without the quoted text or the long hex.
-      await u.page.getByRole('switch').click();
+      await u.page.getByRole('switch', { name: 'Tegami に報告を送る' }).click();
       await throwSoon('on');
       let got;
       for (let i = 0; i < 30 && !got; i++) {
@@ -427,7 +427,7 @@ async function main() {
       await u.page.reload();
       await button(u.page, 'ひらく').click();
       await waitText(u.page, '鍵の守り方');
-      assert(await u.page.getByRole('switch').isChecked(), 'the choice was not remembered');
+      assert(await u.page.getByRole('switch', { name: 'Tegami に報告を送る' }).isChecked(), 'the choice was not remembered');
 
       // Export: a JSON file with the chats, never the key.
       const dl = u.page.waitForEvent('download');
@@ -555,6 +555,57 @@ async function main() {
       await waitText(a.page, 'つなぎ直した後');
       await a.context.close();
       await b.context.close();
+    });
+
+    await test('Notifications: the switch registers this device with the relay (signed), and turning off removes it', async () => {
+      // Test Chrome cannot reach a real push service, so the subscription is stood in for.
+      const u = await newUser(browser, { prf: false });
+      await u.context.grantPermissions(['notifications'], { origin: ORIGIN });
+      await u.page.addInitScript(() => {
+        PushManager.prototype.subscribe = async () => ({ endpoint: 'https://fcm.googleapis.com/fcm/send/test-device', unsubscribe: async () => true });
+        PushManager.prototype.getSubscription = async () => null;
+      });
+      await u.page.reload();
+      await button(u.page, 'はじめる').click();
+      await button(u.page, 'パスキーを使わずに始める').click();
+      await waitOpen(u.page);
+      assert(await u.page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration('/sw.js'))), 'the service worker is not registered');
+      await u.page.getByText('設定', { exact: true }).click();
+      const sw = u.page.getByRole('switch', { name: '新しいメッセージを知らせる' });
+      await sw.waitFor();
+      assert(!(await sw.isChecked()), 'notifications are on before asking');
+      await sw.click();
+      const devices = async () => (await fetch(`http://localhost:${RELAY_PORT}/_push`)).json();
+      let list = [];
+      for (let i = 0; i < 30 && !list.length; i++) {
+        await u.page.waitForTimeout(100);
+        list = await devices();
+      }
+      assert(list.some((d) => d.endpoint.endsWith('/test-device')), 'the device was not registered with the relay');
+      assert(await sw.isChecked(), 'the switch did not turn on');
+      await sw.click();
+      for (let i = 0; i < 30 && list.length; i++) {
+        await u.page.waitForTimeout(100);
+        list = await devices();
+      }
+      assert(!list.length, 'the device was not removed when turning off');
+      await u.context.close();
+    });
+
+    await test('Notifications on iPhone outside the Home Screen: says how to add Tegami to the Home Screen', async () => {
+      const context = await browser.newContext({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1' });
+      await context.addInitScript(() => {
+        delete window.PushManager;
+        delete window.PublicKeyCredential; // start without a passkey, quickly
+      });
+      const page = await context.newPage();
+      await page.goto(ORIGIN + '/');
+      await button(page, 'はじめる').click();
+      await button(page, 'パスキーを使わずに始める').click();
+      await waitOpen(page);
+      await page.getByText('設定', { exact: true }).click();
+      await waitText(page, 'ホーム画面に追加');
+      await context.close();
     });
 
     await test('Group of three: everyone sees the group name and who said what', async () => {
