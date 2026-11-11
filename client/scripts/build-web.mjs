@@ -5,7 +5,7 @@
 // from an earlier build (for example the local relay used by the tests). So this
 // always clears the cache and refuses to finish if the bundle points anywhere else.
 import { execSync } from 'node:child_process';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 const ROOT = resolve(import.meta.dirname, '..');
@@ -36,4 +36,14 @@ if (local.size) {
   console.error(`\nThe bundle points at ${[...local].join(', ')}. Do not deploy.`);
   process.exit(1);
 }
+// Home Screen app (iPhone needs it for notifications): the manifest and icon links.
+const html = join(ROOT, 'dist/index.html');
+const head = [
+  '<link rel="manifest" href="/manifest.webmanifest">',
+  '<link rel="apple-touch-icon" href="/apple-touch-icon.png">',
+  '<meta name="apple-mobile-web-app-capable" content="yes">',
+  '<meta name="apple-mobile-web-app-title" content="Tegami">',
+].join('');
+const page = readFileSync(html, 'utf8');
+if (!page.includes('rel="manifest"')) writeFileSync(html, page.replace('</head>', `${head}</head>`));
 console.log(`\nOK: the bundle talks only to ${RELAY}.`);

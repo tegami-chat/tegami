@@ -21,12 +21,14 @@
 import { DurableObject } from 'cloudflare:workers';
 import { verifyEvent, type NostrEvent } from 'nostr-tools/pure';
 
+import { MAX_DEVICES, Vapid, allowedEndpoint, nip98 } from './push';
 import { STATS_DESCRIPTION, Stats } from './stats';
 
 type Filter = { kinds?: number[]; '#p'?: string[]; since?: number; until?: number; limit?: number; ids?: string[] };
 type Attachment = { challenge: string; ip: string; pubkey?: string; subs: Record<string, Filter[]> };
 
-type Env = { RELAY: DurableObjectNamespace<Relay>; FILES: R2Bucket };
+// VAPID_JWK: the relay's Web Push key (Worker secret). DEV_PUSH=1 lets tests push to localhost.
+type Env = { RELAY: DurableObjectNamespace<Relay>; FILES: R2Bucket; VAPID_JWK?: string; DEV_PUSH?: string };
 
 const ALLOWED_KINDS = new Set([1059]);
 const MAX_EVENT_BYTES = 128 * 1024;
@@ -43,7 +45,7 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const FILE_RATE = { ip: { burst: 100e6, perSecond: 100e3 }, key: { burst: 50e6, perSecond: 50e3 } };
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, HEAD, PUT, POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, HEAD, PUT, POST, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-SHA-256',
   'Access-Control-Max-Age': '86400',
 };
@@ -89,6 +91,15 @@ export default {
     }
     if (url.pathname === '/stats' && req.method === 'GET') {
       return env.RELAY.get(env.RELAY.idFromName('main')).fetch(req);
+    }
+    if (url.pathname === '/push/key' && req.method === 'GET') {
+      if (!env.VAPID_JWK) return new Response('Push is not set up', { status: 503, headers: CORS });
+      return Response.json({ key: new Vapid(env.VAPID_JWK).publicKey }, { headers: { ...CORS, 'Cache-Control': 'public, max-age=3600' } });
+    }
+    if (url.pathname === '/push' && (req.method === 'POST' || req.method === 'DELETE')) {
+      const headers = new Headers(req.headers);
+      headers.set('X-Tegami-IP', req.headers.get('CF-Connecting-IP') ?? 'unknown');
+      return env.RELAY.get(env.RELAY.idFromName('main')).fetch(new Request(req, { headers }));
     }
     if (url.pathname === '/upload' && req.method === 'PUT') {
       const headers = new Headers(req.headers);
@@ -158,6 +169,11 @@ export class Relay extends DurableObject<Env> {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS events (
       id TEXT PRIMARY KEY, kind INTEGER, created_at INTEGER, received_at INTEGER, p TEXT, raw TEXT)`);
     this.sql.exec('CREATE INDEX IF NOT EXISTS events_p ON events (p, created_at)');
+    // Web Push: which devices to tell when an envelope for this key arrives.
+    this.sql.exec('CREATE TABLE IF NOT EXISTS push (endpoint TEXT PRIMARY KEY, pubkey TEXT, created_at INTEGER)');
+    this.sql.exec('CREATE INDEX IF NOT EXISTS push_pubkey ON push (pubkey)');
+    this.vapid = env.VAPID_JWK ? new Vapid(env.VAPID_JWK) : null;
+    this.devPush = env.DEV_PUSH === '1';
     this.stats = new Stats(this.sql);
   }
 
@@ -165,6 +181,7 @@ export class Relay extends DurableObject<Env> {
     const ip = req.headers.get('X-Tegami-IP') ?? 'unknown';
     const path = new URL(req.url).pathname;
     if (path === '/upload') return this.upload(req, ip);
+    if (path === '/push') return this.pushRoute(req, ip);
     if (path === '/crash') return this.crash(req, ip);
     if (path === '/stats') {
       return Response.json({ ...STATS_DESCRIPTION, days: this.stats.recent() }, { headers: { ...CORS, 'Cache-Control': 'public, max-age=300' } });
@@ -247,6 +264,63 @@ export class Relay extends DurableObject<Env> {
     return Response.json(
       { url: `${base}/${hash}`, sha256: hash, size, type: 'application/octet-stream', uploaded: now() },
       { headers: CORS },
+    );
+  }
+
+  vapid: Vapid | null;
+  devPush: boolean;
+  pushRate = new Buckets(30, 0.1); // registering: per address, 30 at once, then one every 10 seconds
+  lastPush = new Map<string, number>();
+
+  /** POST /push registers this device for a key (NIP-98 signed); DELETE removes it. */
+  async pushRoute(req: Request, ip: string): Promise<Response> {
+    const fail = (status: number, why: string) => new Response(why, { status, headers: CORS });
+    if (!this.pushRate.take(ip)) return fail(429, 'rate-limited');
+    const body = await req.text();
+    if (body.length > 4096) return fail(413, 'too large');
+    // The signed URL: the public address (wrangler dev rewrites the host, so tests sign localhost).
+    const pubkey = await nip98(req, body, (u) => u === 'https://relay.tegami.chat/push' || (this.devPush && /^http:\/\/(localhost|127\.0\.0\.1):\d+\/push$/.test(u)));
+    if (!pubkey) return fail(401, 'auth-required: sign the request (NIP-98)');
+    let endpoint: unknown;
+    try {
+      endpoint = JSON.parse(body)?.endpoint;
+    } catch {
+      return fail(400, 'invalid json');
+    }
+    if (!allowedEndpoint(endpoint, this.devPush)) return fail(400, 'invalid: not a push service address');
+    if (req.method === 'DELETE') {
+      this.sql.exec('DELETE FROM push WHERE endpoint = ? AND pubkey = ?', endpoint, pubkey);
+      return new Response(null, { status: 204, headers: CORS });
+    }
+    this.sql.exec('INSERT OR REPLACE INTO push (endpoint, pubkey, created_at) VALUES (?, ?, ?)', endpoint, pubkey, now());
+    // Keep the newest MAX_DEVICES for this key.
+    this.sql.exec(
+      'DELETE FROM push WHERE pubkey = ? AND endpoint NOT IN (SELECT endpoint FROM push WHERE pubkey = ? ORDER BY created_at DESC LIMIT ?)',
+      pubkey,
+      pubkey,
+      MAX_DEVICES,
+    );
+    return new Response(null, { status: 204, headers: CORS });
+  }
+
+  /** Tells this key's devices that something arrived. At most once every 3 seconds per key. */
+  async notify(pubkey: string) {
+    if (!this.vapid) return;
+    const t = Date.now();
+    if (t - (this.lastPush.get(pubkey) ?? 0) < 3000) return;
+    this.lastPush.set(pubkey, t);
+    if (this.lastPush.size > 50_000) this.lastPush.clear();
+    const rows = this.sql.exec('SELECT endpoint FROM push WHERE pubkey = ?', pubkey).toArray();
+    await Promise.all(
+      rows.map(async (r) => {
+        const endpoint = r.endpoint as string;
+        try {
+          const status = await this.vapid!.send(endpoint);
+          if (status === 404 || status === 410) this.sql.exec('DELETE FROM push WHERE endpoint = ?', endpoint);
+        } catch {
+          // The push service is unreachable; try again with the next message.
+        }
+      }),
     );
   }
 
@@ -336,6 +410,8 @@ export class Relay extends DurableObject<Env> {
     reply(true, res.rowsWritten === 0 ? 'duplicate: already have this event' : '');
     if (res.rowsWritten === 0) return;
     this.stats.add('envelopes');
+    // Not for the sender's own copy: the sending connection is logged in as the sender.
+    if (p !== att.pubkey) this.ctx.waitUntil(this.notify(p));
 
     for (const other of this.ctx.getWebSockets()) {
       const o = other.deserializeAttachment() as Attachment;
