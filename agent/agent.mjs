@@ -15,7 +15,9 @@
 //       Only one watcher runs per AI friend; a second one exits (code 3).
 //       Messages that arrived while the watcher was off (up to a day) are answered.
 //   tegami-agent autostart on | off | status
-//       Windows: start the watcher, hidden, every time you sign in.
+//       Windows: a Task Scheduler task runs `keep`, hidden, every time you sign in.
+//   tegami-agent keep [--log <file>]
+//       Runs `watch` and starts it again 10 seconds after it stops.
 //   tegami-agent mcp
 //       MCP server over stdio, so Claude Code (or any MCP client) can read and send
 //       Tegami messages during a conversation.
@@ -153,29 +155,48 @@ const commands = {
     if (process.platform !== 'win32') {
       throw new Error('autostart is only built for Windows so far. Run `watch` under launchd (macOS) or systemd (Linux).');
     }
-    const startup = join(process.env.APPDATA, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup');
-    const vbs = join(startup, `tegami-agent-${agentName}.vbs`);
     const logPath = join(agent.dir, 'watch.log');
+    const task = `Tegami agent ${agentName}`;
+    // The first version put a script in the Startup folder; it vanished around a Windows upgrade.
+    const legacy = join(process.env.APPDATA, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup', `tegami-agent-${agentName}.vbs`);
+    rmSync(legacy, { force: true });
+    const schtasks = (...args) => execFileSync('schtasks', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    const exists = () => {
+      try {
+        schtasks('/Query', '/TN', task);
+        return true;
+      } catch {
+        return false;
+      }
+    };
     if (action === 'on') {
-      writeFileSync(vbs, '﻿' + startupScript(vbs, logPath), 'utf16le');
+      const xml = join(agent.dir, 'task.xml');
+      writeFileSync(xml, '﻿' + taskXml(logPath), 'utf16le');
+      try {
+        schtasks('/Create', '/TN', task, '/XML', xml, '/F');
+      } finally {
+        rmSync(xml, { force: true });
+      }
       // Start it now too, so there is no need to sign out and in.
-      spawn('wscript.exe', [vbs], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
-      console.log(`On. ${agent.profile.name} starts hidden every time you sign in.`);
+      if (!runningPid(keepLockFile())) schtasks('/Run', '/TN', task);
+      console.log(`On. ${agent.profile.name} starts hidden every time you sign in (Task Scheduler: "${task}").`);
       console.log(`Log: ${logPath}`);
     } else if (action === 'off') {
-      rmSync(vbs, { force: true });
-      const pid = runningPid();
-      if (pid) {
+      if (exists()) schtasks('/Delete', '/TN', task, '/F');
+      let stopped = false;
+      for (const pid of [runningPid(keepLockFile()), runningPid()]) {
+        if (!pid) continue;
         try {
           execFileSync('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: 'ignore' });
+          stopped = true;
         } catch {
           // already gone
         }
       }
-      console.log(`Off. ${agent.profile.name} no longer starts at sign-in${pid ? ', and the running watcher was stopped' : ''}.`);
+      console.log(`Off. ${agent.profile.name} no longer starts at sign-in${stopped ? ', and the running watcher was stopped' : ''}.`);
     } else if (action === 'status') {
       const pid = runningPid();
-      console.log(`Starts at sign-in: ${existsSync(vbs) ? 'yes' : 'no'}`);
+      console.log(`Starts at sign-in: ${exists() ? 'yes' : 'no'}`);
       console.log(`Running now:       ${pid ? `yes (process ${pid})` : 'no'}`);
       if (agent.state.alive) console.log(`Last heartbeat:    ${new Date(agent.state.alive * 1000).toLocaleString()}`);
       if (existsSync(logPath)) {
@@ -184,6 +205,25 @@ const commands = {
       }
     } else {
       throw new Error('Use: autostart on | off | status');
+    }
+  },
+  async keep() {
+    // Runs the watcher and starts it again 10 seconds after it stops, unless another
+    // watcher is already running (exit code 3). Task Scheduler starts this at sign-in.
+    needsInit(agent);
+    const logTo = flag('log');
+    if (typeof logTo === 'string') logFile = logTo;
+    if (!takeLock(keepLockFile())) return;
+    for (;;) {
+      const args = [SCRIPT, 'watch', '--agent', agentName, ...(logFile ? ['--log', logFile] : [])];
+      const code = await new Promise((resolve) => {
+        const child = spawn(process.execPath, args, { stdio: 'ignore', windowsHide: true });
+        child.on('exit', resolve);
+        child.on('error', () => resolve(1));
+      });
+      if (code === 3) return;
+      log(`watcher stopped (exit ${code}); starting again in 10 seconds`);
+      await new Promise((r) => setTimeout(r, 10_000));
     }
   },
   async mcp() {
@@ -209,6 +249,7 @@ function log(text) {
 // ---------- one watcher per AI friend ----------
 
 const lockFile = () => join(agent.dir, 'watch.pid');
+const keepLockFile = () => join(agent.dir, 'keep.pid');
 
 function alive(pid) {
   try {
@@ -219,21 +260,21 @@ function alive(pid) {
   }
 }
 
-function runningPid() {
+function runningPid(file = lockFile()) {
   try {
-    const pid = Number(readFileSync(lockFile(), 'utf8'));
+    const pid = Number(readFileSync(file, 'utf8'));
     return pid && pid !== process.pid && alive(pid) ? pid : null;
   } catch {
     return null;
   }
 }
 
-function takeLock() {
-  if (runningPid()) return false;
-  writeFileSync(lockFile(), String(process.pid));
+function takeLock(file = lockFile()) {
+  if (runningPid(file)) return false;
+  writeFileSync(file, String(process.pid));
   const release = () => {
     try {
-      if (readFileSync(lockFile(), 'utf8') === String(process.pid)) rmSync(lockFile());
+      if (readFileSync(file, 'utf8') === String(process.pid)) rmSync(file);
     } catch {
       // nothing to release
     }
@@ -244,25 +285,53 @@ function takeLock() {
 }
 
 /**
- * The script Windows runs at sign-in (Startup folder). It starts the watcher with no
- * window and starts it again 10 seconds after it stops, until this file is deleted
- * (autostart off) or another watcher is already running (exit code 3).
+ * The Task Scheduler task: at this person's sign-in, run `keep` with no window
+ * (conhost --headless), as this person, with no time limit and also on battery.
  */
-function startupScript(self, logPath) {
-  const q = (s) => `""${s}""`;
-  const cmd = `${q(process.execPath)} ${q(SCRIPT)} watch --agent ${q(agentName)} --log ${q(logPath)}`;
-  return [
-    "' tegami-agent: starts the AI friend's watcher at sign-in. Delete this file to stop.",
-    'Set sh = CreateObject("WScript.Shell")',
-    'Set fs = CreateObject("Scripting.FileSystemObject")',
-    'Do',
-    `  code = sh.Run("${cmd}", 0, True)`,
-    '  If code = 3 Then WScript.Quit',
-    '  WScript.Sleep 10000',
-    `  If Not fs.FileExists("${self}") Then WScript.Quit`,
-    'Loop',
-    '',
-  ].join('\r\n');
+function taskXml(logPath) {
+  const x = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const user = `${process.env.USERDOMAIN}\\${process.env.USERNAME}`;
+  const args = `--headless "${process.execPath}" "${SCRIPT}" keep --agent "${agentName}" --log "${logPath}"`;
+  return `<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>Tegami: keeps the AI friend "${x(agentName)}" answering messages (tegami-agent). Turn off with: node agent.mjs autostart off</Description>
+  </RegistrationInfo>
+  <Triggers>
+    <LogonTrigger>
+      <Enabled>true</Enabled>
+      <UserId>${x(user)}</UserId>
+      <Delay>PT20S</Delay>
+    </LogonTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <UserId>${x(user)}</UserId>
+      <LogonType>InteractiveToken</LogonType>
+      <RunLevel>LeastPrivilege</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RestartOnFailure>
+      <Interval>PT1M</Interval>
+      <Count>10</Count>
+    </RestartOnFailure>
+    <Enabled>true</Enabled>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>${x(join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'conhost.exe'))}</Command>
+      <Arguments>${x(args)}</Arguments>
+      <WorkingDirectory>${x(agent.dir)}</WorkingDirectory>
+    </Exec>
+  </Actions>
+</Task>
+`;
 }
 
 /** Runs a shell command line, feeding `input` on stdin. Resolves with the exit code and output. */
@@ -326,7 +395,7 @@ async function runClaude(prompt) {
 
 const fn = commands[cmd];
 if (!fn) {
-  console.log('Commands: init, invite, add, contacts, send, watch, autostart, mcp');
+  console.log("Commands: init, invite, add, contacts, send, watch, keep, autostart, mcp");
   process.exit(cmd ? 1 : 0);
 }
 Promise.resolve(fn()).catch((e) => {
