@@ -316,6 +316,65 @@ async function main() {
       await a.context.close();
       await b.context.close();
     });
+    await test('Group of three: everyone sees the group name and who said what', async () => {
+      // Each person starts without a passkey (fast) and sets a name.
+      async function person(name) {
+        const u = await newUser(browser, { prf: false });
+        await button(u.page, 'はじめる').click();
+        await button(u.page, 'パスキーを使わずに始める').click();
+        await waitOpen(u.page);
+        await u.page.goto(ORIGIN + '/add');
+        await u.page.getByPlaceholder('相手に表示される名前').fill(name);
+        u.link = (await text(u.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
+        return u;
+      }
+      async function befriend(u, other) {
+        await u.page.goto(ORIGIN + '/add');
+        await waitText(u.page, '自分の招待リンク');
+        await u.page.getByPlaceholder('https://app.tegami.chat/i#npub…').fill(other.link);
+        await button(u.page, '追加').click();
+        await u.page.getByPlaceholder('メッセージ').waitFor();
+      }
+      const a = await person('あきら');
+      const b = await person('ぶんた');
+      const c = await person('ちえ');
+      await befriend(a, b);
+      await befriend(a, c);
+      await befriend(b, a);
+      await befriend(c, a);
+
+      await a.page.goto(ORIGIN + '/');
+      await a.page.getByText('グループを作る').click();
+      await a.page.getByPlaceholder('グループの名前').fill('家族');
+      assert(await button(a.page, '作る').isDisabled(), 'can create a group with nobody picked');
+      await a.page.getByRole('checkbox', { name: 'ぶんた' }).click();
+      await a.page.getByRole('checkbox', { name: 'ちえ' }).click();
+      await button(a.page, '作る').click();
+      await a.page.getByPlaceholder('メッセージ').fill('みんなへ');
+      await button(a.page, '送る').click();
+
+      // B knows A, so the group shows in B's list under its name.
+      await b.page.goto(ORIGIN + '/');
+      await waitText(b.page, '家族');
+      await b.page.getByText('家族').click();
+      await waitText(b.page, 'みんなへ');
+      assert((await text(b.page)).includes('あきら'), "B does not see who wrote");
+      await b.page.getByPlaceholder('メッセージ').fill('了解');
+      await button(b.page, '送る').click();
+
+      // C sees both messages in the same group.
+      await c.page.goto(ORIGIN + '/');
+      await waitText(c.page, '家族');
+      await c.page.getByText('家族').click();
+      await waitText(c.page, '了解');
+      const t = await text(c.page);
+      assert(t.includes('みんなへ') && t.includes('あきら'), `C screen: ${t.slice(0, 120)}`);
+      // The 1:1 chat between C and A stays separate.
+      await c.page.goto(ORIGIN + '/');
+      await waitText(c.page, 'あきら');
+      for (const u of [a, b, c]) await u.context.close();
+    });
+
     await test('AI friend: invite link shows the model, and the AI on the computer replies', async () => {
       const AGENT = join(ROOT, '../agent');
       const home = mkdtempSync(join(tmpdir(), 'tegami-agent-'));

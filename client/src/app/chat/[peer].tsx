@@ -3,19 +3,20 @@ import { useMemo, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Palette, usePalette } from '@/constants/theme';
-import { shortId, useTegami } from '@/lib/tegami';
+import { chatName, isGroup, personName, shortId, useTegami } from '@/lib/tegami';
 
 export default function Chat() {
   const c = usePalette();
   const s = styles(c);
   const { peer } = useLocalSearchParams<{ peer: string }>();
-  const { me, contacts, messages, send, addContact } = useTegami();
+  const { me, contacts, groups, messages, send, addContact } = useTegami();
   const [newName, setNewName] = useState('');
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [failed, setFailed] = useState(false);
   const list = useRef<FlatList>(null);
 
+  const group = !!peer && isGroup(peer);
   const contact = contacts.find((x) => x.pubkey === peer);
   const thread = useMemo(() => messages.filter((m) => m.peer === peer).reverse(), [messages, peer]);
 
@@ -38,10 +39,18 @@ export default function Chat() {
     <KeyboardAvoidingView style={s.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Stack.Screen
         options={{
-          title: contact ? (contact.model ? `${contact.name}（${contact.model}）` : contact.name) : peer ? shortId(peer) : '',
+          title: group
+            ? chatName(peer, contacts, groups)
+            : contact
+              ? contact.model
+                ? `${contact.name}（${contact.model}）`
+                : contact.name
+              : peer
+                ? shortId(peer)
+                : '',
         }}
       />
-      {!contact && peer && (
+      {!group && !contact && peer && (
         <View style={s.addBar}>
           <TextInput
             style={s.addInput}
@@ -70,6 +79,7 @@ export default function Chat() {
           const mine = item.from === me;
           return (
             <View style={[s.bubble, mine ? s.mine : s.theirs]}>
+              {group && !mine && <Text style={s.author}>{personName(item.from, contacts)}</Text>}
               <Text style={s.text} selectable>
                 {item.text}
               </Text>
@@ -119,6 +129,7 @@ const styles = (c: Palette) =>
     mine: { alignSelf: 'flex-end', backgroundColor: c.mine, borderBottomRightRadius: 4 },
     theirs: { alignSelf: 'flex-start', backgroundColor: c.theirs, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: c.line },
     text: { fontSize: 16, color: c.text, lineHeight: 22 },
+    author: { fontSize: 12, color: c.accent, fontWeight: '600', marginBottom: 2 },
     time: { fontSize: 11, color: c.muted, alignSelf: 'flex-end', marginTop: 2 },
     addBar: {
       flexDirection: 'row',

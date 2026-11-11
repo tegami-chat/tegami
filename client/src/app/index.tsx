@@ -3,37 +3,47 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ChatRow } from '@/components/chat-row';
 import { Palette, usePalette } from '@/constants/theme';
-import { strangers, useTegami } from '@/lib/tegami';
+import { chatName, strangers, useTegami } from '@/lib/tegami';
 
 export default function Chats() {
   const c = usePalette();
   const s = styles(c);
-  const { contacts, messages } = useTegami();
+  const { contacts, groups, messages } = useTegami();
 
-  const rows = contacts
-    .map((contact) => {
-      const last = [...messages].reverse().find((m) => m.peer === contact.pubkey);
-      return { contact, last };
-    })
+  const lastOf = (room: string) => [...messages].reverse().find((m) => m.peer === room);
+  const rows = [
+    ...contacts.map((c) => ({ room: c.pubkey, name: c.name, model: c.model, group: false })),
+    ...groups.map((g) => ({ room: g.id, name: chatName(g.id, contacts, groups), model: undefined, group: true })),
+  ]
+    .map((r) => ({ ...r, last: lastOf(r.room) }))
     .sort((a, b) => (b.last?.at ?? 0) - (a.last?.at ?? 0));
-  const unknown = strangers(contacts, messages);
+  const unknown = strangers(contacts, messages, groups);
 
   return (
     <View style={s.fill}>
       <Stack.Screen
         options={{
           headerRight: () => (
-            <Link href="/add" asChild>
-              <Pressable role="button" aria-label="友達を追加" style={s.headerButton}>
-                <Text style={s.headerButtonText}>＋</Text>
-              </Pressable>
-            </Link>
+            <View style={s.headerButtons}>
+              {contacts.length >= 2 && (
+                <Link href="/group" asChild>
+                  <Pressable role="button" style={s.headerButton}>
+                    <Text style={s.headerLink}>グループを作る</Text>
+                  </Pressable>
+                </Link>
+              )}
+              <Link href="/add" asChild>
+                <Pressable role="button" aria-label="友達を追加" style={s.headerButton}>
+                  <Text style={s.headerButtonText}>＋</Text>
+                </Pressable>
+              </Link>
+            </View>
           ),
         }}
       />
       <FlatList
         data={rows}
-        keyExtractor={(r) => r.contact.pubkey}
+        keyExtractor={(r) => r.room}
         ListHeaderComponent={
           unknown.length > 0 ? (
             <Pressable style={s.strangers} onPress={() => router.push('/strangers')} role="button">
@@ -42,7 +52,9 @@ export default function Chats() {
             </Pressable>
           ) : null
         }
-        renderItem={({ item }) => <ChatRow peer={item.contact.pubkey} name={item.contact.name} model={item.contact.model} last={item.last} />}
+        renderItem={({ item }) => (
+          <ChatRow peer={item.room} name={item.name} model={item.model} last={item.last} mark={item.group ? '◎' : undefined} />
+        )}
       />
     </View>
   );
@@ -51,7 +63,9 @@ export default function Chats() {
 const styles = (c: Palette) =>
   StyleSheet.create({
     fill: { flex: 1, backgroundColor: c.background },
-    headerButton: { paddingHorizontal: 16, paddingVertical: 4 },
+    headerButtons: { flexDirection: 'row', alignItems: 'center' },
+    headerButton: { paddingHorizontal: 12, paddingVertical: 4 },
+    headerLink: { fontSize: 15, color: c.accent, fontWeight: '600' },
     headerButtonText: { fontSize: 26, color: c.accent },
     strangers: {
       flexDirection: 'row',
