@@ -31,7 +31,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { verifyEvent, type NostrEvent } from 'nostr-tools/pure';
 
-import { MAX_DEVICES, Vapid, allowedEndpoint, nip98 } from './push';
+import { MAX_DEVICES, Vapid, allowedEndpoint, nip98, validKeys, type PushKeys } from './push';
 import { STATS_DESCRIPTION, Stats } from './stats';
 
 type Filter = { kinds?: number[]; '#p'?: string[]; since?: number; until?: number; limit?: number; ids?: string[] };
@@ -203,6 +203,12 @@ export class Relay extends DurableObject<Env> {
     // Web Push: which devices to tell when an envelope for this key arrives.
     this.sql.exec('CREATE TABLE IF NOT EXISTS push (endpoint TEXT PRIMARY KEY, pubkey TEXT, created_at INTEGER)');
     this.sql.exec('CREATE INDEX IF NOT EXISTS push_pubkey ON push (pubkey)');
+    // The device's push keys (to encrypt what kind of thing arrived). Added later: older rows have none.
+    try {
+      this.sql.exec('ALTER TABLE push ADD COLUMN keys TEXT');
+    } catch {
+      // already there
+    }
     // Recovery backups (encrypted on the device). Not touched by the 30-day clean-up.
     this.sql.exec('CREATE TABLE IF NOT EXISTS backups (id TEXT PRIMARY KEY, pubkey TEXT, data TEXT, updated_at INTEGER)');
     this.sql.exec('CREATE INDEX IF NOT EXISTS backups_pubkey ON backups (pubkey)');
@@ -358,8 +364,9 @@ export class Relay extends DurableObject<Env> {
     const pubkey = await nip98(req, body, (u) => u === 'https://relay.tegami.chat/push' || (this.devPush && /^http:\/\/(localhost|127\.0\.0\.1):\d+\/push$/.test(u)));
     if (!pubkey) return fail(401, 'auth-required: sign the request (NIP-98)');
     let endpoint: unknown;
+    let keys: unknown;
     try {
-      endpoint = JSON.parse(body)?.endpoint;
+      ({ endpoint, keys } = JSON.parse(body) ?? {});
     } catch {
       return fail(400, 'invalid json');
     }
@@ -368,7 +375,14 @@ export class Relay extends DurableObject<Env> {
       this.sql.exec('DELETE FROM push WHERE endpoint = ? AND pubkey = ?', endpoint, pubkey);
       return new Response(null, { status: 204, headers: CORS });
     }
-    this.sql.exec('INSERT OR REPLACE INTO push (endpoint, pubkey, created_at) VALUES (?, ?, ?)', endpoint, pubkey, now());
+    if (keys !== undefined && !validKeys(keys)) return fail(400, 'invalid: push keys');
+    this.sql.exec(
+      'INSERT OR REPLACE INTO push (endpoint, pubkey, created_at, keys) VALUES (?, ?, ?, ?)',
+      endpoint,
+      pubkey,
+      now(),
+      keys ? JSON.stringify({ p256dh: (keys as PushKeys).p256dh, auth: (keys as PushKeys).auth }) : null,
+    );
     // Keep the newest MAX_DEVICES for this key.
     this.sql.exec(
       'DELETE FROM push WHERE pubkey = ? AND endpoint NOT IN (SELECT endpoint FROM push WHERE pubkey = ? ORDER BY created_at DESC LIMIT ?)',
@@ -379,19 +393,25 @@ export class Relay extends DurableObject<Env> {
     return new Response(null, { status: 204, headers: CORS });
   }
 
-  /** Tells this key's devices that something arrived. At most once every 3 seconds per key. */
-  async notify(pubkey: string) {
+  /**
+   * Tells this key's devices that something arrived: a message, or a call ringing.
+   * At most once every 3 seconds per key and kind. The kind is encrypted for each device.
+   */
+  async notify(pubkey: string, kind: 'message' | 'call') {
     if (!this.vapid) return;
     const t = Date.now();
-    if (t - (this.lastPush.get(pubkey) ?? 0) < 3000) return;
-    this.lastPush.set(pubkey, t);
+    const slot = `${pubkey}:${kind}`;
+    if (t - (this.lastPush.get(slot) ?? 0) < 3000) return;
+    this.lastPush.set(slot, t);
     if (this.lastPush.size > 50_000) this.lastPush.clear();
-    const rows = this.sql.exec('SELECT endpoint FROM push WHERE pubkey = ?', pubkey).toArray();
+    const rows = this.sql.exec('SELECT endpoint, keys FROM push WHERE pubkey = ?', pubkey).toArray();
+    const payload = JSON.stringify({ t: kind });
     await Promise.all(
       rows.map(async (r) => {
         const endpoint = r.endpoint as string;
         try {
-          const status = await this.vapid!.send(endpoint);
+          const keys = r.keys ? (JSON.parse(r.keys as string) as PushKeys) : null;
+          const status = await this.vapid!.send(endpoint, payload, keys);
           if (status === 404 || status === 410) this.sql.exec('DELETE FROM push WHERE endpoint = ?', endpoint);
         } catch {
           // The push service is unreachable; try again with the next message.
@@ -487,7 +507,14 @@ export class Relay extends DurableObject<Env> {
     if (res.rowsWritten === 0) return;
     this.stats.add('envelopes');
     // Not for the sender's own copy: the sending connection is logged in as the sender.
-    if (p !== att.pubkey) this.ctx.waitUntil(this.notify(p));
+    // Envelopes that expire soon are call signals (or moving an account). Only a ringing call,
+    // marked t=call by the app, is worth a notification; the rest of a call's signals are not.
+    if (p !== att.pubkey) {
+      const short = ev.tags.some((t) => t[0] === 'expiration');
+      const call = ev.tags.some((t) => t[0] === 't' && t[1] === 'call');
+      if (!short) this.ctx.waitUntil(this.notify(p, 'message'));
+      else if (call) this.ctx.waitUntil(this.notify(p, 'call'));
+    }
 
     for (const other of this.ctx.getWebSockets()) {
       const o = other.deserializeAttachment() as Attachment;

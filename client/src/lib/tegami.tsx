@@ -12,7 +12,7 @@ import { encryptAndUpload, fileFromRumor, fileTags, forgetFile, keepSent, keptFi
 import { backoff, loadOutbox, publishOne, saveOutbox, type Outgoing } from './outbox';
 import { load, save } from './storage';
 import { bundleSecret, sendTransfer, type Bundle } from './transfer';
-import { disablePush, enablePush, type PushState } from './push';
+import { disablePush, enablePush, refreshPush, type PushState } from './push';
 import { SIGNAL_KIND, freshSignal, wrapSignal } from './signal';
 import { BackupGoneError, type BackupRef, clearLocal, deleteBackup, deriveKeys, loadLocal, makeCode, putBackup, recoveryOnHere, saveLocal, takeRestoredKeys } from './recovery';
 import { createVault, unlockVault, type Vault } from './vault';
@@ -842,7 +842,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       );
       // My own signals coming back to this device are not for me.
       seenSignals.current.add(rumor.id);
-      const wraps = (alsoMe ? [to, me] : [to]).map((k) => wrapSignal(rumor, secret, k));
+      // Only the ringing offer to the other person is marked as a call (not my own copy).
+      const wraps = (alsoMe ? [to, me] : [to]).map((k) => wrapSignal(rumor, secret, k, data.t === 'offer' && k === to));
       await Promise.any(wraps.flatMap((w) => pool.current!.publish(RELAYS, w, { onauth: authRef.current ?? undefined })));
     },
     [secret, me],
@@ -854,6 +855,11 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     },
     [addMessage],
   );
+
+  // Opening the app with notifications on: register this device again (keys, new address).
+  useEffect(() => {
+    if (secret) void refreshPush(secret);
+  }, [secret]);
 
   const setNotifications = useCallback(
     async (on: boolean) => {

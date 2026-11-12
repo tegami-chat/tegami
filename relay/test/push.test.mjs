@@ -19,20 +19,50 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const b64u = (buf) => Buffer.from(buf).toString('base64url');
 
 // ---------- the stand-in push service ----------
-const received = []; // { path, auth }
+const received = []; // { path, auth, ttl, coding, body }
 const push = createServer((req, res) => {
-  received.push({ path: req.url, auth: req.headers.authorization ?? '', ttl: req.headers.ttl });
-  res.writeHead(req.url === '/gone' ? 410 : 201);
-  res.end();
+  const chunks = [];
+  req.on('data', (c) => chunks.push(c));
+  req.on('end', () => {
+    received.push({ path: req.url, auth: req.headers.authorization ?? '', ttl: req.headers.ttl, coding: req.headers['content-encoding'], body: Buffer.concat(chunks) });
+    res.writeHead(req.url === '/gone' ? 410 : 201);
+    res.end();
+  });
 }).listen(PUSH_PORT);
+
+// ---------- a device's push keys, and decrypting what it receives (RFC 8291 / 8188) ----------
+const device = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+const devicePublic = new Uint8Array(await crypto.subtle.exportKey('raw', device.publicKey));
+const authSecret = crypto.getRandomValues(new Uint8Array(16));
+const deviceKeys = { p256dh: Buffer.from(devicePublic).toString('base64url'), auth: Buffer.from(authSecret).toString('base64url') };
+async function hkdf(salt, ikm, info, bytes) {
+  const k = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info }, k, bytes * 8));
+}
+async function decryptPush(body) {
+  const salt = body.subarray(0, 16);
+  const idlen = body[20];
+  const asPublic = body.subarray(21, 21 + idlen);
+  const cipher = body.subarray(21 + idlen);
+  const as = await crypto.subtle.importKey('raw', asPublic, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  const shared = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: as }, device.privateKey, 256));
+  const ikm = await hkdf(authSecret, shared, Buffer.concat([Buffer.from('WebPush: info\0'), devicePublic, asPublic]), 32);
+  const cek = await hkdf(salt, ikm, Buffer.from('Content-Encoding: aes128gcm\0'), 16);
+  const nonce = await hkdf(salt, ikm, Buffer.from('Content-Encoding: nonce\0'), 12);
+  const key = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['decrypt']);
+  const plain = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: nonce }, key, cipher));
+  let end = plain.length - 1;
+  while (end >= 0 && plain[end] === 0) end--; // padding
+  return JSON.parse(Buffer.from(plain.subarray(0, end)).toString()); // plain[end] is the 0x02 delimiter
+}
 const endpoint = (path) => `http://localhost:${PUSH_PORT}${path}`;
 
 // ---------- helpers ----------
 async function sha256hex(text) {
   return Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))).toString('hex');
 }
-async function register(sk, ep, method = 'POST', { sign = true } = {}) {
-  const body = JSON.stringify({ endpoint: ep });
+async function register(sk, ep, method = 'POST', { sign = true, keys } = {}) {
+  const body = JSON.stringify(keys ? { endpoint: ep, keys } : { endpoint: ep });
   const headers = { 'Content-Type': 'application/json' };
   if (sign) {
     const ev = finalizeEvent(
@@ -128,6 +158,28 @@ await wait(3500);
 await a.send(wrapTo(alice, bobPub, 'four'));
 await wait(1500);
 check('no push after turning off', received.filter((r) => r.path === '/bob').length === 3);
+
+// A device that registered its keys learns what arrived: a message or a ringing call,
+// encrypted for that device. The rest of a call's signals do not notify.
+const carol = generateSecretKey();
+const carolPub = getPublicKey(carol);
+check('push keys that are not keys are refused', (await register(carol, endpoint('/carol'), 'POST', { keys: { p256dh: 'x', auth: 'y' } })) === 400);
+check('carol registers a device with its keys', (await register(carol, endpoint('/carol'), 'POST', { keys: deviceKeys })) === 204);
+const carolGot = () => received.filter((r) => r.path === '/carol');
+await a.send(wrapTo(alice, carolPub, 'hello carol'));
+await wait(1500);
+const first = carolGot()[0];
+check('the push is encrypted for the device (aes128gcm)', first?.coding === 'aes128gcm' && first.body.length > 86);
+check('…and says a message arrived', (await decryptPush(first.body).catch(() => null))?.t === 'message');
+const short = (tags) =>
+  finalizeEvent({ kind: 1059, created_at: Math.floor(Date.now() / 1000), tags: [['p', carolPub], ['expiration', String(Math.floor(Date.now() / 1000) + 60)], ...tags], content: 'sealed' }, generateSecretKey());
+await a.send(short([['t', 'call']]));
+await wait(1500);
+check('a ringing call notifies at once, and says it is a call', carolGot().length === 2 && (await decryptPush(carolGot()[1].body).catch(() => null))?.t === 'call');
+await wait(3500);
+await a.send(short([]));
+await wait(1500);
+check('other short-lived envelopes (the rest of a call) do not notify', carolGot().length === 2);
 
 a.ws.close();
 b.ws.close();

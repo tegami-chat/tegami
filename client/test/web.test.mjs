@@ -776,7 +776,11 @@ async function main() {
       const u = await newUser(browser, { prf: false });
       await u.context.grantPermissions(['notifications'], { origin: ORIGIN });
       await u.page.addInitScript(() => {
-        PushManager.prototype.subscribe = async () => ({ endpoint: 'https://fcm.googleapis.com/fcm/send/test-device', unsubscribe: async () => true });
+        PushManager.prototype.subscribe = async () => ({
+          endpoint: 'https://fcm.googleapis.com/fcm/send/test-device',
+          toJSON: () => ({ endpoint: 'https://fcm.googleapis.com/fcm/send/test-device', keys: { p256dh: 'BTESTp256dh', auth: 'TESTauth' } }),
+          unsubscribe: async () => true,
+        });
         PushManager.prototype.getSubscription = async () => null;
       });
       await u.page.reload();
@@ -796,6 +800,7 @@ async function main() {
         list = await devices();
       }
       assert(list.some((d) => d.endpoint.endsWith('/test-device')), 'the device was not registered with the relay');
+      assert(list.some((d) => d.keys?.p256dh === 'BTESTp256dh' && d.keys?.auth === 'TESTauth'), 'the device keys were not sent to the relay');
       assert(await sw.isChecked(), 'the switch did not turn on');
       await sw.click();
       for (let i = 0; i < 30 && list.length; i++) {
@@ -919,6 +924,9 @@ async function main() {
         const exp = Number(ev.tags.find((t) => t[0] === 'expiration')?.[1]);
         assert(ev.kind === 1059 && exp > now - 60 && exp <= now + 61, `envelope without a short expiration: ${JSON.stringify(ev.tags)}`);
       }
+      // Only the ringing offer to B is marked as a call (so B's notification can say so).
+      const marked = sent.filter((ev) => ev.tags.some((t) => t[0] === 't' && t[1] === 'call'));
+      assert(marked.length === 1 && marked[0].tags.find((t) => t[0] === 'p')?.[1] === b.hex, `call marks: ${marked.length}`);
       for (const u of [a, b]) await u.context.close();
     });
 

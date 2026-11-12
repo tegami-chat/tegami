@@ -86,12 +86,72 @@ export class Vapid {
     return `vapid t=${unsigned}.${b64u(sig)}, k=${this.publicKey}`;
   }
 
-  /** Sends one empty push. Returns the HTTP status (404 or 410: the subscription is gone). */
-  async send(endpoint: string): Promise<number> {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { Authorization: await this.header(endpoint), TTL: '86400', Urgency: 'high', 'Content-Length': '0' },
-    });
+  /**
+   * Sends one push. With the device's keys, the push carries `payload`, encrypted for that
+   * device only (RFC 8291); the push service cannot read it. Without keys (devices that
+   * registered before keys were kept), an empty push. Returns the HTTP status
+   * (404 or 410: the subscription is gone).
+   */
+  async send(endpoint: string, payload?: string, keys?: PushKeys | null): Promise<number> {
+    const headers: Record<string, string> = { Authorization: await this.header(endpoint), TTL: '86400', Urgency: 'high' };
+    let body: Uint8Array | undefined;
+    if (payload && keys) {
+      body = await encryptPayload(new TextEncoder().encode(payload), keys);
+      headers['Content-Encoding'] = 'aes128gcm';
+      headers['Content-Type'] = 'application/octet-stream';
+    } else {
+      headers['Content-Length'] = '0';
+    }
+    const res = await fetch(endpoint, { method: 'POST', headers, body });
     return res.status;
   }
+}
+
+/** A device's push keys: its public key (p256dh, 65 bytes) and auth secret (16 bytes), base64url. */
+export type PushKeys = { p256dh: string; auth: string };
+
+export function validKeys(k: unknown): k is PushKeys {
+  const o = k as PushKeys;
+  try {
+    return !!o && fromB64u(o.p256dh).length === 65 && fromB64u(o.auth).length === 16;
+  } catch {
+    return false;
+  }
+}
+
+async function hkdf(salt: Uint8Array, ikm: Uint8Array, info: Uint8Array, bytes: number) {
+  const key = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info }, key, bytes * 8));
+}
+
+const concat = (...parts: Uint8Array[]) => {
+  const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+  let i = 0;
+  for (const p of parts) {
+    out.set(p, i);
+    i += p.length;
+  }
+  return out;
+};
+const text = (s: string) => new TextEncoder().encode(s);
+
+/** Web Push message encryption (RFC 8291) with the aes128gcm content coding (RFC 8188), one record. */
+export async function encryptPayload(plain: Uint8Array, keys: PushKeys): Promise<Uint8Array> {
+  const uaPublic = fromB64u(keys.p256dh);
+  const authSecret = fromB64u(keys.auth);
+  const as = (await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits'])) as CryptoKeyPair;
+  const asPublic = new Uint8Array((await crypto.subtle.exportKey('raw', as.publicKey)) as ArrayBuffer);
+  const ua = await crypto.subtle.importKey('raw', uaPublic, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  // Workers' types call the field $public; the runtime reads "public" (the standard name).
+  const ecdh = { name: 'ECDH', public: ua } as unknown as SubtleCryptoDeriveKeyAlgorithm;
+  const shared = new Uint8Array(await crypto.subtle.deriveBits(ecdh, as.privateKey, 256));
+  const ikm = await hkdf(authSecret, shared, concat(text('WebPush: info\0'), uaPublic, asPublic), 32);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const cek = await hkdf(salt, ikm, text('Content-Encoding: aes128gcm\0'), 16);
+  const nonce = await hkdf(salt, ikm, text('Content-Encoding: nonce\0'), 12);
+  const key = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt']);
+  // 0x02: the last (and only) record.
+  const cipher = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, key, concat(plain, new Uint8Array([2]))));
+  const rs = new Uint8Array([0, 0, 16, 0]); // record size 4096
+  return concat(salt, rs, new Uint8Array([asPublic.length]), asPublic, cipher);
 }

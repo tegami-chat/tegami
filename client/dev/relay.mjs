@@ -83,11 +83,11 @@ const http = createServer((req, res) => {
         const hash = createHash('sha256').update(body).digest('hex');
         const ok = ev.kind === 27235 && verifyEvent(ev) && tag('u') === `http://localhost:${PORT}/push` && tag('method') === req.method && tag('payload') === hash;
         if (!ok) return send(401, 'auth-required');
-        const { endpoint } = JSON.parse(body);
+        const { endpoint, keys } = JSON.parse(body);
         const rest = pushDevices.filter((d) => d.endpoint !== endpoint);
         pushDevices.length = 0;
         pushDevices.push(...rest);
-        if (req.method === 'POST') pushDevices.push({ endpoint, pubkey: ev.pubkey });
+        if (req.method === 'POST') pushDevices.push({ endpoint, pubkey: ev.pubkey, keys });
         send(204);
       } catch {
         send(400, 'invalid');

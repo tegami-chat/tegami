@@ -16,18 +16,19 @@ export const SIGNAL_TTL = 60;
 
 export type Rumor = ReturnType<typeof nip59.createRumor>;
 
-/** Seals the rumor for `to` and wraps it with an expiration tag (nip59.createWrap has no tags). */
-export function wrapSignal(rumor: Rumor, secret: Uint8Array, to: string, now = Math.floor(Date.now() / 1000)) {
+/**
+ * Seals the rumor for `to` and wraps it with an expiration tag (nip59.createWrap has no tags).
+ * call: marks the envelope of a ringing call (t=call, visible to the relay) so the relay can
+ * notify "a call" instead of "a message". The relay learns only that this envelope rings.
+ */
+export function wrapSignal(rumor: Rumor, secret: Uint8Array, to: string, call = false, now = Math.floor(Date.now() / 1000)) {
   const seal = nip59.createSeal(rumor, secret, to);
   const k = generateSecretKey();
   return finalizeEvent(
     {
       kind: 1059,
       created_at: now,
-      tags: [
-        ['p', to],
-        ['expiration', String(now + SIGNAL_TTL)],
-      ],
+      tags: [['p', to], ['expiration', String(now + SIGNAL_TTL)], ...(call ? [['t', 'call']] : [])],
       content: nip44.encrypt(JSON.stringify(seal), nip44.getConversationKey(k, to)),
     },
     k,
