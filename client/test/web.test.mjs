@@ -1870,8 +1870,11 @@ async function main() {
       await u.page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
       await u.page.waitForTimeout(800);
       await waitText(u.page, 'びー ▾');
-      await leaveOpenRequest(aKey, Date.now());
+      // The screen comes back first and the request is written a moment later (both are woken
+      // by the same tap): the app looks again for a few seconds.
       await u.page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+      await u.page.waitForTimeout(700);
+      await leaveOpenRequest(aKey, Date.now());
       await waitOpen(u.page);
       await waitText(u.page, 'えー ▾');
       // The request is used once: coming back to the screen again stays on A after switching to B.

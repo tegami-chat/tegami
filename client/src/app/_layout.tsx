@@ -75,18 +75,28 @@ export default function RootLayout() {
       if (entry && entry.id !== accounts().current) goToAccount(entry.id);
     };
     const check = () => void takeOpenRequest().then(open);
+    // Coming back to the screen may happen before the service worker has written the
+    // request (the tap wakes both at once), so look again a few times for a few seconds.
+    let timers: ReturnType<typeof setTimeout>[] = [];
+    const checkForAWhile = () => {
+      timers.forEach(clearTimeout);
+      timers = [0, 400, 1000, 2000, 3500, 6000].map((ms) => setTimeout(check, ms));
+    };
     const sw = typeof navigator !== 'undefined' ? navigator.serviceWorker : undefined;
     const onMessage = (e: MessageEvent) => {
       if (e.data?.tegami === 'open') check();
     };
     const onVisible = () => {
-      if (globalThis.document?.visibilityState === 'visible') check();
+      if (globalThis.document?.visibilityState === 'visible') checkForAWhile();
     };
-    check();
+    checkForAWhile();
     sw?.addEventListener('message', onMessage);
     globalThis.document?.addEventListener?.('visibilitychange', onVisible);
     globalThis.addEventListener?.('focus', onVisible);
+    globalThis.addEventListener?.('pageshow', onVisible);
     return () => {
+      timers.forEach(clearTimeout);
+      globalThis.removeEventListener?.('pageshow', onVisible);
       sw?.removeEventListener('message', onMessage);
       globalThis.document?.removeEventListener?.('visibilitychange', onVisible);
       globalThis.removeEventListener?.('focus', onVisible);
