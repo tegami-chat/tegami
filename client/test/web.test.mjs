@@ -1202,7 +1202,7 @@ async function main() {
 
       // The switch hides the counts (and the tab number), and brings them back.
       await a.page.getByText('設定', { exact: true }).click();
-      const sw = a.page.getByRole('switch', { name: '未読の数を表示する' });
+      const sw = a.page.getByRole('switch', { name: '未読数を表示' });
       await sw.waitFor();
       assert(await sw.isChecked(), 'unread counts are off by default');
       await sw.click();
@@ -1211,7 +1211,7 @@ async function main() {
       await waitText(a.page, 'さん');
       assert((await unreadBadges(a.page).count()) === 0, 'counts shown while turned off');
       await a.page.goto(ORIGIN + '/settings');
-      await a.page.getByRole('switch', { name: '未読の数を表示する' }).click();
+      await a.page.getByRole('switch', { name: '未読数を表示' }).click();
       await a.page.goto(ORIGIN + '/');
       await a.page.getByLabel('未読 1件').waitFor({ timeout: 5000 });
 
@@ -1247,7 +1247,7 @@ async function main() {
       for (const u of [a, a2, b, c]) await u.context.close();
     });
 
-    await test('Outbox: written while the relay is down, kept through a reload, delivered exactly once when it is back; 送信をやめる removes one', async () => {
+    await test('Outbox: written while the relay is down, kept through a reload, delivered exactly once when it is back; 削除する removes one', async () => {
       const a = await person(browser, 'あさ');
       const b = await person(browser, 'ばん');
       await befriend(b, a);
@@ -1266,7 +1266,12 @@ async function main() {
 
       // Giving up on one removes it here.
       await a.page.getByText('やめる分').click();
-      await button(a.page, '送信をやめる').click();
+      // Like LINE: resend now, or delete. Resending while the relay is still down keeps it waiting.
+      await button(a.page, '再送する').click();
+      await a.page.waitForTimeout(500);
+      assert((await text(a.page)).includes('やめる分'), 'resending removed the message');
+      await a.page.getByText('やめる分').click();
+      await button(a.page, '削除する').click();
       await noText(a.page, 'やめる分', 300);
 
       // Still waiting after a reload.
@@ -1500,7 +1505,7 @@ async function main() {
       // X replies to something B never had: a quiet line instead of the quote.
       await relaySend(x, wrapTo(x, b.hex, rumorTo(x, b.hex, '昔の話', [['e', 'f'.repeat(64), '']])));
       await waitText(b.page, '昔の話');
-      await waitText(b.page, 'メッセージがこの端末にありません');
+      await waitText(b.page, 'このメッセージはありません');
       await b.context.close();
     });
 

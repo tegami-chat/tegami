@@ -128,6 +128,8 @@ type TegamiState = {
   markRead: (peer: string) => void;
   /** Stops sending a message that is still waiting, and removes it from this device. */
   cancelSend: (id: string) => void;
+  /** Tries to send what is waiting now, without waiting for the next automatic try. */
+  retrySend: () => void;
 };
 
 const Ctx = createContext<TegamiState | null>(null);
@@ -815,6 +817,12 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     [secret, me, build, saveBox, addMessage, flush],
   );
 
+  const retrySend = useCallback(() => {
+    failures.current = 0;
+    clearTimeout(outboxTimer.current);
+    void flushRef.current();
+  }, []);
+
   const cancelSend = useCallback(
     (id: string) => {
       if (!outbox.current.some((o) => o.id === id)) return;
@@ -960,6 +968,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     setShowUnread,
     markRead,
     cancelSend,
+    retrySend,
     recoveryOn,
     recoveryBehind: recoveryOn && recoveryFailures >= RECOVERY_FAILURES_SHOWN,
     makeRecoveryCode,
