@@ -11,7 +11,61 @@ const STATS_URL = 'https://relay.tegami.chat/stats';
 export default function Settings() {
   const c = usePalette();
   const s = styles(c);
-  const { myName, setMyName, protectedByPasskey, crashReports, setCrashReportsOn, exportChats, makeTransferLink, setNotifications } = useTegami();
+  const {
+    myName,
+    setMyName,
+    protectedByPasskey,
+    crashReports,
+    setCrashReportsOn,
+    exportChats,
+    makeTransferLink,
+    setNotifications,
+    recoveryOn,
+    makeRecoveryCode,
+    turnOffRecovery,
+    recoveryBehind,
+  } = useTegami();
+  // The recovery code is shown once, right after it is made, and never kept on screen after.
+  const [newCode, setNewCode] = useState<string | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [recoveryBusy, setRecoveryBusy] = useState(false);
+  const [recoveryFailed, setRecoveryFailed] = useState<null | 'make' | 'off'>(null);
+
+  async function makeCode() {
+    setRecoveryBusy(true);
+    setRecoveryFailed(null);
+    setCodeCopied(false);
+    try {
+      setNewCode(await makeRecoveryCode());
+    } catch {
+      setRecoveryFailed('make');
+    } finally {
+      setRecoveryBusy(false);
+    }
+  }
+
+  async function stopRecovery() {
+    setRecoveryBusy(true);
+    setRecoveryFailed(null);
+    try {
+      await turnOffRecovery();
+      setNewCode(null);
+    } catch {
+      setRecoveryFailed('off');
+    } finally {
+      setRecoveryBusy(false);
+    }
+  }
+
+  async function copyCode() {
+    if (!newCode) return;
+    try {
+      await navigator.clipboard.writeText(newCode);
+      setCodeCopied(true);
+    } catch {
+      await Share.share({ message: newCode });
+    }
+  }
   const [exported, setExported] = useState(false);
   const [transfer, setTransfer] = useState<{ link: string; expiresAt: number; qr: string } | null>(null);
   const [transferFailed, setTransferFailed] = useState(false);
@@ -128,6 +182,43 @@ export default function Settings() {
       )}
       {transferFailed && <Text style={s.note}>リンクを作れませんでした。通信を確かめて、もう一度押してください。</Text>}
 
+      <Text style={s.heading}>復元コード</Text>
+      {newCode ? (
+        <View style={[s.card, s.transfer]}>
+          <Text style={s.code} selectable testID="recovery-code">
+            {newCode}
+          </Text>
+          <Pressable onPress={copyCode} role="button">
+            <Text style={s.action}>{codeCopied ? 'コピーしました' : 'コードをコピー'}</Text>
+          </Pressable>
+          <Text style={s.warn}>このコードは今だけ表示します。パスワード管理アプリか紙に残してください。</Text>
+          <Text style={s.warn}>コードを知っている人は、あなたのアカウントを使えます。コードが無いと、Tegami でも戻せません。</Text>
+          <Pressable onPress={() => setNewCode(null)} role="button">
+            <Text style={s.action}>残しました</Text>
+          </Pressable>
+        </View>
+      ) : recoveryOn ? (
+        <>
+          <View style={s.card}>
+            <Text style={s.value}>端末を全部なくしても、復元コードで戻せます</Text>
+          </View>
+          <Pressable style={[s.card, recoveryBusy && s.busy]} onPress={makeCode} disabled={recoveryBusy} role="button">
+            <Text style={s.action}>新しいコードにする</Text>
+          </Pressable>
+          <Text style={s.note}>新しいコードにすると、前のコードは使えなくなります。</Text>
+          <Pressable style={[s.card, recoveryBusy && s.busy]} onPress={stopRecovery} disabled={recoveryBusy} role="button">
+            <Text style={s.action}>復元コードをやめる</Text>
+          </Pressable>
+        </>
+      ) : (
+        <Pressable style={[s.card, recoveryBusy && s.busy]} onPress={makeCode} disabled={recoveryBusy} role="button">
+          <Text style={s.action}>復元コードを作る</Text>
+        </Pressable>
+      )}
+      {recoveryBehind && !newCode && <Text style={s.note}>復元コードの控えを更新できていません。通信を確かめてください。</Text>}
+      {recoveryFailed === 'make' && <Text style={s.note}>復元コードを作れませんでした。通信を確かめて、もう一度押してください。</Text>}
+      {recoveryFailed === 'off' && <Text style={s.note}>復元コードをやめられませんでした。通信を確かめて、もう一度押してください。</Text>}
+
       <Text style={s.heading}>アプリが落ちた時</Text>
       <View style={[s.card, s.row]}>
         <Text style={s.label}>Tegami に報告を送る</Text>
@@ -163,6 +254,8 @@ const styles = (c: Palette) =>
     transfer: { alignItems: 'center', gap: 12 },
     qr: { width: 220, height: 220, borderRadius: 8, backgroundColor: '#fff' },
     linkText: { fontSize: 12, color: c.muted, textAlign: 'center' },
+    code: { fontSize: 20, color: c.text, fontWeight: '600', letterSpacing: 1, textAlign: 'center', fontFamily: 'monospace' },
+    busy: { opacity: 0.5 },
     warn: { fontSize: 13, color: c.text, lineHeight: 20, textAlign: 'center' },
     input: {
       backgroundColor: c.surface,

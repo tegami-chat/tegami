@@ -16,6 +16,16 @@
 // Files (Blossom, BUD-01/02): PUT /upload stores an already-encrypted file, GET /<sha256>
 // returns it. Uploads need a signed kind 24242 event; files are deleted after 30 days.
 //
+// Recovery backups: PUT /backup/<id> stores an account backup that was encrypted on the
+// person's device with a key from their recovery code; GET /backup/<id> returns it (no
+// login: the id comes from the code and cannot be guessed); DELETE /backup/<id> removes
+// it. Writing and deleting need a NIP-98 signature, and only the key that first stored a
+// backup can replace or delete it. The app signs with a key derived from the recovery
+// code, not with the account's key, so the relay cannot tell whose backup it is. The
+// relay keeps the id, the ciphertext, that signing key and the time of the last upload,
+// until the person deletes it (no 30-day limit). It cannot read the backup or find one
+// without the code.
+//
 // TODO: accept writes only from registered Tegami accounts.
 
 import { DurableObject } from 'cloudflare:workers';
@@ -27,8 +37,9 @@ import { STATS_DESCRIPTION, Stats } from './stats';
 type Filter = { kinds?: number[]; '#p'?: string[]; since?: number; until?: number; limit?: number; ids?: string[] };
 type Attachment = { challenge: string; ip: string; pubkey?: string; subs: Record<string, Filter[]> };
 
-// VAPID_JWK: the relay's Web Push key (Worker secret). DEV_PUSH=1 lets tests push to localhost.
-type Env = { RELAY: DurableObjectNamespace<Relay>; FILES: R2Bucket; VAPID_JWK?: string; DEV_PUSH?: string };
+// VAPID_JWK: the relay's Web Push key (Worker secret). DEV_PUSH=1 lets tests push to localhost
+// (and sign requests for localhost). DEV_LOCAL=1 only lets tests sign requests for localhost.
+type Env = { RELAY: DurableObjectNamespace<Relay>; FILES: R2Bucket; VAPID_JWK?: string; DEV_PUSH?: string; DEV_LOCAL?: string };
 
 const ALLOWED_KINDS = new Set([1059]);
 const MAX_EVENT_BYTES = 128 * 1024;
@@ -41,12 +52,17 @@ const RATE = { ip: { burst: 300, perSecond: 5 }, key: { burst: 120, perSecond: 3
 const MAX_CONNECTIONS_PER_IP = 50;
 const MAX_MAILBOX = 10_000;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_BACKUP_BYTES = 64 * 1024;
+// Backups per signing key. The app derives one signing key and one id from each recovery
+// code, so a key never needs more than one; this stops one key from filling many ids.
+const MAX_BACKUPS_PER_KEY = 1;
+const BACKUP_PATH = /^\/backup\/([0-9a-f]{64})$/;
 // Bytes: an address may upload 100 MB at once, then 100 KB per second; a key 50 MB, then 50 KB/s.
 const FILE_RATE = { ip: { burst: 100e6, perSecond: 100e3 }, key: { burst: 50e6, perSecond: 50e3 } };
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, HEAD, PUT, POST, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-SHA-256',
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-SHA-256, If-Match',
   'Access-Control-Max-Age': '86400',
 };
 
@@ -71,12 +87,22 @@ const INFO = {
   name: 'Tegami relay',
   description: 'Relay for the Tegami messenger. Speak freely.',
   software: 'https://github.com/tegami-chat/tegami',
-  supported_nips: [1, 11, 17, 42, 59],
+  supported_nips: [1, 11, 17, 42, 59, 98],
   limitation: {
     auth_required: true,
     restricted_writes: true,
     max_message_length: MAX_EVENT_BYTES,
     max_subscriptions: MAX_SUBS,
+  },
+  retention: [{ kinds: [1059], time: RETENTION_SECONDS }],
+  // What this relay keeps. Recovery backups are encrypted on the person's device; the
+  // relay cannot read them or find one without the recovery code.
+  keeps: {
+    envelopes: 'Gift-wrapped messages (kind 1059), deleted 30 days after they arrive.',
+    files: 'Encrypted photos and files, deleted after 30 days. Nothing about the uploader.',
+    push: 'For notifications: a device push address and the key it belongs to, until turned off.',
+    backups:
+      'Recovery backups: an id derived from the recovery code, the ciphertext, a signing key also derived from the code (not the account key) and when it was last uploaded. Kept until the person deletes it.',
   },
 };
 
@@ -97,6 +123,11 @@ export default {
       return Response.json({ key: new Vapid(env.VAPID_JWK).publicKey }, { headers: { ...CORS, 'Cache-Control': 'public, max-age=3600' } });
     }
     if (url.pathname === '/push' && (req.method === 'POST' || req.method === 'DELETE')) {
+      const headers = new Headers(req.headers);
+      headers.set('X-Tegami-IP', req.headers.get('CF-Connecting-IP') ?? 'unknown');
+      return env.RELAY.get(env.RELAY.idFromName('main')).fetch(new Request(req, { headers }));
+    }
+    if (BACKUP_PATH.test(url.pathname) && ['GET', 'PUT', 'DELETE'].includes(req.method)) {
       const headers = new Headers(req.headers);
       headers.set('X-Tegami-IP', req.headers.get('CF-Connecting-IP') ?? 'unknown');
       return env.RELAY.get(env.RELAY.idFromName('main')).fetch(new Request(req, { headers }));
@@ -172,8 +203,12 @@ export class Relay extends DurableObject<Env> {
     // Web Push: which devices to tell when an envelope for this key arrives.
     this.sql.exec('CREATE TABLE IF NOT EXISTS push (endpoint TEXT PRIMARY KEY, pubkey TEXT, created_at INTEGER)');
     this.sql.exec('CREATE INDEX IF NOT EXISTS push_pubkey ON push (pubkey)');
+    // Recovery backups (encrypted on the device). Not touched by the 30-day clean-up.
+    this.sql.exec('CREATE TABLE IF NOT EXISTS backups (id TEXT PRIMARY KEY, pubkey TEXT, data TEXT, updated_at INTEGER)');
+    this.sql.exec('CREATE INDEX IF NOT EXISTS backups_pubkey ON backups (pubkey)');
     this.vapid = env.VAPID_JWK ? new Vapid(env.VAPID_JWK) : null;
     this.devPush = env.DEV_PUSH === '1';
+    this.devLocal = this.devPush || env.DEV_LOCAL === '1';
     this.stats = new Stats(this.sql);
   }
 
@@ -182,6 +217,8 @@ export class Relay extends DurableObject<Env> {
     const path = new URL(req.url).pathname;
     if (path === '/upload') return this.upload(req, ip);
     if (path === '/push') return this.pushRoute(req, ip);
+    const backup = path.match(BACKUP_PATH);
+    if (backup) return this.backupRoute(req, ip, backup[1]);
     if (path === '/crash') return this.crash(req, ip);
     if (path === '/stats') {
       return Response.json({ ...STATS_DESCRIPTION, days: this.stats.recent() }, { headers: { ...CORS, 'Cache-Control': 'public, max-age=300' } });
@@ -269,6 +306,45 @@ export class Relay extends DurableObject<Env> {
 
   vapid: Vapid | null;
   devPush: boolean;
+  devLocal: boolean;
+  backupWriteRate = new Buckets(60, 0.1); // per address: 60 at once, then one every 10 seconds
+  backupReadRate = new Buckets(30, 0.2); // per address: 30 at once, then one every 5 seconds
+
+  /** GET returns a backup to anyone with its id; PUT and DELETE need the owning key's signature (NIP-98). */
+  async backupRoute(req: Request, ip: string, id: string): Promise<Response> {
+    const fail = (status: number, why: string) => new Response(why, { status, headers: CORS });
+    if (req.method === 'GET') {
+      if (!this.backupReadRate.take(ip)) return fail(429, 'rate-limited');
+      const row = this.sql.exec('SELECT data FROM backups WHERE id = ?', id).toArray()[0];
+      if (!row) return fail(404, 'not found');
+      return new Response(row.data as string, { headers: { ...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+    }
+    if (!this.backupWriteRate.take(ip)) return fail(429, 'rate-limited');
+    if (Number(req.headers.get('Content-Length') ?? 0) > MAX_BACKUP_BYTES) return fail(413, 'too large: backups up to 64 KB');
+    const body = await req.text();
+    if (new TextEncoder().encode(body).length > MAX_BACKUP_BYTES) return fail(413, 'too large: backups up to 64 KB');
+    // The signed URL: the public address (wrangler dev rewrites the host, so tests sign localhost).
+    const local = /^http:\/\/(localhost|127\.0\.0\.1):\d+\/backup\/([0-9a-f]{64})$/;
+    const signedFor = (u: string) => u === `https://relay.tegami.chat/backup/${id}` || (this.devLocal && local.exec(u)?.[2] === id);
+    const pubkey = await nip98(req, body, signedFor);
+    if (!pubkey) return fail(401, 'auth-required: sign the request (NIP-98)');
+    const owner = this.sql.exec('SELECT pubkey FROM backups WHERE id = ?', id).toArray()[0]?.pubkey as string | undefined;
+    if (owner && owner !== pubkey) return fail(403, 'restricted: this backup belongs to another key');
+    if (req.method === 'DELETE') {
+      if (!owner) return fail(404, 'not found');
+      this.sql.exec('DELETE FROM backups WHERE id = ?', id);
+      return new Response(null, { status: 204, headers: CORS });
+    }
+    if (!body) return fail(400, 'invalid: empty backup');
+    // A refresh (If-Match: *) only replaces a backup that is still there.
+    if (!owner && req.headers.get('If-Match') === '*') return fail(412, 'gone: no backup with this id');
+    if (!owner) {
+      const held = this.sql.exec('SELECT COUNT(*) AS n FROM backups WHERE pubkey = ?', pubkey).one().n as number;
+      if (held >= MAX_BACKUPS_PER_KEY) return fail(429, 'rate-limited: too many backups for this key');
+    }
+    this.sql.exec('INSERT OR REPLACE INTO backups (id, pubkey, data, updated_at) VALUES (?, ?, ?, ?)', id, pubkey, body, now());
+    return new Response(null, { status: 204, headers: CORS });
+  }
   pushRate = new Buckets(30, 0.1); // registering: per address, 30 at once, then one every 10 seconds
   lastPush = new Map<string, number>();
 

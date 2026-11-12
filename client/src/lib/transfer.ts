@@ -106,23 +106,34 @@ export async function receiveTransfer(relays: string[], key: Uint8Array, waitMs 
     if (!found) throw new TransferError('not found or expired');
     const exp = Number(found.tags.find((t) => t[0] === 'expiration')?.[1] ?? 0);
     if (exp <= Math.floor(Date.now() / 1000)) throw new TransferError('expired');
-    const bundle = JSON.parse(nip44.decrypt(found.content, nip44.getConversationKey(key, found.pubkey))) as Bundle;
-    if (bundle?.v !== 1 || !/^[0-9a-f]{64}$/.test(bundle.secretHex)) throw new TransferError('unknown format');
-    // Make sure the key really is a key before anything is saved.
-    getPublicKey(hexToBytes(bundle.secretHex));
-    return {
-      v: 1,
-      secretHex: bundle.secretHex,
-      myName: String(bundle.myName ?? '').slice(0, 40),
-      contacts: Array.isArray(bundle.contacts) ? bundle.contacts : [],
-      groups: Array.isArray(bundle.groups) ? bundle.groups : [],
-    };
+    const bundle = cleanBundle(JSON.parse(nip44.decrypt(found.content, nip44.getConversationKey(key, found.pubkey))));
+    if (!bundle) throw new TransferError('unknown format');
+    return bundle;
   } catch (e) {
     if (e instanceof TransferError) throw e;
     throw new TransferError(String((e as Error)?.message ?? e));
   } finally {
     pool.destroy();
   }
+}
+
+/** Checks a bundle that came from outside (a link or a recovery backup). Null when it is not one. */
+export function cleanBundle(raw: unknown): Bundle | null {
+  const bundle = raw as Bundle;
+  if (bundle?.v !== 1 || typeof bundle.secretHex !== 'string' || !/^[0-9a-f]{64}$/.test(bundle.secretHex)) return null;
+  try {
+    // Make sure the key really is a key before anything is saved.
+    getPublicKey(hexToBytes(bundle.secretHex));
+  } catch {
+    return null;
+  }
+  return {
+    v: 1,
+    secretHex: bundle.secretHex,
+    myName: String(bundle.myName ?? '').slice(0, 40),
+    contacts: Array.isArray(bundle.contacts) ? bundle.contacts : [],
+    groups: Array.isArray(bundle.groups) ? bundle.groups : [],
+  };
 }
 
 export function bundleSecret(bundle: Bundle) {
