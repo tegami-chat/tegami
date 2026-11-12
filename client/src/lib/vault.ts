@@ -6,7 +6,7 @@
 // nor Tegami can read it without the passkey.
 //
 // TODO(native): iOS and Android need a native passkey module.
-// TODO(recovery): upload the encrypted vault so a new device can restore it.
+// Getting the key back after losing every device: recovery.ts (a recovery code the person keeps).
 
 export type Vault = {
   v: 1;

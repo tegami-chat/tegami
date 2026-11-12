@@ -1,6 +1,7 @@
 // A tiny Nostr relay for local development only.
 // Keeps events and uploaded files in memory. Run: npm run relay  (listens on ws://localhost:7447)
 // Files: PUT /upload and GET /<sha256> on the same port, like relay.tegami.chat (Blossom).
+// Recovery backups: GET, PUT and DELETE /backup/<id>, like relay.tegami.chat (NIP-98 signed writes).
 import { createHash, randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
@@ -35,10 +36,12 @@ function matches(filter, ev) {
 const files = new Map(); // sha256 -> Buffer
 const pushDevices = []; // { endpoint, pubkey }
 const crashes = [];
+const backups = new Map(); // id -> { pubkey, data }
+const MAX_BACKUP_BYTES = 64 * 1024;
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, HEAD, PUT, POST, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-SHA-256',
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-SHA-256, If-Match',
 };
 const http = createServer((req, res) => {
   const send = (status, body = '', type = 'text/plain') => {
@@ -89,6 +92,45 @@ const http = createServer((req, res) => {
       } catch {
         send(400, 'invalid');
       }
+    });
+    return;
+  }
+  // Recovery backups. GET /_backups lists them for tests.
+  if (req.url === '/_backups' && req.method === 'GET') {
+    return send(200, JSON.stringify([...backups].map(([id, b]) => ({ id, ...b }))), 'application/json');
+  }
+  const backup = req.url.match(/^\/backup\/([0-9a-f]{64})$/);
+  if (backup && req.method === 'GET') {
+    const b = backups.get(backup[1]);
+    return b ? send(200, b.data, 'application/json') : send(404, 'not found');
+  }
+  if (backup && (req.method === 'PUT' || req.method === 'DELETE')) {
+    const id = backup[1];
+    let body = '';
+    req.on('data', (c) => (body += c));
+    req.on('end', () => {
+      if (Buffer.byteLength(body) > MAX_BACKUP_BYTES) return send(413, 'too large');
+      let ev;
+      try {
+        ev = JSON.parse(Buffer.from((req.headers.authorization ?? '').replace(/^Nostr /, ''), 'base64').toString());
+      } catch {
+        return send(401, 'auth-required');
+      }
+      const tag = (n) => ev?.tags?.find((t) => t[0] === n)?.[1];
+      const hash = createHash('sha256').update(body).digest('hex');
+      const ok = ev?.kind === 27235 && verifyEvent(ev) && tag('u') === `http://localhost:${PORT}/backup/${id}` && tag('method') === req.method && tag('payload') === hash;
+      if (!ok) return send(401, 'auth-required');
+      const old = backups.get(id);
+      if (old && old.pubkey !== ev.pubkey) return send(403, 'restricted');
+      if (req.method === 'DELETE') {
+        if (!old) return send(404, 'not found');
+        backups.delete(id);
+        return send(204);
+      }
+      if (!body) return send(400, 'invalid');
+      if (!old && req.headers['if-match'] === '*') return send(412, 'gone');
+      backups.set(id, { pubkey: ev.pubkey, data: body });
+      send(204);
     });
     return;
   }
