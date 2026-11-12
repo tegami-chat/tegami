@@ -167,7 +167,7 @@ export function Gate({ locked }: { locked: boolean }) {
                 setCode(t);
                 if (restoring === 'failed') setRestoring('input');
               }}
-              placeholder="復元コード"
+              placeholder="復旧コード"
               placeholderTextColor={c.muted}
               autoCapitalize="characters"
               autoCorrect={false}
@@ -175,9 +175,9 @@ export function Gate({ locked }: { locked: boolean }) {
               autoFocus
             />
             <Pressable style={s.secondary} onPress={restore} disabled={!code.trim() || restoring === 'checking'} role="button">
-              <Text style={s.secondaryText}>{restoring === 'checking' ? '確かめています' : '戻す'}</Text>
+              <Text style={s.secondaryText}>{restoring === 'checking' ? '確認中' : '復旧'}</Text>
             </Pressable>
-            {restoring === 'failed' && <Text style={s.notice}>このコードでは戻せませんでした。コードを確かめてください。</Text>}
+            {restoring === 'failed' && <Text style={s.notice}>コードが正しくありません。もう一度確認してください。</Text>}
           </View>
         ) : (
           <>
@@ -185,7 +185,7 @@ export function Gate({ locked }: { locked: boolean }) {
               <Text style={s.secondaryText}>別の端末から受け取る</Text>
             </Pressable>
             <Pressable style={s.quiet} onPress={() => setRestoring('input')} role="button">
-              <Text style={s.quietText}>復元コードで戻す</Text>
+              <Text style={s.quietText}>復旧コードを使う</Text>
             </Pressable>
           </>
         ))}

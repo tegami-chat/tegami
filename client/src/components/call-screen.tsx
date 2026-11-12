@@ -103,7 +103,7 @@ export function CallScreen() {
       : call.phase === 'outgoing'
         ? '呼び出し中'
         : call.phase === 'connecting'
-          ? 'つないでいます'
+          ? '接続中'
           : call.phase === 'ended'
             ? call.endText
             : null;
@@ -122,17 +122,17 @@ export function CallScreen() {
       <View style={s.keys}>
         {call.phase === 'incoming' && (
           <>
-            <Round label="断る" color={RED} onPress={decline} />
-            <Round label="出る" color={GREEN} onPress={accept} />
+            <Round label="拒否" color={RED} onPress={decline} />
+            <Round label="応答" color={GREEN} onPress={accept} />
           </>
         )}
         {(call.phase === 'outgoing' || call.phase === 'connecting' || call.phase === 'active') && (
           <>
-            <Round label={call.muted ? 'マイクを入れる' : 'マイクを切る'} color={KEY} onPress={toggleMute} />
+            <Round label={call.muted ? 'ミュート解除' : 'ミュート'} color={KEY} onPress={toggleMute} />
             {call.video && (
-              <Round label={call.cameraOff ? 'カメラを入れる' : 'カメラを切る'} color={KEY} onPress={toggleCamera} />
+              <Round label={call.cameraOff ? 'カメラをオン' : 'カメラをオフ'} color={KEY} onPress={toggleCamera} />
             )}
-            <Round label="切る" color={RED} onPress={hangUp} />
+            <Round label="通話を終了" color={RED} onPress={hangUp} />
           </>
         )}
       </View>

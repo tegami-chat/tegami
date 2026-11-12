@@ -795,7 +795,7 @@ async function main() {
       await waitText(a.page, '呼び出し中');
       await waitText(b.page, '音声通話');
       assert((await text(b.page)).includes('あおい'), 'B does not see who calls');
-      await button(b.page, '出る').click();
+      await button(b.page, '応答').click();
       await waitConnected(a.page);
       await waitConnected(b.page);
       for (const p of [a.page, b.page]) await p.waitForFunction(() => /(^|\s)0:0\d(\s|$)/.test(document.body.innerText), null, { timeout: 5000 });
@@ -804,10 +804,10 @@ async function main() {
         await b.page.evaluate(() => document.querySelector('audio[data-call="remote-audio"]')?.srcObject?.getAudioTracks()[0]?.readyState === 'live'),
         'no remote audio on B',
       );
-      await button(a.page, 'マイクを切る').click();
-      await button(a.page, 'マイクを入れる').waitFor();
-      await button(a.page, '切る').click();
-      await waitText(b.page, '通話が終わりました');
+      await button(a.page, 'ミュート').click();
+      await button(a.page, 'ミュート解除').waitFor();
+      await button(a.page, '通話を終了').click();
+      await waitText(b.page, '通話が終了しました');
       await b.page.waitForFunction(() => window.__pcs.every((p) => p.connectionState === 'closed'), null, { timeout: 5000 });
       assert((await pcState(a.page)).every((s) => s === 'closed'), 'A still connected');
       // Both chats note the call.
@@ -833,9 +833,9 @@ async function main() {
       await a.page.getByRole('button', { name: 'ビデオ通話' }).click();
       await waitText(b.page, 'ビデオ通話');
       await a.page.waitForFunction(() => document.querySelector('video[data-call="local-video"]')?.srcObject?.getVideoTracks().length === 1, null, { timeout: 5000 });
-      await button(b.page, '断る').click();
-      await waitText(a.page, '相手は出られませんでした');
-      assert(!(await button(b.page, '出る').count()), 'B still rings');
+      await button(b.page, '拒否').click();
+      await waitText(a.page, '応答がありません');
+      assert(!(await button(b.page, '応答').count()), 'B still rings');
       await waitText(a.page, '応答なし');
       for (const u of [a, b]) await u.context.close();
     });
@@ -847,10 +847,10 @@ async function main() {
       await b.page.goto(ORIGIN + '/');
       await c.page.getByRole('button', { name: '音声通話' }).click();
       await waitText(c.page, '呼び出し中');
-      await noText(b.page, '出る', 5000);
+      await noText(b.page, '応答', 5000);
       const t = await text(b.page);
       assert(!t.includes('不在着信') && !t.includes('知らない人から'), 'the stranger left a trace');
-      await button(c.page, '切る').click();
+      await button(c.page, '通話を終了').click();
       for (const u of [b, c]) await u.context.close();
     });
 
@@ -862,11 +862,11 @@ async function main() {
       await waitText(b.page, 'えっくす');
       const offer = (id) => ({ t: 'offer', id, video: false, sdp: 'v=0\r\n' });
       await relaySend(x, signalFrom(x, b.hex, offer('a'.repeat(32)), 120));
-      await noText(b.page, '出る', 3000);
+      await noText(b.page, '応答', 3000);
       // The same kind of envelope, written now: rings (so the late one really reached B).
       await relaySend(x, signalFrom(x, b.hex, offer('b'.repeat(32))));
-      await button(b.page, '出る').waitFor({ timeout: 10000 });
-      await button(b.page, '断る').click();
+      await button(b.page, '応答').waitFor({ timeout: 10000 });
+      await button(b.page, '拒否').click();
       await b.context.close();
     });
 
@@ -900,10 +900,10 @@ async function main() {
       /** Tries a code on a fresh browser. Returns the screen text after trying. */
       const tryCode = async (code, { use = false } = {}) => {
         const u = await newUser(browser, { prf: false });
-        await button(u.page, '復元コードで戻す').click();
-        await u.page.getByPlaceholder('復元コード').fill(code);
-        await button(u.page, '戻す').click();
-        await u.page.waitForFunction(() => /受け取りました|戻せませんでした/.test(document.body.innerText), null, { timeout: 15000 });
+        await button(u.page, '復旧コードを使う').click();
+        await u.page.getByPlaceholder('復旧コード').fill(code);
+        await button(u.page, '復旧').click();
+        await u.page.waitForFunction(() => /受け取りました|コードが正しくありません/.test(document.body.innerText), null, { timeout: 15000 });
         const t = await text(u.page);
         if (!use) await u.context.close();
         return { u, t };
@@ -935,9 +935,9 @@ async function main() {
 
       // Turn recovery on: the code is shown once.
       await a.page.goto(ORIGIN + '/settings');
-      await openIfLocked(a.page, '復元コードを作る');
-      await button(a.page, '復元コードを作る').click();
-      await waitText(a.page, 'このコードは今だけ表示します');
+      await openIfLocked(a.page, '復旧コードを作成');
+      await button(a.page, '復旧コードを作成').click();
+      await waitText(a.page, 'このコードは今だけ表示されます');
       const code1 = (await a.page.getByTestId('recovery-code').innerText()).trim();
       assert(/^([2-9A-HJ-NP-Z]{4}-){6}[2-9A-HJ-NP-Z]{4}$/.test(code1), `code format: ${code1}`);
       let list = await backups();
@@ -949,8 +949,8 @@ async function main() {
       assert(opened.id === first.id && opened.bundle.myName === 'えー' && opened.bundle.contacts[0]?.name === 'びー', 'backup content');
       assert(first.pubkey === opened.signerPub, 'the backup is not signed with the key from the code');
       assert(!(await storage(a.page))['tegami.recovery']?.includes(code1.replace(/-/g, '')), 'the code is kept on the device in the clear');
-      await button(a.page, '残しました').click();
-      await waitText(a.page, '端末を全部なくしても、復元コードで戻せます');
+      await button(a.page, '保管しました').click();
+      await waitText(a.page, '端末をすべて失っても、復旧コードで戻せます');
       assert(!(await text(a.page)).includes(code1), 'the code is still on the screen');
 
       // Rename the friend: the backup follows (after a short pause).
@@ -966,10 +966,10 @@ async function main() {
 
       // The relay cannot be reached: after 3 failed refreshes in a row, settings says so
       // in one line; the next successful refresh takes the line away.
-      const BEHIND = '復元コードの控えを更新できていません';
+      const BEHIND = '復旧コードの控えを更新できていません';
       await a.page.goto(ORIGIN + '/settings');
-      await openIfLocked(a.page, '復元コードをやめる');
-      await waitText(a.page, '復元コードをやめる');
+      await openIfLocked(a.page, '復旧コードを削除');
+      await waitText(a.page, '復旧コードを削除');
       await a.page.waitForTimeout(2500); // the refresh every app start makes, before the relay goes away
       let attempts = 0;
       await a.page.route('**/backup/**', (route) => {
@@ -1008,39 +1008,39 @@ async function main() {
       assert((await text(r.u.page)).includes(aNpub), 'not the same account');
       assert((await r.u.page.getByPlaceholder('相手に表示される名前').inputValue()) === 'えー', 'name not restored');
       await r.u.page.goto(ORIGIN + '/settings');
-      await waitText(r.u.page, '端末を全部なくしても、復元コードで戻せます');
+      await waitText(r.u.page, '端末をすべて失っても、復旧コードで戻せます');
 
       // Wrong codes fail cleanly and leave the start screen as it was.
       for (const wrong of ['2222-3333-4444-5555-6666-7777-8888', 'hello']) {
         const w = await tryCode(wrong);
-        assert(w.t.includes('このコードでは戻せませんでした') && w.t.includes('はじめる'), `wrong code screen: ${w.t.slice(0, 120)}`);
+        assert(w.t.includes('コードが正しくありません') && w.t.includes('はじめる'), `wrong code screen: ${w.t.slice(0, 120)}`);
       }
 
       // A new code: the old one stops working, the new one works.
       await a.page.goto(ORIGIN + '/settings');
-      await openIfLocked(a.page, '新しいコードにする');
-      await button(a.page, '新しいコードにする').click();
-      await waitText(a.page, 'このコードは今だけ表示します');
+      await openIfLocked(a.page, 'コードを更新');
+      await button(a.page, 'コードを更新').click();
+      await waitText(a.page, 'このコードは今だけ表示されます');
       const code2 = (await a.page.getByTestId('recovery-code').innerText()).trim();
       assert(code2 !== code1, 'the same code again');
       await until(async () => (await backups()).length === 1, 'the old backup was not deleted');
-      assert((await tryCode(code1)).t.includes('このコードでは戻せませんでした'), 'the old code still works');
+      assert((await tryCode(code1)).t.includes('コードが正しくありません'), 'the old code still works');
       assert((await tryCode(code2)).t.includes('えーさんのアカウントを受け取りました'), 'the new code does not work');
 
       // The restored device still has the old code: its next refresh finds the backup gone
       // and turns recovery off there instead of bringing the old code back.
       await r.u.page.goto(ORIGIN + '/settings');
-      await waitText(r.u.page, '復元コードを作る');
+      await waitText(r.u.page, '復旧コードを作成');
       assert((await backups()).length === 1, 'the old code came back');
-      assert((await tryCode(code1)).t.includes('このコードでは戻せませんでした'), 'the old code works again');
+      assert((await tryCode(code1)).t.includes('コードが正しくありません'), 'the old code works again');
       await r.u.context.close();
 
       // Turning off deletes the backup; the code then fails.
-      await button(a.page, '残しました').click();
-      await button(a.page, '復元コードをやめる').click();
-      await waitText(a.page, '復元コードを作る');
+      await button(a.page, '保管しました').click();
+      await button(a.page, '復旧コードを削除').click();
+      await waitText(a.page, '復旧コードを作成');
       assert((await backups()).length === 0, 'the backup is still on the relay');
-      assert((await tryCode(code2)).t.includes('このコードでは戻せませんでした'), 'the code works after turning off');
+      assert((await tryCode(code2)).t.includes('コードが正しくありません'), 'the code works after turning off');
       for (const u of [a, b]) await u.context.close();
     });
 

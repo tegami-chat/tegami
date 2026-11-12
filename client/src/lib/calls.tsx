@@ -276,7 +276,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           setTimeout(() => {
             if (live.current !== l || l.pc?.remoteDescription) return;
             signal(l, { t: 'hangup' });
-            end(l, '応答がありませんでした');
+            end(l, '応答がありません');
           }, RING_MS),
         );
       })().catch(() => end(l, 'つながりませんでした', false));
@@ -335,7 +335,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     if (l.role === 'callee' && !l.pc) return decline();
     signal(l, { t: 'hangup' });
     // Hanging up my own call before it was answered is not worth a note in the chat.
-    end(l, '通話が終わりました', !!l.connectedAt || l.role === 'callee');
+    end(l, '通話が終了しました', !!l.connectedAt || l.role === 'callee');
   }, [signal, end, decline]);
 
   const toggleMute = useCallback(() => {
@@ -417,11 +417,11 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         addIce(l, (d.c as unknown[]).filter((c): c is RTCIceCandidateInit => !!c && typeof c === 'object').slice(0, 50));
       } else if (t === 'hangup') {
         // Hung up while ringing here: a missed call, quietly.
-        end(l, l.role === 'callee' && !l.pc ? undefined : '通話が終わりました');
+        end(l, l.role === 'callee' && !l.pc ? undefined : '通話が終了しました');
       } else if (t === 'decline' && l.role === 'caller') {
-        end(l, '相手は出られませんでした');
+        end(l, '応答がありません');
       } else if (t === 'busy' && l.role === 'caller') {
-        end(l, '相手は別の通話中です');
+        end(l, '相手は通話中です');
       }
     });
   }, [me, onSignal, sendSignal, recordCall, end, signal, addIce, waitForConnection]);
