@@ -230,8 +230,8 @@ export default function Settings() {
 
       <Text style={s.heading}>会話</Text>
       <View style={[s.card, s.row]}>
-        <Text style={s.label}>未読の数を表示する</Text>
-        <Switch value={showUnread} onValueChange={setShowUnread} aria-label="未読の数を表示する" />
+        <Text style={s.label}>未読数を表示</Text>
+        <Switch value={showUnread} onValueChange={setShowUnread} aria-label="未読数を表示" />
       </View>
       <Pressable style={s.card} onPress={exportFile} role="button">
         <Text style={s.action}>{exported ? '書き出しました' : '会話を書き出す'}</Text>

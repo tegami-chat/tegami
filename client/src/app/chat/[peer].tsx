@@ -16,7 +16,7 @@ export default function Chat() {
   const s = styles(c);
   // m: a message to jump to (from search).
   const { peer, m: focus } = useLocalSearchParams<{ peer: string; m?: string }>();
-  const { me, myName, contacts, groups, messages, send, sendPhoto, addContact, markRead, cancelSend } = useTegami();
+  const { me, myName, contacts, groups, messages, send, sendPhoto, addContact, markRead, cancelSend, retrySend } = useTegami();
   // A message waiting to be sent that was tapped: it offers to stop sending.
   const [offered, setOffered] = useState<string | null>(null);
   const [replying, setReplying] = useState<Message | null>(null);
@@ -234,7 +234,7 @@ export default function Chat() {
                   </Pressable>
                 ) : (
                   <View style={s.quote} testID="quote">
-                    <Text style={s.quoteText}>メッセージがこの端末にありません</Text>
+                    <Text style={s.quoteText}>このメッセージはありません</Text>
                   </View>
                 ))}
               {item.file ? (
@@ -273,9 +273,20 @@ export default function Chat() {
                 {bubble}
               </Pressable>
               {offered === item.id && (
-                <Pressable style={s.cancel} onPress={() => cancelSend(item.id)} role="button">
-                  <Text style={s.cancelText}>送信をやめる</Text>
-                </Pressable>
+                <View style={s.offer}>
+                  <Pressable
+                    style={s.cancel}
+                    onPress={() => {
+                      setOffered(null);
+                      retrySend();
+                    }}
+                    role="button">
+                    <Text style={s.cancelText}>再送する</Text>
+                  </Pressable>
+                  <Pressable style={s.cancel} onPress={() => cancelSend(item.id)} role="button">
+                    <Text style={s.cancelText}>削除する</Text>
+                  </Pressable>
+                </View>
               )}
             </View>
           );
@@ -366,6 +377,7 @@ const styles = (c: Palette) =>
     waiting: { opacity: 0.6 },
     full: { maxWidth: '100%' },
     mineWrap: { alignSelf: 'flex-end', alignItems: 'flex-end', maxWidth: '78%' },
+    offer: { flexDirection: 'row', justifyContent: 'flex-end', gap: 4 },
     cancel: { paddingHorizontal: 8, paddingVertical: 6 },
     cancelText: { fontSize: 14, color: c.accent, fontWeight: '600' },
     addBar: {
