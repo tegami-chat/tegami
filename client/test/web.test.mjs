@@ -236,6 +236,53 @@ function signalFrom(secret, to, data, age = 0) {
   );
 }
 
+/** A chat message (kind 14) from `secret` to `to`, as another Nostr app would write it. */
+function rumorTo(secret, to, content, tags = [], created_at = Math.floor(Date.now() / 1000)) {
+  return nip59.createRumor({ kind: 14, content, tags: [['p', to], ...tags], created_at }, secret);
+}
+function wrapTo(secret, to, rumor) {
+  return nip59.createWrap(nip59.createSeal(rumor, secret, to), to);
+}
+/** Every message the dev relay holds for `secret`, opened. Waits until `ready(messages)`. */
+async function inboxOf(secret, ready = () => true) {
+  const me = getPublicKey(secret);
+  for (let i = 0; i < 50; i++) {
+    const wraps = await new Promise((ok, fail) => {
+      const ws = new WebSocket(`ws://localhost:${RELAY_PORT}`);
+      const got = [];
+      const timer = setTimeout(() => (ws.close(), fail(new Error('relay did not answer'))), 5000);
+      ws.on('message', (raw) => {
+        const m = JSON.parse(raw.toString());
+        if (m[0] === 'AUTH') {
+          const auth = finalizeEvent(
+            { kind: 22242, created_at: Math.floor(Date.now() / 1000), tags: [['relay', `ws://localhost:${RELAY_PORT}`], ['challenge', m[1]]], content: '' },
+            secret,
+          );
+          ws.send(JSON.stringify(['AUTH', auth]));
+        } else if (m[0] === 'OK') {
+          ws.send(JSON.stringify(['REQ', 'inbox', { kinds: [1059], '#p': [me] }]));
+        } else if (m[0] === 'EVENT') {
+          got.push(m[2]);
+        } else if (m[0] === 'EOSE') {
+          clearTimeout(timer);
+          ws.close();
+          ok(got);
+        }
+      });
+    });
+    const opened = wraps.flatMap((w) => {
+      try {
+        return [nip59.unwrapEvent(w, secret)];
+      } catch {
+        return [];
+      }
+    });
+    if (ready(opened)) return opened;
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  throw new Error('the messages did not reach the relay');
+}
+
 // ---------- tests ----------
 
 const results = [];
@@ -1096,6 +1143,223 @@ async function main() {
         watch?.kill();
         rmSync(home, { recursive: true, force: true });
       }
+    });
+
+    // ---------- reply and search ----------
+
+    await test('Reply: B sees the quote above the reply, tapping it scrolls to and marks the original; cancel works', async () => {
+      const a = await person(browser, 'あみ');
+      const b = await person(browser, 'ばく');
+      await befriend(a, b);
+      await befriend(b, a); // b is in the chat with a
+      await b.page.getByPlaceholder('メッセージ').fill('最初のメッセージ');
+      await button(b.page, '送る').click();
+      for (let i = 1; i <= 15; i++) {
+        await b.page.getByPlaceholder('メッセージ').fill(`つづき${i}`);
+        await button(b.page, '送る').click();
+      }
+      await a.page.goto(ORIGIN + '/');
+      await a.page.getByText('ばく').first().click();
+      await waitText(a.page, 'つづき15');
+      const original = a.page.getByText('最初のメッセージ', { exact: true });
+      await original.hover();
+      await button(a.page, 'リプライ').click();
+      // The composer shows what the reply is to; キャンセル takes it away.
+      const bar = () => a.page.getByRole('button', { name: 'キャンセル' });
+      await bar().waitFor();
+      await bar().click();
+      await bar().waitFor({ state: 'detached' });
+      await original.hover();
+      await button(a.page, 'リプライ').click();
+      await bar().waitFor();
+      const replying = (await a.page.getByTestId('replying').innerText()).replace(/\s+/g, ' ');
+      assert(replying.includes('ばく 最初のメッセージ'), `the composer shows: ${replying}`);
+      await a.page.getByPlaceholder('メッセージ').fill('それに返信');
+      await button(a.page, '送る').click();
+      await bar().waitFor({ state: 'detached' });
+
+      // B: the reply carries the quote (B's own name and the first line).
+      await waitText(b.page, 'それに返信');
+      const stored = await b.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages')));
+      const orig = stored.find((m) => m.text === '最初のメッセージ');
+      const reply = stored.find((m) => m.text === 'それに返信');
+      assert(reply.replyTo === orig.id, `replyTo: ${reply.replyTo} vs ${orig.id}`);
+      const quote = b.page.getByTestId('quote');
+      assert((await quote.innerText()).replace(/\s+/g, ' ').trim() === 'ばく 最初のメッセージ', `quote: ${await quote.innerText()}`);
+      // The original bubble (not the quote): is it on the screen?
+      const originalInView = () =>
+        b.page.evaluate(() =>
+          [...document.querySelectorAll('div')].some((el) => {
+            if (el.innerText !== '最初のメッセージ' || el.children.length || el.closest('[data-testid="quote"]')) return false;
+            const r = el.getBoundingClientRect();
+            return r.height > 0 && r.bottom > 0 && r.top < innerHeight;
+          }),
+        );
+      assert(!(await originalInView()), 'the original was already on screen (the scroll is not tested)');
+      await quote.click();
+      const marked = b.page.getByTestId('highlighted');
+      await marked.waitFor({ timeout: 5000 });
+      assert((await marked.innerText()).includes('最初のメッセージ'), `marked: ${await marked.innerText()}`);
+      await b.page.waitForFunction(() => {
+        const el = document.querySelector('[data-testid="highlighted"]');
+        const r = el?.getBoundingClientRect();
+        return r && r.bottom > 0 && r.top < innerHeight;
+      }, null, { timeout: 5000 });
+      await marked.waitFor({ state: 'detached', timeout: 5000 }); // the mark goes away
+      for (const u of [a, b]) await u.context.close();
+    });
+
+    await test('Reply on the wire: e tags as NIP-17 writes them; photos quote as 写真; an original not on the device', async () => {
+      const b = await person(browser, 'べに');
+      const x = generateSecretKey();
+      const xHex = getPublicKey(x);
+      await befriend(b, `https://app.tegami.chat/i#${nip19.npubEncode(xHex)}&n=${encodeURIComponent('えっくす')}`);
+      const first = rumorTo(x, b.hex, 'えっくすの一言');
+      await relaySend(x, wrapTo(x, b.hex, first));
+      await waitText(b.page, 'えっくすの一言');
+
+      // A text reply: kind 14 with ["e", id, relay].
+      await b.page.getByText('えっくすの一言', { exact: true }).hover();
+      await button(b.page, 'リプライ').click();
+      await b.page.getByPlaceholder('メッセージ').fill('べにの返信');
+      await button(b.page, '送る').click();
+      let inbox = await inboxOf(x, (all) => all.some((r) => r.content === 'べにの返信'));
+      const r1 = inbox.find((r) => r.content === 'べにの返信');
+      assert(r1 && r1.kind === 14, 'reply not received');
+      const e1 = r1.tags.filter((t) => t[0] === 'e');
+      assert(e1.length === 1 && e1[0][1] === first.id && e1[0][2] === `ws://localhost:${RELAY_PORT}` && e1[0].length === 3, `e tag: ${JSON.stringify(e1)}`);
+
+      // A photo, then a photo sent as a reply to it: kind 15 with ["e", id, relay, "reply"].
+      const png = Buffer.from(
+        await b.page.evaluate(() => {
+          const c = document.createElement('canvas');
+          c.width = 300;
+          c.height = 200;
+          c.getContext('2d').fillRect(0, 0, 300, 200);
+          return c.toDataURL('image/png').split(',')[1];
+        }),
+        'base64',
+      );
+      const sendPng = async () => {
+        const chooser = b.page.waitForEvent('filechooser');
+        await button(b.page, '写真').click();
+        await (await chooser).setFiles({ name: 'test.png', mimeType: 'image/png', buffer: png });
+      };
+      await sendPng();
+      await b.page.locator('img[alt="写真"]').first().waitFor({ timeout: 15000 });
+      await b.page.locator('img[alt="写真"]').first().hover();
+      await button(b.page, 'リプライ').click();
+      await b.page.getByRole('button', { name: 'キャンセル' }).waitFor();
+      assert(/べに\s*写真/.test(await b.page.getByTestId('replying').innerText()), 'the composer does not say 写真');
+      await sendPng();
+      await b.page.getByRole('button', { name: 'キャンセル' }).waitFor({ state: 'detached', timeout: 15000 });
+      inbox = await inboxOf(x, (all) => all.filter((r) => r.kind === 15).length === 2);
+      const photos = inbox.filter((r) => r.kind === 15).sort((p, q) => p.created_at - q.created_at);
+      assert(photos.length === 2, `photos received: ${photos.length}`);
+      const photo = photos.find((r) => !r.tags.some((t) => t[0] === 'e'));
+      const photoReply = photos.find((r) => r.tags.some((t) => t[0] === 'e'));
+      const e2 = photoReply?.tags.filter((t) => t[0] === 'e');
+      assert(photo && e2?.length === 1 && e2[0][1] === photo.id && e2[0][3] === 'reply', `photo e tag: ${JSON.stringify(e2)}`);
+
+      // X replies to B's photo: B sees the quote with 写真.
+      await relaySend(x, wrapTo(x, b.hex, rumorTo(x, b.hex, '写真ありがとう', [['e', photo.id, '', 'reply']])));
+      await waitText(b.page, '写真ありがとう');
+      const quotes = await b.page.getByTestId('quote').allInnerTexts();
+      assert(quotes.filter((q) => /べに\s*写真/.test(q)).length === 2, `quotes: ${JSON.stringify(quotes)}`);
+
+      // X replies to something B never had: a quiet line instead of the quote.
+      await relaySend(x, wrapTo(x, b.hex, rumorTo(x, b.hex, '昔の話', [['e', 'f'.repeat(64), '']])));
+      await waitText(b.page, '昔の話');
+      await waitText(b.page, 'メッセージがこの端末にありません');
+      await b.context.close();
+    });
+
+    await test('Reply in a group: the third person sees who wrote the original', async () => {
+      const a = await person(browser, 'あきら');
+      const b = await person(browser, 'ぶんた');
+      const c = await person(browser, 'ちえ');
+      await befriend(a, b);
+      await befriend(a, c);
+      await befriend(b, a);
+      await befriend(c, a);
+      await a.page.goto(ORIGIN + '/');
+      await a.page.getByText('グループを作る').click();
+      await a.page.getByPlaceholder('グループの名前').fill('家族');
+      await a.page.getByRole('checkbox', { name: 'ぶんた' }).click();
+      await a.page.getByRole('checkbox', { name: 'ちえ' }).click();
+      await button(a.page, '作る').click();
+      await a.page.getByPlaceholder('メッセージ').fill('みんなへ\n二行目');
+      await button(a.page, '送る').click();
+
+      await b.page.goto(ORIGIN + '/');
+      await b.page.getByText('家族').click();
+      await waitText(b.page, 'みんなへ');
+      await b.page.getByText(/みんなへ/).last().hover();
+      await button(b.page, 'リプライ').click();
+      await b.page.getByPlaceholder('メッセージ').fill('了解です');
+      await button(b.page, '送る').click();
+
+      await c.page.goto(ORIGIN + '/');
+      await c.page.getByText('家族').click();
+      await waitText(c.page, '了解です');
+      const quote = c.page.getByTestId('quote');
+      assert((await quote.innerText()).replace(/\s+/g, ' ').trim() === 'あきら みんなへ', `quote: ${await quote.innerText()}`);
+      await quote.click();
+      await c.page.getByTestId('highlighted').waitFor({ timeout: 5000 });
+      assert((await c.page.getByTestId('highlighted').innerText()).includes('二行目'), 'the original is not marked');
+      for (const u of [a, b, c]) await u.context.close();
+    });
+
+    await test('Search: across chats, ignoring width, case and kana; chat names; opening a result marks it; nothing found', async () => {
+      const a = await person(browser, 'あや');
+      const x = generateSecretKey();
+      const y = generateSecretKey();
+      await befriend(a, `https://app.tegami.chat/i#${nip19.npubEncode(getPublicKey(x))}&n=${encodeURIComponent('えっくす')}`);
+      await befriend(a, `https://app.tegami.chat/i#${nip19.npubEncode(getPublicKey(y))}&n=${encodeURIComponent('わいわい')}`);
+      const now = Math.floor(Date.now() / 1000);
+      await relaySend(x, wrapTo(x, a.hex, rumorTo(x, a.hex, 'ＴｅｇａｍｉでＡＢＣを話そう', [], now - 200)));
+      await relaySend(y, wrapTo(y, a.hex, rumorTo(y, a.hex, 'テガミの話をしよう', [], now - 100)));
+      for (let i = 1; i <= 15; i++) await relaySend(y, wrapTo(y, a.hex, rumorTo(y, a.hex, `ほかの話${i}`, [], now - 100 + i)));
+      await a.page.goto(ORIGIN + '/');
+      await waitText(a.page, 'ほかの話15');
+      const box = a.page.getByPlaceholder('検索');
+      const results = async () => (await text(a.page)).replace(/\s+/g, ' ');
+
+      await box.fill('abc');
+      await waitText(a.page, 'メッセージ');
+      let t = await results();
+      assert(t.includes('えっくす') && t.includes('ＡＢＣ') && !t.includes('テガミの話'), `abc: ${t.slice(0, 200)}`);
+      await box.fill('TEGAMI');
+      await waitText(a.page, 'ＡＢＣ');
+      t = await results();
+      assert(!t.includes('テガミの話'), 'TEGAMI matched katakana');
+      await box.fill('てがみ'); // hiragana finds katakana
+      await waitText(a.page, 'テガミの話をしよう');
+      assert(!(await results()).includes('ＡＢＣ'), 'てがみ matched the latin text');
+      await box.fill('ﾃｶﾞﾐ'); // half-width katakana too
+      await waitText(a.page, 'テガミの話をしよう');
+      await box.fill('ワイワイ'); // a chat's name
+      await waitText(a.page, 'トーク');
+      assert((await results()).includes('わいわい'), 'chat name not found');
+      await box.fill('ぜったいにない言葉');
+      await waitText(a.page, '検索結果はありません');
+
+      // Open a result: the chat opens at that message, marked.
+      await box.fill('てがみ');
+      await a.page.getByText('テガミの話をしよう').click();
+      await a.page.getByPlaceholder('メッセージ').waitFor();
+      const marked = a.page.getByTestId('highlighted');
+      await marked.waitFor({ timeout: 5000 });
+      assert((await marked.innerText()).includes('テガミの話をしよう'), `marked: ${await marked.innerText()}`);
+      await a.page.waitForFunction(() => {
+        const r = document.querySelector('[data-testid="highlighted"]')?.getBoundingClientRect();
+        return r && r.bottom > 0 && r.top < innerHeight;
+      }, null, { timeout: 5000 });
+      // Back: the search is still there.
+      await a.page.goBack();
+      await waitText(a.page, 'テガミの話をしよう');
+      assert((await box.inputValue()) === 'てがみ', 'the search was lost');
+      await a.context.close();
     });
   } finally {
     await browser.close();

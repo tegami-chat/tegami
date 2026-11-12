@@ -1,18 +1,29 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Photo } from '@/components/photo';
 import { Palette, usePalette } from '@/constants/theme';
 import { useCall } from '@/lib/calls';
-import { chatName, isGroup, personName, shortId, useTegami } from '@/lib/tegami';
+import { chatName, isGroup, personName, shortId, useTegami, type Message } from '@/lib/tegami';
+
+/** How long a message stays marked after jumping to it. */
+const HIGHLIGHT_MS = 2000;
 
 export default function Chat() {
   const c = usePalette();
   const s = styles(c);
-  const { peer } = useLocalSearchParams<{ peer: string }>();
-  const { me, contacts, groups, messages, send, sendPhoto, addContact } = useTegami();
+  // m: a message to jump to (from search).
+  const { peer, m: focus } = useLocalSearchParams<{ peer: string; m?: string }>();
+  const { me, myName, contacts, groups, messages, send, sendPhoto, addContact } = useTegami();
+  const [replying, setReplying] = useState<Message | null>(null);
+  // The message whose actions are shown: by long press (touch) or by hovering (mouse).
+  const [pressed, setPressed] = useState<string | null>(null);
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [highlight, setHighlight] = useState<string | null>(null);
+  const highlightTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const input = useRef<TextInput>(null);
   const [newName, setNewName] = useState('');
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
@@ -25,6 +36,54 @@ export default function Chat() {
   // 1:1 with a person (an AI friend cannot pick up). Groups later.
   const canCall = supported && !group && !!contact && !contact.model;
   const thread = useMemo(() => messages.filter((m) => m.peer === peer).reverse(), [messages, peer]);
+  const byId = useMemo(() => new Map(thread.map((m, i) => [m.id, i])), [thread]);
+
+  const nameOf = (pubkey: string) => (pubkey === me ? myName || '自分' : personName(pubkey, contacts));
+  const firstLine = (m: Message) => (m.file ? '写真' : m.text.split('\n')[0]);
+
+  /** Scrolls to a message on this device and marks it for a moment. */
+  const jumpTo = useCallback(
+    (id: string) => {
+      const index = byId.get(id);
+      if (index === undefined) return;
+      list.current?.scrollToIndex({ index, viewPosition: 0.5, animated: true });
+      setHighlight(id);
+      clearTimeout(highlightTimer.current);
+      highlightTimer.current = setTimeout(() => setHighlight(null), HIGHLIGHT_MS);
+    },
+    [byId],
+  );
+  useEffect(() => () => clearTimeout(highlightTimer.current), []);
+
+  // Opened from a search result: jump to that message once it is here.
+  const jumped = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focus || jumped.current === focus || !byId.has(focus)) return;
+    jumped.current = focus;
+    // After the list has laid out its first rows.
+    const t = setTimeout(() => jumpTo(focus), 50);
+    return () => clearTimeout(t);
+  }, [focus, byId, jumpTo]);
+
+  // Leaving a message hides its actions a moment later, so the mouse can reach them.
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const hoverIn = (id: string) => {
+    clearTimeout(hoverTimer.current);
+    setHovered(id);
+  };
+  const hoverOut = (id: string) => {
+    clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(() => setHovered((h) => (h === id ? null : h)), 300);
+  };
+  useEffect(() => () => clearTimeout(hoverTimer.current), []);
+
+  function startReply(m: Message) {
+    setReplying(m);
+    setPressed(null);
+    clearTimeout(hoverTimer.current);
+    setHovered(null);
+    input.current?.focus();
+  }
 
   async function pickPhoto() {
     if (!peer || sending) return;
@@ -35,7 +94,8 @@ export default function Chat() {
     setFailed(false);
     try {
       const blob = asset.file ?? (await (await fetch(asset.uri)).blob());
-      await sendPhoto(peer, blob);
+      await sendPhoto(peer, blob, replying?.id);
+      setReplying(null);
     } catch {
       setFailed(true);
     } finally {
@@ -49,8 +109,9 @@ export default function Chat() {
     setSending(true);
     setFailed(false);
     try {
-      await send(peer, text);
+      await send(peer, text, replying?.id);
       setDraft('');
+      setReplying(null);
     } catch {
       setFailed(true);
     } finally {
@@ -110,6 +171,11 @@ export default function Chat() {
         data={thread}
         keyExtractor={(m) => m.id}
         contentContainerStyle={s.list}
+        onScrollToIndexFailed={(info) => {
+          // The row is not drawn yet (far up the chat): get near it, then try again.
+          list.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
+          setTimeout(() => list.current?.scrollToIndex({ index: info.index, viewPosition: 0.5, animated: true }), 100);
+        }}
         renderItem={({ item }) => {
           const mine = item.from === me;
           if (item.call) {
@@ -123,9 +189,44 @@ export default function Chat() {
               </View>
             );
           }
+          const original = item.replyTo !== undefined ? byId.get(item.replyTo) : undefined;
+          const quoted = original !== undefined ? thread[original] : null;
+          const actions = (pressed === item.id || hovered === item.id) && (
+            <Pressable
+              role="button"
+              style={s.action}
+              onPress={() => startReply(item)}
+              onHoverIn={() => hoverIn(item.id)}
+              onHoverOut={() => hoverOut(item.id)}>
+              <Text style={s.actionText}>リプライ</Text>
+            </Pressable>
+          );
           return (
-            <View style={[s.bubble, mine ? s.mine : s.theirs]}>
+            <Pressable
+              style={[s.row, mine ? s.rowMine : s.rowTheirs]}
+              onLongPress={() => setPressed(item.id)}
+              onPress={() => pressed && setPressed(null)}
+              onHoverIn={() => hoverIn(item.id)}
+              onHoverOut={() => hoverOut(item.id)}
+              testID={highlight === item.id ? 'highlighted' : undefined}>
+              {mine && actions}
+              <View style={[s.bubble, mine ? s.mine : s.theirs, highlight === item.id && s.highlight]}>
               {group && !mine && <Text style={s.author}>{personName(item.from, contacts)}</Text>}
+              {item.replyTo !== undefined &&
+                (quoted ? (
+                  <Pressable style={s.quote} onPress={() => jumpTo(quoted.id)} role="button" testID="quote">
+                    <Text style={s.quoteName} numberOfLines={1}>
+                      {nameOf(quoted.from)}
+                    </Text>
+                    <Text style={s.quoteText} numberOfLines={1}>
+                      {firstLine(quoted)}
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <View style={s.quote} testID="quote">
+                    <Text style={s.quoteText}>メッセージがこの端末にありません</Text>
+                  </View>
+                ))}
               {item.file ? (
                 <Photo id={item.id} file={item.file} />
               ) : (
@@ -136,16 +237,34 @@ export default function Chat() {
               <Text style={s.time}>
                 {new Date(item.at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </Text>
-            </View>
+              </View>
+              {!mine && actions}
+            </Pressable>
           );
         }}
       />
       {failed && <Text style={s.error}>送れませんでした。もう一度送ってください</Text>}
+      {replying && (
+        <View style={s.replyBar} testID="replying">
+          <View style={s.replyBody}>
+            <Text style={s.quoteName} numberOfLines={1}>
+              {nameOf(replying.from)}
+            </Text>
+            <Text style={s.quoteText} numberOfLines={1}>
+              {firstLine(replying)}
+            </Text>
+          </View>
+          <Pressable role="button" aria-label="キャンセル" style={s.replyClose} onPress={() => setReplying(null)}>
+            <Text style={s.replyCloseText}>×</Text>
+          </Pressable>
+        </View>
+      )}
       <View style={s.composer}>
         <Pressable style={[s.attach, sending && s.disabled]} onPress={pickPhoto} disabled={sending} role="button">
           <Text style={s.attachText}>写真</Text>
         </Pressable>
         <TextInput
+          ref={input}
           style={s.input}
           value={draft}
           onChangeText={setDraft}
@@ -178,9 +297,31 @@ const styles = (c: Palette) =>
   StyleSheet.create({
     fill: { flex: 1, backgroundColor: c.background },
     list: { padding: 12, gap: 8 },
-    bubble: { maxWidth: '78%', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8 },
-    mine: { alignSelf: 'flex-end', backgroundColor: c.mine, borderBottomRightRadius: 4 },
-    theirs: { alignSelf: 'flex-start', backgroundColor: c.theirs, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: c.line },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '88%' },
+    rowMine: { alignSelf: 'flex-end', justifyContent: 'flex-end' },
+    rowTheirs: { alignSelf: 'flex-start' },
+    bubble: { flexShrink: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: 'transparent' },
+    mine: { backgroundColor: c.mine, borderBottomRightRadius: 4 },
+    theirs: { backgroundColor: c.theirs, borderBottomLeftRadius: 4, borderColor: c.line },
+    highlight: { borderColor: c.accent, borderWidth: 2 },
+    action: { paddingHorizontal: 8, paddingVertical: 4 },
+    actionText: { fontSize: 13, color: c.accent, fontWeight: '600' },
+    quote: { borderLeftWidth: 3, borderLeftColor: c.accent, paddingLeft: 8, marginBottom: 4, maxWidth: 260 },
+    quoteName: { fontSize: 12, color: c.accent, fontWeight: '600' },
+    quoteText: { fontSize: 13, color: c.muted },
+    replyBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginHorizontal: 8,
+      marginTop: 6,
+      paddingLeft: 10,
+      borderLeftWidth: 3,
+      borderLeftColor: c.accent,
+    },
+    replyBody: { flex: 1 },
+    replyClose: { paddingHorizontal: 12, paddingVertical: 6 },
+    replyCloseText: { fontSize: 18, color: c.muted },
     text: { fontSize: 16, color: c.text, lineHeight: 22 },
     author: { fontSize: 12, color: c.accent, fontWeight: '600', marginBottom: 2 },
     time: { fontSize: 11, color: c.muted, alignSelf: 'flex-end', marginTop: 2 },
