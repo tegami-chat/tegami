@@ -18,7 +18,7 @@ export default function MoveHere() {
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, backgroundColor: c.background, padding: 24 }}>
       <Text style={{ fontSize: 16, color: c.text, textAlign: 'center', maxWidth: 320, lineHeight: 24 }}>
-        {waiting ? 'この端末には、もう Tegami のアカウントがあります。' : 'このリンクは使えません。元の端末の設定で、もう一度作ってください。'}
+        {waiting ? 'この端末には、すでに Tegami のアカウントがあります。' : 'このリンクは使えません。元の端末の設定で、もう一度作ってください。'}
       </Text>
       {waiting && (
         <Pressable role="button" onPress={startAddingAccount}>
