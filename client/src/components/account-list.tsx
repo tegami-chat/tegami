@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Palette, usePalette } from '@/constants/theme';
-import { addAccount, readyAccounts, switchAccount, useAccounts, type AccountEntry } from '@/lib/accounts';
+import { addAccount, readyAccounts, switchAccount, useAccounts, useNewMarks, type AccountEntry } from '@/lib/accounts';
 import { shortId } from '@/lib/tegami';
 
 export function accountName(a: AccountEntry) {
@@ -35,10 +35,13 @@ export function AccountList({ add = true }: { add?: boolean }) {
   const s = styles(c);
   const index = useAccounts();
   const list = readyAccounts(index);
+  const marks = useNewMarks();
   return (
     <View style={s.card}>
       {list.map((a, i) => {
         const current = a.id === index.current;
+        // Known only through notifications: an account without them never shows it.
+        const fresh = !current && !!a.pubkey && marks[a.pubkey];
         return (
           <Pressable
             key={a.id}
@@ -46,11 +49,12 @@ export function AccountList({ add = true }: { add?: boolean }) {
             onPress={() => goToAccount(a.id)}
             disabled={current}
             role="button"
-            aria-label={current ? `${accountName(a)}（使用中）` : accountName(a)}>
+            aria-label={current ? `${accountName(a)}（使用中）` : fresh ? `${accountName(a)}（新着あり）` : accountName(a)}>
             <Text style={s.name} numberOfLines={1}>
               {accountName(a)}
             </Text>
             {current && <Text style={s.current}>使用中</Text>}
+            {fresh && <Text style={s.fresh}>新着あり</Text>}
           </Pressable>
         );
       })}
@@ -70,5 +74,6 @@ const styles = (c: Palette) =>
     line: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line },
     name: { flex: 1, fontSize: 16, color: c.text },
     current: { fontSize: 13, color: c.muted },
+    fresh: { fontSize: 13, color: c.accent, fontWeight: '600' },
     add: { fontSize: 16, color: c.accent, fontWeight: '600' },
   });

@@ -5,7 +5,8 @@ import { Pressable, Text, View } from 'react-native';
 import { CallScreen } from '@/components/call-screen';
 import { Gate } from '@/components/gate';
 import { usePalette } from '@/constants/theme';
-import { useAccounts } from '@/lib/accounts';
+import { goToAccount } from '@/components/account-list';
+import { accountByKey, useAccounts } from '@/lib/accounts';
 import { CallProvider } from '@/lib/calls';
 import { report } from '@/lib/crash';
 import { TegamiProvider, useTegami } from '@/lib/tegami';
@@ -64,6 +65,17 @@ function Shell() {
 export default function RootLayout() {
   // Switching accounts mounts everything again on the other account's storage.
   const { current } = useAccounts();
+  // A notification for another account was tapped while the app was open: open that account.
+  useEffect(() => {
+    const sw = typeof navigator !== 'undefined' ? navigator.serviceWorker : undefined;
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.tegami !== 'open' || typeof e.data.p !== 'string') return;
+      const entry = accountByKey(e.data.p);
+      if (entry) goToAccount(entry.id);
+    };
+    sw?.addEventListener('message', onMessage);
+    return () => sw?.removeEventListener('message', onMessage);
+  }, []);
   return (
     <TegamiProvider key={current}>
       <Shell />

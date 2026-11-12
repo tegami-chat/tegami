@@ -170,7 +170,9 @@ await a.send(wrapTo(alice, carolPub, 'hello carol'));
 await wait(1500);
 const first = carolGot()[0];
 check('the push is encrypted for the device (aes128gcm)', first?.coding === 'aes128gcm' && first.body.length > 86);
-check('…and says a message arrived', (await decryptPush(first.body).catch(() => null))?.t === 'message');
+const firstPayload = await decryptPush(first.body).catch(() => null);
+check('…and says a message arrived', firstPayload?.t === 'message');
+check('…and for which account (its public key)', firstPayload?.p === carolPub);
 const short = (tags) =>
   finalizeEvent({ kind: 1059, created_at: Math.floor(Date.now() / 1000), tags: [['p', carolPub], ['expiration', String(Math.floor(Date.now() / 1000) + 60)], ...tags], content: 'sealed' }, generateSecretKey());
 await a.send(short([['t', 'call']]));

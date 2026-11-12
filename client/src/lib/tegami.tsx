@@ -7,6 +7,7 @@ import { bytesToHex, hexToBytes } from 'nostr-tools/utils';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { describeAccount } from './accounts';
+import { clearNewMark } from './sw-store';
 import { createDeviceVault, deviceVaultAvailable, openDeviceVault, type DeviceVault } from './device-vault';
 import { setCrashReports } from './crash';
 import { encryptAndUpload, fileFromRumor, fileTags, forgetFile, keepSent, keptFile, shrinkImage, type FileRef } from './files';
@@ -328,6 +329,20 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (me) describeAccount(me, myName);
   }, [me, myName]);
+  // The open account has nothing new waiting in the account list: its chats are on screen.
+  useEffect(() => {
+    if (!me) return;
+    void clearNewMark(me);
+    const sw = typeof navigator !== 'undefined' ? navigator.serviceWorker : undefined;
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.tegami === 'new' && e.data.p === me) void clearNewMark(me);
+    };
+    sw?.addEventListener('message', onMessage);
+    return () => {
+      sw?.removeEventListener('message', onMessage);
+      void clearNewMark(me);
+    };
+  }, [me]);
 
   const saveGroups = useCallback((update: (prev: Group[]) => Group[]) => {
     setGroups((prev) => {

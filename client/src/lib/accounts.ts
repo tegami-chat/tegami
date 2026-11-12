@@ -9,9 +9,10 @@
 // key, and switching remounts the whole app on the other account. Opening every account
 // at once would mean asking for every passkey each time the app opens.
 
-import { useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import { FIRST_ACCOUNT, keyFor, load, remove, save, setStorageAccount } from './storage';
+import { newMarks, shareAccounts } from './sw-store';
 
 export type AccountEntry = { id: string; pubkey?: string; name?: string };
 type Index = { v: 1; current: string; list: AccountEntry[]; back?: string };
@@ -22,6 +23,7 @@ const INDEX = 'tegami.accounts';
 const KEY_NAMES = ['vault', 'device', 'account'];
 
 let index: Index = read();
+openFromAddress();
 setStorageAccount(index.current);
 const listeners = new Set<() => void>();
 
@@ -34,7 +36,35 @@ function read(): Index {
 function write(next: Index) {
   index = next;
   save(INDEX, next);
+  share();
   for (const fn of listeners) fn();
+}
+
+/** Tells the service worker who is who, so a notification can carry the account's name. */
+function share() {
+  void shareAccounts(index.list.filter((a) => a.pubkey).map((a) => ({ pubkey: a.pubkey!, name: a.name ?? '' })));
+}
+
+/**
+ * A notification tapped while the app was closed opens /?a=<public key>: start on that
+ * account. The address is put back to / at once (the key is public, but it need not stay).
+ */
+function openFromAddress() {
+  if (typeof window === 'undefined') return;
+  const a = new URLSearchParams(window.location.search).get('a');
+  if (a === null) return;
+  const entry = index.list.find((x) => x.pubkey === a);
+  if (entry && entry.id !== index.current) index = { ...index, current: entry.id, back: undefined };
+  save(INDEX, index);
+  // The router remembered the address when it loaded and writes it back after the first
+  // screen, so take the query out again a few times after that (as transfer.ts does).
+  const strip = () => {
+    if (new URLSearchParams(window.location.search).has('a')) {
+      window.history.replaceState(window.history.state, '', window.location.pathname + window.location.hash);
+    }
+  };
+  strip();
+  for (const ms of [0, 50, 200, 500, 1000, 2000]) setTimeout(strip, ms);
 }
 
 /** Whether an account has a key stored on this device (an account being added has none yet). */
@@ -55,6 +85,7 @@ function tidy() {
   }
 }
 tidy();
+share();
 
 function forgetStorage(id: string) {
   if (id === FIRST_ACCOUNT) return;
@@ -141,4 +172,37 @@ export function accountWithKey(pubkey: string) {
 /** Other accounts' storage names for one thing (for example who has notifications on). */
 export function otherAccountsHave(name: string) {
   return index.list.some((a) => a.id !== index.current && load<unknown>(keyFor(a.id, name), null) != null);
+}
+
+/** The account with this public key, if it is on this device. */
+export function accountByKey(pubkey: string) {
+  return index.list.find((a) => a.pubkey === pubkey);
+}
+
+/**
+ * Public keys of accounts that got a notification since they were last open (see sw-store.ts).
+ * Follows new notifications while the app is open, and the list when the app comes back.
+ */
+export function useNewMarks() {
+  const [marks, setMarks] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    let alive = true;
+    const refresh = () => void newMarks().then((m) => alive && setMarks(m));
+    refresh();
+    const sw = typeof navigator !== 'undefined' ? navigator.serviceWorker : undefined;
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.tegami === 'new') refresh();
+    };
+    const onVisible = () => {
+      if (globalThis.document?.visibilityState === 'visible') refresh();
+    };
+    sw?.addEventListener('message', onMessage);
+    globalThis.document?.addEventListener?.('visibilitychange', onVisible);
+    return () => {
+      alive = false;
+      sw?.removeEventListener('message', onMessage);
+      globalThis.document?.removeEventListener?.('visibilitychange', onVisible);
+    };
+  }, []);
+  return marks;
 }
