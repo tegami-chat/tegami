@@ -825,6 +825,29 @@ async function main() {
       for (const u of [a, b]) await u.context.close();
     });
 
+    await test('Reopening right after a call: the ended call does not ring again, and the next call connects', async () => {
+      const a = await person(browser, 'あさ');
+      const b = await person(browser, 'ばん');
+      await befriend(b, a);
+      await befriend(a, b);
+      await b.page.goto(ORIGIN + '/');
+      await a.page.getByRole('button', { name: '音声通話' }).click();
+      await button(b.page, '応答').click();
+      await waitConnected(a.page);
+      await button(a.page, '通話を終了').click();
+      await waitText(b.page, '通話が終了しました');
+      // B reopens within the minute the signals still live on the relay.
+      await b.page.goto(ORIGIN + '/');
+      await waitOpen(b.page);
+      await noText(b.page, '応答', 3000);
+      // A calls again: B rings for the new call, answers, and both connect.
+      await a.page.getByRole('button', { name: '音声通話' }).click();
+      await button(b.page, '応答').click();
+      await waitConnected(b.page);
+      await button(a.page, '通話を終了').click();
+      for (const u of [a, b]) await u.context.close();
+    });
+
     await test('Video call declined: the caller is told, nothing rings any more', async () => {
       const a = await person(browser, 'あん');
       const b = await person(browser, 'べん');
