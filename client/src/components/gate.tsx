@@ -138,7 +138,7 @@ export function Gate({ locked }: { locked: boolean }) {
         <>
           <Text style={s.notice}>
             {passkeysAvailable()
-              ? 'このパスキーの保存先では、鍵を守れませんでした。下の「保存できる場所」を選んでください。iPhone では「設定」→「一般」→「自動入力とパスワード」で「パスワード」を入れると選べるようになります。'
+              ? 'このパスキーの保存先では、鍵を守れませんでした。下の「いま使えるパスキーの保存先」から選んでください。iPhone では「設定」→「一般」→「自動入力とパスワード」で「パスワード」を入れると選べるようになります。'
               : 'このブラウザはパスキーを使えません。'}
           </Text>
           {passkeysAvailable() && (
@@ -241,19 +241,19 @@ export function Gate({ locked }: { locked: boolean }) {
 // A store must return the WebAuthn PRF value; Bitwarden saves the passkey but does not.
 // Tried: iPhone (Safari, 2026-11-12), Windows Hello (Chrome, 2026-11-11), Bitwarden (Chrome and iPhone, 2026-11-11/12).
 const STORES_OK = ['iPhone（iCloud キーチェーン）', 'Windows（Windows Hello）'];
-const STORES_NOT_YET = ['Bitwarden'];
+const STORES_PLANNED = ['Bitwarden'];
 
 function PasskeyStores() {
   const c = usePalette();
   const s = styles(c);
   return (
     <View style={s.stores}>
-      <Text style={s.storesHeading}>パスキーを保存できる場所</Text>
+      <Text style={s.storesHeading}>いま使えるパスキーの保存先</Text>
       {STORES_OK.map((name) => (
         <Text key={name} style={s.storesItem}>・{name}</Text>
       ))}
-      <Text style={[s.storesHeading, s.storesGap]}>まだ保存できない場所</Text>
-      {STORES_NOT_YET.map((name) => (
+      <Text style={[s.storesHeading, s.storesGap]}>対応予定</Text>
+      {STORES_PLANNED.map((name) => (
         <Text key={name} style={s.storesItem}>・{name}</Text>
       ))}
     </View>
