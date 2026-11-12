@@ -126,7 +126,7 @@ export function Gate({ locked }: { locked: boolean }) {
       )}
       {twin ? (
         <>
-          <Text style={s.notice}>{`このアカウントは、この端末にもうあります（${accountName(twin)}）`}</Text>
+          <Text style={s.notice}>{`このアカウントは、この端末にすでにあります（${accountName(twin)}）`}</Text>
           <Pressable style={s.primary} onPress={() => {
               takeRestoredKeys(); // a code for that account must not stay waiting for another one
               goToAccount(twin.id);

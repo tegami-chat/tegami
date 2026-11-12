@@ -726,7 +726,7 @@ async function main() {
       // The same link on a device that already has an account replaces nothing: the
       // account can be added as a second one, and B's own account stays as it was.
       await b.page.goto(moveLink);
-      await waitText(b.page, 'この端末には、もう Tegami のアカウントがあります');
+      await waitText(b.page, 'この端末には、すでに Tegami のアカウントがあります');
       assert(await keyLeavesAddressBar(b.page), 'the key stayed in the address bar of a device with an account');
       await button(b.page, 'アカウントを追加して受け取る').click();
       await waitText(b.page, 'えーさんのアカウントを受け取りました');
@@ -741,7 +741,7 @@ async function main() {
       // The same link once more: this device has that account already, so it offers to switch.
       await b.page.goto(moveLink);
       await button(b.page, 'アカウントを追加して受け取る').click();
-      await waitText(b.page, 'このアカウントは、この端末にもうあります（えー）');
+      await waitText(b.page, 'このアカウントは、この端末にすでにあります（えー）');
       await button(b.page, '切り替える').click();
       await waitOpen(b.page);
       await waitText(b.page, 'えー ▾');
