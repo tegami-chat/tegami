@@ -14,12 +14,17 @@ import { tmpdir } from 'node:os';
 import { createServer } from 'node:http';
 import { extname, join, resolve } from 'node:path';
 import * as nip19 from 'nostr-tools/nip19';
+import * as nip44 from 'nostr-tools/nip44';
+import * as nip59 from 'nostr-tools/nip59';
+import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import { chromium } from 'playwright-core';
+import WebSocket from 'ws';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const DIST = join(ROOT, 'dist-test');
-const RELAY_PORT = 7448;
-const WEB_PORT = 8766;
+// Ports can be moved when another copy of these tests runs at the same time.
+const RELAY_PORT = Number(process.env.RELAY_PORT || 7448);
+const WEB_PORT = Number(process.env.WEB_PORT || 8766);
 const ORIGIN = `http://localhost:${WEB_PORT}`;
 const CHROME =
   process.env.CHROME_PATH ??
@@ -91,9 +96,26 @@ function wrapper(opts) {
   })();`;
 }
 
+// Records every peer connection and every event the page sends, for the call tests.
+const RECORDER = `(() => {
+  window.__pcs = [];
+  const PC = window.RTCPeerConnection;
+  if (PC) {
+    window.RTCPeerConnection = function (...a) { const pc = new PC(...a); window.__pcs.push(pc); return pc; };
+    window.RTCPeerConnection.prototype = PC.prototype;
+  }
+  window.__sent = [];
+  const send = WebSocket.prototype.send;
+  WebSocket.prototype.send = function (d) {
+    try { const m = JSON.parse(d); if (m[0] === 'EVENT') window.__sent.push(m[1]); } catch {}
+    return send.call(this, d);
+  };
+})();`;
+
 async function newUser(browser, { prf = true, wrap = {}, authenticator = true } = {}) {
   const context = await browser.newContext();
   await context.addInitScript(wrapper(wrap));
+  await context.addInitScript(RECORDER);
   const page = await context.newPage();
   const cdp = await context.newCDPSession(page);
   await cdp.send('WebAuthn.enable');
@@ -138,6 +160,82 @@ async function noRawKey(page) {
   return !/"secretHex"/.test(all);
 }
 
+// ---------- calls ----------
+
+/** Someone who starts without a passkey (fast) and has a name on their invite link. */
+async function person(browser, name) {
+  const u = await newUser(browser, { prf: false });
+  await button(u.page, 'はじめる').click();
+  await button(u.page, 'パスキーを使わずに始める').click();
+  await waitOpen(u.page);
+  await u.page.goto(ORIGIN + '/add');
+  await waitText(u.page, '自分の招待リンク');
+  await u.page.getByPlaceholder('相手に表示される名前').fill(name);
+  u.link = (await text(u.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
+  u.hex = nip19.decode(u.link.match(/npub1[0-9a-z]+/)[0]).data;
+  return u;
+}
+/** u adds other (a person or an invite link) as a friend and ends up in the chat with them. */
+async function befriend(u, other) {
+  await u.page.goto(ORIGIN + '/add');
+  await waitText(u.page, '自分の招待リンク');
+  await u.page.getByPlaceholder('https://app.tegami.chat/i#npub…').fill(typeof other === 'string' ? other : other.link);
+  await button(u.page, '追加').click();
+  await u.page.getByPlaceholder('メッセージ').waitFor();
+}
+const pcState = (page) => page.evaluate(() => window.__pcs.map((p) => p.connectionState));
+async function waitConnected(page) {
+  try {
+    await page.waitForFunction(() => window.__pcs.some((p) => p.connectionState === 'connected'), null, { timeout: 20000 });
+  } catch {
+    throw new Error(`not connected: ${JSON.stringify(await pcState(page))}`);
+  }
+}
+async function noText(page, s, ms) {
+  await page.waitForTimeout(ms);
+  assert(!(await text(page)).includes(s), `"${s}" is shown`);
+}
+
+/** Sends one event to the dev relay as `secret` (logs in with NIP-42 first). */
+function relaySend(secret, event) {
+  return new Promise((ok, fail) => {
+    const ws = new WebSocket(`ws://localhost:${RELAY_PORT}`);
+    const timer = setTimeout(() => (ws.close(), fail(new Error('relay did not answer'))), 5000);
+    ws.on('message', (raw) => {
+      const m = JSON.parse(raw.toString());
+      if (m[0] === 'AUTH') {
+        const auth = finalizeEvent(
+          { kind: 22242, created_at: Math.floor(Date.now() / 1000), tags: [['relay', `ws://localhost:${RELAY_PORT}`], ['challenge', m[1]]], content: '' },
+          secret,
+        );
+        ws.send(JSON.stringify(['AUTH', auth]));
+      } else if (m[0] === 'OK' && m[1] !== event.id) {
+        ws.send(JSON.stringify(['EVENT', event]));
+      } else if (m[0] === 'OK') {
+        clearTimeout(timer);
+        ws.close();
+        m[2] ? ok() : fail(new Error(m[3]));
+      }
+    });
+  });
+}
+/** A call signal from `secret` to `to`, written `age` seconds ago, in an envelope the relay still hands out. */
+function signalFrom(secret, to, data, age = 0) {
+  const now = Math.floor(Date.now() / 1000);
+  const rumor = nip59.createRumor({ kind: 25050, content: JSON.stringify(data), tags: [['p', to]], created_at: now - age }, secret);
+  const seal = nip59.createSeal(rumor, secret, to);
+  const k = generateSecretKey();
+  return finalizeEvent(
+    {
+      kind: 1059,
+      created_at: now,
+      tags: [['p', to], ['expiration', String(now + 60)]],
+      content: nip44.encrypt(JSON.stringify(seal), nip44.getConversationKey(k, to)),
+    },
+    k,
+  );
+}
+
 // ---------- tests ----------
 
 const results = [];
@@ -165,7 +263,12 @@ async function main() {
   }
   const relay = spawn(process.execPath, ['dev/relay.mjs'], { cwd: ROOT, env: { ...process.env, PORT: String(RELAY_PORT) }, stdio: 'ignore' });
   const server = await serve();
-  const browser = await chromium.launch({ executablePath: CHROME, headless: !process.env.HEADED });
+  const browser = await chromium.launch({
+    executablePath: CHROME,
+    headless: !process.env.HEADED,
+    // Calls: a fake camera and microphone, allowed without asking.
+    args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
+  });
 
   try {
     await test('PRF at create: starts with one prompt, reopens with the passkey', async () => {
@@ -678,6 +781,93 @@ async function main() {
       await waitText(c.page, 'あきら');
       for (const u of [a, b, c]) await u.context.close();
     });
+
+    await test('Voice call: B answers, both connect, hanging up ends it on both sides; signals expire', async () => {
+      const a = await person(browser, 'あおい');
+      const b = await person(browser, 'ばく');
+      await befriend(b, a);
+      await befriend(a, b);
+      await b.page.goto(ORIGIN + '/'); // B is somewhere else in the app
+      const before = await a.page.evaluate(() => window.__sent.length);
+      await a.page.getByRole('button', { name: '音声通話' }).click();
+      await waitText(a.page, '呼び出し中');
+      await waitText(b.page, '音声通話');
+      assert((await text(b.page)).includes('あおい'), 'B does not see who calls');
+      await button(b.page, '出る').click();
+      await waitConnected(a.page);
+      await waitConnected(b.page);
+      for (const p of [a.page, b.page]) await p.waitForFunction(() => /(^|\s)0:0\d(\s|$)/.test(document.body.innerText), null, { timeout: 5000 });
+      // B hears A: the remote audio element plays a live track.
+      assert(
+        await b.page.evaluate(() => document.querySelector('audio[data-call="remote-audio"]')?.srcObject?.getAudioTracks()[0]?.readyState === 'live'),
+        'no remote audio on B',
+      );
+      await button(a.page, 'マイクを切る').click();
+      await button(a.page, 'マイクを入れる').waitFor();
+      await button(a.page, '切る').click();
+      await waitText(b.page, '通話が終わりました');
+      await b.page.waitForFunction(() => window.__pcs.every((p) => p.connectionState === 'closed'), null, { timeout: 5000 });
+      assert((await pcState(a.page)).every((s) => s === 'closed'), 'A still connected');
+      // Both chats note the call.
+      await waitText(a.page, '音声通話 0:');
+      await b.page.getByText('あおい').first().click();
+      await waitText(b.page, '音声通話 0:');
+      // Every envelope sent for the call carries an expiration a minute ahead.
+      const sent = (await a.page.evaluate(() => window.__sent)).slice(before);
+      const now = Math.floor(Date.now() / 1000);
+      assert(sent.length >= 2, `only ${sent.length} envelopes sent`);
+      for (const ev of sent) {
+        const exp = Number(ev.tags.find((t) => t[0] === 'expiration')?.[1]);
+        assert(ev.kind === 1059 && exp > now - 60 && exp <= now + 61, `envelope without a short expiration: ${JSON.stringify(ev.tags)}`);
+      }
+      for (const u of [a, b]) await u.context.close();
+    });
+
+    await test('Video call declined: the caller is told, nothing rings any more', async () => {
+      const a = await person(browser, 'あん');
+      const b = await person(browser, 'べん');
+      await befriend(b, a);
+      await befriend(a, b);
+      await a.page.getByRole('button', { name: 'ビデオ通話' }).click();
+      await waitText(b.page, 'ビデオ通話');
+      await a.page.waitForFunction(() => document.querySelector('video[data-call="local-video"]')?.srcObject?.getVideoTracks().length === 1, null, { timeout: 5000 });
+      await button(b.page, '断る').click();
+      await waitText(a.page, '相手は出られませんでした');
+      assert(!(await button(b.page, '出る').count()), 'B still rings');
+      await waitText(a.page, '応答なし');
+      for (const u of [a, b]) await u.context.close();
+    });
+
+    await test("A stranger's call does not ring", async () => {
+      const b = await person(browser, 'びわ');
+      const c = await person(browser, 'ちか');
+      await befriend(c, b); // C knows B, B does not know C
+      await b.page.goto(ORIGIN + '/');
+      await c.page.getByRole('button', { name: '音声通話' }).click();
+      await waitText(c.page, '呼び出し中');
+      await noText(b.page, '出る', 5000);
+      const t = await text(b.page);
+      assert(!t.includes('不在着信') && !t.includes('知らない人から'), 'the stranger left a trace');
+      await button(c.page, '切る').click();
+      for (const u of [b, c]) await u.context.close();
+    });
+
+    await test('A late signal (written more than a minute ago) does not ring; a fresh one does', async () => {
+      const b = await person(browser, 'ぼたん');
+      const x = generateSecretKey();
+      await befriend(b, `https://app.tegami.chat/i#${nip19.npubEncode(getPublicKey(x))}&n=${encodeURIComponent('えっくす')}`);
+      await b.page.goto(ORIGIN + '/');
+      await waitText(b.page, 'えっくす');
+      const offer = (id) => ({ t: 'offer', id, video: false, sdp: 'v=0\r\n' });
+      await relaySend(x, signalFrom(x, b.hex, offer('a'.repeat(32)), 120));
+      await noText(b.page, '出る', 3000);
+      // The same kind of envelope, written now: rings (so the late one really reached B).
+      await relaySend(x, signalFrom(x, b.hex, offer('b'.repeat(32))));
+      await button(b.page, '出る').waitFor({ timeout: 10000 });
+      await button(b.page, '断る').click();
+      await b.context.close();
+    });
+
 
     await test('AI friend: invite link shows the model, and the AI on the computer replies', async () => {
       const AGENT = join(ROOT, '../agent');

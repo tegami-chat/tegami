@@ -2,8 +2,10 @@ import { Stack, type ErrorBoundaryProps } from 'expo-router';
 import { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { CallScreen } from '@/components/call-screen';
 import { Gate } from '@/components/gate';
 import { usePalette } from '@/constants/theme';
+import { CallProvider } from '@/lib/calls';
 import { report } from '@/lib/crash';
 import { TegamiProvider, useTegami } from '@/lib/tegami';
 import { registerServiceWorker } from '@/lib/push';
@@ -34,22 +36,26 @@ function Shell() {
   // Every screen stays behind the gate until the account is open.
   if (status !== 'open') return <Gate locked={status === 'locked'} />;
   return (
-    <Stack
-      screenOptions={{
-        headerStyle: { backgroundColor: c.background },
-        headerTintColor: c.text,
-        headerShadowVisible: false,
-        contentStyle: { backgroundColor: c.background },
-      }}>
-      <Stack.Screen name="index" options={{ title: 'Tegami' }} />
-      <Stack.Screen name="add" options={{ title: '友達を追加' }} />
-      <Stack.Screen name="group" options={{ title: 'グループを作る' }} />
-      <Stack.Screen name="settings" options={{ title: '設定' }} />
-      <Stack.Screen name="i" options={{ headerShown: false }} />
-      <Stack.Screen name="link" options={{ title: "" }} />
-      <Stack.Screen name="strangers" options={{ title: '知らない人から' }} />
-      <Stack.Screen name="chat/[peer]" options={{ title: '' }} />
-    </Stack>
+    <CallProvider>
+      <Stack
+        screenOptions={{
+          headerStyle: { backgroundColor: c.background },
+          headerTintColor: c.text,
+          headerShadowVisible: false,
+          contentStyle: { backgroundColor: c.background },
+        }}>
+        <Stack.Screen name="index" options={{ title: 'Tegami' }} />
+        <Stack.Screen name="add" options={{ title: '友達を追加' }} />
+        <Stack.Screen name="group" options={{ title: 'グループを作る' }} />
+        <Stack.Screen name="settings" options={{ title: '設定' }} />
+        <Stack.Screen name="i" options={{ headerShown: false }} />
+        <Stack.Screen name="link" options={{ title: "" }} />
+        <Stack.Screen name="strangers" options={{ title: '知らない人から' }} />
+        <Stack.Screen name="chat/[peer]" options={{ title: '' }} />
+      </Stack>
+      {/* Over every screen: an incoming call shows wherever the person is. */}
+      <CallScreen />
+    </CallProvider>
   );
 }
 

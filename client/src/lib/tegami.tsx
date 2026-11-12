@@ -12,6 +12,7 @@ import { encryptAndUpload, fileFromRumor, fileTags, keepSent, shrinkImage, type 
 import { load, save } from './storage';
 import { bundleSecret, sendTransfer, type Bundle } from './transfer';
 import { disablePush, enablePush, type PushState } from './push';
+import { SIGNAL_KIND, freshSignal, wrapSignal } from './signal';
 import { createVault, unlockVault, type Vault } from './vault';
 
 // Tegami relays. In development: the relay in app/relay started with `npm run dev`.
@@ -27,7 +28,15 @@ export type Message = {
   at: number; // unix seconds
   /** A photo or file (NIP-17 kind 15). text is empty then. */
   file?: FileRef;
+  /** A call, recorded on this device only (never sent). text holds what the chat shows. */
+  call?: CallRecord;
 };
+
+/** done: we talked. missed: they called, I did not answer. unanswered: I called, no answer. */
+export type CallRecord = { video: boolean; result: 'done' | 'missed' | 'unanswered'; seconds?: number };
+
+/** A call signal from someone (or from my other device: from === me). See lib/signal.ts. */
+export type Signal = { id: string; from: string; to: string; at: number; data: Record<string, unknown> };
 
 /** model: for an AI friend, which company's which model (always shown, philosophy #93). */
 export type Contact = { pubkey: string; name: string; model?: string };
@@ -84,6 +93,12 @@ type TegamiState = {
   sendPhoto: (peer: string, photo: Blob) => Promise<void>;
   /** Turns notifications for this device on or off. Returns the new state. */
   setNotifications: (on: boolean) => Promise<PushState>;
+  /** Sends a call signal to one person, and to my other devices when alsoMe. */
+  sendSignal: (to: string, data: Record<string, unknown>, alsoMe?: boolean) => Promise<void>;
+  /** Listens for fresh call signals. Returns the function that stops listening. */
+  onSignal: (fn: (s: Signal) => void) => () => void;
+  /** Adds a call record to a chat on this device. */
+  recordCall: (peer: string, from: string, record: CallRecord, id: string) => void;
 };
 
 const Ctx = createContext<TegamiState | null>(null);
@@ -272,6 +287,16 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     [saveGroups],
   );
 
+  // Call signals go to whoever listens (lib/calls.tsx). Each is handled once.
+  const signalListeners = useRef(new Set<(s: Signal) => void>());
+  const seenSignals = useRef(new Set<string>());
+  const onSignal = useCallback((fn: (s: Signal) => void) => {
+    signalListeners.current.add(fn);
+    return () => {
+      signalListeners.current.delete(fn);
+    };
+  }, []);
+
   const addMessage = useCallback((m: Message) => {
     setMessages((prev) => {
       if (prev.some((p) => p.id === m.id)) return prev;
@@ -294,6 +319,16 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       {
         try {
           const rumor = nip17.unwrapEvent(wrap, secret);
+          if (rumor.kind === SIGNAL_KIND) {
+            // Late envelopes (delivered again after a reconnect) must not ring.
+            if (!freshSignal(rumor.created_at) || seenSignals.current.has(rumor.id)) return;
+            seenSignals.current.add(rumor.id);
+            const to = rumor.tags.find((t) => t[0] === 'p')?.[1] ?? '';
+            const data = JSON.parse(rumor.content);
+            if (!data || typeof data !== 'object' || !/^[0-9a-f]{64}$/.test(to)) return;
+            for (const fn of signalListeners.current) fn({ id: rumor.id, from: rumor.pubkey, to, at: rumor.created_at, data });
+            return;
+          }
           if (rumor.kind !== 14 && rumor.kind !== 15) return;
           const file = rumor.kind === 15 ? fileFromRumor(rumor.content, rumor.tags) : undefined;
           if (file === null) return;
@@ -469,6 +504,28 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     [secret, deliver, me, addMessage],
   );
 
+  const sendSignal = useCallback(
+    async (to: string, data: Record<string, unknown>, alsoMe = false) => {
+      if (!secret || !me || !pool.current) throw new Error('not open');
+      const rumor = nip59.createRumor(
+        { kind: SIGNAL_KIND, content: JSON.stringify(data), tags: [['p', to]], created_at: Math.floor(Date.now() / 1000) },
+        secret,
+      );
+      // My own signals coming back to this device are not for me.
+      seenSignals.current.add(rumor.id);
+      const wraps = (alsoMe ? [to, me] : [to]).map((k) => wrapSignal(rumor, secret, k));
+      await Promise.any(wraps.flatMap((w) => pool.current!.publish(RELAYS, w, { onauth: authRef.current ?? undefined })));
+    },
+    [secret, me],
+  );
+
+  const recordCall = useCallback(
+    (peer: string, from: string, record: CallRecord, id: string) => {
+      addMessage({ id: `call:${id}`, from, peer, text: callText(record), at: Math.floor(Date.now() / 1000), call: record });
+    },
+    [addMessage],
+  );
+
   const setNotifications = useCallback(
     async (on: boolean) => {
       if (!secret) throw new Error('not open');
@@ -479,6 +536,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
 
   const value: TegamiState = {
     setNotifications,
+    sendSignal,
+    onSignal,
+    recordCall,
     status,
     me,
     protectedByPasskey: !!vault,
@@ -515,4 +575,20 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       ),
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+/** What a call record says in the chat. */
+export function callText(r: CallRecord) {
+  if (r.result === 'missed') return '不在着信';
+  if (r.result === 'unanswered') return '応答なし';
+  return `${r.video ? 'ビデオ通話' : '音声通話'} ${clock(r.seconds ?? 0)}`;
+}
+
+/** 75 -> "1:15", 3725 -> "1:02:05" */
+export function clock(seconds: number) {
+  const s = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = String(s % 60).padStart(2, '0');
+  return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
 }
