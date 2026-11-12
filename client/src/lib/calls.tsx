@@ -15,6 +15,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
+import { load, save } from './storage';
 import { useTegami, type Signal } from './tegami';
 
 // STUN only, for now. There is no TURN server yet, so calls can fail when both sides are
@@ -120,6 +121,25 @@ function gathered(pc: RTCPeerConnection, ms: number) {
 
 const str = (v: unknown) => (typeof v === 'string' ? v : '');
 
+/** How long an offer waits before ringing, so a replayed hang-up for it can arrive first. */
+const OFFER_SETTLE_MS = 1200;
+
+// Ended call ids, kept on this device for a few minutes (longer than a signal lives).
+const DONE_KEY = 'tegami.calls.done';
+const DONE_SECONDS = 5 * 60;
+type DoneRow = { id: string; at: number };
+function loadDone(): string[] {
+  const now = Math.floor(Date.now() / 1000);
+  return load<DoneRow[]>(DONE_KEY, [])
+    .filter((r) => r && now - r.at < DONE_SECONDS)
+    .map((r) => r.id);
+}
+function saveDone(id: string) {
+  const now = Math.floor(Date.now() / 1000);
+  const rows = load<DoneRow[]>(DONE_KEY, []).filter((r) => r && now - r.at < DONE_SECONDS && r.id !== id);
+  save(DONE_KEY, [...rows, { id, at: now }].slice(-100));
+}
+
 export function CallProvider({ children }: { children: React.ReactNode }) {
   const { me, contacts, sendSignal, onSignal, recordCall } = useTegami();
   const [view, setView] = useState<CallView>(IDLE);
@@ -128,6 +148,15 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const contactsRef = useRef(contacts);
   contactsRef.current = contacts;
   const supported = useMemo(callsSupported, []);
+
+  // Calls already over. The relay hands a minute of signals out again after a reload, so
+  // without this an ended call would ring again when the app is reopened right after it.
+  const done = useRef<Set<string>>(new Set(loadDone()));
+  const markDone = useCallback((id: string) => {
+    if (done.current.has(id)) return;
+    done.current.add(id);
+    saveDone(id);
+  }, []);
 
   const signal = useCallback(
     (l: Live, data: Record<string, unknown>, alsoMe = false) =>
@@ -145,6 +174,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     (l: Live, text?: string, record = true) => {
       if (live.current !== l) return;
       live.current = null;
+      markDone(l.id);
       for (const t of l.timers) clearTimeout(t);
       l.stream?.getTracks().forEach((t) => t.stop());
       try {
@@ -360,19 +390,60 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       const t = str(d.t);
       const id = str(d.id);
       if (!id) return;
-      const l = live.current;
+      let l = live.current;
 
       // My other device answered or declined this call: stop ringing here.
       if (s.from === me) {
+        if (t === 'answer' || t === 'decline') markDone(id);
         if (l && l.role === 'callee' && !l.pc && l.id === id && (t === 'answer' || t === 'decline')) end(l, undefined, false);
         return;
+      }
+      // The end of a call: remember it even when it is not the call on screen (see `done`).
+      if (t === 'hangup' || t === 'decline' || t === 'busy') {
+        if (!l || l.id !== id) markDone(id);
       }
 
       if (t === 'offer') {
         // Only contacts can ring. Anyone else: nothing happens, nothing is kept.
         if (!contactsRef.current.some((c) => c.pubkey === s.from)) return;
         const sdp = str(d.sdp);
+        if (!sdp || done.current.has(id)) return;
+        // Wait a moment before ringing: after a reload the relay hands out a call's signals
+        // in no particular order, and its hang-up may come right after its offer.
+        setTimeout(() => ring(s, id, sdp), OFFER_SETTLE_MS);
+        return;
+      }
+
+      if (!l || l.id !== id || l.peer !== s.from) return;
+      if (t === 'answer' && l.role === 'caller' && l.pc && !l.pc.remoteDescription) {
+        const sdp = str(d.sdp);
         if (!sdp) return;
+        for (const x of l.timers.splice(0)) clearTimeout(x);
+        setView((v) => ({ ...v, phase: 'connecting' }));
+        l.pc
+          .setRemoteDescription({ type: 'answer', sdp })
+          .then(() => addIce(l!, l!.pendingIce.splice(0)))
+          .catch(() => {
+            signal(l!, { t: 'hangup' });
+            end(l!, 'つながりませんでした');
+          });
+        waitForConnection(l);
+      } else if (t === 'ice' && Array.isArray(d.c)) {
+        addIce(l, (d.c as unknown[]).filter((c): c is RTCIceCandidateInit => !!c && typeof c === 'object').slice(0, 50));
+      } else if (t === 'hangup') {
+        // Hung up while ringing here: a missed call, quietly.
+        end(l, l.role === 'callee' && !l.pc ? undefined : '通話が終了しました');
+      } else if (t === 'decline' && l.role === 'caller') {
+        end(l, '応答がありません');
+      } else if (t === 'busy' && l.role === 'caller') {
+        end(l, '相手は通話中です');
+      }
+
+      /** Rings for an offer once it has settled (still not over, not already ringing). */
+      function ring(s: Signal, id: string, sdp: string) {
+        if (done.current.has(id)) return;
+        const d = s.data;
+        l = live.current;
         if (l) {
           if (l.id === id) return;
           // Busy: say so, and note the missed call.
@@ -396,35 +467,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         setView({ ...IDLE, phase: 'incoming', peer: s.from, video: n.video });
         // The ring stops on its own; the caller gives up at the same time.
         n.timers.push(setTimeout(() => end(n, undefined, true), RING_MS));
-        return;
-      }
-
-      if (!l || l.id !== id || l.peer !== s.from) return;
-      if (t === 'answer' && l.role === 'caller' && l.pc && !l.pc.remoteDescription) {
-        const sdp = str(d.sdp);
-        if (!sdp) return;
-        for (const x of l.timers.splice(0)) clearTimeout(x);
-        setView((v) => ({ ...v, phase: 'connecting' }));
-        l.pc
-          .setRemoteDescription({ type: 'answer', sdp })
-          .then(() => addIce(l, l.pendingIce.splice(0)))
-          .catch(() => {
-            signal(l, { t: 'hangup' });
-            end(l, 'つながりませんでした');
-          });
-        waitForConnection(l);
-      } else if (t === 'ice' && Array.isArray(d.c)) {
-        addIce(l, (d.c as unknown[]).filter((c): c is RTCIceCandidateInit => !!c && typeof c === 'object').slice(0, 50));
-      } else if (t === 'hangup') {
-        // Hung up while ringing here: a missed call, quietly.
-        end(l, l.role === 'callee' && !l.pc ? undefined : '通話が終了しました');
-      } else if (t === 'decline' && l.role === 'caller') {
-        end(l, '応答がありません');
-      } else if (t === 'busy' && l.role === 'caller') {
-        end(l, '相手は通話中です');
       }
     });
-  }, [me, onSignal, sendSignal, recordCall, end, signal, addIce, waitForConnection]);
+  }, [me, onSignal, sendSignal, recordCall, end, signal, addIce, waitForConnection, markDone]);
 
   // Leaving the page ends the call for the other person too.
   useEffect(() => {
