@@ -1847,7 +1847,42 @@ async function main() {
       await waitOpen(u.page);
       await u.page.getByRole('button', { name: /びー ▾/ }).getByLabel('未読 4件').waitFor({ timeout: 5000 });
       await u.page.getByText('設定', { exact: true }).click();
-      // Tapping the notification while the app is open: the service worker asks the app to open that account.
+      // Tapping the notification: the service worker leaves the request in IndexedDB and sends a
+      // message. An app that was asleep (iPhone) misses the message and reads the request when it
+      // is on screen again; here the request is left and only the screen coming back is signalled.
+      const leaveOpenRequest = (p, at) =>
+        u.page.evaluate(
+          ([p, at]) =>
+            new Promise((ok) => {
+              const req = indexedDB.open('tegami-sw', 1);
+              req.onupgradeneeded = () => req.result.createObjectStore('kv');
+              req.onsuccess = () => {
+                const tx = req.result.transaction('kv', 'readwrite');
+                tx.objectStore('kv').put({ p, at }, 'open');
+                tx.oncomplete = ok;
+              };
+            }),
+          [p, at],
+        );
+      await u.page.goto(ORIGIN + '/');
+      await waitOpen(u.page);
+      await leaveOpenRequest(aKey, Date.now() - 5 * 60_000); // an old tap: ignored
+      await u.page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+      await u.page.waitForTimeout(800);
+      await waitText(u.page, 'びー ▾');
+      await leaveOpenRequest(aKey, Date.now());
+      await u.page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+      await waitOpen(u.page);
+      await waitText(u.page, 'えー ▾');
+      // The request is used once: coming back to the screen again stays on A after switching to B.
+      await u.page.getByText('えー ▾').click();
+      await u.page.getByRole('button', { name: /^びー/ }).click();
+      await waitOpen(u.page);
+      await u.page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+      await u.page.waitForTimeout(800);
+      await waitText(u.page, 'びー ▾');
+      // The message path (app awake): the request plus a message opens the account at once.
+      await leaveOpenRequest(aKey, Date.now());
       await u.page.evaluate((p) => navigator.serviceWorker.dispatchEvent(new MessageEvent('message', { data: { tegami: 'open', p } })), aKey);
       await waitOpen(u.page);
       await waitText(u.page, 'えー ▾');

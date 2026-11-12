@@ -1,6 +1,7 @@
 // What the app and the service worker (public/sw.js) share, in IndexedDB "tegami-sw":
 //   accounts: [{ pubkey, name }] for the accounts on this device, so a notification can
 //             say which account it is for (only when there is more than one).
+//   open:     { p, at } the account a tapped notification asks the app to open.
 //   new:      { [pubkey]: count } messages told by notifications since each account was last
 //             open, so the account list can show a number for an account that is not open.
 // The app cannot see an account that is not open (it is not connected with its key), so
@@ -51,6 +52,21 @@ async function update<T>(key: string, fn: (old: T | undefined) => T) {
 const available = () => typeof indexedDB !== 'undefined';
 
 export type SwAccount = { pubkey: string; name: string };
+
+/**
+ * The account a tapped notification asked to open, once, if it was tapped in the last
+ * two minutes (an older request is from a tap the app already handled or missed).
+ */
+export async function takeOpenRequest(): Promise<string | null> {
+  if (!available()) return null;
+  let found: { p?: string; at?: number } | undefined;
+  await update<{ p?: string; at?: number } | null>('open', (old) => {
+    found = old ?? undefined;
+    return null;
+  }).catch(() => {});
+  if (!found?.p || typeof found.at !== 'number' || Date.now() - found.at > 120_000) return null;
+  return found.p;
+}
 
 export async function shareAccounts(list: SwAccount[]) {
   if (!available()) return;
