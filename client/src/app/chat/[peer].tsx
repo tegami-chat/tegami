@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
-import { Stack, useLocalSearchParams } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { Stack, useIsFocused, useLocalSearchParams } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Photo } from '@/components/photo';
@@ -12,7 +12,9 @@ export default function Chat() {
   const c = usePalette();
   const s = styles(c);
   const { peer } = useLocalSearchParams<{ peer: string }>();
-  const { me, contacts, groups, messages, send, sendPhoto, addContact } = useTegami();
+  const { me, contacts, groups, messages, send, sendPhoto, addContact, markRead, cancelSend } = useTegami();
+  // A message waiting to be sent that was tapped: it offers to stop sending.
+  const [offered, setOffered] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
@@ -25,6 +27,20 @@ export default function Chat() {
   // 1:1 with a person (an AI friend cannot pick up). Groups later.
   const canCall = supported && !group && !!contact && !contact.model;
   const thread = useMemo(() => messages.filter((m) => m.peer === peer).reverse(), [messages, peer]);
+
+  // What is on the screen is read. Only on this device; nobody is told (no read receipts).
+  const focused = useIsFocused();
+  const [visible, setVisible] = useState(() => globalThis.document?.visibilityState !== 'hidden');
+  useEffect(() => {
+    const doc = globalThis.document;
+    if (!doc?.addEventListener) return;
+    const on = () => setVisible(doc.visibilityState !== 'hidden');
+    doc.addEventListener('visibilitychange', on);
+    return () => doc.removeEventListener('visibilitychange', on);
+  }, []);
+  useEffect(() => {
+    if (peer && focused && visible) markRead(peer);
+  }, [peer, focused, visible, thread, markRead]);
 
   async function pickPhoto() {
     if (!peer || sending) return;
@@ -45,16 +61,15 @@ export default function Chat() {
 
   async function submit() {
     const text = draft.trim();
-    if (!text || !peer || sending) return;
-    setSending(true);
+    if (!text || !peer) return;
     setFailed(false);
+    // Never lost: without a connection it waits in the chat and goes out later.
+    setDraft('');
     try {
       await send(peer, text);
-      setDraft('');
     } catch {
+      setDraft(text);
       setFailed(true);
-    } finally {
-      setSending(false);
     }
   }
 
@@ -123,19 +138,36 @@ export default function Chat() {
               </View>
             );
           }
-          return (
-            <View style={[s.bubble, mine ? s.mine : s.theirs]}>
+          const unsent = mine && item.pending === 'unsent';
+          const bubble = (
+            <View style={[s.bubble, mine ? s.mine : s.theirs, unsent && s.waiting, mine && !!item.pending && s.full]}>
               {group && !mine && <Text style={s.author}>{personName(item.from, contacts)}</Text>}
               {item.file ? (
                 <Photo id={item.id} file={item.file} />
               ) : (
-                <Text style={s.text} selectable>
+                <Text style={s.text} selectable={!unsent}>
                   {item.text}
                 </Text>
               )}
               <Text style={s.time}>
-                {new Date(item.at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {unsent ? '未送信' : new Date(item.at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </Text>
+            </View>
+          );
+          if (!mine || !item.pending) return bubble;
+          return (
+            <View style={s.mineWrap}>
+              <Pressable
+                onPress={() => setOffered(offered === item.id ? null : item.id)}
+                onLongPress={() => setOffered(item.id)}
+                aria-label={unsent ? '未送信のメッセージ' : undefined}>
+                {bubble}
+              </Pressable>
+              {offered === item.id && (
+                <Pressable style={s.cancel} onPress={() => cancelSend(item.id)} role="button">
+                  <Text style={s.cancelText}>送信をやめる</Text>
+                </Pressable>
+              )}
             </View>
           );
         }}
@@ -184,6 +216,11 @@ const styles = (c: Palette) =>
     text: { fontSize: 16, color: c.text, lineHeight: 22 },
     author: { fontSize: 12, color: c.accent, fontWeight: '600', marginBottom: 2 },
     time: { fontSize: 11, color: c.muted, alignSelf: 'flex-end', marginTop: 2 },
+    waiting: { opacity: 0.6 },
+    full: { maxWidth: '100%' },
+    mineWrap: { alignSelf: 'flex-end', alignItems: 'flex-end', maxWidth: '78%' },
+    cancel: { paddingHorizontal: 8, paddingVertical: 6 },
+    cancelText: { fontSize: 14, color: c.accent, fontWeight: '600' },
     addBar: {
       flexDirection: 'row',
       gap: 8,

@@ -8,7 +8,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { createDeviceVault, deviceVaultAvailable, openDeviceVault, type DeviceVault } from './device-vault';
 import { setCrashReports } from './crash';
-import { encryptAndUpload, fileFromRumor, fileTags, keepSent, shrinkImage, type FileRef } from './files';
+import { encryptAndUpload, fileFromRumor, fileTags, forgetFile, keepSent, keptFile, shrinkImage, type FileRef } from './files';
+import { backoff, loadOutbox, publishOne, saveOutbox, type Outgoing } from './outbox';
 import { load, save } from './storage';
 import { bundleSecret, sendTransfer, type Bundle } from './transfer';
 import { disablePush, enablePush, type PushState } from './push';
@@ -31,6 +32,10 @@ export type Message = {
   file?: FileRef;
   /** A call, recorded on this device only (never sent). text holds what the chat shows. */
   call?: CallRecord;
+  /** When this device received it (ms). Only for messages from others. */
+  got?: number;
+  /** My message not yet accepted by the relay: being sent now, or waiting for the connection. */
+  pending?: 'sending' | 'unsent';
 };
 
 /** done: we talked. missed: they called, I did not answer. unanswered: I called, no answer. */
@@ -111,6 +116,15 @@ type TegamiState = {
   turnOffRecovery: () => Promise<void>;
   /** The backup has not been refreshed for several tries in a row (offline, relay refused). */
   recoveryBehind: boolean;
+  /** Unread messages per chat id (only chats with some). Empty when counts are hidden. */
+  unread: Record<string, number>;
+  /** Whether unread counts are shown (philosophy #112: the person's choice, on by default). */
+  showUnread: boolean;
+  setShowUnread: (on: boolean) => void;
+  /** Marks a chat as read up to now. Stays on this device; nothing is sent (philosophy #17). */
+  markRead: (peer: string) => void;
+  /** Stops sending a message that is still waiting, and removes it from this device. */
+  cancelSend: (id: string) => void;
 };
 
 const Ctx = createContext<TegamiState | null>(null);
@@ -187,6 +201,23 @@ export function strangers(contacts: Contact[], messages: Message[], groups: Grou
   return [...last.entries()].map(([peer, m]) => ({ peer, last: m })).sort((a, b) => b.last.at - a.last.at);
 }
 
+/**
+ * Unread messages per chat: from someone else, received after the chat was last read.
+ * My own messages (also from my other devices) never count; of call records only missed calls.
+ * Messages written before this device's account was set up (brought back from the relay
+ * after moving to a new device) count as read. readAt and got are ms, setupAt is unix seconds.
+ */
+export function countUnread(messages: Message[], me: string | null, readAt: Record<string, number>, setupAt: number) {
+  const out: Record<string, number> = {};
+  for (const m of messages) {
+    if (m.from === me || m.at < setupAt) continue;
+    if (m.call && m.call.result !== 'missed') continue;
+    if ((m.got ?? m.at * 1000) <= (readAt[m.peer] ?? 0)) continue;
+    out[m.peer] = (out[m.peer] ?? 0) + 1;
+  }
+  return out;
+}
+
 /** Accepts an npub, a hex pubkey or an invite link that contains an npub. */
 export function parsePubkey(input: string): string | null {
   const text = input.trim();
@@ -212,9 +243,13 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const [crashReports, setCrashReportsState] = useState(false);
   const [recoveryOn, setRecoveryOn] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [readAt, setReadAt] = useState<Record<string, number>>({});
+  const [setupAt, setSetupAt] = useState(0);
+  const [showUnread, setShowUnreadState] = useState(true);
   const pool = useRef<SimplePool | null>(null);
   const authRef = useRef<((t: EventTemplate) => Promise<ReturnType<typeof finalizeEvent>>) | null>(null);
-
+  const outbox = useRef<Outgoing[]>([]);
+  const flushRef = useRef<() => Promise<void>>(async () => {});
 
   useEffect(() => {
     let alive = true;
@@ -246,7 +281,28 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       if (sk) setSecret(sk);
       setContacts(load<Contact[]>('tegami.contacts', []));
       setGroups(load<Group[]>('tegami.groups', []));
-      setMessages(load<Message[]>('tegami.messages', []));
+      // Messages waiting to be sent: the outbox is what counts. A message still marked as
+      // being sent when the app closed is now waiting; a mark without an outbox entry is stale.
+      const box = loadOutbox();
+      const stored = load<Message[]>('tegami.messages', []);
+      const ids = new Set(stored.map((m) => m.id));
+      outbox.current = box.filter((o) => ids.has(o.id));
+      if (outbox.current.length !== box.length) saveOutbox(outbox.current);
+      const waiting = new Set(outbox.current.map((o) => o.id));
+      setMessages(
+        stored.map((m) => {
+          if (waiting.has(m.id)) return m.pending === 'unsent' ? m : { ...m, pending: 'unsent' };
+          if (!m.pending) return m;
+          const { pending: _, ...rest } = m;
+          return rest;
+        }),
+      );
+      setReadAt(load<Record<string, number>>('tegami.readAt', {}));
+      setShowUnreadState(load<boolean>('tegami.showUnread', true));
+      // Accounts made before unread counts existed: what is already here counts as read.
+      let setup = load<number>('tegami.setupAt', 0);
+      if (!setup && (v || device || plain)) save('tegami.setupAt', (setup = Math.floor(Date.now() / 1000)));
+      setSetupAt(setup);
       setMyNameState(load<string>('tegami.myName', ''));
       const crash = load<boolean>('tegami.crashReports', false);
       setCrashReportsState(crash);
@@ -320,6 +376,66 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  /** Changes or removes messages already in the list (update returns null to remove). */
+  const editMessages = useCallback((ids: string[], update: (m: Message) => Message | null) => {
+    setMessages((prev) => {
+      let changed = false;
+      const next: Message[] = [];
+      for (const m of prev) {
+        if (!ids.includes(m.id)) {
+          next.push(m);
+          continue;
+        }
+        const u = update(m);
+        if (u !== m) changed = true;
+        if (u) next.push(u);
+      }
+      if (!changed) return prev;
+      save('tegami.messages', next);
+      return next;
+    });
+  }, []);
+  const setPending = useCallback(
+    (ids: string[], pending: Message['pending']) =>
+      editMessages(ids, (m) => {
+        if (m.pending === pending) return m;
+        if (pending) return { ...m, pending };
+        const { pending: _, ...rest } = m;
+        return rest;
+      }),
+    [editMessages],
+  );
+
+  // ---------- unread counts ----------
+  const unread = useMemo(
+    () => (showUnread ? countUnread(messages, me, readAt, setupAt) : {}),
+    [showUnread, messages, me, readAt, setupAt],
+  );
+  const messagesRef = useRef<Message[]>([]);
+  messagesRef.current = messages;
+  const markRead = useCallback((room: string) => {
+    let latest = 0;
+    for (const m of messagesRef.current) if (m.peer === room) latest = Math.max(latest, m.got ?? m.at * 1000);
+    setReadAt((prev) => {
+      if ((prev[room] ?? 0) >= latest) return prev;
+      const next = { ...prev, [room]: Math.max(latest, Date.now()) };
+      save('tegami.readAt', next);
+      return next;
+    });
+  }, []);
+  const setShowUnread = useCallback((on: boolean) => {
+    save('tegami.showUnread', on);
+    setShowUnreadState(on);
+  }, []);
+  // The browser tab shows the total, like "(3) Tegami".
+  const totalUnread = Object.values(unread).reduce((a, b) => a + b, 0);
+  useEffect(() => {
+    const doc = globalThis.document;
+    if (!doc) return;
+    const base = doc.title.replace(/^\(\d+\+?\) /, '') || 'Tegami';
+    doc.title = totalUnread ? `(${totalUnread > 99 ? '99+' : totalUnread}) ${base}` : base;
+  }, [totalUnread]);
+
   // Receive gift-wrapped messages addressed to me.
   useEffect(() => {
     if (!secret || !me) return;
@@ -356,11 +472,11 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
             const subject = rumor.tags.find((t) => t[0] === 'subject')?.[1]?.slice(0, 60);
             rememberGroup(peer, subject, rumor.pubkey);
           }
-          addMessage(
-            file
-              ? { id: rumor.id, from: rumor.pubkey, peer, text: '', at: rumor.created_at, file }
-              : { id: rumor.id, from: rumor.pubkey, peer, text: rumor.content, at: rumor.created_at },
-          );
+          const m: Message = file
+            ? { id: rumor.id, from: rumor.pubkey, peer, text: '', at: rumor.created_at, file }
+            : { id: rumor.id, from: rumor.pubkey, peer, text: rumor.content, at: rumor.created_at };
+          if (rumor.pubkey !== me) m.got = Date.now();
+          addMessage(m);
         } catch {
           // Not for us or malformed. Ignore.
         }
@@ -387,6 +503,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       const s = p.subscribe(RELAYS, filter, {
         onauth,
         onevent,
+        // Connected (again): send what is waiting.
+        oneose: () => void flushRef.current(),
         onclose: () => {
           if (disposed || sub !== s) return;
           retry = setTimeout(open, 2000);
@@ -396,15 +514,22 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     };
     open();
     const onVisible = () => {
-      if (globalThis.document?.visibilityState === 'visible') open();
+      if (globalThis.document?.visibilityState === 'visible') {
+        open();
+        void flushRef.current();
+      }
+    };
+    const onOnline = () => {
+      open();
+      void flushRef.current();
     };
     globalThis.document?.addEventListener?.('visibilitychange', onVisible);
-    globalThis.addEventListener?.('online', open);
+    globalThis.addEventListener?.('online', onOnline);
     return () => {
       disposed = true;
       clearTimeout(retry);
       globalThis.document?.removeEventListener?.('visibilitychange', onVisible);
-      globalThis.removeEventListener?.('online', open);
+      globalThis.removeEventListener?.('online', onOnline);
       sub?.close();
       p.destroy();
       pool.current = null;
@@ -437,17 +562,29 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // From now on, messages count as unread. Older ones (brought back from the relay on a
+  // new device) are read. Envelopes still waiting from an earlier account here are dropped.
+  const beginAccount = useCallback(() => {
+    const now = Math.floor(Date.now() / 1000);
+    save('tegami.setupAt', now);
+    setSetupAt(now);
+    setPending(outbox.current.map((o) => o.id), undefined);
+    outbox.current = [];
+    saveOutbox([]);
+  }, [setPending]);
+
   const start = useCallback(
     async (moved?: Bundle) => {
       const sk = moved ? bundleSecret(moved) : generateSecretKey();
       const v = await createVault(sk as Uint8Array<ArrayBuffer>);
       if (moved) await adopt(moved, sk);
       else forgetRecovery();
+      beginAccount();
       save('tegami.vault', v);
       setVault(v);
       setSecret(sk);
     },
-    [adopt, forgetRecovery],
+    [adopt, forgetRecovery, beginAccount],
   );
 
   const startWithoutPasskey = useCallback(
@@ -457,9 +594,10 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       else save('tegami.account', { secretHex: bytesToHex(sk) });
       if (moved) await adopt(moved, sk);
       else forgetRecovery();
+      beginAccount();
       setSecret(sk);
     },
-    [adopt, forgetRecovery],
+    [adopt, forgetRecovery, beginAccount],
   );
 
   const makeTransferLink = useCallback(async () => {
@@ -496,10 +634,13 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  /** Sends one rumor to everyone in the chat. Returns its id. */
-  const deliver = useCallback(
-    async (peer: string, kind: 14 | 15, content: string, extra: string[][] = []) => {
-      if (!secret || !me || !pool.current) throw new Error('not open');
+  /**
+   * Seals and wraps one rumor for everyone in the chat, once: the other people first, my own
+   * devices last. The envelopes are kept as they are until the relay takes them (lib/outbox.ts).
+   */
+  const build = useCallback(
+    (peer: string, kind: 14 | 15, content: string, extra: string[][] = [], at = Math.floor(Date.now() / 1000)) => {
+      if (!secret || !me) throw new Error('not open');
       // One rumor with a p tag for everyone in the chat, sealed and wrapped once
       // per person and once for myself, so my other devices see it too.
       // (nip17.wrapManyEvents gives the self copy a different rumor without the p tags.)
@@ -508,32 +649,160 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       const subject = groupsRef.current.find((g) => g.id === peer)?.name;
       if (isGroup(peer) && subject) tags.push(['subject', subject]);
       tags.push(...extra);
-      const rumor = nip59.createRumor({ kind, content, tags, created_at: Math.floor(Date.now() / 1000) }, secret);
+      const rumor = nip59.createRumor({ kind, content, tags, created_at: at }, secret);
       const wraps = [...members, me].map((to) => nip59.createWrap(nip59.createSeal(rumor, secret, to), to));
-      await Promise.any(wraps.flatMap((w) => pool.current!.publish(RELAYS, w, { onauth: authRef.current ?? undefined })));
-      return rumor;
+      return { rumor, wraps };
     },
     [secret, me],
   );
 
+  // ---------- outbox ----------
+  const saveBox = useCallback((list: Outgoing[]) => {
+    outbox.current = list;
+    saveOutbox(list);
+  }, []);
+  const failures = useRef(0);
+  const flushing = useRef(false);
+  const flushAgain = useRef(false);
+  const outboxTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  /** One try at one waiting message. True when everything in it was accepted. */
+  const attempt = useCallback(
+    async (item: Outgoing): Promise<boolean> => {
+      if (!secret || !pool.current) return false;
+      let cur = item;
+      if (cur.photo && !cur.wraps.length) {
+        // The upload failed earlier: upload again, then build the message once.
+        const kept = await keptFile(cur.id);
+        if (!kept) return false;
+        const bytes = new Uint8Array(await kept.arrayBuffer());
+        let file: FileRef;
+        try {
+          file = await encryptAndUpload(bytes, cur.photo.type, secret, cur.photo.dim);
+        } catch {
+          return false;
+        }
+        if (!outbox.current.some((o) => o.id === item.id)) return false; // given up meanwhile
+        const { rumor, wraps } = build(cur.peer, 15, file.url, fileTags(file), cur.at);
+        await keepSent(rumor.id, bytes, cur.photo.type);
+        const localId = cur.id;
+        cur = { id: rumor.id, peer: cur.peer, at: cur.at, wraps, done: [] };
+        const next = cur;
+        saveBox(outbox.current.map((o) => (o.id === localId ? next : o)));
+        editMessages([localId], (m) => ({ ...m, id: rumor.id, file }));
+        void forgetFile(localId);
+      }
+      for (const wrap of cur.wraps) {
+        if (cur.done.includes(wrap.id)) continue;
+        if (!(await publishOne(pool.current, RELAYS, wrap, authRef.current ?? undefined))) return false;
+        cur = { ...cur, done: [...cur.done, wrap.id] };
+        const next = cur;
+        // Given up while sending: the rest stays unsent.
+        if (!outbox.current.some((o) => o.id === next.id)) return false;
+        saveBox(outbox.current.map((o) => (o.id === next.id ? next : o)));
+      }
+      const doneId = cur.id;
+      saveBox(outbox.current.filter((o) => o.id !== doneId));
+      setPending([doneId], undefined);
+      return true;
+    },
+    [secret, build, saveBox, editMessages, setPending],
+  );
+
+  /** Sends what is waiting, oldest first. Stops at the first failure and tries again later. */
+  const flush = useCallback(async () => {
+    if (flushing.current) {
+      flushAgain.current = true;
+      return;
+    }
+    if (!pool.current || !outbox.current.length) return;
+    flushing.current = true;
+    clearTimeout(outboxTimer.current);
+    let ok = true;
+    try {
+      do {
+        flushAgain.current = false;
+        for (const item of [...outbox.current]) {
+          const fresh = outbox.current.find((o) => o.id === item.id);
+          if (!fresh) continue;
+          ok = await attempt(fresh);
+          if (!ok) break;
+        }
+      } while (ok && flushAgain.current && outbox.current.length);
+    } finally {
+      flushing.current = false;
+    }
+    if (!outbox.current.length) {
+      failures.current = 0;
+      return;
+    }
+    if (ok) {
+      // Something was added while the last one was being sent.
+      outboxTimer.current = setTimeout(() => void flushRef.current(), 0);
+      return;
+    }
+    failures.current += 1;
+    setPending(outbox.current.map((o) => o.id), 'unsent');
+    outboxTimer.current = setTimeout(() => void flushRef.current(), backoff(failures.current));
+  }, [attempt, setPending]);
+  flushRef.current = flush;
+  useEffect(() => () => clearTimeout(outboxTimer.current), []);
+  // Opening the app with messages waiting: try once the connection is up (the subscription's
+  // first EOSE also triggers this), and keep trying with the backoff.
+  useEffect(() => {
+    if (secret && me) void flushRef.current();
+  }, [secret, me]);
+
   const send = useCallback(
     async (peer: string, text: string) => {
-      const rumor = await deliver(peer, 14, text);
-      addMessage({ id: rumor.id, from: me!, peer, text, at: rumor.created_at });
+      const { rumor, wraps } = build(peer, 14, text);
+      saveBox([...outbox.current, { id: rumor.id, peer, at: rumor.created_at, wraps, done: [] }]);
+      addMessage({ id: rumor.id, from: me!, peer, text, at: rumor.created_at, pending: 'sending' });
+      void flush();
     },
-    [deliver, me, addMessage],
+    [build, saveBox, addMessage, me, flush],
   );
 
   const sendPhoto = useCallback(
     async (peer: string, photo: Blob) => {
-      if (!secret) throw new Error('not open');
+      if (!secret || !me) throw new Error('not open');
       const small = await shrinkImage(photo);
-      const file = await encryptAndUpload(small.bytes, small.type, secret, `${small.width}x${small.height}`);
-      const rumor = await deliver(peer, 15, file.url, fileTags(file));
-      await keepSent(rumor.id, small.bytes, small.type);
-      addMessage({ id: rumor.id, from: me!, peer, text: '', at: rumor.created_at, file });
+      const dim = `${small.width}x${small.height}`;
+      const at = Math.floor(Date.now() / 1000);
+      let file: FileRef | null = null;
+      try {
+        file = await encryptAndUpload(small.bytes, small.type, secret, dim);
+      } catch {
+        // Offline or the file server refused: keep the photo here and upload it later.
+      }
+      if (file) {
+        const { rumor, wraps } = build(peer, 15, file.url, fileTags(file), at);
+        await keepSent(rumor.id, small.bytes, small.type);
+        saveBox([...outbox.current, { id: rumor.id, peer, at, wraps, done: [] }]);
+        addMessage({ id: rumor.id, from: me, peer, text: '', at, file, pending: 'sending' });
+      } else {
+        const id = `local:${bytesToHex(crypto.getRandomValues(new Uint8Array(16)))}`;
+        await keepSent(id, small.bytes, small.type);
+        // Without a place to keep it (no IndexedDB), the photo cannot wait: say it was not sent.
+        if (!(await keptFile(id))) throw new Error('could not keep the photo');
+        const info = { type: small.type, dim, size: small.bytes.byteLength };
+        saveBox([...outbox.current, { id, peer, at, wraps: [], done: [], photo: info }]);
+        // Shown from this device until it is uploaded; the file fields are filled in then.
+        addMessage({ id, from: me, peer, text: '', at, file: { url: '', type: info.type, key: '', nonce: '', sha256: '', size: info.size, dim }, pending: 'unsent' });
+      }
+      void flush();
     },
-    [secret, deliver, me, addMessage],
+    [secret, me, build, saveBox, addMessage, flush],
+  );
+
+  const cancelSend = useCallback(
+    (id: string) => {
+      if (!outbox.current.some((o) => o.id === id)) return;
+      saveBox(outbox.current.filter((o) => o.id !== id));
+      editMessages([id], () => null);
+      if (id.startsWith('local:')) void forgetFile(id);
+    },
+    [saveBox, editMessages],
   );
 
   const sendSignal = useCallback(
@@ -666,6 +935,11 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => () => clearTimeout(retryTimer.current), []);
 
   const value: TegamiState = {
+    unread,
+    showUnread,
+    setShowUnread,
+    markRead,
+    cancelSend,
     recoveryOn,
     recoveryBehind: recoveryOn && recoveryFailures >= RECOVERY_FAILURES_SHOWN,
     makeRecoveryCode,

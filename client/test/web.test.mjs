@@ -236,6 +236,57 @@ function signalFrom(secret, to, data, age = 0) {
   );
 }
 
+// ---------- the dev relay (stopped and started again by the outbox tests) ----------
+
+let relay = null;
+async function startRelay() {
+  relay = spawn(process.execPath, ['dev/relay.mjs'], { cwd: ROOT, env: { ...process.env, PORT: String(RELAY_PORT) }, stdio: 'ignore' });
+  for (let i = 0; i < 100; i++) {
+    try {
+      if ((await fetch(`http://localhost:${RELAY_PORT}/`)).ok) return;
+    } catch {}
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error('the dev relay did not start');
+}
+async function stopRelay() {
+  const r = relay;
+  relay = null;
+  if (!r || r.exitCode !== null) return;
+  await new Promise((ok) => {
+    r.once('exit', ok);
+    r.kill();
+  });
+}
+/** Every envelope on the dev relay addressed to this pubkey (read with a throwaway login). */
+function envelopesFor(hex) {
+  const secret = generateSecretKey();
+  return new Promise((ok, fail) => {
+    const ws = new WebSocket(`ws://localhost:${RELAY_PORT}`);
+    const found = [];
+    const timer = setTimeout(() => (ws.close(), fail(new Error('relay did not answer'))), 5000);
+    ws.on('message', (raw) => {
+      const m = JSON.parse(raw.toString());
+      if (m[0] === 'AUTH') {
+        const auth = finalizeEvent(
+          { kind: 22242, created_at: Math.floor(Date.now() / 1000), tags: [['relay', `ws://localhost:${RELAY_PORT}`], ['challenge', m[1]]], content: '' },
+          secret,
+        );
+        ws.send(JSON.stringify(['AUTH', auth]));
+      } else if (m[0] === 'OK') {
+        ws.send(JSON.stringify(['REQ', 'q', { kinds: [1059], '#p': [hex] }]));
+      } else if (m[0] === 'EVENT') {
+        found.push(m[2]);
+      } else if (m[0] === 'EOSE') {
+        clearTimeout(timer);
+        ws.close();
+        ok(found);
+      }
+    });
+  });
+}
+const unreadBadges = (page) => page.locator('[data-testid="unread"]');
+
 // ---------- tests ----------
 
 const results = [];
@@ -263,7 +314,7 @@ async function main() {
       EXPO_PUBLIC_TEGAMI_FILES: `http://localhost:${RELAY_PORT}`,
     });
   }
-  const relay = spawn(process.execPath, ['dev/relay.mjs'], { cwd: ROOT, env: { ...process.env, PORT: String(RELAY_PORT) }, stdio: 'ignore' });
+  await startRelay();
   const server = await serve();
   const browser = await chromium.launch({
     executablePath: CHROME,
@@ -1067,6 +1118,186 @@ async function main() {
       for (const u of [a, b]) await u.context.close();
     });
 
+    await test('Unread: counts on the list and the tab, cleared by opening the chat; own messages never count; the switch hides them', async () => {
+      const a = await person(browser, 'うに');
+      const b = await person(browser, 'べに');
+      await befriend(b, a);
+      await befriend(a, b);
+      await a.page.goto(ORIGIN + '/');
+      await waitText(a.page, 'べに');
+      assert((await unreadBadges(a.page).count()) === 0, 'a badge before anything arrived');
+
+      await b.page.getByPlaceholder('メッセージ').fill('いち');
+      await button(b.page, '送る').click();
+      await b.page.getByPlaceholder('メッセージ').fill('に');
+      await button(b.page, '送る').click();
+      await a.page.getByLabel('未読 2件').waitFor({ timeout: 15000 });
+      await a.page.waitForFunction(() => document.title === '(2) Tegami', null, { timeout: 5000 });
+
+      // Opening the chat reads it; my reply (its copy also comes back from the relay) does not count.
+      await a.page.getByText('べに').first().click();
+      await waitText(a.page, 'に');
+      await a.page.getByPlaceholder('メッセージ').fill('こちらから');
+      await button(a.page, '送る').click();
+      await a.page.waitForTimeout(800);
+      await a.page.goto(ORIGIN + '/');
+      await waitText(a.page, 'こちらから');
+      assert((await unreadBadges(a.page).count()) === 0, 'still unread after opening the chat, or my own message counted');
+      assert((await a.page.title()) === 'Tegami', `title: ${await a.page.title()}`);
+      await a.page.reload();
+      await waitText(a.page, 'こちらから');
+      await a.page.waitForTimeout(1500); // everything comes back from the relay after a reload
+      assert((await unreadBadges(a.page).count()) === 0, 'messages became unread again after a reload');
+
+      // A new one while I am on the list counts.
+      await b.page.getByPlaceholder('メッセージ').fill('さん');
+      await button(b.page, '送る').click();
+      await a.page.getByLabel('未読 1件').waitFor({ timeout: 15000 });
+
+      // The switch hides the counts (and the tab number), and brings them back.
+      await a.page.getByText('設定', { exact: true }).click();
+      const sw = a.page.getByRole('switch', { name: '未読の数を表示する' });
+      await sw.waitFor();
+      assert(await sw.isChecked(), 'unread counts are off by default');
+      await sw.click();
+      assert((await a.page.title()) === 'Tegami', 'the tab still shows a number');
+      await a.page.goto(ORIGIN + '/');
+      await waitText(a.page, 'さん');
+      assert((await unreadBadges(a.page).count()) === 0, 'counts shown while turned off');
+      await a.page.goto(ORIGIN + '/settings');
+      await a.page.getByRole('switch', { name: '未読の数を表示する' }).click();
+      await a.page.goto(ORIGIN + '/');
+      await a.page.getByLabel('未読 1件').waitFor({ timeout: 5000 });
+
+      // Someone not in my friends: the 「知らない人から」 row shows their total.
+      const c = await person(browser, 'ちり');
+      await befriend(c, a);
+      await c.page.getByPlaceholder('メッセージ').fill('はじめまして');
+      await button(c.page, '送る').click();
+      await c.page.getByPlaceholder('メッセージ').fill('よろしく');
+      await button(c.page, '送る').click();
+      await a.page.getByRole('button', { name: /知らない人から/ }).getByLabel('未読 2件').waitFor({ timeout: 15000 });
+      await a.page.waitForFunction(() => document.title === '(3) Tegami', null, { timeout: 5000 });
+
+      // Moving to a new device: what was written before it was set up is not unread there.
+      await a.page.goto(ORIGIN + '/settings');
+      await a.page.getByText('別の端末でも使う').click();
+      await waitText(a.page, 'まで使えます');
+      const moveLink = (await text(a.page)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)[0];
+      const a2 = await newUser(browser, { prf: false });
+      await a2.page.goto(moveLink);
+      await button(a2.page, 'この端末で使う').click();
+      await button(a2.page, 'パスキーを使わずに始める').click();
+      await waitOpen(a2.page);
+      await waitText(a2.page, 'さん');
+      await waitText(a2.page, '知らない人から');
+      await a2.page.waitForTimeout(1000);
+      assert((await unreadBadges(a2.page).count()) === 0, 'old messages are unread on the new device');
+      assert((await a2.page.title()) === 'Tegami', `new device title: ${await a2.page.title()}`);
+      // ...but a new one is.
+      await b.page.getByPlaceholder('メッセージ').fill('よん');
+      await button(b.page, '送る').click();
+      await a2.page.getByLabel('未読 1件').waitFor({ timeout: 15000 });
+      for (const u of [a, a2, b, c]) await u.context.close();
+    });
+
+    await test('Outbox: written while the relay is down, kept through a reload, delivered exactly once when it is back; 送信をやめる removes one', async () => {
+      const a = await person(browser, 'あさ');
+      const b = await person(browser, 'ばん');
+      await befriend(b, a);
+      await befriend(a, b);
+      await b.page.goto(ORIGIN + '/');
+
+      await stopRelay();
+      await a.page.waitForTimeout(500);
+      await a.page.getByPlaceholder('メッセージ').fill('あとで届く');
+      await button(a.page, '送る').click();
+      await waitText(a.page, '未送信');
+      assert((await a.page.getByPlaceholder('メッセージ').inputValue()) === '', 'the text stayed in the box');
+      await a.page.getByPlaceholder('メッセージ').fill('やめる分');
+      await button(a.page, '送る').click();
+      await a.page.waitForFunction(() => document.body.innerText.split('未送信').length === 3, null, { timeout: 15000 });
+
+      // Giving up on one removes it here.
+      await a.page.getByText('やめる分').click();
+      await button(a.page, '送信をやめる').click();
+      await noText(a.page, 'やめる分', 300);
+
+      // Still waiting after a reload.
+      await a.page.reload();
+      await waitText(a.page, 'あとで届く');
+      await waitText(a.page, '未送信');
+      assert(!(await text(a.page)).includes('やめる分'), 'the stopped message came back after a reload');
+      const box = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.outbox')));
+      assert(box.length === 1 && box[0].wraps.length === 2 && box[0].done.length === 0, `outbox: ${JSON.stringify(box).slice(0, 120)}`);
+
+      // The relay is back: sent without anyone doing anything, once.
+      await startRelay();
+      await a.page.waitForFunction(() => !document.body.innerText.includes('未送信'), null, { timeout: 20000 });
+      await b.page.getByText('あさ').first().click();
+      await waitText(b.page, 'あとで届く');
+      await b.page.waitForTimeout(1500);
+      const bt = await text(b.page);
+      assert(bt.split('あとで届く').length === 2, 'the other person sees it more than once');
+      assert(!bt.includes('やめる分'), 'the stopped message was delivered');
+      assert((await envelopesFor(b.hex)).length === 1, `envelopes for B: ${(await envelopesFor(b.hex)).length}`);
+      assert((await envelopesFor(a.hex)).length === 1, `envelopes for my own devices: ${(await envelopesFor(a.hex)).length}`);
+      assert((await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.outbox')))).length === 0, 'the outbox is not empty');
+
+      // Offline in the browser (no network at all): waits, then goes when the network returns.
+      await a.context.setOffline(true);
+      await a.page.getByPlaceholder('メッセージ').fill('電波が戻ったら');
+      await button(a.page, '送る').click();
+      await waitText(a.page, '未送信');
+      await a.context.setOffline(false);
+      await a.page.waitForFunction(() => !document.body.innerText.includes('未送信'), null, { timeout: 20000 });
+      await waitText(b.page, '電波が戻ったら');
+      for (const u of [a, b]) await u.context.close();
+    });
+
+    await test('Outbox: a photo whose upload failed is shown, uploaded later and delivered once', async () => {
+      const a = await person(browser, 'あお');
+      const b = await person(browser, 'びわ');
+      await befriend(b, a);
+      await befriend(a, b);
+      await b.page.goto(ORIGIN + '/');
+      const png = Buffer.from(
+        await a.page.evaluate(() => {
+          const c = document.createElement('canvas');
+          c.width = 400;
+          c.height = 300;
+          const g = c.getContext('2d');
+          g.fillStyle = '#2f6db5';
+          g.fillRect(0, 0, 400, 300);
+          return c.toDataURL('image/png').split(',')[1];
+        }),
+        'base64',
+      );
+      await stopRelay();
+      await a.page.waitForTimeout(500);
+      const chooser = a.page.waitForEvent('filechooser');
+      await button(a.page, '写真').click();
+      await (await chooser).setFiles({ name: 'test.png', mimeType: 'image/png', buffer: png });
+      await waitText(a.page, '未送信');
+      await a.page.locator('img[alt="写真"]').first().waitFor({ timeout: 15000 });
+      await a.page.reload();
+      await waitText(a.page, '未送信');
+      await a.page.locator('img[alt="写真"]').first().waitFor({ timeout: 15000 });
+
+      await startRelay();
+      await a.page.waitForFunction(() => !document.body.innerText.includes('未送信'), null, { timeout: 30000 });
+      const sent = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages')).find((m) => m.file));
+      assert(sent && !sent.id.startsWith('local:') && sent.file.url.startsWith('http'), `sent: ${JSON.stringify(sent).slice(0, 120)}`);
+      await b.page.getByText('あお').first().click();
+      await b.page.waitForFunction(() => {
+        const i = document.querySelector('img[alt="写真"]');
+        return i && i.complete && i.naturalWidth === 400;
+      }, null, { timeout: 15000 });
+      assert((await b.page.locator('img[alt="写真"]').count()) === 1, 'more than one photo arrived');
+      assert((await envelopesFor(b.hex)).length === 1, 'more than one envelope for B');
+      for (const u of [a, b]) await u.context.close();
+    });
+
     await test('AI friend: invite link shows the model, and the AI on the computer replies', async () => {
       const AGENT = join(ROOT, '../agent');
       const home = mkdtempSync(join(tmpdir(), 'tegami-agent-'));
@@ -1100,7 +1331,7 @@ async function main() {
   } finally {
     await browser.close();
     server.close();
-    relay.kill();
+    relay?.kill();
   }
 
   const failed = results.filter(([, ok]) => !ok).length;
