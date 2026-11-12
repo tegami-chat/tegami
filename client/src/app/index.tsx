@@ -1,14 +1,14 @@
 import { Link, Stack, router } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ChatRow } from '@/components/chat-row';
+import { Badge, ChatRow } from '@/components/chat-row';
 import { Palette, usePalette } from '@/constants/theme';
 import { chatName, strangers, useTegami } from '@/lib/tegami';
 
 export default function Chats() {
   const c = usePalette();
   const s = styles(c);
-  const { contacts, groups, messages } = useTegami();
+  const { contacts, groups, messages, unread } = useTegami();
 
   const lastOf = (room: string) => [...messages].reverse().find((m) => m.peer === room);
   const rows = [
@@ -18,6 +18,7 @@ export default function Chats() {
     .map((r) => ({ ...r, last: lastOf(r.room) }))
     .sort((a, b) => (b.last?.at ?? 0) - (a.last?.at ?? 0));
   const unknown = strangers(contacts, messages, groups);
+  const unknownUnread = unknown.reduce((n, r) => n + (unread[r.peer] ?? 0), 0);
 
   return (
     <View style={s.fill}>
@@ -53,12 +54,12 @@ export default function Chats() {
           unknown.length > 0 ? (
             <Pressable style={s.strangers} onPress={() => router.push('/strangers')} role="button">
               <Text style={s.strangersText}>知らない人から</Text>
-              <Text style={s.count}>{unknown.length}</Text>
+              {unknownUnread > 0 ? <Badge count={unknownUnread} /> : <Text style={s.count}>{unknown.length}</Text>}
             </Pressable>
           ) : null
         }
         renderItem={({ item }) => (
-          <ChatRow peer={item.room} name={item.name} model={item.model} last={item.last} mark={item.group ? '◎' : undefined} />
+          <ChatRow peer={item.room} name={item.name} model={item.model} last={item.last} mark={item.group ? '◎' : undefined} unread={unread[item.room]} />
         )}
       />
     </View>

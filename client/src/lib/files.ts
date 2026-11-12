@@ -174,3 +174,24 @@ export async function openFile(id: string, f: FileRef): Promise<Blob> {
 export async function keepSent(id: string, bytes: Uint8Array<ArrayBuffer>, type: string) {
   await keep(id, new Blob([bytes], { type })).catch(() => {});
 }
+
+/** A file kept on this device under this id, if any. */
+export async function keptFile(id: string): Promise<Blob | undefined> {
+  return cached(id).catch(() => undefined);
+}
+
+/** Removes a file kept on this device (a photo that was never sent). */
+export async function forgetFile(id: string) {
+  const d = await db().catch(() => null);
+  if (!d) return;
+  try {
+    await new Promise<void>((resolve) => {
+      const tx = d.transaction('files', 'readwrite');
+      tx.objectStore('files').delete(id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  } finally {
+    d.close();
+  }
+}

@@ -24,6 +24,8 @@ export default function Settings() {
     makeRecoveryCode,
     turnOffRecovery,
     recoveryBehind,
+    showUnread,
+    setShowUnread,
   } = useTegami();
   // The recovery code is shown once, right after it is made, and never kept on screen after.
   const [newCode, setNewCode] = useState<string | null>(null);
@@ -227,6 +229,10 @@ export default function Settings() {
       <Text style={s.note}>報告には、エラーの内容だけが入ります。名前や会話は入りません。</Text>
 
       <Text style={s.heading}>会話</Text>
+      <View style={[s.card, s.row]}>
+        <Text style={s.label}>未読の数を表示する</Text>
+        <Switch value={showUnread} onValueChange={setShowUnread} aria-label="未読の数を表示する" />
+      </View>
       <Pressable style={s.card} onPress={exportFile} role="button">
         <Text style={s.action}>{exported ? '書き出しました' : '会話を書き出す'}</Text>
       </Pressable>
