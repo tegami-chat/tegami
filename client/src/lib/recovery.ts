@@ -28,7 +28,7 @@
 
 import { getPublicKey } from 'nostr-tools/pure';
 
-import { load, save } from './storage';
+import { k, load, remove, save } from './storage';
 import { relayHttp, signedFetch } from './relay-http';
 import { cleanBundle, type Bundle } from './transfer';
 import { fromB64u, toB64u } from './vault';
@@ -41,7 +41,7 @@ const CODE_LENGTH = 28;
 const GROUP = 4;
 const PAD = 1024;
 export const MAX_BACKUP_BYTES = 64 * 1024;
-const LOCAL = 'tegami.recovery';
+const LOCAL = () => k('recovery');
 
 export class RecoveryError extends Error {}
 
@@ -185,7 +185,7 @@ async function localKey(secret: Uint8Array) {
 }
 
 export function recoveryOnHere() {
-  return !!load<LocalRecord | null>(LOCAL, null);
+  return !!load<LocalRecord | null>(LOCAL(), null);
 }
 
 export async function saveLocal(secret: Uint8Array, rec: LocalRecovery) {
@@ -199,11 +199,11 @@ export async function saveLocal(secret: Uint8Array, rec: LocalRecovery) {
     }),
   );
   const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await localKey(secret), pt);
-  save(LOCAL, { v: 1, iv: toB64u(iv), ct: toB64u(ct) } satisfies LocalRecord);
+  save(LOCAL(), { v: 1, iv: toB64u(iv), ct: toB64u(ct) } satisfies LocalRecord);
 }
 
 export async function loadLocal(secret: Uint8Array): Promise<LocalRecovery | null> {
-  const r = load<LocalRecord | null>(LOCAL, null);
+  const r = load<LocalRecord | null>(LOCAL(), null);
   if (!r) return null;
   try {
     const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64u(r.iv) }, await localKey(secret), fromB64u(r.ct));
@@ -218,8 +218,8 @@ export async function loadLocal(secret: Uint8Array): Promise<LocalRecovery | nul
 
 export function clearLocal() {
   try {
-    globalThis.localStorage?.removeItem(LOCAL);
-    globalThis.localStorage?.removeItem('tegami.recovery.failures');
+    remove(LOCAL());
+    remove(k('recovery.failures'));
   } catch {
     // Storage unavailable: nothing to clear.
   }

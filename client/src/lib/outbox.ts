@@ -10,7 +10,7 @@ import type { NostrEvent, EventTemplate } from 'nostr-tools/core';
 import type { SimplePool } from 'nostr-tools/pool';
 import type { finalizeEvent } from 'nostr-tools/pure';
 
-import { load, save } from './storage';
+import { k, load, save } from './storage';
 
 export type Outgoing = {
   /** The message id in the chat: the rumor id, or "local:…" for a photo not uploaded yet. */
@@ -26,14 +26,13 @@ export type Outgoing = {
   photo?: { type: string; dim: string; size: number; replyTo?: string };
 };
 
-const KEY = 'tegami.outbox';
 
 export function loadOutbox(): Outgoing[] {
-  return load<Outgoing[]>(KEY, []);
+  return load<Outgoing[]>(k('outbox'), []);
 }
 
 export function saveOutbox(list: Outgoing[]) {
-  save(KEY, list);
+  save(k('outbox'), list);
 }
 
 /** Retry waits: 2 s, 4 s, 8 s … up to a minute. */

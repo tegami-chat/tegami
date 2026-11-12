@@ -15,7 +15,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-import { load, save } from './storage';
+import { k, load, save } from './storage';
 import { useTegami, type Signal } from './tegami';
 
 // STUN only, for now. There is no TURN server yet, so calls can fail when both sides are
@@ -127,19 +127,19 @@ const OFFER_SETTLE_MS = 1200;
 const LIVE_SECONDS = 3;
 
 // Ended call ids, kept on this device for a few minutes (longer than a signal lives).
-const DONE_KEY = 'tegami.calls.done';
+const DONE_KEY = () => k('calls.done');
 const DONE_SECONDS = 5 * 60;
 type DoneRow = { id: string; at: number };
 function loadDone(): string[] {
   const now = Math.floor(Date.now() / 1000);
-  return load<DoneRow[]>(DONE_KEY, [])
+  return load<DoneRow[]>(DONE_KEY(), [])
     .filter((r) => r && now - r.at < DONE_SECONDS)
     .map((r) => r.id);
 }
 function saveDone(id: string) {
   const now = Math.floor(Date.now() / 1000);
-  const rows = load<DoneRow[]>(DONE_KEY, []).filter((r) => r && now - r.at < DONE_SECONDS && r.id !== id);
-  save(DONE_KEY, [...rows, { id, at: now }].slice(-100));
+  const rows = load<DoneRow[]>(DONE_KEY(), []).filter((r) => r && now - r.at < DONE_SECONDS && r.id !== id);
+  save(DONE_KEY(), [...rows, { id, at: now }].slice(-100));
 }
 
 export function CallProvider({ children }: { children: React.ReactNode }) {

@@ -1,10 +1,11 @@
 // Notifications on the web (Web Push). The relay keeps this device's push address for
-// my key and sends an empty push when an envelope for me arrives; the service worker
+// my key (one browser has one push address; each account on it registers it with its own key) and sends an empty push when an envelope for me arrives; the service worker
 // (public/sw.js) shows "新しいメッセージがあります". Nothing about the message leaves
 // the relay. iPhone allows web notifications only for a web app added to the Home Screen.
 
 import { relayHttp, signedFetch } from './relay-http';
-import { load, save } from './storage';
+import { otherAccountsHave } from './accounts';
+import { k, load, remove, save } from './storage';
 import { fromB64u } from './vault';
 
 export type PushState = 'on' | 'off' | 'denied' | 'needs-home-screen' | 'unsupported';
@@ -30,7 +31,7 @@ export function registerServiceWorker() {
 export function pushState(): PushState {
   if (!pushSupported()) return isIos() && !installed() ? 'needs-home-screen' : 'unsupported';
   if (Notification.permission === 'denied') return 'denied';
-  return load<string | null>('tegami.push', null) && Notification.permission === 'granted' ? 'on' : 'off';
+  return load<string | null>(k('push'), null) && Notification.permission === 'granted' ? 'on' : 'off';
 }
 
 /** Tells the relay about this device, signed with my key (NIP-98). */
@@ -52,7 +53,7 @@ export async function enablePush(secret: Uint8Array): Promise<PushState> {
   const { key } = (await (await fetch(`${relayHttp()}/push/key`)).json()) as { key: string };
   const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: fromB64u(key) }));
   await tellRelay('POST', sub.endpoint, secret, sub.toJSON?.().keys);
-  save('tegami.push', sub.endpoint);
+  save(k('push'), sub.endpoint);
   return 'on';
 }
 
@@ -70,15 +71,16 @@ export async function refreshPush(secret: Uint8Array) {
   }
 }
 
-/** Unregisters this device from the relay and stops the subscription. */
+/** Unregisters this device from the relay for this account, and stops the subscription when no account uses it. */
 export async function disablePush(secret: Uint8Array): Promise<PushState> {
-  const endpoint = load<string | null>('tegami.push', null);
-  save('tegami.push', null);
+  const endpoint = load<string | null>(k('push'), null);
+  remove(k('push'));
   try {
     const reg = await navigator.serviceWorker.getRegistration('/sw.js');
     const sub = await reg?.pushManager.getSubscription();
     if (endpoint) await tellRelay('DELETE', endpoint, secret);
-    await sub?.unsubscribe();
+    // Another account on this browser still uses the same subscription: keep it.
+    if (!otherAccountsHave('push')) await sub?.unsubscribe();
   } catch {
     // Already gone; the relay also forgets addresses the push service reports as gone.
   }

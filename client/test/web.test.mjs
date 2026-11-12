@@ -723,10 +723,35 @@ async function main() {
       await waitText(a3.page, 'びー');
       await a3.context.close();
 
-      // The same link on a device that already has an account replaces nothing.
+      // The same link on a device that already has an account replaces nothing: the
+      // account can be added as a second one, and B's own account stays as it was.
       await b.page.goto(moveLink);
-      await waitText(b.page, 'もう Tegami のアカウントを使っています');
+      await waitText(b.page, 'この端末には、もう Tegami のアカウントがあります');
       assert(await keyLeavesAddressBar(b.page), 'the key stayed in the address bar of a device with an account');
+      await button(b.page, 'アカウントを追加して受け取る').click();
+      await waitText(b.page, 'えーさんのアカウントを受け取りました');
+      await button(b.page, 'この端末で使う').click();
+      await button(b.page, 'パスキーを使わずに始める').click();
+      await waitOpen(b.page);
+      await waitText(b.page, 'えー ▾');
+      await waitText(b.page, 'びー'); // A's friend, in A's account
+      const bKeys = Object.keys(await storage(b.page));
+      assert(bKeys.includes('tegami.device') && bKeys.some((k) => /^tegami@[0-9a-f]{8}\.device$/.test(k)), `storage: ${bKeys}`);
+      assert(await noRawKey(b.page), 'raw key stored for the added account');
+      // The same link once more: this device has that account already, so it offers to switch.
+      await b.page.goto(moveLink);
+      await button(b.page, 'アカウントを追加して受け取る').click();
+      await waitText(b.page, 'このアカウントは、この端末にもうあります（えー）');
+      await button(b.page, '切り替える').click();
+      await waitOpen(b.page);
+      await waitText(b.page, 'えー ▾');
+      await b.page.getByText('えー ▾').click();
+      await waitText(b.page, '使用中');
+      await b.page.getByRole('button', { name: 'びー', exact: true }).click();
+      await waitOpen(b.page);
+      await waitText(b.page, 'びー ▾');
+      const bAccounts = JSON.parse((await storage(b.page))['tegami.accounts']).list;
+      assert(bAccounts.length === 2, `accounts on B's browser: ${JSON.stringify(bAccounts)}`);
 
       // A broken or expired link explains itself and lets the person start fresh.
       const c = await newUser(browser, { prf: false });
@@ -1603,6 +1628,160 @@ async function main() {
       await waitText(a.page, 'テガミの話をしよう');
       assert((await box.inputValue()) === 'てがみ', 'the search was lost');
       await a.context.close();
+    });
+
+    await test('Accounts: two on one browser keep their friends and messages apart; switching from the list and the title', async () => {
+      const u = await person(browser, 'あい');
+      const x = generateSecretKey();
+      await befriend(u, `https://app.tegami.chat/i#${nip19.npubEncode(getPublicKey(x))}&n=${encodeURIComponent('えっくす')}`);
+      await relaySend(x, wrapTo(x, u.hex, rumorTo(x, u.hex, 'あいさんへの手紙')));
+      await u.page.goto(ORIGIN + '/');
+      await waitText(u.page, 'あいさんへの手紙');
+      assert(!(await text(u.page)).includes('▾'), 'the title switches accounts with only one account');
+
+      // Add a second account from settings; going back is offered while adding.
+      await u.page.getByText('設定', { exact: true }).click();
+      await waitText(u.page, '使用中');
+      await button(u.page, 'アカウントを追加').click();
+      await button(u.page, 'キャンセル').waitFor();
+      await button(u.page, 'はじめる').click();
+      await button(u.page, 'パスキーを使わずに始める').click();
+      await waitOpen(u.page);
+      let t = await text(u.page);
+      assert(!t.includes('えっくす') && !t.includes('あいさんへの手紙'), `the first account's chats show in the second: ${t.slice(0, 200)}`);
+      await u.page.goto(ORIGIN + '/add');
+      await waitText(u.page, '自分の招待リンク');
+      await u.page.getByPlaceholder('相手に表示される名前').fill('びい');
+      const bHex = nip19.decode((await text(u.page)).match(/npub1[0-9a-z]+/)[0]).data;
+      assert(bHex !== u.hex, 'the second account has the same key');
+      await relaySend(x, wrapTo(x, bHex, rumorTo(x, bHex, 'びいさんへの手紙')));
+      await u.page.goto(ORIGIN + '/');
+      await waitText(u.page, 'びい ▾');
+      await waitText(u.page, '知らない人から'); // x is not B's friend
+      assert(!(await text(u.page)).includes('あいさんへの手紙'), 'a message for A shows in B');
+
+      // Switch with the title; A's chats come back, B's message does not show there.
+      await u.page.getByText('びい ▾').click();
+      await u.page.getByRole('button', { name: 'あい', exact: true }).click();
+      await waitOpen(u.page);
+      await waitText(u.page, 'あい ▾');
+      await waitText(u.page, 'あいさんへの手紙');
+      t = await text(u.page);
+      assert(!t.includes('知らない人から') && !t.includes('びいさんへの手紙'), "B's message shows in A");
+      // The open account is remembered across a reload.
+      await u.page.reload();
+      await waitOpen(u.page);
+      await waitText(u.page, 'あい ▾');
+      // B still has its message after switching back from settings.
+      await u.page.getByText('設定', { exact: true }).click();
+      await u.page.getByRole('button', { name: 'びい', exact: true }).click();
+      await waitOpen(u.page);
+      await u.page.getByText('知らない人から').click();
+      await waitText(u.page, 'びいさんへの手紙');
+      const s = await storage(u.page);
+      assert(JSON.parse(s['tegami.messages']).every((m) => m.text !== 'びいさんへの手紙'), "B's message in A's storage");
+      await u.context.close();
+    });
+
+    await test('Accounts: an account from the earlier version becomes the first one; giving up adding goes back to it', async () => {
+      const u = await person(browser, 'まえ');
+      const x = generateSecretKey();
+      await relaySend(x, wrapTo(x, u.hex, rumorTo(x, u.hex, '前の版からの手紙')));
+      await u.page.goto(ORIGIN + '/');
+      await waitText(u.page, '知らない人から');
+      // The earlier version had no account list.
+      await u.page.evaluate(() => localStorage.removeItem('tegami.accounts'));
+      const before = await storage(u.page);
+      await u.page.reload();
+      await waitOpen(u.page);
+      await waitText(u.page, '知らない人から');
+      const after = await storage(u.page);
+      for (const k of ['tegami.device', 'tegami.messages', 'tegami.myName', 'tegami.setupAt'])
+        assert(after[k] === before[k], `${k} changed when the account list was made`);
+
+      await u.page.getByText('設定', { exact: true }).click();
+      await button(u.page, 'アカウントを追加').click();
+      await button(u.page, 'キャンセル').click();
+      await waitOpen(u.page);
+      await waitText(u.page, '知らない人から');
+      const left = await storage(u.page);
+      assert(!Object.keys(left).some((k) => k.startsWith('tegami@')), `storage left behind: ${Object.keys(left)}`);
+      assert(JSON.parse(left['tegami.accounts']).list.length === 1, `account list: ${left['tegami.accounts']}`);
+      // Closing the app while adding: the empty account is gone next time, and the first one opens.
+      await u.page.goto(ORIGIN + '/settings');
+      await button(u.page, 'アカウントを追加').click();
+      await button(u.page, 'はじめる').waitFor();
+      await u.page.evaluate(() => {
+        const i = JSON.parse(localStorage.getItem('tegami.accounts'));
+        i.current = 'main';
+        localStorage.setItem('tegami.accounts', JSON.stringify(i));
+      });
+      await u.page.reload();
+      await waitOpen(u.page);
+      assert(JSON.parse((await storage(u.page))['tegami.accounts']).list.length === 1, 'the empty account stayed in the list');
+      await u.context.close();
+    });
+
+    await test('Accounts: notifications are per account; turning one off keeps the other on the same browser', async () => {
+      const u = await newUser(browser, { prf: false });
+      await u.context.grantPermissions(['notifications'], { origin: ORIGIN });
+      await u.page.addInitScript(() => {
+        window.__unsubscribed = 0;
+        const sub = {
+          endpoint: 'https://fcm.googleapis.com/fcm/send/shared-device',
+          toJSON: () => ({ endpoint: 'https://fcm.googleapis.com/fcm/send/shared-device', keys: { p256dh: 'BTESTp256dh', auth: 'TESTauth' } }),
+          unsubscribe: async () => {
+            window.__unsubscribed++;
+            return true;
+          },
+        };
+        PushManager.prototype.subscribe = async () => sub;
+        PushManager.prototype.getSubscription = async () => sub;
+      });
+      await u.page.reload();
+      const begin = async () => {
+        await button(u.page, 'はじめる').click();
+        await button(u.page, 'パスキーを使わずに始める').click();
+        await waitOpen(u.page);
+      };
+      await begin();
+      const sw = () => u.page.getByRole('switch', { name: '新しいメッセージを知らせる' });
+      const devices = async () => (await (await fetch(`http://localhost:${RELAY_PORT}/_push`)).json()).filter((d) => d.endpoint.endsWith('/shared-device'));
+      const until = async (n) => {
+        let list = [];
+        for (let i = 0; i < 30; i++) {
+          list = await devices();
+          if (list.length === n) return list;
+          await u.page.waitForTimeout(100);
+        }
+        throw new Error(`expected ${n} registrations, got ${list.length}`);
+      };
+      await u.page.getByText('設定', { exact: true }).click();
+      await sw().click();
+      const [first] = await until(1);
+      await button(u.page, 'アカウントを追加').click();
+      await begin();
+      await u.page.getByText('設定', { exact: true }).click();
+      assert(!(await sw().isChecked()), 'the second account shows notifications on before turning them on');
+      await sw().click();
+      const both = await until(2);
+      assert(new Set(both.map((d) => d.pubkey)).size === 2 && both.some((d) => d.pubkey === first.pubkey), 'not one registration per account');
+      await sw().click();
+      const [kept] = await until(1);
+      assert(kept.pubkey === first.pubkey, 'the wrong account was removed');
+      assert((await u.page.evaluate(() => window.__unsubscribed)) === 0, 'the shared subscription was stopped while the first account uses it');
+      // The first account (no name: shown by its short id) still has notifications on.
+      await u.page.getByRole('button', { name: /^npub1[^（]*$/ }).click();
+      await waitOpen(u.page);
+      await u.page.getByText('設定', { exact: true }).click();
+      assert(await sw().isChecked(), 'the first account lost its notifications');
+      await sw().click();
+      await until(0);
+      // The relay forgets it first; the subscription stops right after.
+      await u.page.waitForFunction(() => window.__unsubscribed === 1, null, { timeout: 5000 }).catch(() => {
+        throw new Error('the subscription was not stopped when no account uses it');
+      });
+      await u.context.close();
     });
   } finally {
     await browser.close();

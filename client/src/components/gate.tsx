@@ -1,10 +1,13 @@
+import { getPublicKey } from 'nostr-tools/pure';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { AccountList, accountName, goToAccount } from '@/components/account-list';
 import { Palette, usePalette } from '@/constants/theme';
+import { accountWithKey, adding, cancelAdd, readyAccounts } from '@/lib/accounts';
 import { RELAYS, useTegami } from '@/lib/tegami';
-import { restoreFromCode, setRestoredKeys } from '@/lib/recovery';
-import { arrival, receiveTransfer, takeLinkKey, transferKey, type Bundle } from '@/lib/transfer';
+import { restoreFromCode, setRestoredKeys, takeRestoredKeys } from '@/lib/recovery';
+import { arrival, bundleSecret, receiveTransfer, takeLinkKey, transferKey, type Bundle } from '@/lib/transfer';
 import { PasskeyUnsupportedError, passkeysAvailable } from '@/lib/vault';
 
 // A cancelled or timed-out passkey prompt is not an error worth showing.
@@ -51,6 +54,11 @@ export function Gate({ locked }: { locked: boolean }) {
     }
   }
   const moved = moving?.state === 'ready' ? moving.bundle : undefined;
+  // The account received is one this device already has: switch to it instead.
+  const twin = moved ? accountWithKey(getPublicKey(bundleSecret(moved))) : undefined;
+  // Adding another account: the person can go back to the one they were using.
+  const canCancel = !locked && adding();
+  const [switching, setSwitching] = useState(false);
   const [busy, setBusy] = useState(false);
   const [unsupported, setUnsupported] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -116,7 +124,17 @@ export function Gate({ locked }: { locked: boolean }) {
       ) : (
         <Text style={s.promise}>言葉は、自由だ。</Text>
       )}
-      {unsupported ? (
+      {twin ? (
+        <>
+          <Text style={s.notice}>{`このアカウントは、この端末にもうあります（${accountName(twin)}）`}</Text>
+          <Pressable style={s.primary} onPress={() => {
+              takeRestoredKeys(); // a code for that account must not stay waiting for another one
+              goToAccount(twin.id);
+            }} role="button">
+            <Text style={s.primaryText}>切り替える</Text>
+          </Pressable>
+        </>
+      ) : unsupported ? (
         <>
           <Text style={s.notice}>
             {passkeysAvailable()
@@ -141,7 +159,7 @@ export function Gate({ locked }: { locked: boolean }) {
           <Text style={s.primaryText}>{locked ? 'ひらく' : moved ? 'この端末で使う' : 'はじめる'}</Text>
         </Pressable>
       )}
-      {!locked && !moved && !unsupported &&
+      {!locked && !moved && !unsupported && !twin &&
         (pasting ? (
           <View style={s.paste}>
             <TextInput
@@ -189,7 +207,25 @@ export function Gate({ locked }: { locked: boolean }) {
             </Pressable>
           </>
         ))}
-      {!locked && passkeysAvailable() && <PasskeyStores />}
+      {locked && readyAccounts().length > 1 &&
+        (switching ? (
+          <View style={s.paste}>
+            <AccountList add={false} />
+          </View>
+        ) : (
+          <Pressable style={s.quiet} onPress={() => setSwitching(true)} role="button">
+            <Text style={s.quietText}>アカウントを切り替える</Text>
+          </Pressable>
+        ))}
+      {canCancel && (
+        <Pressable style={s.quiet} onPress={() => {
+            takeRestoredKeys();
+            cancelAdd();
+          }} role="button">
+          <Text style={s.quietText}>キャンセル</Text>
+        </Pressable>
+      )}
+      {!locked && !twin && passkeysAvailable() && <PasskeyStores />}
       {failed && <Text style={s.notice}>パスキーを使えませんでした。もう一度押してください</Text>}
       {missed && (
         <Text style={s.notice}>
