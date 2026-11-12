@@ -66,7 +66,8 @@ async function show(data) {
     icon: '/icon-192.png',
     badge: '/icon-192.png',
     // One notice per account and kind: a second account's message does not replace the first's.
-    tag: `${call ? 'tegami-call' : 'tegami-new-message'}${p ? `-${p.slice(0, 16)}` : ''}`,
+    // The whole key is in the tag too: a tapped notification may come back without its data.
+    tag: `${call ? 'tegami-call' : 'tegami-new-message'}${p ? `-${p}` : ''}`,
     renotify: true,
     requireInteraction: call,
     data: { p },
@@ -85,7 +86,9 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const p = event.notification.data?.p;
+  const fromData = event.notification.data?.p;
+  const fromTag = (event.notification.tag || '').match(/-([0-9a-f]{64})$/)?.[1];
+  const p = typeof fromData === 'string' && /^[0-9a-f]{64}$/.test(fromData) ? fromData : fromTag || null;
   event.waitUntil(
     (async () => {
       // Which account to open is also left in IndexedDB: an iPhone Home Screen app that was
