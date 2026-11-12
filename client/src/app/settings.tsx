@@ -159,7 +159,7 @@ export default function Settings() {
             <Switch value={push === 'on'} onValueChange={togglePush} disabled={pushBusy} aria-label="新しいメッセージを知らせる" />
           </View>
           {push === 'denied' && <Text style={s.note}>通知が許可されていません。ブラウザか端末の設定で、Tegami の通知を許可してください。</Text>}
-          {pushFailed && <Text style={s.note}>通知を設定できませんでした。通信を確かめて、もう一度切り替えてください。</Text>}
+          {pushFailed && <Text style={s.note}>通知を設定できませんでした。通信を確認して、もう一度お試しください。</Text>}
         </>
       )}
 
@@ -180,9 +180,9 @@ export default function Settings() {
           <Text style={s.action}>別の端末でも使う</Text>
         </Pressable>
       )}
-      {transferFailed && <Text style={s.note}>リンクを作れませんでした。通信を確かめて、もう一度押してください。</Text>}
+      {transferFailed && <Text style={s.note}>リンクを作成できませんでした。通信を確認して、もう一度お試しください。</Text>}
 
-      <Text style={s.heading}>復元コード</Text>
+      <Text style={s.heading}>復旧コード</Text>
       {newCode ? (
         <View style={[s.card, s.transfer]}>
           <Text style={s.code} selectable testID="recovery-code">
@@ -191,33 +191,33 @@ export default function Settings() {
           <Pressable onPress={copyCode} role="button">
             <Text style={s.action}>{codeCopied ? 'コピーしました' : 'コードをコピー'}</Text>
           </Pressable>
-          <Text style={s.warn}>このコードは今だけ表示します。パスワード管理アプリか紙に残してください。</Text>
-          <Text style={s.warn}>コードを知っている人は、あなたのアカウントを使えます。コードが無いと、Tegami でも戻せません。</Text>
+          <Text style={s.warn}>このコードは今だけ表示されます。パスワード管理アプリか紙に保管してください。</Text>
+          <Text style={s.warn}>このコードは誰にも見せないでください。なくすと、Tegami でも復旧できません。</Text>
           <Pressable onPress={() => setNewCode(null)} role="button">
-            <Text style={s.action}>残しました</Text>
+            <Text style={s.action}>保管しました</Text>
           </Pressable>
         </View>
       ) : recoveryOn ? (
         <>
           <View style={s.card}>
-            <Text style={s.value}>端末を全部なくしても、復元コードで戻せます</Text>
+            <Text style={s.value}>端末をすべて失っても、復旧コードで戻せます</Text>
           </View>
           <Pressable style={[s.card, recoveryBusy && s.busy]} onPress={makeCode} disabled={recoveryBusy} role="button">
-            <Text style={s.action}>新しいコードにする</Text>
+            <Text style={s.action}>コードを更新</Text>
           </Pressable>
-          <Text style={s.note}>新しいコードにすると、前のコードは使えなくなります。</Text>
+          <Text style={s.note}>更新すると、前のコードは使えなくなります。</Text>
           <Pressable style={[s.card, recoveryBusy && s.busy]} onPress={stopRecovery} disabled={recoveryBusy} role="button">
-            <Text style={s.action}>復元コードをやめる</Text>
+            <Text style={s.action}>復旧コードを削除</Text>
           </Pressable>
         </>
       ) : (
         <Pressable style={[s.card, recoveryBusy && s.busy]} onPress={makeCode} disabled={recoveryBusy} role="button">
-          <Text style={s.action}>復元コードを作る</Text>
+          <Text style={s.action}>復旧コードを作成</Text>
         </Pressable>
       )}
-      {recoveryBehind && !newCode && <Text style={s.note}>復元コードの控えを更新できていません。通信を確かめてください。</Text>}
-      {recoveryFailed === 'make' && <Text style={s.note}>復元コードを作れませんでした。通信を確かめて、もう一度押してください。</Text>}
-      {recoveryFailed === 'off' && <Text style={s.note}>復元コードをやめられませんでした。通信を確かめて、もう一度押してください。</Text>}
+      {recoveryBehind && !newCode && <Text style={s.note}>復旧コードの控えを更新できていません。通信を確認してください。</Text>}
+      {recoveryFailed === 'make' && <Text style={s.note}>復旧コードを作成できませんでした。通信を確認して、もう一度お試しください。</Text>}
+      {recoveryFailed === 'off' && <Text style={s.note}>復旧コードを削除できませんでした。通信を確認して、もう一度お試しください。</Text>}
 
       <Text style={s.heading}>アプリが落ちた時</Text>
       <View style={[s.card, s.row]}>
