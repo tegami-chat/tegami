@@ -14,6 +14,7 @@ import { tmpdir } from 'node:os';
 import { createServer } from 'node:http';
 import { extname, join, resolve } from 'node:path';
 import * as nip19 from 'nostr-tools/nip19';
+import { getPublicKey } from 'nostr-tools/pure';
 import { chromium } from 'playwright-core';
 
 const ROOT = resolve(import.meta.dirname, '..');
@@ -702,10 +703,11 @@ async function main() {
         const bits = (info) =>
           crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt: new TextEncoder().encode('tegami/recovery/v1'), info: new TextEncoder().encode(info) }, base, 256);
         const id = Buffer.from(await bits('backup id')).toString('hex');
+        const signerPub = getPublicKey(new Uint8Array(await bits('backup signer')));
         const key = await crypto.subtle.importKey('raw', await bits('backup key'), 'AES-GCM', false, ['decrypt']);
         const { iv, ct } = JSON.parse(body);
         const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: Buffer.from(iv, 'base64url'), additionalData: new TextEncoder().encode(id) }, key, Buffer.from(ct, 'base64url'));
-        return { id, bundle: JSON.parse(Buffer.from(pt).toString()) };
+        return { id, signerPub, bundle: JSON.parse(Buffer.from(pt).toString()) };
       };
       /** Tries a code on a fresh browser. Returns the screen text after trying. */
       const tryCode = async (code, { use = false } = {}) => {
@@ -751,11 +753,13 @@ async function main() {
       const code1 = (await a.page.getByTestId('recovery-code').innerText()).trim();
       assert(/^([2-9A-HJ-NP-Z]{4}-){6}[2-9A-HJ-NP-Z]{4}$/.test(code1), `code format: ${code1}`);
       let list = await backups();
-      assert(list.length === 1 && list[0].pubkey === aHex, `relay backups: ${JSON.stringify(list.map((x) => x.pubkey))}`);
+      assert(list.length === 1, `relay backups: ${list.length}`);
       const first = list[0];
       assert(!/えー|びー|secretHex|npub/.test(first.data) && first.data.length < 64 * 1024, 'the relay holds readable account data');
+      assert(!JSON.stringify(first).includes(aHex), 'the relay row contains the account key');
       const opened = await decrypt(code1, first.data);
       assert(opened.id === first.id && opened.bundle.myName === 'えー' && opened.bundle.contacts[0]?.name === 'びー', 'backup content');
+      assert(first.pubkey === opened.signerPub, 'the backup is not signed with the key from the code');
       assert(!(await storage(a.page))['tegami.recovery']?.includes(code1.replace(/-/g, '')), 'the code is kept on the device in the clear');
       await button(a.page, '残しました').click();
       await waitText(a.page, '端末を全部なくしても、復元コードで戻せます');
@@ -771,6 +775,37 @@ async function main() {
         const [cur] = await backups();
         return cur && (await decrypt(code1, cur.data)).bundle.contacts[0]?.name === 'びーさん';
       }, 'the backup was not refreshed after renaming');
+
+      // The relay cannot be reached: after 3 failed refreshes in a row, settings says so
+      // in one line; the next successful refresh takes the line away.
+      const BEHIND = '復元コードの控えを更新できていません';
+      await a.page.goto(ORIGIN + '/settings');
+      await openIfLocked(a.page, '復元コードをやめる');
+      await waitText(a.page, '復元コードをやめる');
+      await a.page.waitForTimeout(2500); // the refresh every app start makes, before the relay goes away
+      let attempts = 0;
+      await a.page.route('**/backup/**', (route) => {
+        attempts++;
+        return route.abort();
+      });
+      const nameBox = a.page.getByPlaceholder('相手に表示される名前');
+      for (const n of ['え1', 'え2']) {
+        const before = attempts;
+        await nameBox.fill(n);
+        await until(async () => attempts > before, 'no refresh was tried');
+        assert(!(await text(a.page)).includes(BEHIND), `shown after ${attempts} failures`);
+      }
+      await nameBox.fill('え3');
+      await waitText(a.page, BEHIND);
+      await a.page.unroute('**/backup/**');
+      await nameBox.fill('えーさん');
+      await a.page.waitForFunction((t) => !document.body.innerText.includes(t), BEHIND, { timeout: 15000 }).catch(() => {
+        throw new Error('the line stayed after the relay came back');
+      });
+      const [now] = await backups();
+      assert((await decrypt(code1, now.data)).bundle.myName === 'えーさん', 'the backup after the relay came back');
+      await nameBox.fill('えー');
+      await until(async () => (await decrypt(code1, (await backups())[0].data)).bundle.myName === 'えー', 'name back');
 
       // A new device restores with the code (typed in lower case, with spaces).
       const typed = code1.toLowerCase().replace(/-/g, ' ');

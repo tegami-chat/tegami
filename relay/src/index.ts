@@ -20,9 +20,11 @@
 // person's device with a key from their recovery code; GET /backup/<id> returns it (no
 // login: the id comes from the code and cannot be guessed); DELETE /backup/<id> removes
 // it. Writing and deleting need a NIP-98 signature, and only the key that first stored a
-// backup can replace or delete it. The relay keeps the id, the ciphertext, that key and
-// the time of the last upload, until the person deletes it (no 30-day limit). It cannot
-// read the backup or find one without the code.
+// backup can replace or delete it. The app signs with a key derived from the recovery
+// code, not with the account's key, so the relay cannot tell whose backup it is. The
+// relay keeps the id, the ciphertext, that signing key and the time of the last upload,
+// until the person deletes it (no 30-day limit). It cannot read the backup or find one
+// without the code.
 //
 // TODO: accept writes only from registered Tegami accounts.
 
@@ -51,8 +53,9 @@ const MAX_CONNECTIONS_PER_IP = 50;
 const MAX_MAILBOX = 10_000;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_BACKUP_BYTES = 64 * 1024;
-// Backups per key: the current one, plus an old one while a new code replaces it.
-const MAX_BACKUPS_PER_KEY = 3;
+// Backups per signing key. The app derives one signing key and one id from each recovery
+// code, so a key never needs more than one; this stops one key from filling many ids.
+const MAX_BACKUPS_PER_KEY = 1;
 const BACKUP_PATH = /^\/backup\/([0-9a-f]{64})$/;
 // Bytes: an address may upload 100 MB at once, then 100 KB per second; a key 50 MB, then 50 KB/s.
 const FILE_RATE = { ip: { burst: 100e6, perSecond: 100e3 }, key: { burst: 50e6, perSecond: 50e3 } };
@@ -99,7 +102,7 @@ const INFO = {
     files: 'Encrypted photos and files, deleted after 30 days. Nothing about the uploader.',
     push: 'For notifications: a device push address and the key it belongs to, until turned off.',
     backups:
-      'Recovery backups: an id derived from the recovery code, the ciphertext, the key that uploaded it and when. Kept until the person deletes it.',
+      'Recovery backups: an id derived from the recovery code, the ciphertext, a signing key also derived from the code (not the account key) and when it was last uploaded. Kept until the person deletes it.',
   },
 };
 

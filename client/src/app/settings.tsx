@@ -23,6 +23,7 @@ export default function Settings() {
     recoveryOn,
     makeRecoveryCode,
     turnOffRecovery,
+    recoveryBehind,
   } = useTegami();
   // The recovery code is shown once, right after it is made, and never kept on screen after.
   const [newCode, setNewCode] = useState<string | null>(null);
@@ -214,6 +215,7 @@ export default function Settings() {
           <Text style={s.action}>復元コードを作る</Text>
         </Pressable>
       )}
+      {recoveryBehind && !newCode && <Text style={s.note}>復元コードの控えを更新できていません。通信を確かめてください。</Text>}
       {recoveryFailed === 'make' && <Text style={s.note}>復元コードを作れませんでした。通信を確かめて、もう一度押してください。</Text>}
       {recoveryFailed === 'off' && <Text style={s.note}>復元コードをやめられませんでした。通信を確かめて、もう一度押してください。</Text>}
 
