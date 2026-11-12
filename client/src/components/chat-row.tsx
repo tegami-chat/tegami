@@ -18,12 +18,14 @@ export function ChatRow({
   model,
   last,
   mark,
+  unread = 0,
 }: {
   peer: string;
   name: string;
   model?: string;
   last?: Message;
   mark?: string;
+  unread?: number;
 }) {
   const c = usePalette();
   const s = styles(c);
@@ -40,13 +42,25 @@ export function ChatRow({
           </Text>
           {last && <Text style={s.time}>{time(last.at)}</Text>}
         </View>
-        {last && (
+        <View style={s.bottom}>
           <Text style={s.preview} numberOfLines={1}>
-            {last.file ? '写真' : last.text}
+            {last ? (last.file ? '写真' : last.text) : ''}
           </Text>
-        )}
+          {unread > 0 && <Badge count={unread} />}
+        </View>
       </View>
     </Pressable>
+  );
+}
+
+/** The number of unread messages, in a small round mark. */
+export function Badge({ count }: { count: number }) {
+  const c = usePalette();
+  const s = styles(c);
+  return (
+    <View style={s.badge} aria-label={`未読 ${count}件`} testID="unread">
+      <Text style={s.badgeText}>{count > 99 ? '99+' : count}</Text>
+    </View>
   );
 }
 
@@ -60,5 +74,8 @@ const styles = (c: Palette) =>
     name: { flex: 1, fontSize: 16, fontWeight: '600', color: c.text },
     model: { fontSize: 13, fontWeight: '400', color: c.muted },
     time: { fontSize: 13, color: c.muted },
-    preview: { fontSize: 14, color: c.muted, marginTop: 2 },
+    bottom: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
+    preview: { flex: 1, fontSize: 14, color: c.muted },
+    badge: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' },
+    badgeText: { fontSize: 12, lineHeight: 16, color: c.onAccent, fontWeight: '700' },
   });
