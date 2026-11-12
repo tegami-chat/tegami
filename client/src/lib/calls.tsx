@@ -123,6 +123,8 @@ const str = (v: unknown) => (typeof v === 'string' ? v : '');
 
 /** How long an offer waits before ringing, so a replayed hang-up for it can arrive first. */
 const OFFER_SETTLE_MS = 1200;
+/** An offer written within these seconds is a call ringing now (not one handed out again). */
+const LIVE_SECONDS = 3;
 
 // Ended call ids, kept on this device for a few minutes (longer than a signal lives).
 const DONE_KEY = 'tegami.calls.done';
@@ -408,9 +410,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         if (!contactsRef.current.some((c) => c.pubkey === s.from)) return;
         const sdp = str(d.sdp);
         if (!sdp || done.current.has(id)) return;
-        // Wait a moment before ringing: after a reload the relay hands out a call's signals
-        // in no particular order, and its hang-up may come right after its offer.
-        setTimeout(() => ring(s, id, sdp), OFFER_SETTLE_MS);
+        // A call that is ringing right now rings at once. An offer written a few seconds ago
+        // (handed out again after a reload, in no particular order) waits a moment, so its
+        // hang-up, if there is one, can arrive first.
+        const age = Math.floor(Date.now() / 1000) - s.at;
+        if (age <= LIVE_SECONDS) ring(s, id, sdp);
+        else setTimeout(() => ring(s, id, sdp), OFFER_SETTLE_MS);
         return;
       }
 
