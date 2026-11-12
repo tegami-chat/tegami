@@ -4,7 +4,7 @@
 // device; never who sent it or what it says. Devices registered before the relay kept
 // push keys get an empty push, shown as a message.
 // With more than one account on this device, the notification is titled with the
-// account's name, tapping it opens that account, and the account list marks it as new
+// account's name, tapping it opens that account, and the account list counts what arrived
 // (shared with the app in IndexedDB "tegami-sw"; src/lib/sw-store.ts is the app's side).
 // It caches nothing: the app always loads from app.tegami.chat.
 
@@ -55,7 +55,9 @@ async function show(data) {
     const accounts = (await get('accounts').catch(() => null)) || [];
     const mine = accounts.find((a) => a.pubkey === p);
     if (accounts.length > 1 && mine?.name) title = mine.name;
-    await update('new', (old) => ({ ...(old || {}), [p]: true })).catch(() => {});
+    // How many messages arrived for this account since it was last open (a call does not count).
+    const n = !call && Number.isInteger(data.n) && data.n > 0 ? Math.min(data.n, 1000) : call ? 0 : 1;
+    if (n) await update('new', (old) => ({ ...(old || {}), [p]: Math.min(9999, (Number((old || {})[p]) || 0) + n) })).catch(() => {});
     const open = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const c of open) c.postMessage({ tegami: 'new', p });
   }

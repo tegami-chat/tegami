@@ -180,11 +180,11 @@ export function accountByKey(pubkey: string) {
 }
 
 /**
- * Public keys of accounts that got a notification since they were last open (see sw-store.ts).
+ * Messages per public key told by notifications since that account was last open (see sw-store.ts).
  * Follows new notifications while the app is open, and the list when the app comes back.
  */
 export function useNewMarks() {
-  const [marks, setMarks] = useState<Record<string, boolean>>({});
+  const [marks, setMarks] = useState<Record<string, number>>({});
   useEffect(() => {
     let alive = true;
     const refresh = () => void newMarks().then((m) => alive && setMarks(m));

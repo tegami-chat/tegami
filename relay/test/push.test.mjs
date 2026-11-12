@@ -204,6 +204,16 @@ await a.send(wrapTo(alice, getPublicKey(dave), 'to dave again'));
 await wait(1500);
 check('…then only the first account is told', sharedGot() === 3);
 
+// Messages close together: the first is told at once, the rest in one more push after
+// the 3 seconds, with their number (n), so the device can count all of them.
+await wait(3500);
+const before = carolGot().length;
+for (const word of ['one', 'two', 'three']) await a.send(wrapTo(alice, carolPub, word));
+await wait(4500);
+const burst = await Promise.all(carolGot().slice(before).map((r) => decryptPush(r.body).catch(() => null)));
+check('three messages close together make two pushes', burst.length === 2);
+check('…which tell of three messages together', burst.reduce((sum, d) => sum + (d?.n ?? 0), 0) === 3);
+
 a.ws.close();
 b.ws.close();
 push.close();

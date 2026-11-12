@@ -1,8 +1,8 @@
 // What the app and the service worker (public/sw.js) share, in IndexedDB "tegami-sw":
 //   accounts: [{ pubkey, name }] for the accounts on this device, so a notification can
 //             say which account it is for (only when there is more than one).
-//   new:      { [pubkey]: true } for accounts that got a notification since they were last
-//             open, so the account list can say which other account has something new.
+//   new:      { [pubkey]: count } messages told by notifications since each account was last
+//             open, so the account list can show a number for an account that is not open.
 // The app cannot see an account that is not open (it is not connected with its key), so
 // these marks come only from notifications: an account without notifications gets none.
 // public/sw.js has its own copy of the open/get/put code below; keep the two in step.
@@ -57,14 +57,14 @@ export async function shareAccounts(list: SwAccount[]) {
   await update<SwAccount[]>('accounts', () => list).catch(() => {});
 }
 
-export async function newMarks(): Promise<Record<string, boolean>> {
+export async function newMarks(): Promise<Record<string, number>> {
   if (!available()) return {};
-  return (await get<Record<string, boolean>>('new').catch(() => undefined)) ?? {};
+  return (await get<Record<string, number>>('new').catch(() => undefined)) ?? {};
 }
 
 export async function clearNewMark(pubkey: string) {
   if (!available()) return;
-  await update<Record<string, boolean>>('new', (old) => {
+  await update<Record<string, number>>('new', (old) => {
     const next = { ...(old ?? {}) };
     delete next[pubkey];
     return next;

@@ -5,7 +5,7 @@ import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-na
 import { accountName } from '@/components/account-list';
 import { Badge, ChatRow } from '@/components/chat-row';
 import { Palette, usePalette } from '@/constants/theme';
-import { readyAccounts, useAccounts } from '@/lib/accounts';
+import { readyAccounts, useAccounts, useNewMarks } from '@/lib/accounts';
 import { excerpt, matchesName, searchMessages } from '@/lib/search';
 import { chatName, strangers, useTegami, type Message } from '@/lib/tegami';
 
@@ -23,6 +23,9 @@ export default function Chats() {
   // With more than one account here, the title says which one is open and switches.
   const index = useAccounts();
   const current = readyAccounts(index).length > 1 ? index.list.find((a) => a.id === index.current) : undefined;
+  // What arrived for the other accounts (told by notifications), next to the title.
+  const marks = useNewMarks();
+  const others = index.list.reduce((n, a) => n + (a.id !== index.current && a.pubkey ? (marks[a.pubkey] ?? 0) : 0), 0);
 
   const lastOf = (room: string) => [...messages].reverse().find((m) => m.peer === room);
   const rows = [
@@ -57,6 +60,7 @@ export default function Chats() {
                     <Text style={s.title} numberOfLines={1}>
                       {accountName(current)} ▾
                     </Text>
+                    {others > 0 && <Badge count={others} />}
                   </Pressable>
                 ),
               }
@@ -159,7 +163,7 @@ const styles = (c: Palette) =>
   StyleSheet.create({
     fill: { flex: 1, backgroundColor: c.background },
     headerButtons: { flexDirection: 'row', alignItems: 'center' },
-    titleButton: { paddingVertical: 4, maxWidth: 220 },
+    titleButton: { paddingVertical: 4, maxWidth: 260, flexDirection: 'row', alignItems: 'center', gap: 8 },
     title: { fontSize: 17, fontWeight: '600', color: c.text },
     headerButton: { paddingHorizontal: 12, paddingVertical: 4 },
     headerLink: { fontSize: 15, color: c.accent, fontWeight: '600' },

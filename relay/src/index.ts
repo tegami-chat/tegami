@@ -398,20 +398,40 @@ export class Relay extends DurableObject<Env> {
     return new Response(null, { status: 204, headers: CORS });
   }
 
+  /** Messages for a key not yet told to its devices (counted while pushes wait out the 3 seconds). */
+  pendingMessages = new Map<string, number>();
+  /** Keys with a push waiting for the end of the 3 seconds. */
+  trailing = new Set<string>();
+
   /**
    * Tells this key's devices that something arrived: a message, or a call ringing.
    * At most once every 3 seconds per key and kind. The kind is encrypted for each device.
+   * Messages that arrive within those 3 seconds are counted, and one more push after the
+   * wait carries their number, so a device can show how many arrived (n).
    */
   async notify(pubkey: string, kind: 'message' | 'call') {
     if (!this.vapid) return;
-    const t = Date.now();
-    const slot = `${pubkey}:${kind}`;
-    if (t - (this.lastPush.get(slot) ?? 0) < 3000) return;
-    this.lastPush.set(slot, t);
+    if (kind === 'message') this.pendingMessages.set(pubkey, (this.pendingMessages.get(pubkey) ?? 0) + 1);
+    const wait = 3000 - (Date.now() - (this.lastPush.get(`${pubkey}:${kind}`) ?? 0));
+    if (wait <= 0) return this.push(pubkey, kind);
+    if (kind !== 'message' || this.trailing.has(pubkey)) return;
+    this.trailing.add(pubkey);
+    await new Promise((r) => setTimeout(r, wait));
+    this.trailing.delete(pubkey);
+    // Another push may have gone out meanwhile and told these already.
+    if (this.pendingMessages.get(pubkey)) await this.push(pubkey, 'message');
+  }
+
+  async push(pubkey: string, kind: 'message' | 'call') {
+    this.lastPush.set(`${pubkey}:${kind}`, Date.now());
     if (this.lastPush.size > 50_000) this.lastPush.clear();
+    if (this.pendingMessages.size > 50_000) this.pendingMessages.clear();
+    const n = kind === 'message' ? (this.pendingMessages.get(pubkey) ?? 1) : 0;
+    if (kind === 'message') this.pendingMessages.delete(pubkey);
     const rows = this.sql.exec('SELECT endpoint, keys FROM push_devices WHERE pubkey = ?', pubkey).toArray();
     // p: which account it is for, so a device with several accounts can say whose it is.
-    const payload = JSON.stringify({ t: kind, p: pubkey });
+    // n: how many messages this push tells of.
+    const payload = JSON.stringify(n ? { t: kind, p: pubkey, n } : { t: kind, p: pubkey });
     await Promise.all(
       rows.map(async (r) => {
         const endpoint = r.endpoint as string;

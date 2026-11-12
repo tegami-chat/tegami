@@ -1834,9 +1834,19 @@ async function main() {
       await push({ t: 'call', p: bKey });
       const both = await waitNotice((n) => n.title === 'びー' && n.body === '着信があります', 'titled びー');
       assert(both.length === 2, `one notification replaced the other: ${JSON.stringify(both)}`);
-      // The list in settings marks the other account (the open one never).
-      await u.page.getByRole('button', { name: 'えー（新着あり）', exact: true }).waitFor({ timeout: 5000 });
-      assert(!(await text(u.page)).match(/びー\s*新着あり/), 'the open account is marked');
+      // The list in settings counts what arrived for the other account (a call does not count;
+      // the open account never shows one). A push may tell of several messages (n).
+      await u.page.getByRole('button', { name: 'えー（未読 1件）', exact: true }).waitFor({ timeout: 5000 });
+      await push({ t: 'message', p: aKey, n: 3 });
+      await u.page.getByRole('button', { name: 'えー（未読 4件）', exact: true }).waitFor({ timeout: 5000 });
+      await push({ t: 'message', p: bKey });
+      await u.page.waitForTimeout(500);
+      assert(await u.page.getByRole('button', { name: 'びー（使用中）', exact: true }).isVisible(), 'the open account shows a count');
+      // The chat list shows the other accounts' total next to the title.
+      await u.page.goto(ORIGIN + '/');
+      await waitOpen(u.page);
+      await u.page.getByRole('button', { name: /びー ▾/ }).getByLabel('未読 4件').waitFor({ timeout: 5000 });
+      await u.page.getByText('設定', { exact: true }).click();
       // Tapping the notification while the app is open: the service worker asks the app to open that account.
       await u.page.evaluate((p) => navigator.serviceWorker.dispatchEvent(new MessageEvent('message', { data: { tegami: 'open', p } })), aKey);
       await waitOpen(u.page);
@@ -1849,7 +1859,7 @@ async function main() {
       await u.page.getByRole('button', { name: 'えー', exact: true }).waitFor();
       // Tapping it while the app is closed opens /?a=<key>: that account, and the address goes back to /.
       await push({ t: 'message', p: aKey });
-      await u.page.getByRole('button', { name: 'えー（新着あり）', exact: true }).waitFor({ timeout: 5000 });
+      await u.page.getByRole('button', { name: 'えー（未読 1件）', exact: true }).waitFor({ timeout: 5000 });
       await u.page.goto(`${ORIGIN}/?a=${aKey}`);
       await waitOpen(u.page);
       await waitText(u.page, 'えー ▾');
