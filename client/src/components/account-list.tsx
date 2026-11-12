@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Badge } from '@/components/chat-row';
 import { Palette, usePalette } from '@/constants/theme';
 import { addAccount, readyAccounts, switchAccount, useAccounts, useNewMarks, type AccountEntry } from '@/lib/accounts';
 import { shortId } from '@/lib/tegami';
@@ -41,7 +42,7 @@ export function AccountList({ add = true }: { add?: boolean }) {
       {list.map((a, i) => {
         const current = a.id === index.current;
         // Known only through notifications: an account without them never shows it.
-        const fresh = !current && !!a.pubkey && marks[a.pubkey];
+        const fresh = !current && a.pubkey ? (marks[a.pubkey] ?? 0) : 0;
         return (
           <Pressable
             key={a.id}
@@ -49,12 +50,12 @@ export function AccountList({ add = true }: { add?: boolean }) {
             onPress={() => goToAccount(a.id)}
             disabled={current}
             role="button"
-            aria-label={current ? `${accountName(a)}（使用中）` : fresh ? `${accountName(a)}（新着あり）` : accountName(a)}>
+            aria-label={current ? `${accountName(a)}（使用中）` : fresh ? `${accountName(a)}（未読 ${fresh}件）` : accountName(a)}>
             <Text style={s.name} numberOfLines={1}>
               {accountName(a)}
             </Text>
             {current && <Text style={s.current}>使用中</Text>}
-            {fresh && <Text style={s.fresh}>新着あり</Text>}
+            {fresh > 0 && <Badge count={fresh} />}
           </Pressable>
         );
       })}
@@ -74,6 +75,5 @@ const styles = (c: Palette) =>
     line: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line },
     name: { flex: 1, fontSize: 16, color: c.text },
     current: { fontSize: 13, color: c.muted },
-    fresh: { fontSize: 13, color: c.accent, fontWeight: '600' },
     add: { fontSize: 16, color: c.accent, fontWeight: '600' },
   });
