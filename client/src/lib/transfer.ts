@@ -40,6 +40,10 @@ export function captureLinkKey() {
   strip();
   for (const ms of [0, 50, 200, 500, 1000, 2000]) setTimeout(strip, ms);
 }
+/** Whether a link's key is waiting for the first screen (an account is open, so nobody took it). */
+export function linkKeyWaiting() {
+  return !!linkKey;
+}
 /** Hands the captured key over once. */
 export function takeLinkKey() {
   const k = linkKey;

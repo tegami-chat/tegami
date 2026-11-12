@@ -200,14 +200,19 @@ export class Relay extends DurableObject<Env> {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS events (
       id TEXT PRIMARY KEY, kind INTEGER, created_at INTEGER, received_at INTEGER, p TEXT, raw TEXT)`);
     this.sql.exec('CREATE INDEX IF NOT EXISTS events_p ON events (p, created_at)');
-    // Web Push: which devices to tell when an envelope for this key arrives.
-    this.sql.exec('CREATE TABLE IF NOT EXISTS push (endpoint TEXT PRIMARY KEY, pubkey TEXT, created_at INTEGER)');
-    this.sql.exec('CREATE INDEX IF NOT EXISTS push_pubkey ON push (pubkey)');
-    // The device's push keys (to encrypt what kind of thing arrived). Added later: older rows have none.
+    // Web Push: which devices to tell when an envelope for this key arrives. One device (one
+    // push address) can hold several Tegami accounts, so a row is an address and a key together.
+    // keys: the device's push keys (to encrypt what kind of thing arrived); older rows have none.
+    this.sql.exec(
+      'CREATE TABLE IF NOT EXISTS push_devices (endpoint TEXT, pubkey TEXT, created_at INTEGER, keys TEXT, PRIMARY KEY (endpoint, pubkey))',
+    );
+    this.sql.exec('CREATE INDEX IF NOT EXISTS push_devices_pubkey ON push_devices (pubkey)');
+    // Before 2026-11-12 the table was "push", one key per address. Move its rows over once.
     try {
-      this.sql.exec('ALTER TABLE push ADD COLUMN keys TEXT');
+      this.sql.exec('INSERT OR IGNORE INTO push_devices (endpoint, pubkey, created_at, keys) SELECT endpoint, pubkey, created_at, keys FROM push');
+      this.sql.exec('DROP TABLE push');
     } catch {
-      // already there
+      // No old table: nothing to move.
     }
     // Recovery backups (encrypted on the device). Not touched by the 30-day clean-up.
     this.sql.exec('CREATE TABLE IF NOT EXISTS backups (id TEXT PRIMARY KEY, pubkey TEXT, data TEXT, updated_at INTEGER)');
@@ -372,12 +377,12 @@ export class Relay extends DurableObject<Env> {
     }
     if (!allowedEndpoint(endpoint, this.devPush)) return fail(400, 'invalid: not a push service address');
     if (req.method === 'DELETE') {
-      this.sql.exec('DELETE FROM push WHERE endpoint = ? AND pubkey = ?', endpoint, pubkey);
+      this.sql.exec('DELETE FROM push_devices WHERE endpoint = ? AND pubkey = ?', endpoint, pubkey);
       return new Response(null, { status: 204, headers: CORS });
     }
     if (keys !== undefined && !validKeys(keys)) return fail(400, 'invalid: push keys');
     this.sql.exec(
-      'INSERT OR REPLACE INTO push (endpoint, pubkey, created_at, keys) VALUES (?, ?, ?, ?)',
+      'INSERT OR REPLACE INTO push_devices (endpoint, pubkey, created_at, keys) VALUES (?, ?, ?, ?)',
       endpoint,
       pubkey,
       now(),
@@ -385,7 +390,7 @@ export class Relay extends DurableObject<Env> {
     );
     // Keep the newest MAX_DEVICES for this key.
     this.sql.exec(
-      'DELETE FROM push WHERE pubkey = ? AND endpoint NOT IN (SELECT endpoint FROM push WHERE pubkey = ? ORDER BY created_at DESC LIMIT ?)',
+      'DELETE FROM push_devices WHERE pubkey = ? AND endpoint NOT IN (SELECT endpoint FROM push_devices WHERE pubkey = ? ORDER BY created_at DESC LIMIT ?)',
       pubkey,
       pubkey,
       MAX_DEVICES,
@@ -404,7 +409,7 @@ export class Relay extends DurableObject<Env> {
     if (t - (this.lastPush.get(slot) ?? 0) < 3000) return;
     this.lastPush.set(slot, t);
     if (this.lastPush.size > 50_000) this.lastPush.clear();
-    const rows = this.sql.exec('SELECT endpoint, keys FROM push WHERE pubkey = ?', pubkey).toArray();
+    const rows = this.sql.exec('SELECT endpoint, keys FROM push_devices WHERE pubkey = ?', pubkey).toArray();
     const payload = JSON.stringify({ t: kind });
     await Promise.all(
       rows.map(async (r) => {
@@ -412,7 +417,7 @@ export class Relay extends DurableObject<Env> {
         try {
           const keys = r.keys ? (JSON.parse(r.keys as string) as PushKeys) : null;
           const status = await this.vapid!.send(endpoint, payload, keys);
-          if (status === 404 || status === 410) this.sql.exec('DELETE FROM push WHERE endpoint = ?', endpoint);
+          if (status === 404 || status === 410) this.sql.exec('DELETE FROM push_devices WHERE endpoint = ?', endpoint);
         } catch {
           // The push service is unreachable; try again with the next message.
         }

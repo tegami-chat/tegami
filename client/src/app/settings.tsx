@@ -2,6 +2,7 @@ import makeQr from 'qrcode-generator';
 import { useEffect, useState } from 'react';
 import { Image, Linking, Pressable, ScrollView, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
+import { AccountList } from '@/components/account-list';
 import { Palette, usePalette } from '@/constants/theme';
 import { pushState, type PushState } from '@/lib/push';
 import { useTegami } from '@/lib/tegami';
@@ -135,6 +136,9 @@ export default function Settings() {
 
   return (
     <ScrollView style={s.fill} contentContainerStyle={s.body}>
+      <Text style={s.heading}>アカウント</Text>
+      <AccountList />
+
       <Text style={s.heading}>自分の名前</Text>
       <TextInput
         style={s.input}

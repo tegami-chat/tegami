@@ -181,6 +181,27 @@ await a.send(short([]));
 await wait(1500);
 check('other short-lived envelopes (the rest of a call) do not notify', carolGot().length === 2);
 
+// One device (one push address) with two Tegami accounts: both are told, and turning
+// one account off leaves the other on.
+await wait(3500);
+const dave = generateSecretKey();
+const erin = generateSecretKey();
+check('dave registers the shared device', (await register(dave, endpoint('/shared'))) === 204);
+check('erin registers the same device', (await register(erin, endpoint('/shared'))) === 204);
+const sharedGot = () => received.filter((r) => r.path === '/shared').length;
+await a.send(wrapTo(alice, getPublicKey(dave), 'to dave'));
+await wait(1500);
+check('a message to the first account reaches the shared device', sharedGot() === 1);
+await a.send(wrapTo(alice, getPublicKey(erin), 'to erin'));
+await wait(1500);
+check('a message to the second account reaches it too', sharedGot() === 2);
+check('erin turns notifications off on the shared device', (await register(erin, endpoint('/shared'), 'DELETE')) === 204);
+await wait(3500);
+await a.send(wrapTo(alice, getPublicKey(erin), 'to erin again'));
+await a.send(wrapTo(alice, getPublicKey(dave), 'to dave again'));
+await wait(1500);
+check('…then only the first account is told', sharedGot() === 3);
+
 a.ws.close();
 b.ws.close();
 push.close();

@@ -6,11 +6,12 @@ import { finalizeEvent, generateSecretKey, getPublicKey, type EventTemplate } fr
 import { bytesToHex, hexToBytes } from 'nostr-tools/utils';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
+import { describeAccount } from './accounts';
 import { createDeviceVault, deviceVaultAvailable, openDeviceVault, type DeviceVault } from './device-vault';
 import { setCrashReports } from './crash';
 import { encryptAndUpload, fileFromRumor, fileTags, forgetFile, keepSent, keptFile, shrinkImage, type FileRef } from './files';
 import { backoff, loadOutbox, publishOne, saveOutbox, type Outgoing } from './outbox';
-import { load, save } from './storage';
+import { k, load, remove, save } from './storage';
 import { bundleSecret, sendTransfer, type Bundle } from './transfer';
 import { disablePush, enablePush, refreshPush, type PushState } from './push';
 import { SIGNAL_KIND, freshSignal, wrapSignal } from './signal';
@@ -259,9 +260,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const v = load<Vault | null>('tegami.vault', null);
-      const device = load<DeviceVault | null>('tegami.device', null);
-      const plain = load<PlainAccount | null>('tegami.account', null);
+      const v = load<Vault | null>(k('vault'), null);
+      const device = load<DeviceVault | null>(k('device'), null);
+      const plain = load<PlainAccount | null>(k('account'), null);
       let sk: Uint8Array | null = null;
       if (!v && device) {
         try {
@@ -274,8 +275,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
         sk = hexToBytes(plain.secretHex);
         if (deviceVaultAvailable()) {
           try {
-            save('tegami.device', await createDeviceVault(sk as Uint8Array<ArrayBuffer>));
-            globalThis.localStorage?.removeItem('tegami.account');
+            save(k('device'), await createDeviceVault(sk as Uint8Array<ArrayBuffer>));
+            remove(k('account'));
           } catch {
             // Keep the legacy record; try again next time.
           }
@@ -284,12 +285,12 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       if (!alive) return;
       setVault(v);
       if (sk) setSecret(sk);
-      setContacts(load<Contact[]>('tegami.contacts', []));
-      setGroups(load<Group[]>('tegami.groups', []));
+      setContacts(load<Contact[]>(k('contacts'), []));
+      setGroups(load<Group[]>(k('groups'), []));
       // Messages waiting to be sent: the outbox is what counts. A message still marked as
       // being sent when the app closed is now waiting; a mark without an outbox entry is stale.
       const box = loadOutbox();
-      const stored = load<Message[]>('tegami.messages', []);
+      const stored = load<Message[]>(k('messages'), []);
       const ids = new Set(stored.map((m) => m.id));
       outbox.current = box.filter((o) => ids.has(o.id));
       if (outbox.current.length !== box.length) saveOutbox(outbox.current);
@@ -302,13 +303,14 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
           return rest;
         }),
       );
-      setReadAt(load<Record<string, number>>('tegami.readAt', {}));
-      setShowUnreadState(load<boolean>('tegami.showUnread', true));
+      setReadAt(load<Record<string, number>>(k('readAt'), {}));
+      setShowUnreadState(load<boolean>(k('showUnread'), true));
       // Accounts made before unread counts existed: what is already here counts as read.
-      let setup = load<number>('tegami.setupAt', 0);
-      if (!setup && (v || device || plain)) save('tegami.setupAt', (setup = Math.floor(Date.now() / 1000)));
+      let setup = load<number>(k('setupAt'), 0);
+      if (!setup && (v || device || plain)) save(k('setupAt'), (setup = Math.floor(Date.now() / 1000)));
       setSetupAt(setup);
-      setMyNameState(load<string>('tegami.myName', ''));
+      setMyNameState(load<string>(k('myName'), ''));
+      // A choice for the whole device, not for one account.
       const crash = load<boolean>('tegami.crashReports', false);
       setCrashReportsState(crash);
       setCrashReports(crash);
@@ -322,11 +324,15 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
 
   const status: Status = !loaded ? 'loading' : secret ? 'open' : vault ? 'locked' : 'new';
   const me = useMemo(() => (secret ? getPublicKey(secret) : null), [secret]);
+  // The account list (lib/accounts.ts) shows each account's name without opening it.
+  useEffect(() => {
+    if (me) describeAccount(me, myName);
+  }, [me, myName]);
 
   const saveGroups = useCallback((update: (prev: Group[]) => Group[]) => {
     setGroups((prev) => {
       const next = update(prev);
-      if (next !== prev) save('tegami.groups', next);
+      if (next !== prev) save(k('groups'), next);
       return next;
     });
   }, []);
@@ -376,7 +382,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     setMessages((prev) => {
       if (prev.some((p) => p.id === m.id)) return prev;
       const next = [...prev, m].sort((a, b) => a.at - b.at);
-      save('tegami.messages', next);
+      save(k('messages'), next);
       return next;
     });
   }, []);
@@ -396,7 +402,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
         if (u) next.push(u);
       }
       if (!changed) return prev;
-      save('tegami.messages', next);
+      save(k('messages'), next);
       return next;
     });
   }, []);
@@ -424,12 +430,12 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     setReadAt((prev) => {
       if ((prev[room] ?? 0) >= latest) return prev;
       const next = { ...prev, [room]: Math.max(latest, Date.now()) };
-      save('tegami.readAt', next);
+      save(k('readAt'), next);
       return next;
     });
   }, []);
   const setShowUnread = useCallback((on: boolean) => {
-    save('tegami.showUnread', on);
+    save(k('showUnread'), on);
     setShowUnreadState(on);
   }, []);
   // The browser tab shows the total, like "(3) Tegami".
@@ -557,9 +563,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
 
   // An account restored with a recovery code keeps recovery on with the same code.
   const adopt = useCallback(async (moved: Bundle, sk: Uint8Array) => {
-    save('tegami.myName', moved.myName);
-    save('tegami.contacts', moved.contacts);
-    save('tegami.groups', moved.groups);
+    save(k('myName'), moved.myName);
+    save(k('contacts'), moved.contacts);
+    save(k('groups'), moved.groups);
     setMyNameState(moved.myName);
     setContacts(moved.contacts);
     setGroups(moved.groups);
@@ -578,7 +584,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   // new device) are read. Envelopes still waiting from an earlier account here are dropped.
   const beginAccount = useCallback(() => {
     const now = Math.floor(Date.now() / 1000);
-    save('tegami.setupAt', now);
+    save(k('setupAt'), now);
     setSetupAt(now);
     setPending(outbox.current.map((o) => o.id), undefined);
     outbox.current = [];
@@ -592,7 +598,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       if (moved) await adopt(moved, sk);
       else forgetRecovery();
       beginAccount();
-      save('tegami.vault', v);
+      save(k('vault'), v);
       setVault(v);
       setSecret(sk);
     },
@@ -602,8 +608,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const startWithoutPasskey = useCallback(
     async (moved?: Bundle) => {
       const sk = moved ? bundleSecret(moved) : generateSecretKey();
-      if (deviceVaultAvailable()) save('tegami.device', await createDeviceVault(sk as Uint8Array<ArrayBuffer>));
-      else save('tegami.account', { secretHex: bytesToHex(sk) });
+      if (deviceVaultAvailable()) save(k('device'), await createDeviceVault(sk as Uint8Array<ArrayBuffer>));
+      else save(k('account'), { secretHex: bytesToHex(sk) });
       if (moved) await adopt(moved, sk);
       else forgetRecovery();
       beginAccount();
@@ -631,7 +637,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
 
   const setMyName = useCallback((name: string) => {
     const n = name.slice(0, 40);
-    save('tegami.myName', n);
+    save(k('myName'), n);
     setMyNameState(n);
   }, []);
 
@@ -641,7 +647,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       const rest = prev.filter((c) => c.pubkey !== pubkey);
       const m = model ?? old?.model;
       const next = [...rest, m ? { pubkey, name, model: m } : { pubkey, name }];
-      save('tegami.contacts', next);
+      save(k('contacts'), next);
       return next;
     });
   }, []);
@@ -883,11 +889,11 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const retryTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // Refreshes that failed in a row, counted across app starts. After RECOVERY_FAILURES_SHOWN
   // the settings screen says the backup is out of date; the next success clears it.
-  const [recoveryFailures, setRecoveryFailures] = useState(() => load<number>('tegami.recovery.failures', 0));
+  const [recoveryFailures, setRecoveryFailures] = useState(() => load<number>(k('recovery.failures'), 0));
   const refreshed = useCallback((ok: boolean) => {
     setRecoveryFailures((n) => {
       const next = ok ? 0 : n + 1;
-      if (next !== n) save('tegami.recovery.failures', next);
+      if (next !== n) save(k('recovery.failures'), next);
       return next;
     });
   }, []);

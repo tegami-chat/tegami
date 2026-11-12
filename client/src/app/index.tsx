@@ -1,9 +1,11 @@
-import { Link, Stack, router } from 'expo-router';
+import { Link, Stack, router, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { accountName } from '@/components/account-list';
 import { Badge, ChatRow } from '@/components/chat-row';
 import { Palette, usePalette } from '@/constants/theme';
+import { readyAccounts, useAccounts } from '@/lib/accounts';
 import { excerpt, matchesName, searchMessages } from '@/lib/search';
 import { chatName, strangers, useTegami, type Message } from '@/lib/tegami';
 
@@ -18,6 +20,9 @@ export default function Chats() {
   const c = usePalette();
   const s = styles(c);
   const { contacts, groups, messages, unread } = useTegami();
+  // With more than one account here, the title says which one is open and switches.
+  const index = useAccounts();
+  const current = readyAccounts(index).length > 1 ? index.list.find((a) => a.id === index.current) : undefined;
 
   const lastOf = (room: string) => [...messages].reverse().find((m) => m.peer === room);
   const rows = [
@@ -45,6 +50,17 @@ export default function Chats() {
     <View style={s.fill}>
       <Stack.Screen
         options={{
+          ...(current
+            ? {
+                headerTitle: () => (
+                  <Pressable role="button" onPress={() => router.push('/accounts' as Href)} style={s.titleButton}>
+                    <Text style={s.title} numberOfLines={1}>
+                      {accountName(current)} ▾
+                    </Text>
+                  </Pressable>
+                ),
+              }
+            : {}),
           headerRight: () => (
             <View style={s.headerButtons}>
               <Link href="/settings" asChild>
@@ -143,6 +159,8 @@ const styles = (c: Palette) =>
   StyleSheet.create({
     fill: { flex: 1, backgroundColor: c.background },
     headerButtons: { flexDirection: 'row', alignItems: 'center' },
+    titleButton: { paddingVertical: 4, maxWidth: 220 },
+    title: { fontSize: 17, fontWeight: '600', color: c.text },
     headerButton: { paddingHorizontal: 12, paddingVertical: 4 },
     headerLink: { fontSize: 15, color: c.accent, fontWeight: '600' },
     headerButtonText: { fontSize: 26, color: c.accent },

@@ -84,7 +84,7 @@ const http = createServer((req, res) => {
         const ok = ev.kind === 27235 && verifyEvent(ev) && tag('u') === `http://localhost:${PORT}/push` && tag('method') === req.method && tag('payload') === hash;
         if (!ok) return send(401, 'auth-required');
         const { endpoint, keys } = JSON.parse(body);
-        const rest = pushDevices.filter((d) => d.endpoint !== endpoint);
+        const rest = pushDevices.filter((d) => d.endpoint !== endpoint || d.pubkey !== ev.pubkey); // one row per address and key, like the real relay
         pushDevices.length = 0;
         pushDevices.push(...rest);
         if (req.method === 'POST') pushDevices.push({ endpoint, pubkey: ev.pubkey, keys });

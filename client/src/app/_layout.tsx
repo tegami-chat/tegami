@@ -5,6 +5,7 @@ import { Pressable, Text, View } from 'react-native';
 import { CallScreen } from '@/components/call-screen';
 import { Gate } from '@/components/gate';
 import { usePalette } from '@/constants/theme';
+import { useAccounts } from '@/lib/accounts';
 import { CallProvider } from '@/lib/calls';
 import { report } from '@/lib/crash';
 import { TegamiProvider, useTegami } from '@/lib/tegami';
@@ -48,6 +49,7 @@ function Shell() {
         <Stack.Screen name="add" options={{ title: '友達を追加' }} />
         <Stack.Screen name="group" options={{ title: 'グループを作る' }} />
         <Stack.Screen name="settings" options={{ title: '設定' }} />
+        <Stack.Screen name="accounts" options={{ title: 'アカウント' }} />
         <Stack.Screen name="i" options={{ headerShown: false }} />
         <Stack.Screen name="link" options={{ title: "" }} />
         <Stack.Screen name="strangers" options={{ title: '知らない人から' }} />
@@ -60,8 +62,10 @@ function Shell() {
 }
 
 export default function RootLayout() {
+  // Switching accounts mounts everything again on the other account's storage.
+  const { current } = useAccounts();
   return (
-    <TegamiProvider>
+    <TegamiProvider key={current}>
       <Shell />
     </TegamiProvider>
   );
