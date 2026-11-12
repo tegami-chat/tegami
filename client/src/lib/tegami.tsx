@@ -36,6 +36,8 @@ export type Message = {
   got?: number;
   /** My message not yet accepted by the relay: being sent now, or waiting for the connection. */
   pending?: 'sending' | 'unsent';
+  /** The id of the message this one replies to (NIP-17 `e` tag). It may not be on this device. */
+  replyTo?: string;
 };
 
 /** done: we talked. missed: they called, I did not answer. unanswered: I called, no answer. */
@@ -92,14 +94,15 @@ type TegamiState = {
   /** Asks for the passkey and opens the account. */
   unlock: () => Promise<void>;
   addContact: (pubkey: string, name: string, model?: string) => void;
-  send: (peer: string, text: string) => Promise<void>;
+  /** Sends a text message, as a reply to the message with id replyTo when given. */
+  send: (peer: string, text: string, replyTo?: string) => Promise<void>;
   /** Whether crash reports are sent (off unless the person turns it on). */
   crashReports: boolean;
   setCrashReportsOn: (on: boolean) => void;
   /** Everything on this device except the key, as JSON (philosophy #88). */
   exportChats: () => string;
   /** Makes the photo smaller, encrypts it on this device, uploads it and sends it. */
-  sendPhoto: (peer: string, photo: Blob) => Promise<void>;
+  sendPhoto: (peer: string, photo: Blob, replyTo?: string) => Promise<void>;
   /** Turns notifications for this device on or off. Returns the new state. */
   setNotifications: (on: boolean) => Promise<PushState>;
   /** Sends a call signal to one person, and to my other devices when alsoMe. */
@@ -468,13 +471,20 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
           );
           if (!others.length) return;
           const peer = roomOf(others);
+          const replyTo = replyOf(rumor.tags);
           if (isGroup(peer)) {
             const subject = rumor.tags.find((t) => t[0] === 'subject')?.[1]?.slice(0, 60);
             rememberGroup(peer, subject, rumor.pubkey);
           }
-          const m: Message = file
-            ? { id: rumor.id, from: rumor.pubkey, peer, text: '', at: rumor.created_at, file }
-            : { id: rumor.id, from: rumor.pubkey, peer, text: rumor.content, at: rumor.created_at };
+          const m: Message = {
+            id: rumor.id,
+            from: rumor.pubkey,
+            peer,
+            text: file ? '' : rumor.content,
+            at: rumor.created_at,
+            ...(file ? { file } : {}),
+            ...(replyTo ? { replyTo } : {}),
+          };
           if (rumor.pubkey !== me) m.got = Date.now();
           addMessage(m);
         } catch {
@@ -683,7 +693,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
           return false;
         }
         if (!outbox.current.some((o) => o.id === item.id)) return false; // given up meanwhile
-        const { rumor, wraps } = build(cur.peer, 15, file.url, fileTags(file), cur.at);
+        const { rumor, wraps } = build(cur.peer, 15, file.url, [...fileTags(file), ...(cur.photo.replyTo ? replyTag(15, cur.photo.replyTo) : [])], cur.at);
         await keepSent(rumor.id, bytes, cur.photo.type);
         const localId = cur.id;
         cur = { id: rumor.id, peer: cur.peer, at: cur.at, wraps, done: [] };
@@ -754,18 +764,19 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   }, [secret, me]);
 
   const send = useCallback(
-    async (peer: string, text: string) => {
-      const { rumor, wraps } = build(peer, 14, text);
+    async (peer: string, text: string, replyTo?: string) => {
+      const { rumor, wraps } = build(peer, 14, text, replyTo ? replyTag(14, replyTo) : []);
       saveBox([...outbox.current, { id: rumor.id, peer, at: rumor.created_at, wraps, done: [] }]);
-      addMessage({ id: rumor.id, from: me!, peer, text, at: rumor.created_at, pending: 'sending' });
+      addMessage({ id: rumor.id, from: me!, peer, text, at: rumor.created_at, pending: 'sending', ...(replyTo ? { replyTo } : {}) });
       void flush();
     },
     [build, saveBox, addMessage, me, flush],
   );
 
   const sendPhoto = useCallback(
-    async (peer: string, photo: Blob) => {
+    async (peer: string, photo: Blob, replyTo?: string) => {
       if (!secret || !me) throw new Error('not open');
+      const reply = replyTo ? replyTag(15, replyTo) : [];
       const small = await shrinkImage(photo);
       const dim = `${small.width}x${small.height}`;
       const at = Math.floor(Date.now() / 1000);
@@ -776,19 +787,28 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
         // Offline or the file server refused: keep the photo here and upload it later.
       }
       if (file) {
-        const { rumor, wraps } = build(peer, 15, file.url, fileTags(file), at);
+        const { rumor, wraps } = build(peer, 15, file.url, [...fileTags(file), ...reply], at);
         await keepSent(rumor.id, small.bytes, small.type);
         saveBox([...outbox.current, { id: rumor.id, peer, at, wraps, done: [] }]);
-        addMessage({ id: rumor.id, from: me, peer, text: '', at, file, pending: 'sending' });
+        addMessage({ id: rumor.id, from: me, peer, text: '', at, file, pending: 'sending', ...(replyTo ? { replyTo } : {}) });
       } else {
         const id = `local:${bytesToHex(crypto.getRandomValues(new Uint8Array(16)))}`;
         await keepSent(id, small.bytes, small.type);
         // Without a place to keep it (no IndexedDB), the photo cannot wait: say it was not sent.
         if (!(await keptFile(id))) throw new Error('could not keep the photo');
         const info = { type: small.type, dim, size: small.bytes.byteLength };
-        saveBox([...outbox.current, { id, peer, at, wraps: [], done: [], photo: info }]);
+        saveBox([...outbox.current, { id, peer, at, wraps: [], done: [], photo: replyTo ? { ...info, replyTo } : info }]);
         // Shown from this device until it is uploaded; the file fields are filled in then.
-        addMessage({ id, from: me, peer, text: '', at, file: { url: '', type: info.type, key: '', nonce: '', sha256: '', size: info.size, dim }, pending: 'unsent' });
+        addMessage({
+          id,
+          from: me,
+          peer,
+          text: '',
+          at,
+          file: { url: '', type: info.type, key: '', nonce: '', sha256: '', size: info.size, dim },
+          pending: 'unsent',
+          ...(replyTo ? { replyTo } : {}),
+        });
       }
       void flush();
     },
@@ -984,6 +1004,20 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       ),
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+/**
+ * The reply tag, as NIP-17 writes it: ["e", <id>, <relay>] on a chat message (kind 14) and
+ * ["e", <id>, <relay>, "reply"] on a file message (kind 15).
+ */
+export function replyTag(kind: 14 | 15, id: string): string[][] {
+  return [kind === 14 ? ['e', id, RELAYS[0]] : ['e', id, RELAYS[0], 'reply']];
+}
+
+/** The message a rumor replies to: the e tag marked "reply", else the only or first e tag. */
+export function replyOf(tags: string[][]): string | undefined {
+  const es = tags.filter((t) => t[0] === 'e' && /^[0-9a-f]{64}$/.test(t[1] ?? ''));
+  return (es.find((t) => t[3] === 'reply') ?? es[0])?.[1];
 }
 
 /** What a call record says in the chat. */
