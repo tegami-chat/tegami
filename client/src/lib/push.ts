@@ -34,8 +34,11 @@ export function pushState(): PushState {
 }
 
 /** Tells the relay about this device, signed with my key (NIP-98). */
-async function tellRelay(method: 'POST' | 'DELETE', endpoint: string, secret: Uint8Array) {
-  const res = await signedFetch(method, '/push', JSON.stringify({ endpoint }), secret);
+async function tellRelay(method: 'POST' | 'DELETE', endpoint: string, secret: Uint8Array, keys?: { p256dh?: string; auth?: string }) {
+  // keys: this device's push keys, so the relay can say (encrypted for this device) whether
+  // a message arrived or a call is ringing.
+  const body = keys?.p256dh && keys.auth ? { endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth } } : { endpoint };
+  const res = await signedFetch(method, '/push', JSON.stringify(body), secret);
   if (!res.ok) throw new Error(`relay said ${res.status}`);
 }
 
@@ -48,9 +51,23 @@ export async function enablePush(secret: Uint8Array): Promise<PushState> {
   await navigator.serviceWorker.ready;
   const { key } = (await (await fetch(`${relayHttp()}/push/key`)).json()) as { key: string };
   const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: fromB64u(key) }));
-  await tellRelay('POST', sub.endpoint, secret);
+  await tellRelay('POST', sub.endpoint, secret, sub.toJSON?.().keys);
   save('tegami.push', sub.endpoint);
   return 'on';
+}
+
+/**
+ * When notifications are on, registers this device again on opening the app: the push
+ * address can change, and devices that registered before the relay kept push keys get
+ * the "message or call" notifications this way. No prompt is shown (permission is granted).
+ */
+export async function refreshPush(secret: Uint8Array) {
+  if (pushState() !== 'on') return;
+  try {
+    await enablePush(secret);
+  } catch {
+    // Offline or the relay is busy: the old registration still works.
+  }
 }
 
 /** Unregisters this device from the relay and stops the subscription. */
