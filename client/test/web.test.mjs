@@ -1783,6 +1783,85 @@ async function main() {
       });
       await u.context.close();
     });
+
+    await test('Accounts: a notification says which account it is for, marks it in the list, and opens it', async () => {
+      const u = await newUser(browser, { prf: false });
+      await u.context.grantPermissions(['notifications'], { origin: ORIGIN });
+      // A push straight to the service worker, as the relay would send it (DevTools).
+      const sw = await u.context.newCDPSession(u.page);
+      const regs = new Map();
+      sw.on('ServiceWorker.workerRegistrationUpdated', (e) => {
+        for (const r of e.registrations) if (!r.isDeleted) regs.set(r.scopeURL, r.registrationId);
+      });
+      await sw.send('ServiceWorker.enable');
+      const push = async (data) => {
+        for (let i = 0; i < 50 && !regs.size; i++) await u.page.waitForTimeout(100);
+        assert(regs.size, 'no service worker registration');
+        await sw.send('ServiceWorker.deliverPushMessage', { origin: ORIGIN, registrationId: [...regs.values()][0], data: JSON.stringify(data) });
+      };
+      const notices = () => u.page.evaluate(async () => (await (await navigator.serviceWorker.ready).getNotifications()).map((n) => ({ title: n.title, body: n.body, tag: n.tag })));
+      const clearNotices = () => u.page.evaluate(async () => (await (await navigator.serviceWorker.ready).getNotifications()).forEach((n) => n.close()));
+      const waitNotice = async (pred, what) => {
+        for (let i = 0; i < 50; i++) {
+          const list = await notices();
+          if (list.some(pred)) return list;
+          await u.page.waitForTimeout(100);
+        }
+        throw new Error(`no notification ${what}: ${JSON.stringify(await notices())}`);
+      };
+      const begin = async (name) => {
+        await button(u.page, 'はじめる').click();
+        await button(u.page, 'パスキーを使わずに始める').click();
+        await waitOpen(u.page);
+        await u.page.goto(ORIGIN + '/settings');
+        await u.page.getByPlaceholder('相手に表示される名前').fill(name);
+        await u.page.waitForTimeout(300);
+      };
+      await begin('えー');
+      const key = (name) => u.page.evaluate((n) => JSON.parse(localStorage.getItem('tegami.accounts')).list.find((a) => a.name === n)?.pubkey, name);
+      const aKey = await key('えー');
+      // One account: the notification is titled Tegami, as before.
+      await push({ t: 'message', p: aKey });
+      await waitNotice((n) => n.title === 'Tegami' && n.body === '新しいメッセージがあります', 'titled Tegami');
+      await clearNotices();
+
+      await button(u.page, 'アカウントを追加').click();
+      await begin('びー');
+      const bKey = await key('びー');
+      // Two accounts: the title is the account's name; a call and a message for different accounts both stay.
+      await push({ t: 'message', p: aKey });
+      await waitNotice((n) => n.title === 'えー' && n.body === '新しいメッセージがあります', 'titled えー');
+      await push({ t: 'call', p: bKey });
+      const both = await waitNotice((n) => n.title === 'びー' && n.body === '着信があります', 'titled びー');
+      assert(both.length === 2, `one notification replaced the other: ${JSON.stringify(both)}`);
+      // The list in settings marks the other account (the open one never).
+      await u.page.getByRole('button', { name: 'えー（新着あり）', exact: true }).waitFor({ timeout: 5000 });
+      assert(!(await text(u.page)).match(/びー\s*新着あり/), 'the open account is marked');
+      // Tapping the notification while the app is open: the service worker asks the app to open that account.
+      await u.page.evaluate((p) => navigator.serviceWorker.dispatchEvent(new MessageEvent('message', { data: { tegami: 'open', p } })), aKey);
+      await waitOpen(u.page);
+      await waitText(u.page, 'えー ▾');
+      // Seen: back on B, A is no longer marked.
+      await u.page.getByText('設定', { exact: true }).click();
+      await u.page.getByRole('button', { name: 'びー', exact: true }).click();
+      await waitOpen(u.page);
+      await u.page.getByText('設定', { exact: true }).click();
+      await u.page.getByRole('button', { name: 'えー', exact: true }).waitFor();
+      // Tapping it while the app is closed opens /?a=<key>: that account, and the address goes back to /.
+      await push({ t: 'message', p: aKey });
+      await u.page.getByRole('button', { name: 'えー（新着あり）', exact: true }).waitFor({ timeout: 5000 });
+      await u.page.goto(`${ORIGIN}/?a=${aKey}`);
+      await waitOpen(u.page);
+      await waitText(u.page, 'えー ▾');
+      assert(!u.page.url().includes('a='), `the key stayed in the address: ${u.page.url()}`);
+      // A key that is not on this device changes nothing.
+      await u.page.goto(`${ORIGIN}/?a=${'0'.repeat(64)}`);
+      await waitOpen(u.page);
+      await waitText(u.page, 'えー ▾');
+      // The test notifications show on the real desktop (Windows): close them.
+      await clearNotices();
+      await u.context.close();
+    });
   } finally {
     await browser.close();
     server.close();

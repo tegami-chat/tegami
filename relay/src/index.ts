@@ -410,7 +410,8 @@ export class Relay extends DurableObject<Env> {
     this.lastPush.set(slot, t);
     if (this.lastPush.size > 50_000) this.lastPush.clear();
     const rows = this.sql.exec('SELECT endpoint, keys FROM push_devices WHERE pubkey = ?', pubkey).toArray();
-    const payload = JSON.stringify({ t: kind });
+    // p: which account it is for, so a device with several accounts can say whose it is.
+    const payload = JSON.stringify({ t: kind, p: pubkey });
     await Promise.all(
       rows.map(async (r) => {
         const endpoint = r.endpoint as string;
