@@ -57,10 +57,12 @@ check('…it is still there', (await call('GET', id)).status === 200);
 const big = JSON.stringify({ v: 1, iv: 'aaaa', ct: 'b'.repeat(64 * 1024) });
 check('a backup over 64 KB is refused', (await call('PUT', newId(), { sk: alice, body: big })).status === 413);
 
-// One key holds at most 3 backups (the current one and old ones while a new code replaces them).
-const more = [newId(), newId()];
-for (const x of more) await call('PUT', x, { sk: alice, body: blob });
-check('a fourth backup for the same key is refused', (await call('PUT', newId(), { sk: alice, body: blob })).status === 429);
+// The app derives one signing key per recovery code, so one key holds one backup.
+const more = [];
+check('a second backup for the same key is refused', (await call('PUT', newId(), { sk: alice, body: blob })).status === 429);
+const bobId = newId();
+check('another key stores its own backup', (await call('PUT', bobId, { sk: mallory, body: blob })).status === 204);
+check('…and deletes it', (await call('DELETE', bobId, { sk: mallory })).status === 204);
 
 check('alice deletes it', (await call('DELETE', id, { sk: alice })).status === 204);
 check('after deleting, GET is 404', (await call('GET', id)).status === 404);

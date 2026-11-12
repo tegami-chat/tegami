@@ -12,7 +12,7 @@ import { encryptAndUpload, fileFromRumor, fileTags, keepSent, shrinkImage, type 
 import { load, save } from './storage';
 import { bundleSecret, sendTransfer, type Bundle } from './transfer';
 import { disablePush, enablePush, type PushState } from './push';
-import { BackupGoneError, clearLocal, deleteBackup, deriveKeys, loadLocal, makeCode, putBackup, recoveryOnHere, saveLocal, takeRestoredKeys } from './recovery';
+import { BackupGoneError, type BackupRef, clearLocal, deleteBackup, deriveKeys, loadLocal, makeCode, putBackup, recoveryOnHere, saveLocal, takeRestoredKeys } from './recovery';
 import { createVault, unlockVault, type Vault } from './vault';
 
 // Tegami relays. In development: the relay in app/relay started with `npm run dev`.
@@ -47,6 +47,9 @@ export function isGroup(room: string) {
 // Legacy, unprotected account. Moved into a device vault on first load;
 // still used only when this browser has no IndexedDB or Web Crypto.
 type PlainAccount = { secretHex: string };
+
+/** Failed backup refreshes in a row (across app starts) before settings says so. */
+const RECOVERY_FAILURES_SHOWN = 3;
 
 export type Status = 'loading' | 'new' | 'locked' | 'open';
 
@@ -91,6 +94,8 @@ type TegamiState = {
   makeRecoveryCode: () => Promise<string>;
   /** Deletes the backup from the relay and turns recovery off. */
   turnOffRecovery: () => Promise<void>;
+  /** The backup has not been refreshed for several tries in a row (offline, relay refused). */
+  recoveryBehind: boolean;
 };
 
 const Ctx = createContext<TegamiState | null>(null);
@@ -514,6 +519,18 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     return run;
   }, []);
   const lastUploaded = useRef('');
+  const [recoveryRetry, setRecoveryRetry] = useState(0);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Refreshes that failed in a row, counted across app starts. After RECOVERY_FAILURES_SHOWN
+  // the settings screen says the backup is out of date; the next success clears it.
+  const [recoveryFailures, setRecoveryFailures] = useState(() => load<number>('tegami.recovery.failures', 0));
+  const refreshed = useCallback((ok: boolean) => {
+    setRecoveryFailures((n) => {
+      const next = ok ? 0 : n + 1;
+      if (next !== n) save('tegami.recovery.failures', next);
+      return next;
+    });
+  }, []);
   const currentBundle = useCallback(
     (sk: Uint8Array): Bundle => ({ v: 1, secretHex: bytesToHex(sk), myName, contacts, groups }),
     [myName, contacts, groups],
@@ -526,64 +543,74 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     const bundle = currentBundle(secret);
     await enqueue(async () => {
       const old = await loadLocal(secret);
-      await putBackup(secret, keys, bundle);
+      await putBackup(keys, bundle);
       lastUploaded.current = JSON.stringify(bundle);
-      const stale = [...(old?.stale ?? []), ...(old ? [old.keys.id] : [])];
+      const stale = [...(old?.stale ?? []), ...(old ? [old.keys] : [])].map(({ id, signer }) => ({ id, signer }));
       await saveLocal(secret, { keys, stale });
       setRecoveryOn(true);
+      refreshed(true);
       // The old code stops working. If the relay cannot be reached now, the next refresh tries again.
-      const left: string[] = [];
-      for (const id of stale) await deleteBackup(secret, id).catch(() => left.push(id));
+      const left: BackupRef[] = [];
+      for (const ref of stale) await deleteBackup(ref).catch(() => left.push(ref));
       if (left.length !== stale.length) await saveLocal(secret, { keys, stale: left });
     });
     return code;
-  }, [secret, currentBundle, enqueue]);
+  }, [secret, currentBundle, enqueue, refreshed]);
 
   const turnOffRecovery = useCallback(async () => {
     if (!secret) throw new Error('not open');
     await enqueue(async () => {
       const rec = await loadLocal(secret);
-      if (rec) for (const id of [rec.keys.id, ...rec.stale]) await deleteBackup(secret, id);
+      if (rec) for (const ref of [rec.keys, ...rec.stale]) await deleteBackup(ref);
       clearLocal();
+      refreshed(true);
       lastUploaded.current = '';
       setRecoveryOn(false);
     });
-  }, [secret, enqueue]);
+  }, [secret, enqueue, refreshed]);
 
   // Keep the backup up to date when my name, contacts or groups change (after a pause).
   useEffect(() => {
     if (!secret || !recoveryOn) return;
     const bundle = currentBundle(secret);
     const json = JSON.stringify(bundle);
-    if (json === lastUploaded.current) return;
+    // Back to what the relay already has: the backup is up to date again.
+    if (json === lastUploaded.current) return refreshed(true);
     const t = setTimeout(() => {
       void enqueue(async () => {
         const rec = await loadLocal(secret);
         if (!rec) return; // turned off meanwhile
         try {
-          await putBackup(secret, rec.keys, bundle, true);
+          await putBackup(rec.keys, bundle, true);
         } catch (e) {
           if (!(e instanceof BackupGoneError)) throw e;
           // Turned off, or a new code was made, on another device.
           clearLocal();
           setRecoveryOn(false);
+          refreshed(true);
           return;
         }
         lastUploaded.current = json;
+        refreshed(true);
         if (rec.stale.length) {
-          const left: string[] = [];
-          for (const id of rec.stale) await deleteBackup(secret, id).catch(() => left.push(id));
+          const left: BackupRef[] = [];
+          for (const ref of rec.stale) await deleteBackup(ref).catch(() => left.push(ref));
           await saveLocal(secret, { keys: rec.keys, stale: left });
         }
       }).catch(() => {
-        // Offline or the relay refused: the next change or the next start tries again.
+        // Offline or the relay refused: try again in a minute, and at the next change or start.
+        refreshed(false);
+        clearTimeout(retryTimer.current);
+        retryTimer.current = setTimeout(() => setRecoveryRetry((n) => n + 1), 60_000);
       });
     }, 1500);
     return () => clearTimeout(t);
-  }, [secret, recoveryOn, currentBundle, enqueue]);
+  }, [secret, recoveryOn, currentBundle, enqueue, refreshed, recoveryRetry]);
+  useEffect(() => () => clearTimeout(retryTimer.current), []);
 
   const value: TegamiState = {
     recoveryOn,
+    recoveryBehind: recoveryOn && recoveryFailures >= RECOVERY_FAILURES_SHOWN,
     makeRecoveryCode,
     turnOffRecovery,
     setNotifications,
