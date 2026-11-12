@@ -87,7 +87,12 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const p = event.notification.data?.p;
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    (async () => {
+      // Which account to open is also left in IndexedDB: an iPhone Home Screen app that was
+      // in the background does not get the message below (it is asleep when it is sent), and
+      // reads the request when it comes back to the screen.
+      if (p) await update('open', () => ({ p, at: Date.now() })).catch(() => {});
+      const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       for (const c of list) {
         if ('focus' in c) {
           if (p) c.postMessage({ tegami: 'open', p });
@@ -95,6 +100,6 @@ self.addEventListener('notificationclick', (event) => {
         }
       }
       return self.clients.openWindow(p ? `/?a=${p}` : '/');
-    }),
+    })(),
   );
 });

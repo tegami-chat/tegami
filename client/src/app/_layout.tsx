@@ -6,7 +6,8 @@ import { CallScreen } from '@/components/call-screen';
 import { Gate } from '@/components/gate';
 import { usePalette } from '@/constants/theme';
 import { goToAccount } from '@/components/account-list';
-import { accountByKey, useAccounts } from '@/lib/accounts';
+import { accountByKey, accounts, useAccounts } from '@/lib/accounts';
+import { takeOpenRequest } from '@/lib/sw-store';
 import { CallProvider } from '@/lib/calls';
 import { report } from '@/lib/crash';
 import { TegamiProvider, useTegami } from '@/lib/tegami';
@@ -65,16 +66,31 @@ function Shell() {
 export default function RootLayout() {
   // Switching accounts mounts everything again on the other account's storage.
   const { current } = useAccounts();
-  // A notification for another account was tapped while the app was open: open that account.
+  // A notification for another account was tapped: open that account. The service worker
+  // sends a message, and also leaves the request in IndexedDB for an app that was asleep
+  // (an iPhone Home Screen app in the background) and reads it when it is on screen again.
   useEffect(() => {
+    const open = (p: string | null) => {
+      const entry = p ? accountByKey(p) : undefined;
+      if (entry && entry.id !== accounts().current) goToAccount(entry.id);
+    };
+    const check = () => void takeOpenRequest().then(open);
     const sw = typeof navigator !== 'undefined' ? navigator.serviceWorker : undefined;
     const onMessage = (e: MessageEvent) => {
-      if (e.data?.tegami !== 'open' || typeof e.data.p !== 'string') return;
-      const entry = accountByKey(e.data.p);
-      if (entry) goToAccount(entry.id);
+      if (e.data?.tegami === 'open') check();
     };
+    const onVisible = () => {
+      if (globalThis.document?.visibilityState === 'visible') check();
+    };
+    check();
     sw?.addEventListener('message', onMessage);
-    return () => sw?.removeEventListener('message', onMessage);
+    globalThis.document?.addEventListener?.('visibilitychange', onVisible);
+    globalThis.addEventListener?.('focus', onVisible);
+    return () => {
+      sw?.removeEventListener('message', onMessage);
+      globalThis.document?.removeEventListener?.('visibilitychange', onVisible);
+      globalThis.removeEventListener?.('focus', onVisible);
+    };
   }, []);
   return (
     <TegamiProvider key={current}>
