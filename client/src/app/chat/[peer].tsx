@@ -5,6 +5,7 @@ import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, 
 
 import { Photo } from '@/components/photo';
 import { Palette, usePalette } from '@/constants/theme';
+import { useCall } from '@/lib/calls';
 import { chatName, isGroup, personName, shortId, useTegami } from '@/lib/tegami';
 
 export default function Chat() {
@@ -17,9 +18,12 @@ export default function Chat() {
   const [sending, setSending] = useState(false);
   const [failed, setFailed] = useState(false);
   const list = useRef<FlatList>(null);
+  const { supported, startCall } = useCall();
 
   const group = !!peer && isGroup(peer);
   const contact = contacts.find((x) => x.pubkey === peer);
+  // 1:1 with a person (an AI friend cannot pick up). Groups later.
+  const canCall = supported && !group && !!contact && !contact.model;
   const thread = useMemo(() => messages.filter((m) => m.peer === peer).reverse(), [messages, peer]);
 
   async function pickPhoto() {
@@ -67,6 +71,18 @@ export default function Chat() {
               : peer
                 ? shortId(peer)
                 : '',
+          headerRight: canCall
+            ? () => (
+                <View style={s.callButtons}>
+                  <Pressable role="button" aria-label="音声通話" style={s.callButton} onPress={() => startCall(peer, false)}>
+                    <Text style={s.callText}>通話</Text>
+                  </Pressable>
+                  <Pressable role="button" aria-label="ビデオ通話" style={s.callButton} onPress={() => startCall(peer, true)}>
+                    <Text style={s.callText}>ビデオ</Text>
+                  </Pressable>
+                </View>
+              )
+            : undefined,
         }}
       />
       {!group && !contact && peer && (
@@ -96,6 +112,17 @@ export default function Chat() {
         contentContainerStyle={s.list}
         renderItem={({ item }) => {
           const mine = item.from === me;
+          if (item.call) {
+            return (
+              <View style={s.callRow}>
+                <Text style={[s.callNote, item.call.result === 'missed' && s.missed]}>
+                  {item.text}
+                  {'  '}
+                  {new Date(item.at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
+            );
+          }
           return (
             <View style={[s.bubble, mine ? s.mine : s.theirs]}>
               {group && !mine && <Text style={s.author}>{personName(item.from, contacts)}</Text>}
@@ -204,5 +231,11 @@ const styles = (c: Palette) =>
     attach: { paddingHorizontal: 6, paddingVertical: 10 },
     attachText: { color: c.accent, fontSize: 15, fontWeight: '600' },
     disabled: { opacity: 0.4 },
+    callButtons: { flexDirection: 'row', alignItems: 'center' },
+    callButton: { paddingHorizontal: 10, paddingVertical: 4 },
+    callText: { fontSize: 15, color: c.accent, fontWeight: '600' },
+    callRow: { alignSelf: 'center', paddingVertical: 2 },
+    callNote: { fontSize: 13, color: c.muted },
+    missed: { color: c.accent },
     sendText: { color: c.onAccent, fontSize: 15, fontWeight: '600' },
   });
