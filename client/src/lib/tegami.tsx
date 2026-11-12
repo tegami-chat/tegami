@@ -12,6 +12,7 @@ import { encryptAndUpload, fileFromRumor, fileTags, keepSent, shrinkImage, type 
 import { load, save } from './storage';
 import { bundleSecret, sendTransfer, type Bundle } from './transfer';
 import { disablePush, enablePush, type PushState } from './push';
+import { BackupGoneError, clearLocal, deleteBackup, deriveKeys, loadLocal, makeCode, putBackup, recoveryOnHere, saveLocal, takeRestoredKeys } from './recovery';
 import { createVault, unlockVault, type Vault } from './vault';
 
 // Tegami relays. In development: the relay in app/relay started with `npm run dev`.
@@ -84,6 +85,12 @@ type TegamiState = {
   sendPhoto: (peer: string, photo: Blob) => Promise<void>;
   /** Turns notifications for this device on or off. Returns the new state. */
   setNotifications: (on: boolean) => Promise<PushState>;
+  /** Whether this device keeps a recovery backup on the relay up to date. */
+  recoveryOn: boolean;
+  /** Makes a new recovery code and uploads the backup; an earlier code stops working. Returns the code (shown once). */
+  makeRecoveryCode: () => Promise<string>;
+  /** Deletes the backup from the relay and turns recovery off. */
+  turnOffRecovery: () => Promise<void>;
 };
 
 const Ctx = createContext<TegamiState | null>(null);
@@ -183,6 +190,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [myName, setMyNameState] = useState('');
   const [crashReports, setCrashReportsState] = useState(false);
+  const [recoveryOn, setRecoveryOn] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const pool = useRef<SimplePool | null>(null);
   const authRef = useRef<((t: EventTemplate) => Promise<ReturnType<typeof finalizeEvent>>) | null>(null);
@@ -223,6 +231,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       const crash = load<boolean>('tegami.crashReports', false);
       setCrashReportsState(crash);
       setCrashReports(crash);
+      setRecoveryOn(recoveryOnHere());
       setLoaded(true);
     })();
     return () => {
@@ -363,25 +372,42 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   }, [secret, me, addMessage, rememberGroup]);
 
   // An account moved from another device brings its name, contacts and groups.
-  const adopt = useCallback((moved: Bundle) => {
+  // A new account: nothing from an earlier account on this browser applies.
+  const forgetRecovery = useCallback(() => {
+    clearLocal();
+    setRecoveryOn(false);
+  }, []);
+
+  // An account restored with a recovery code keeps recovery on with the same code.
+  const adopt = useCallback(async (moved: Bundle, sk: Uint8Array) => {
     save('tegami.myName', moved.myName);
     save('tegami.contacts', moved.contacts);
     save('tegami.groups', moved.groups);
     setMyNameState(moved.myName);
     setContacts(moved.contacts);
     setGroups(moved.groups);
+    const keys = takeRestoredKeys();
+    if (keys) {
+      await saveLocal(sk, { keys, stale: [] });
+      setRecoveryOn(true);
+    } else {
+      // An account moved by link starts without recovery on this device.
+      clearLocal();
+      setRecoveryOn(false);
+    }
   }, []);
 
   const start = useCallback(
     async (moved?: Bundle) => {
       const sk = moved ? bundleSecret(moved) : generateSecretKey();
       const v = await createVault(sk as Uint8Array<ArrayBuffer>);
-      if (moved) adopt(moved);
+      if (moved) await adopt(moved, sk);
+      else forgetRecovery();
       save('tegami.vault', v);
       setVault(v);
       setSecret(sk);
     },
-    [adopt],
+    [adopt, forgetRecovery],
   );
 
   const startWithoutPasskey = useCallback(
@@ -389,10 +415,11 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       const sk = moved ? bundleSecret(moved) : generateSecretKey();
       if (deviceVaultAvailable()) save('tegami.device', await createDeviceVault(sk as Uint8Array<ArrayBuffer>));
       else save('tegami.account', { secretHex: bytesToHex(sk) });
-      if (moved) adopt(moved);
+      if (moved) await adopt(moved, sk);
+      else forgetRecovery();
       setSecret(sk);
     },
-    [adopt],
+    [adopt, forgetRecovery],
   );
 
   const makeTransferLink = useCallback(async () => {
@@ -477,7 +504,88 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     [secret],
   );
 
+  // ---------- recovery code ----------
+  // Every relay call for recovery runs one after another, so turning it off cannot be
+  // overtaken by a refresh that is still uploading.
+  const recoveryQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const enqueue = useCallback(<T,>(job: () => Promise<T>): Promise<T> => {
+    const run = recoveryQueue.current.then(job, job);
+    recoveryQueue.current = run.catch(() => undefined);
+    return run;
+  }, []);
+  const lastUploaded = useRef('');
+  const currentBundle = useCallback(
+    (sk: Uint8Array): Bundle => ({ v: 1, secretHex: bytesToHex(sk), myName, contacts, groups }),
+    [myName, contacts, groups],
+  );
+
+  const makeRecoveryCode = useCallback(async () => {
+    if (!secret) throw new Error('not open');
+    const code = makeCode();
+    const keys = await deriveKeys(code);
+    const bundle = currentBundle(secret);
+    await enqueue(async () => {
+      const old = await loadLocal(secret);
+      await putBackup(secret, keys, bundle);
+      lastUploaded.current = JSON.stringify(bundle);
+      const stale = [...(old?.stale ?? []), ...(old ? [old.keys.id] : [])];
+      await saveLocal(secret, { keys, stale });
+      setRecoveryOn(true);
+      // The old code stops working. If the relay cannot be reached now, the next refresh tries again.
+      const left: string[] = [];
+      for (const id of stale) await deleteBackup(secret, id).catch(() => left.push(id));
+      if (left.length !== stale.length) await saveLocal(secret, { keys, stale: left });
+    });
+    return code;
+  }, [secret, currentBundle, enqueue]);
+
+  const turnOffRecovery = useCallback(async () => {
+    if (!secret) throw new Error('not open');
+    await enqueue(async () => {
+      const rec = await loadLocal(secret);
+      if (rec) for (const id of [rec.keys.id, ...rec.stale]) await deleteBackup(secret, id);
+      clearLocal();
+      lastUploaded.current = '';
+      setRecoveryOn(false);
+    });
+  }, [secret, enqueue]);
+
+  // Keep the backup up to date when my name, contacts or groups change (after a pause).
+  useEffect(() => {
+    if (!secret || !recoveryOn) return;
+    const bundle = currentBundle(secret);
+    const json = JSON.stringify(bundle);
+    if (json === lastUploaded.current) return;
+    const t = setTimeout(() => {
+      void enqueue(async () => {
+        const rec = await loadLocal(secret);
+        if (!rec) return; // turned off meanwhile
+        try {
+          await putBackup(secret, rec.keys, bundle, true);
+        } catch (e) {
+          if (!(e instanceof BackupGoneError)) throw e;
+          // Turned off, or a new code was made, on another device.
+          clearLocal();
+          setRecoveryOn(false);
+          return;
+        }
+        lastUploaded.current = json;
+        if (rec.stale.length) {
+          const left: string[] = [];
+          for (const id of rec.stale) await deleteBackup(secret, id).catch(() => left.push(id));
+          await saveLocal(secret, { keys: rec.keys, stale: left });
+        }
+      }).catch(() => {
+        // Offline or the relay refused: the next change or the next start tries again.
+      });
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [secret, recoveryOn, currentBundle, enqueue]);
+
   const value: TegamiState = {
+    recoveryOn,
+    makeRecoveryCode,
+    turnOffRecovery,
     setNotifications,
     status,
     me,

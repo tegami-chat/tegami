@@ -18,8 +18,9 @@ import { chromium } from 'playwright-core';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const DIST = join(ROOT, 'dist-test');
-const RELAY_PORT = 7448;
-const WEB_PORT = 8766;
+// Other test runs on this computer may use the defaults: RELAY_PORT=7468 WEB_PORT=8786 npm run test:web
+const RELAY_PORT = Number(process.env.RELAY_PORT || 7448);
+const WEB_PORT = Number(process.env.WEB_PORT || 8766);
 const ORIGIN = `http://localhost:${WEB_PORT}`;
 const CHROME =
   process.env.CHROME_PATH ??
@@ -142,13 +143,15 @@ async function noRawKey(page) {
 
 const results = [];
 async function test(name, fn) {
+  // ONLY=<part of a name> runs just the matching tests.
+  if (process.env.ONLY && !name.includes(process.env.ONLY)) return;
   try {
     await fn();
     results.push([name, true]);
     console.log(`  ok    ${name}`);
   } catch (e) {
     results.push([name, false]);
-    console.log(`  FAIL  ${name}\n        ${e.message.split('\n')[0]}`);
+    console.log(`  FAIL  ${name}\n        ${e.message.split('\n').slice(0, process.env.ONLY ? 8 : 1).join('\n        ')}`);
   }
 }
 function assert(cond, msg) {
@@ -677,6 +680,145 @@ async function main() {
       await c.page.goto(ORIGIN + '/');
       await waitText(c.page, 'あきら');
       for (const u of [a, b, c]) await u.context.close();
+    });
+
+    await test('Recovery code: backup on the relay is encrypted, follows changes, restores on a new device; wrong, old and turned-off codes fail', async () => {
+      const openIfLocked = async (page, expect) => {
+        await page.waitForFunction((e) => document.body.innerText.includes('ひらく') || document.body.innerText.includes(e), expect, { timeout: 15000 });
+        if ((await text(page)).includes('ひらく')) await button(page, 'ひらく').click();
+      };
+      const backups = async () => (await fetch(`http://localhost:${RELAY_PORT}/_backups`)).json();
+      const until = async (cond, what) => {
+        for (let i = 0; i < 60; i++) {
+          if (await cond()) return;
+          await new Promise((r) => setTimeout(r, 100));
+        }
+        throw new Error(`timed out: ${what}`);
+      };
+      /** Opens a backup here in the test, the way the app does (HKDF of the code → id and AES-GCM key). */
+      const decrypt = async (code, body) => {
+        const ikm = new TextEncoder().encode(code.replace(/-/g, ''));
+        const base = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']);
+        const bits = (info) =>
+          crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt: new TextEncoder().encode('tegami/recovery/v1'), info: new TextEncoder().encode(info) }, base, 256);
+        const id = Buffer.from(await bits('backup id')).toString('hex');
+        const key = await crypto.subtle.importKey('raw', await bits('backup key'), 'AES-GCM', false, ['decrypt']);
+        const { iv, ct } = JSON.parse(body);
+        const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: Buffer.from(iv, 'base64url'), additionalData: new TextEncoder().encode(id) }, key, Buffer.from(ct, 'base64url'));
+        return { id, bundle: JSON.parse(Buffer.from(pt).toString()) };
+      };
+      /** Tries a code on a fresh browser. Returns the screen text after trying. */
+      const tryCode = async (code, { use = false } = {}) => {
+        const u = await newUser(browser, { prf: false });
+        await button(u.page, '復元コードで戻す').click();
+        await u.page.getByPlaceholder('復元コード').fill(code);
+        await button(u.page, '戻す').click();
+        await u.page.waitForFunction(() => /受け取りました|戻せませんでした/.test(document.body.innerText), null, { timeout: 15000 });
+        const t = await text(u.page);
+        if (!use) await u.context.close();
+        return { u, t };
+      };
+
+      // A (passkey) has a name and a friend B.
+      const a = await newUser(browser);
+      await button(a.page, 'はじめる').click();
+      await waitOpen(a.page);
+      const b = await newUser(browser, { prf: false });
+      await button(b.page, 'はじめる').click();
+      await button(b.page, 'パスキーを使わずに始める').click();
+      await waitOpen(b.page);
+      await b.page.goto(ORIGIN + '/add');
+      await waitText(b.page, '自分の招待リンク');
+      await b.page.getByPlaceholder('相手に表示される名前').fill('びー');
+      const bLink = (await text(b.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0].replace('https://app.tegami.chat', ORIGIN);
+      await a.page.goto(bLink);
+      await button(a.page, 'ひらく').click();
+      await waitText(a.page, '自分の招待リンク');
+      await a.page.getByPlaceholder('相手に表示される名前').fill('えー');
+      await button(a.page, '追加').click();
+      await a.page.getByPlaceholder('メッセージ').waitFor();
+      await a.page.goto(ORIGIN + '/add');
+      await openIfLocked(a.page, '自分の招待リンク');
+      await waitText(a.page, '自分の招待リンク');
+      const aNpub = (await text(a.page)).match(/npub1[0-9a-z]+/)[0];
+      const aHex = nip19.decode(aNpub).data;
+
+      // Turn recovery on: the code is shown once.
+      await a.page.goto(ORIGIN + '/settings');
+      await openIfLocked(a.page, '復元コードを作る');
+      await button(a.page, '復元コードを作る').click();
+      await waitText(a.page, 'このコードは今だけ表示します');
+      const code1 = (await a.page.getByTestId('recovery-code').innerText()).trim();
+      assert(/^([2-9A-HJ-NP-Z]{4}-){6}[2-9A-HJ-NP-Z]{4}$/.test(code1), `code format: ${code1}`);
+      let list = await backups();
+      assert(list.length === 1 && list[0].pubkey === aHex, `relay backups: ${JSON.stringify(list.map((x) => x.pubkey))}`);
+      const first = list[0];
+      assert(!/えー|びー|secretHex|npub/.test(first.data) && first.data.length < 64 * 1024, 'the relay holds readable account data');
+      const opened = await decrypt(code1, first.data);
+      assert(opened.id === first.id && opened.bundle.myName === 'えー' && opened.bundle.contacts[0]?.name === 'びー', 'backup content');
+      assert(!(await storage(a.page))['tegami.recovery']?.includes(code1.replace(/-/g, '')), 'the code is kept on the device in the clear');
+      await button(a.page, '残しました').click();
+      await waitText(a.page, '端末を全部なくしても、復元コードで戻せます');
+      assert(!(await text(a.page)).includes(code1), 'the code is still on the screen');
+
+      // Rename the friend: the backup follows (after a short pause).
+      await a.page.goto(bLink);
+      await openIfLocked(a.page, '自分の招待リンク');
+      await a.page.getByPlaceholder('表示する名前').fill('びーさん');
+      await button(a.page, '名前を変える').click();
+      await a.page.getByPlaceholder('メッセージ').waitFor();
+      await until(async () => {
+        const [cur] = await backups();
+        return cur && (await decrypt(code1, cur.data)).bundle.contacts[0]?.name === 'びーさん';
+      }, 'the backup was not refreshed after renaming');
+
+      // A new device restores with the code (typed in lower case, with spaces).
+      const typed = code1.toLowerCase().replace(/-/g, ' ');
+      const r = await tryCode(typed, { use: true });
+      assert(r.t.includes('えーさんのアカウントを受け取りました'), `restore screen: ${r.t.slice(0, 120)}`);
+      await button(r.u.page, 'この端末で使う').click();
+      await button(r.u.page, 'パスキーを使わずに始める').click();
+      await waitOpen(r.u.page);
+      await waitText(r.u.page, 'びーさん');
+      await r.u.page.goto(ORIGIN + '/add');
+      await waitText(r.u.page, '自分の招待リンク');
+      assert((await text(r.u.page)).includes(aNpub), 'not the same account');
+      assert((await r.u.page.getByPlaceholder('相手に表示される名前').inputValue()) === 'えー', 'name not restored');
+      await r.u.page.goto(ORIGIN + '/settings');
+      await waitText(r.u.page, '端末を全部なくしても、復元コードで戻せます');
+
+      // Wrong codes fail cleanly and leave the start screen as it was.
+      for (const wrong of ['2222-3333-4444-5555-6666-7777-8888', 'hello']) {
+        const w = await tryCode(wrong);
+        assert(w.t.includes('このコードでは戻せませんでした') && w.t.includes('はじめる'), `wrong code screen: ${w.t.slice(0, 120)}`);
+      }
+
+      // A new code: the old one stops working, the new one works.
+      await a.page.goto(ORIGIN + '/settings');
+      await openIfLocked(a.page, '新しいコードにする');
+      await button(a.page, '新しいコードにする').click();
+      await waitText(a.page, 'このコードは今だけ表示します');
+      const code2 = (await a.page.getByTestId('recovery-code').innerText()).trim();
+      assert(code2 !== code1, 'the same code again');
+      await until(async () => (await backups()).length === 1, 'the old backup was not deleted');
+      assert((await tryCode(code1)).t.includes('このコードでは戻せませんでした'), 'the old code still works');
+      assert((await tryCode(code2)).t.includes('えーさんのアカウントを受け取りました'), 'the new code does not work');
+
+      // The restored device still has the old code: its next refresh finds the backup gone
+      // and turns recovery off there instead of bringing the old code back.
+      await r.u.page.goto(ORIGIN + '/settings');
+      await waitText(r.u.page, '復元コードを作る');
+      assert((await backups()).length === 1, 'the old code came back');
+      assert((await tryCode(code1)).t.includes('このコードでは戻せませんでした'), 'the old code works again');
+      await r.u.context.close();
+
+      // Turning off deletes the backup; the code then fails.
+      await button(a.page, '残しました').click();
+      await button(a.page, '復元コードをやめる').click();
+      await waitText(a.page, '復元コードを作る');
+      assert((await backups()).length === 0, 'the backup is still on the relay');
+      assert((await tryCode(code2)).t.includes('このコードでは戻せませんでした'), 'the code works after turning off');
+      for (const u of [a, b]) await u.context.close();
     });
 
     await test('AI friend: invite link shows the model, and the AI on the computer replies', async () => {

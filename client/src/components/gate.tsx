@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Palette, usePalette } from '@/constants/theme';
 import { RELAYS, useTegami } from '@/lib/tegami';
+import { restoreFromCode, setRestoredKeys } from '@/lib/recovery';
 import { arrival, receiveTransfer, takeLinkKey, transferKey, type Bundle } from '@/lib/transfer';
 import { PasskeyUnsupportedError, passkeysAvailable } from '@/lib/vault';
 
@@ -32,6 +33,22 @@ export function Gate({ locked }: { locked: boolean }) {
     if (!k) return setMoving({ state: 'failed' });
     setKey(k);
     setMoving({ state: 'fetching' });
+  }
+  // Restoring with a recovery code after losing every device.
+  const [restoring, setRestoring] = useState<null | 'input' | 'checking' | 'failed'>(null);
+  const [code, setCode] = useState('');
+
+  async function restore() {
+    setRestoring('checking');
+    try {
+      const { bundle, keys } = await restoreFromCode(code);
+      setRestoredKeys(keys);
+      setCode('');
+      setRestoring(null);
+      setMoving({ state: 'ready', bundle });
+    } catch {
+      setRestoring('failed');
+    }
   }
   const moved = moving?.state === 'ready' ? moving.bundle : undefined;
   const [busy, setBusy] = useState(false);
@@ -141,10 +158,36 @@ export function Gate({ locked }: { locked: boolean }) {
               <Text style={s.secondaryText}>受け取る</Text>
             </Pressable>
           </View>
+        ) : restoring ? (
+          <View style={s.paste}>
+            <TextInput
+              style={s.pasteInput}
+              value={code}
+              onChangeText={(t) => {
+                setCode(t);
+                if (restoring === 'failed') setRestoring('input');
+              }}
+              placeholder="復元コード"
+              placeholderTextColor={c.muted}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              autoComplete="off"
+              autoFocus
+            />
+            <Pressable style={s.secondary} onPress={restore} disabled={!code.trim() || restoring === 'checking'} role="button">
+              <Text style={s.secondaryText}>{restoring === 'checking' ? '確かめています' : '戻す'}</Text>
+            </Pressable>
+            {restoring === 'failed' && <Text style={s.notice}>このコードでは戻せませんでした。コードを確かめてください。</Text>}
+          </View>
         ) : (
-          <Pressable style={s.secondary} onPress={() => setPasting(true)} role="button">
-            <Text style={s.secondaryText}>別の端末から受け取る</Text>
-          </Pressable>
+          <>
+            <Pressable style={s.secondary} onPress={() => setPasting(true)} role="button">
+              <Text style={s.secondaryText}>別の端末から受け取る</Text>
+            </Pressable>
+            <Pressable style={s.quiet} onPress={() => setRestoring('input')} role="button">
+              <Text style={s.quietText}>復元コードで戻す</Text>
+            </Pressable>
+          </>
         ))}
       {!locked && passkeysAvailable() && <PasskeyStores />}
       {failed && <Text style={s.notice}>パスキーを使えませんでした。もう一度押してください</Text>}
@@ -191,6 +234,8 @@ const styles = (c: Palette) =>
     busy: { opacity: 0.5 },
     secondary: { paddingVertical: 12, paddingHorizontal: 24 },
     secondaryText: { color: c.accent, fontSize: 16, fontWeight: '600' },
+    quiet: { paddingVertical: 6, paddingHorizontal: 24 },
+    quietText: { color: c.muted, fontSize: 14 },
     small: { fontSize: 12, color: c.muted, textAlign: 'center', maxWidth: 320 },
     notice: { fontSize: 14, color: c.muted, textAlign: 'center', maxWidth: 320, lineHeight: 22 },
     paste: { width: '100%', maxWidth: 320, alignItems: 'center', gap: 4 },
