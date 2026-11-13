@@ -143,12 +143,14 @@ function saveDone(id: string) {
 }
 
 export function CallProvider({ children }: { children: React.ReactNode }) {
-  const { me, contacts, sendSignal, onSignal, recordCall } = useTegami();
+  const { me, contacts, blocked, sendSignal, onSignal, recordCall } = useTegami();
   const [view, setView] = useState<CallView>(IDLE);
   const live = useRef<Live | null>(null);
   const endedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const contactsRef = useRef(contacts);
   contactsRef.current = contacts;
+  const blockedRef = useRef(blocked);
+  blockedRef.current = blocked;
   const supported = useMemo(callsSupported, []);
 
   // Calls already over. The relay hands a minute of signals out again after a reload, so
@@ -281,7 +283,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   const startCall = useCallback(
     (peer: string, video: boolean) => {
-      if (live.current || !supported) return;
+      if (live.current || !supported || blockedRef.current.includes(peer)) return;
       // Ask for the microphone first, inside the tap (iPhone allows it only then).
       const asked = media(video);
       const l: Live = { id: newId(), peer, video, role: 'caller', pendingIce: [], outIce: [], descSent: false, timers: [] };
@@ -388,6 +390,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!me) return;
     return onSignal((s: Signal) => {
+      if (s.from !== me && blockedRef.current.includes(s.from)) return;
       const d = s.data;
       const t = str(d.t);
       const id = str(d.id);
@@ -406,8 +409,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (t === 'offer') {
-        // Only contacts can ring. Anyone else: nothing happens, nothing is kept.
-        if (!contactsRef.current.some((c) => c.pubkey === s.from)) return;
+        // Only unblocked contacts can ring. Anyone else: nothing happens, nothing is kept.
+        if (!contactsRef.current.some((c) => c.pubkey === s.from) || blockedRef.current.includes(s.from)) return;
         const sdp = str(d.sdp);
         if (!sdp || done.current.has(id)) return;
         // A call that is ringing right now rings at once. An offer written a few seconds ago
@@ -446,7 +449,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
       /** Rings for an offer once it has settled (still not over, not already ringing). */
       function ring(s: Signal, id: string, sdp: string) {
-        if (done.current.has(id)) return;
+        if (done.current.has(id) || blockedRef.current.includes(s.from)) return;
         const d = s.data;
         l = live.current;
         if (l) {
@@ -475,6 +478,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       }
     });
   }, [me, onSignal, sendSignal, recordCall, end, signal, addIce, waitForConnection, markDone]);
+
+  // Blocking someone while their call is on screen stops it quietly.
+  useEffect(() => {
+    const l = live.current;
+    if (l && blocked.includes(l.peer)) end(l, undefined, false);
+  }, [blocked, end]);
 
   // Leaving the page ends the call for the other person too.
   useEffect(() => {

@@ -6,8 +6,8 @@ import { chatName, strangers, useTegami } from '@/lib/tegami';
 
 export default function Strangers() {
   const c = usePalette();
-  const { contacts, groups, messages, unread } = useTegami();
-  const rows = strangers(contacts, messages, groups);
+  const { contacts, groups, messages, unread, blocked } = useTegami();
+  const rows = strangers(contacts, messages, groups, blocked);
   return (
     <View style={[styles.fill, { backgroundColor: c.background }]}>
       <FlatList

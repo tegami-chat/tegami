@@ -19,7 +19,7 @@ function when(at: number) {
 export default function Chats() {
   const c = usePalette();
   const s = styles(c);
-  const { contacts, groups, messages, unread } = useTegami();
+  const { contacts, groups, messages, unread, blocked } = useTegami();
   // With more than one account here, the title says which one is open and switches.
   const index = useAccounts();
   const current = readyAccounts(index).length > 1 ? index.list.find((a) => a.id === index.current) : undefined;
@@ -29,12 +29,12 @@ export default function Chats() {
 
   const lastOf = (room: string) => [...messages].reverse().find((m) => m.peer === room);
   const rows = [
-    ...contacts.map((c) => ({ room: c.pubkey, name: c.name, model: c.model, group: false })),
+    ...contacts.filter((c) => !blocked.includes(c.pubkey)).map((c) => ({ room: c.pubkey, name: c.name, model: c.model, group: false })),
     ...groups.map((g) => ({ room: g.id, name: chatName(g.id, contacts, groups), model: undefined, group: true })),
   ]
     .map((r) => ({ ...r, last: lastOf(r.room) }))
     .sort((a, b) => (b.last?.at ?? 0) - (a.last?.at ?? 0));
-  const unknown = strangers(contacts, messages, groups);
+  const unknown = strangers(contacts, messages, groups, blocked);
   const unknownUnread = unknown.reduce((n, r) => n + (unread[r.peer] ?? 0), 0);
 
   const [query, setQuery] = useState('');

@@ -86,6 +86,9 @@ type TegamiState = {
   npub: string | null;
   contacts: Contact[];
   groups: Group[];
+  blocked: string[];
+  block: (pubkey: string) => void;
+  unblock: (pubkey: string) => void;
   messages: Message[];
   /** Makes a group with these contacts and returns its chat id. */
   createGroup: (name: string, members: string[]) => string;
@@ -223,8 +226,8 @@ export function chatName(room: string, contacts: Contact[], groups: Group[]) {
 }
 
 /** Chats that are neither a contact nor a group I know, newest first. */
-export function strangers(contacts: Contact[], messages: Message[], groups: Group[] = []) {
-  const known = new Set([...contacts.map((c) => c.pubkey), ...groups.map((g) => g.id)]);
+export function strangers(contacts: Contact[], messages: Message[], groups: Group[] = [], blocked: string[] = []) {
+  const known = new Set([...contacts.map((c) => c.pubkey), ...groups.map((g) => g.id), ...blocked]);
   const last = new Map<string, Message>();
   for (const m of messages) if (!known.has(m.peer)) last.set(m.peer, m);
   return [...last.entries()].map(([peer, m]) => ({ peer, last: m })).sort((a, b) => b.last.at - a.last.at);
@@ -236,10 +239,17 @@ export function strangers(contacts: Contact[], messages: Message[], groups: Grou
  * Messages written before this device's account was set up (brought back from the relay
  * after moving to a new device) count as read. readAt and got are ms, setupAt is unix seconds.
  */
-export function countUnread(messages: Message[], me: string | null, readAt: Record<string, number>, setupAt: number) {
+export function countUnread(
+  messages: Message[],
+  me: string | null,
+  readAt: Record<string, number>,
+  setupAt: number,
+  blocked: string[] = [],
+) {
+  const skip = new Set(blocked);
   const out: Record<string, number> = {};
   for (const m of messages) {
-    if (m.from === me || m.at < setupAt) continue;
+    if (m.from === me || m.at < setupAt || skip.has(m.peer)) continue;
     if (m.call && m.call.result !== 'missed') continue;
     if ((m.got ?? m.at * 1000) <= (readAt[m.peer] ?? 0)) continue;
     out[m.peer] = (out[m.peer] ?? 0) + 1;
@@ -267,6 +277,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const [vault, setVault] = useState<Vault | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [blocked, setBlocked] = useState<string[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [myName, setMyNameState] = useState('');
   const [crashReports, setCrashReportsState] = useState(false);
@@ -310,6 +321,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       if (sk) setSecret(sk);
       setContacts(load<Contact[]>(k('contacts'), []));
       setGroups(load<Group[]>(k('groups'), []));
+      const loadedBlocked = load<string[]>(k('blocked'), []);
+      blockedRef.current = loadedBlocked;
+      setBlocked(loadedBlocked);
       // Messages waiting to be sent: the outbox is what counts. A message still marked as
       // being sent when the app closed is now waiting; a mark without an outbox entry is stale.
       const box = loadOutbox();
@@ -381,6 +395,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   contactsRef.current = contacts;
   const groupsRef = useRef<Group[]>([]);
   groupsRef.current = groups;
+  const blockedRef = useRef<string[]>([]);
+  blockedRef.current = blocked;
   const rememberGroup = useCallback(
     (id: string, subject: string | undefined, author: string) => {
       saveGroups((prev) => {
@@ -456,8 +472,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
 
   // ---------- unread counts ----------
   const unread = useMemo(
-    () => (showUnread ? countUnread(messages, me, readAt, setupAt) : {}),
-    [showUnread, messages, me, readAt, setupAt],
+    () => (showUnread ? countUnread(messages, me, readAt, setupAt, blocked) : {}),
+    [showUnread, messages, me, readAt, setupAt, blocked],
   );
   const messagesRef = useRef<Message[]>([]);
   messagesRef.current = messages;
@@ -497,6 +513,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       {
         try {
           const rumor = nip17.unwrapEvent(wrap, secret);
+          if (rumor.pubkey !== me && blockedRef.current.includes(rumor.pubkey)) return;
           // Written by a key registered without an invite: only from friends and groups I know.
           // Keys made in bulk cannot reach strangers this way (relay/src/members.ts).
           if ((wrap as { tegami_open?: number }).tegami_open === 1 && rumor.pubkey !== me) {
@@ -762,6 +779,26 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const block = useCallback((pubkey: string) => {
+    setBlocked((prev) => {
+      if (prev.includes(pubkey)) return prev;
+      const next = [...prev, pubkey];
+      blockedRef.current = next;
+      save(k('blocked'), next);
+      return next;
+    });
+  }, []);
+
+  const unblock = useCallback((pubkey: string) => {
+    setBlocked((prev) => {
+      if (!prev.includes(pubkey)) return prev;
+      const next = prev.filter((p) => p !== pubkey);
+      blockedRef.current = next;
+      save(k('blocked'), next);
+      return next;
+    });
+  }, []);
+
   /**
    * Seals and wraps one rumor for everyone in the chat, once: the other people first, my own
    * devices last. The envelopes are kept as they are until the relay takes them (lib/outbox.ts).
@@ -883,6 +920,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
 
   const send = useCallback(
     async (peer: string, text: string, replyTo?: string) => {
+      if (!isGroup(peer) && blockedRef.current.includes(peer)) return;
       const { rumor, wraps } = build(peer, 14, text, replyTo ? replyTag(14, replyTo) : []);
       saveBox([...outbox.current, { id: rumor.id, peer, at: rumor.created_at, wraps, done: [] }]);
       addMessage({ id: rumor.id, from: me!, peer, text, at: rumor.created_at, pending: 'sending', ...(replyTo ? { replyTo } : {}) });
@@ -894,6 +932,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const sendPhoto = useCallback(
     async (peer: string, photo: Blob, replyTo?: string) => {
       if (!secret || !me) throw new Error('not open');
+      if (!isGroup(peer) && blockedRef.current.includes(peer)) return;
       const reply = replyTo ? replyTag(15, replyTo) : [];
       const small = await shrinkImage(photo);
       const dim = `${small.width}x${small.height}`;
@@ -1109,6 +1148,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     npub: me ? nip19.npubEncode(me) : null,
     contacts,
     groups,
+    blocked,
+    block,
+    unblock,
     createGroup,
     messages,
     start,
