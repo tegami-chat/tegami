@@ -6,3 +6,7 @@
 /.well-known/nostr.json
   Access-Control-Allow-Origin: *
   Content-Type: application/json
+
+/.well-known/lnurlp/*
+  Access-Control-Allow-Origin: *
+  Content-Type: application/json
