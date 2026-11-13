@@ -19,6 +19,7 @@ import { SIGNAL_KIND, freshSignal, wrapSignal } from './signal';
 import { BackupGoneError, type BackupRef, clearLocal, deleteBackup, deriveKeys, loadLocal, makeCode, putBackup, recoveryOnHere, saveLocal, takeRestoredKeys } from './recovery';
 import { createVault, unlockVault, type Vault } from './vault';
 import { TURNSTILE_SITEKEY, askRelay, forgetInviteCode, keptInviteCode, type Registration } from './register';
+import { signedFetch } from './relay-http';
 
 // Tegami relays. In development: the relay in app/relay started with `npm run dev`.
 export const RELAYS = (process.env.EXPO_PUBLIC_TEGAMI_RELAYS ?? 'wss://relay.tegami.chat').split(',');
@@ -79,6 +80,13 @@ export type Status = 'loading' | 'new' | 'locked' | 'open';
  */
 export type RegistrationState = 'checking' | 'needed' | 'ok' | 'blocked';
 
+/** Why someone is reported to the relay's operator (POST /report). */
+export type ReportReason = 'spam' | 'scam' | 'harassment' | 'other';
+
+/** Recent messages attached to a report: at most this many, each cut to this length. */
+const REPORT_MESSAGES = 20;
+const REPORT_TEXT = 2000;
+
 type TegamiState = {
   status: Status;
   me: string | null; // hex pubkey
@@ -89,6 +97,11 @@ type TegamiState = {
   blocked: string[];
   block: (pubkey: string) => void;
   unblock: (pubkey: string) => void;
+  /**
+   * Reports a person to the relay's operator. With attach, the last 20 text messages they
+   * wrote in our 1:1 chat go along. Nothing is sent to them. Throws when it did not go through.
+   */
+  report: (pubkey: string, reason: ReportReason, attach: boolean) => Promise<void>;
   messages: Message[];
   /** Makes a group with these contacts and returns its chat id. */
   createGroup: (name: string, members: string[]) => string;
@@ -799,6 +812,24 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // Only the relay's operator sees a report. The relay cannot read chats, so messages go
+  // along only when the person chose to attach them, and only what the other person wrote.
+  const report = useCallback(
+    async (pubkey: string, reason: ReportReason, attach: boolean) => {
+      if (!secret) throw new Error('not open');
+      const messages = attach
+        ? messagesRef.current
+            .filter((m) => m.peer === pubkey && m.from === pubkey && !m.file && !m.call && m.text)
+            .slice(-REPORT_MESSAGES)
+            .map((m) => ({ text: m.text.slice(0, REPORT_TEXT), at: Math.floor(m.at) }))
+        : [];
+      const body = JSON.stringify(messages.length ? { pubkey, reason, messages } : { pubkey, reason });
+      const res = await signedFetch('POST', '/report', body, secret);
+      if (!res.ok) throw new Error(`report: ${res.status}`);
+    },
+    [secret],
+  );
+
   /**
    * Seals and wraps one rumor for everyone in the chat, once: the other people first, my own
    * devices last. The envelopes are kept as they are until the relay takes them (lib/outbox.ts).
@@ -1151,6 +1182,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     blocked,
     block,
     unblock,
+    report,
     createGroup,
     messages,
     start,

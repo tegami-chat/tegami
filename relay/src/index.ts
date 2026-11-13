@@ -31,12 +31,18 @@
 // reports its state, and returns its own invite code when it may invite. Envelopes from keys
 // registered without an invite are marked (tegami_open) and ring no notifications.
 // POST /admin lets the operator (ADMIN_PUBKEYS) stop a key and those it invited.
+//
+// Reports (reports.ts): POST /report (NIP-98) lets a registered key tell the operator about
+// another key, with recent messages only if the reporter chose to attach them. Nothing is
+// sent to the reported key and nothing happens automatically; the operator reads them with
+// POST /admin {action: 'reports'}. Deleted after 90 days.
 
 import { DurableObject } from 'cloudflare:workers';
 import { verifyEvent, type NostrEvent } from 'nostr-tools/pure';
 
 import { Members, turnstileOk, type Member } from './members';
 import { MAX_DEVICES, Vapid, allowedEndpoint, nip98, validKeys, type PushKeys } from './push';
+import { Reports, parseReport } from './reports';
 import { STATS_DESCRIPTION, Stats } from './stats';
 
 type Filter = { kinds?: number[]; '#p'?: string[]; since?: number; until?: number; limit?: number; ids?: string[] };
@@ -123,6 +129,8 @@ const INFO = {
     push: 'For notifications: a device push address and the key it belongs to, until turned off.',
     backups:
       'Recovery backups: an id derived from the recovery code, the ciphertext, a signing key also derived from the code (not the account key) and when it was last uploaded. Kept until the person deletes it.',
+    reports:
+      "Reports about a key, for the operator: the reporter's key, the reported key, the reason, and recent messages only if the reporter chose to attach them. Deleted after 90 days.",
   },
 };
 
@@ -142,7 +150,7 @@ export default {
       if (!env.VAPID_JWK) return new Response('Push is not set up', { status: 503, headers: CORS });
       return Response.json({ key: new Vapid(env.VAPID_JWK).publicKey }, { headers: { ...CORS, 'Cache-Control': 'public, max-age=3600' } });
     }
-    if ((url.pathname === '/register' || url.pathname === '/admin') && req.method === 'POST') {
+    if ((url.pathname === '/register' || url.pathname === '/admin' || url.pathname === '/report') && req.method === 'POST') {
       const headers = new Headers(req.headers);
       headers.set('X-Tegami-IP', req.headers.get('CF-Connecting-IP') ?? 'unknown');
       return env.RELAY.get(env.RELAY.idFromName('main')).fetch(new Request(req, { headers }));
@@ -249,6 +257,7 @@ export class Relay extends DurableObject<Env> {
       // Already there.
     }
     this.members = new Members(this.sql);
+    this.reports = new Reports(this.sql);
     this.vapid = env.VAPID_JWK ? new Vapid(env.VAPID_JWK) : null;
     this.devPush = env.DEV_PUSH === '1';
     this.devLocal = this.devPush || env.DEV_LOCAL === '1';
@@ -262,6 +271,7 @@ export class Relay extends DurableObject<Env> {
     if (path === '/push') return this.pushRoute(req, ip);
     if (path === '/register') return this.registerRoute(req, ip);
     if (path === '/admin') return this.adminRoute(req);
+    if (path === '/report') return this.reportRoute(req, ip);
     const backup = path.match(BACKUP_PATH);
     if (backup) return this.backupRoute(req, ip, backup[1]);
     if (path === '/crash') return this.crash(req, ip);
@@ -344,7 +354,10 @@ export class Relay extends DurableObject<Env> {
     };
   }
 
-  /** POST /admin, signed (NIP-98) by an operator key. Body: {action, pubkey, invitees?, per_day?}. */
+  /**
+   * POST /admin, signed (NIP-98) by an operator key. Body: {action, pubkey, invitees?, per_day?}.
+   * {action: 'reports'} lists the latest reports; with pubkey, the reports about that key.
+   */
   async adminRoute(req: Request): Promise<Response> {
     const body = await req.text();
     const signer = await nip98(req, body, this.signedFor('/admin'));
@@ -356,12 +369,48 @@ export class Relay extends DurableObject<Env> {
     } catch {
       return new Response('invalid json', { status: 400, headers: CORS });
     }
-    if (typeof a.action !== 'string' || typeof a.pubkey !== 'string' || !/^[0-9a-f]{64}$/.test(a.pubkey)) {
+    if (a?.action === 'reports' && a.pubkey === undefined) return Response.json(this.reports.latest(), { headers: CORS });
+    if (typeof a?.action !== 'string' || typeof a.pubkey !== 'string' || !/^[0-9a-f]{64}$/.test(a.pubkey)) {
       return new Response('invalid', { status: 400, headers: CORS });
     }
+    if (a.action === 'reports') return Response.json(this.reports.about(a.pubkey), { headers: CORS });
     const changed = this.members.admin(a.action, a.pubkey, { invitees: a.invitees === true, per_day: a.per_day as number });
     if (changed === null) return new Response('invalid', { status: 400, headers: CORS });
     return Response.json({ changed, member: this.describe(this.members.get(a.pubkey)) }, { headers: CORS });
+  }
+
+  reports: Reports;
+  // Reporting: per address, 60 at once, then one every 10 seconds. The real limit is per
+  // reporter (reports.ts); this only stops floods of bad requests.
+  reportRate = new Buckets(60, 0.1);
+
+  /**
+   * POST /report, signed (NIP-98) by the reporter, a registered key that is not stopped.
+   * Body: {pubkey, reason, messages?}. Nothing is sent to the reported key.
+   */
+  async reportRoute(req: Request, ip: string): Promise<Response> {
+    const fail = (status: number, error: string) => Response.json({ error }, { status, headers: CORS });
+    if (!this.reportRate.take(ip)) return fail(429, 'rate-limited');
+    const body = await req.text();
+    // 20 messages of 2000 characters, with room for JSON escapes.
+    if (body.length > 128 * 1024) return fail(413, 'too large');
+    const reporter = await nip98(req, body, this.signedFor('/report'));
+    if (!reporter) return fail(401, 'auth-required');
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(body);
+    } catch {
+      return fail(400, 'invalid json');
+    }
+    const m = this.members.get(reporter);
+    if (!m) return fail(403, 'restricted: register first (POST /register)');
+    if (m.banned) return fail(403, 'blocked');
+    const r = parseReport(parsed);
+    if (typeof r === 'string') return fail(400, r);
+    if (r.pubkey === reporter) return fail(400, 'invalid: cannot report yourself');
+    if (this.reports.limited(reporter, r.pubkey)) return fail(429, 'rate-limited: too many reports');
+    this.reports.add(reporter, r.pubkey, r.reason, r.messages);
+    return new Response(null, { status: 204, headers: CORS });
   }
 
   ipBytes = new Buckets(FILE_RATE.ip.burst, FILE_RATE.ip.perSecond);
@@ -571,6 +620,7 @@ export class Relay extends DurableObject<Env> {
     // received_at, not created_at: NIP-59 wraps carry a randomized past created_at.
     this.sql.exec('DELETE FROM events WHERE received_at < ?', now() - RETENTION_SECONDS);
     this.members.forgetOldInvites();
+    this.reports.forgetOld();
     await this.ctx.storage.setAlarm(Date.now() + 24 * 60 * 60 * 1000);
   }
 

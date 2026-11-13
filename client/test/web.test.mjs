@@ -2027,6 +2027,44 @@ async function main() {
       assert(!(await text(a.page)).includes('ブロック中の手紙'), 'message while blocked appeared');
       for (const u of [a, b]) await u.context.close();
     });
+
+    await test("Report and caution: a stranger's money talk shows a caution; reporting reaches the relay with messages only when attached", async () => {
+      const a = await person(browser, 'えー');
+      const b = await person(browser, 'びー');
+      // Only B adds A: B is a stranger to A.
+      await befriend(b, a);
+      await b.page.getByPlaceholder('メッセージ').fill('この投資で必ず儲かります https://example.com');
+      await button(b.page, '送る').click();
+      await b.page.waitForFunction(() => !document.body.innerText.includes('未送信'), null, { timeout: 10000 });
+      const caution = '初めての相手からのお金やリンクの話です。気をつけてください。';
+      assert(!(await text(b.page)).includes(caution), 'the caution shows under my own message');
+
+      await a.page.goto(ORIGIN + '/');
+      await waitOpen(a.page);
+      await waitText(a.page, '知らない人から');
+      await a.page.getByText('知らない人から').click();
+      await a.page.getByText('この投資で必ず儲かります', { exact: false }).first().click();
+      await waitText(a.page, caution);
+
+      // Report: scam, without attaching messages.
+      await button(a.page, '通報').click();
+      await waitText(a.page, '通報する理由');
+      await a.page.getByRole('radio', { name: '詐欺', exact: true }).click();
+      await button(a.page, '通報する').click();
+      await waitText(a.page, '通報しました');
+      const reports = await (await fetch(`http://localhost:${RELAY_PORT}/_reports`)).json();
+      const about = reports.filter((r) => r.reported === b.hex);
+      assert(about.length === 1, `reports about B: ${JSON.stringify(about)}`);
+      assert(about[0].reason === 'scam' && about[0].reporter === a.hex, `report: ${JSON.stringify(about[0])}`);
+      assert(!about[0].messages, `messages went along without being attached: ${JSON.stringify(about[0].messages)}`);
+      // (A second report about B today is refused by the relay; relay/test/report.test.mjs covers it.)
+
+      // Then block, from the same panel.
+      a.page.once('dialog', (d) => d.accept());
+      await button(a.page, 'ブロックする').click();
+      await waitText(a.page, 'ブロック中です');
+      for (const u of [a, b]) await u.context.close();
+    });
   } finally {
     await browser.close();
     server.close();

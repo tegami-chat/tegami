@@ -1,22 +1,30 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { Photo } from '@/components/photo';
 import { Palette, usePalette } from '@/constants/theme';
 import { useCall } from '@/lib/calls';
-import { chatName, isGroup, personName, shortId, useTegami, type Message } from '@/lib/tegami';
+import { cautionFor } from '@/lib/caution';
+import { chatName, isGroup, personName, shortId, useTegami, type Message, type ReportReason } from '@/lib/tegami';
 
 /** How long a message stays marked after jumping to it. */
 const HIGHLIGHT_MS = 2000;
+
+const REPORT_REASONS: [ReportReason, string][] = [
+  ['spam', '迷惑なメッセージ'],
+  ['scam', '詐欺'],
+  ['harassment', '嫌がらせ'],
+  ['other', 'その他'],
+];
 
 export default function Chat() {
   const c = usePalette();
   const s = styles(c);
   // m: a message to jump to (from search).
   const { peer, m: focus } = useLocalSearchParams<{ peer: string; m?: string }>();
-  const { me, myName, contacts, groups, blocked, block, unblock, messages, send, sendPhoto, addContact, markRead, cancelSend, retrySend } = useTegami();
+  const { me, myName, contacts, groups, blocked, block, unblock, report, messages, send, sendPhoto, addContact, markRead, cancelSend, retrySend } = useTegami();
   // A message waiting to be sent that was tapped: it offers to stop sending.
   const [offered, setOffered] = useState<string | null>(null);
   const [replying, setReplying] = useState<Message | null>(null);
@@ -40,6 +48,14 @@ export default function Chat() {
   const canCall = supported && !group && !!contact && !contact.model && !isBlocked;
   const thread = useMemo(() => messages.filter((m) => m.peer === peer).reverse(), [messages, peer]);
   const byId = useMemo(() => new Map(thread.map((m, i) => [m.id, i])), [thread]);
+  const friends = useMemo(() => new Set(contacts.map((x) => x.pubkey)), [contacts]);
+
+  // The report panel: the form (and while sending), or done.
+  const [reporting, setReporting] = useState<null | 'form' | 'sending' | 'done'>(null);
+  const [reason, setReason] = useState<ReportReason | null>(null);
+  const [attach, setAttach] = useState(false);
+  const [reportFailed, setReportFailed] = useState(false);
+  useEffect(() => setReporting(null), [peer]);
 
   const nameOf = (pubkey: string) => (pubkey === me ? myName || '自分' : personName(pubkey, contacts));
   const firstLine = (m: Message) => (m.file ? '写真' : m.text.split('\n')[0]);
@@ -107,7 +123,28 @@ export default function Chat() {
     const msg = `${personName(peer, contacts)}さんをブロックしますか？`;
     if (typeof window !== 'undefined' && typeof window.confirm === 'function' && !window.confirm(msg)) return;
     setReplying(null);
+    setReporting(null);
     block(peer);
+  }
+
+  function openReport() {
+    setReason(null);
+    setAttach(false);
+    setReportFailed(false);
+    setReporting('form');
+  }
+
+  async function submitReport() {
+    if (!peer || group || !reason || reporting === 'sending') return;
+    setReporting('sending');
+    setReportFailed(false);
+    try {
+      await report(peer, reason, attach);
+      setReporting('done');
+    } catch {
+      setReportFailed(true);
+      setReporting('form');
+    }
   }
 
   async function pickPhoto() {
@@ -170,6 +207,9 @@ export default function Chat() {
                         </Pressable>
                       </>
                     )}
+                    <Pressable role="button" style={s.callButton} onPress={openReport}>
+                      <Text style={s.callText}>通報</Text>
+                    </Pressable>
                     <Pressable role="button" style={s.callButton} onPress={confirmBlock}>
                       <Text style={s.callText}>ブロック</Text>
                     </Pressable>
@@ -195,6 +235,58 @@ export default function Chat() {
             role="button">
             <Text style={s.sendText}>友達に追加</Text>
           </Pressable>
+        </View>
+      )}
+      {reporting && !group && peer && (
+        <View style={s.reportPanel}>
+          {reporting === 'done' ? (
+            <>
+              <Text style={s.reportTitle}>通報しました</Text>
+              <View style={s.reportButtons}>
+                {!isBlocked && (
+                  <Pressable role="button" style={s.reportButton} onPress={confirmBlock}>
+                    <Text style={s.callText}>ブロックする</Text>
+                  </Pressable>
+                )}
+                <Pressable role="button" style={s.reportButton} onPress={() => setReporting(null)}>
+                  <Text style={s.callText}>閉じる</Text>
+                </Pressable>
+              </View>
+            </>
+          ) : (
+            <>
+              <Text style={s.reportTitle}>通報する理由</Text>
+              <View role="radiogroup" aria-label="通報する理由" style={s.reasons}>
+                {REPORT_REASONS.map(([value, label]) => (
+                  <Pressable
+                    key={value}
+                    role="radio"
+                    aria-checked={reason === value}
+                    style={[s.reason, reason === value && s.reasonOn]}
+                    onPress={() => setReason(value)}>
+                    <Text style={[s.reasonText, reason === value && s.reasonTextOn]}>{label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={s.reportAttach}>
+                <Text style={s.reportAttachText}>直近のメッセージを添える</Text>
+                <Switch value={attach} onValueChange={setAttach} aria-label="直近のメッセージを添える" />
+              </View>
+              {reportFailed && <Text style={s.reportError}>通信を確認して、もう一度お試しください。</Text>}
+              <View style={s.reportButtons}>
+                <Pressable
+                  role="button"
+                  style={[s.reportSend, (!reason || reporting === 'sending') && s.disabled]}
+                  disabled={!reason || reporting === 'sending'}
+                  onPress={submitReport}>
+                  <Text style={s.sendText}>通報する</Text>
+                </Pressable>
+                <Pressable role="button" style={s.reportButton} onPress={() => setReporting(null)}>
+                  <Text style={s.callText}>キャンセル</Text>
+                </Pressable>
+              </View>
+            </>
+          )}
         </View>
       )}
       <FlatList
@@ -267,8 +359,8 @@ export default function Chat() {
             </View>
           );
           // Sent (or someone else's): reply by long press or hover. Waiting to be sent: offer to stop sending.
-          if (!mine || !item.pending)
-            return (
+          if (!mine || !item.pending) {
+            const row = (
               <Pressable
                 style={[s.row, mine ? s.rowMine : s.rowTheirs]}
                 onLongPress={() => setPressed(item.id)}
@@ -281,6 +373,15 @@ export default function Chat() {
                 {!mine && actions}
               </Pressable>
             );
+            // Money or a link from someone who is not a friend. Checked on this device only.
+            if (mine || item.file || friends.has(item.from) || !cautionFor(item.text)) return row;
+            return (
+              <View style={s.cautionWrap}>
+                {row}
+                <Text style={s.caution}>初めての相手からのお金やリンクの話です。気をつけてください。</Text>
+              </View>
+            );
+          }
           return (
             <View style={s.mineWrap}>
               <Pressable
@@ -440,6 +541,27 @@ const styles = (c: Palette) =>
       backgroundColor: c.surface,
     },
     blockedText: { fontSize: 15, color: c.muted },
+    reportPanel: {
+      gap: 10,
+      padding: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.line,
+      backgroundColor: c.surface,
+    },
+    reportTitle: { fontSize: 15, color: c.text, fontWeight: '600' },
+    reasons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    reason: { borderRadius: 16, borderWidth: 1, borderColor: c.line, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: c.background },
+    reasonOn: { borderColor: c.accent, backgroundColor: c.accent },
+    reasonText: { fontSize: 14, color: c.text },
+    reasonTextOn: { color: c.onAccent, fontWeight: '600' },
+    reportAttach: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+    reportAttachText: { fontSize: 14, color: c.text, flex: 1 },
+    reportError: { fontSize: 13, color: c.accent },
+    reportButtons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    reportSend: { backgroundColor: c.accent, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 },
+    reportButton: { paddingHorizontal: 10, paddingVertical: 8 },
+    cautionWrap: { alignSelf: 'stretch', gap: 2 },
+    caution: { fontSize: 12, color: c.accent, paddingHorizontal: 4 },
     composer: {
       flexDirection: 'row',
       alignItems: 'flex-end',
