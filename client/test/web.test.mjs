@@ -2302,6 +2302,55 @@ async function main() {
       await waitText(a.page, 'もう一度こんにちは');
       for (const u of [a, b]) await u.context.close();
     });
+
+    await test('Stamps: make one from a picture, send it, the friend sees it without a bubble and adds it to their own stamps', async () => {
+      const a = await person(browser, 'あゆみ');
+      const b = await person(browser, 'ばんり');
+      await befriend(b, a);
+      await befriend(a, b); // a is now in the chat with b
+
+      const png = Buffer.from(
+        await a.page.evaluate(() => {
+          const c = document.createElement('canvas');
+          c.width = 400;
+          c.height = 400;
+          const g = c.getContext('2d');
+          g.fillStyle = '#b5452f';
+          g.fillRect(40, 40, 320, 320);
+          return c.toDataURL('image/png').split(',')[1];
+        }),
+        'base64',
+      );
+      await button(a.page, 'スタンプ').click();
+      const chooser = a.page.waitForEvent('filechooser');
+      await button(a.page, 'スタンプを作る').click();
+      await (await chooser).setFiles({ name: 'stamp.png', mimeType: 'image/png', buffer: png });
+      const aItem = a.page.getByTestId('stamp-item').first();
+      await aItem.waitFor({ timeout: 15000 });
+
+      const saved = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.stamps'))?.[0]);
+      assert(saved && saved.dim === '320x320' && saved.type === 'image/png', `stamp not shrunk: ${JSON.stringify(saved)}`);
+      const stored = Buffer.from(await (await fetch(saved.url)).arrayBuffer());
+      const head = stored.subarray(0, 4).toString('hex');
+      assert(stored.length > 0 && !head.startsWith('ffd8ff') && head !== '89504e47', 'the server holds an unencrypted stamp');
+
+      await aItem.click();
+      const bStamp = b.page.getByTestId('stamp-message').first();
+      await bStamp.waitFor({ timeout: 15000 });
+      const bg = await bStamp.evaluate((el) => getComputedStyle(el.parentElement.parentElement).backgroundColor);
+      assert(bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent', `stamp has a bubble background: ${bg}`);
+
+      await bStamp.click();
+      await button(b.page, 'スタンプに追加').click();
+      await button(b.page, 'スタンプ').click();
+      const bItems = b.page.getByTestId('stamp-item');
+      await bItems.first().waitFor({ timeout: 15000 });
+      assert((await bItems.count()) === 1, `expected 1 stamp-item, got ${await bItems.count()}`);
+
+      await bItems.first().click();
+      await a.page.waitForFunction(() => document.querySelectorAll('[data-testid="stamp-message"]').length === 2, null, { timeout: 15000 });
+      for (const u of [a, b]) await u.context.close();
+    });
   } finally {
     await browser.close();
     server.close();
