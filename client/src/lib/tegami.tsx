@@ -126,6 +126,9 @@ type TegamiState = {
   /** Asks for the passkey and opens the account. */
   unlock: () => Promise<void>;
   addContact: (pubkey: string, name: string, model?: string) => void;
+  removeContact: (pubkey: string) => void;
+  /** Removes every message of this chat (and the group entry for a group) from this device. */
+  deleteChat: (room: string) => void;
   /** Sends a text message, as a reply to the message with id replyTo when given. */
   send: (peer: string, text: string, replyTo?: string) => Promise<void>;
   /** Whether crash reports are sent (off unless the person turns it on). */
@@ -135,6 +138,8 @@ type TegamiState = {
   exportChats: () => string;
   /** Makes the photo smaller, encrypts it on this device, uploads it and sends it. */
   sendPhoto: (peer: string, photo: Blob, replyTo?: string) => Promise<void>;
+  /** Sends an already-uploaded photo or file to another chat without uploading again. */
+  forwardFile: (peer: string, file: FileRef) => Promise<void>;
   /** Turns notifications for this device on or off. Returns the new state. */
   setNotifications: (on: boolean) => Promise<PushState>;
   /** Sends a call signal to one person, and to my other devices when alsoMe. */
@@ -370,6 +375,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
         }),
       );
       setReadAt(load<Record<string, number>>(k('readAt'), {}));
+      clearedRef.current = load<Record<string, number>>(k('cleared'), {});
       setShowUnreadState(load<boolean>(k('showUnread'), true));
       // Accounts made before unread counts existed: what is already here counts as read.
       let setup = load<number>(k('setupAt'), 0);
@@ -412,7 +418,10 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const saveGroups = useCallback((update: (prev: Group[]) => Group[]) => {
     setGroups((prev) => {
       const next = update(prev);
-      if (next !== prev) save(k('groups'), next);
+      if (next !== prev) {
+        groupsRef.current = next;
+        save(k('groups'), next);
+      }
       return next;
     });
   }, []);
@@ -425,6 +434,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const groupsRef = useRef<Group[]>([]);
   groupsRef.current = groups;
   const blockedRef = useRef<string[]>([]);
+  // Chats deleted on this device: room -> the time up to which their messages stay deleted.
+  const clearedRef = useRef<Record<string, number>>({});
   blockedRef.current = blocked;
   const rememberGroup = useCallback(
     (id: string, subject: string | undefined, author: string) => {
@@ -593,6 +604,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
           );
           if (!others.length) return;
           const peer = roomOf(others);
+          // A deleted chat: the relay still holds its envelopes for 30 days and hands them
+          // out again on the next start. Messages up to the moment of deleting stay gone.
+          if (rumor.created_at <= (clearedRef.current[peer] ?? 0)) return;
           const replyTo = replyOf(rumor.tags);
           if (isGroup(peer)) {
             const subject = rumor.tags.find((t) => t[0] === 'subject')?.[1]?.slice(0, 60);
@@ -906,6 +920,19 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     [sendProfileTo],
   );
 
+  const removeContact = useCallback((pubkey: string) => {
+    profileAt.current.delete(pubkey);
+    setContacts((prev) => {
+      const old = prev.find((c) => c.pubkey === pubkey);
+      if (!old) return prev;
+      if (old.avatar?.sha256) void forgetFile(`avatar:${old.avatar.sha256}`);
+      const next = prev.filter((c) => c.pubkey !== pubkey);
+      contactsRef.current = next;
+      save(k('contacts'), next);
+      return next;
+    });
+  }, []);
+
   const block = useCallback((pubkey: string) => {
     setBlocked((prev) => {
       if (prev.includes(pubkey)) return prev;
@@ -1117,6 +1144,53 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     [secret, me, build, saveBox, addMessage, flush],
   );
 
+  const forwardFile = useCallback(
+    async (peer: string, file: FileRef) => {
+      if (!secret || !me) throw new Error('not open');
+      if (!isGroup(peer) && blockedRef.current.includes(peer)) return;
+      const { rumor, wraps } = build(peer, 15, file.url, fileTags(file));
+      saveBox([...outbox.current, { id: rumor.id, peer, at: rumor.created_at, wraps, done: [] }]);
+      addMessage({ id: rumor.id, from: me, peer, text: '', at: rumor.created_at, file, pending: 'sending' });
+      void flush();
+    },
+    [secret, me, build, saveBox, addMessage, flush],
+  );
+
+  const deleteChat = useCallback(
+    (room: string) => {
+      let upTo = Math.floor(Date.now() / 1000);
+      for (const m of messagesRef.current) if (m.peer === room) upTo = Math.max(upTo, m.at);
+      clearedRef.current = { ...clearedRef.current, [room]: upTo };
+      save(k('cleared'), clearedRef.current);
+      const waiting = outbox.current.filter((o) => o.peer === room);
+      if (waiting.length) {
+        saveBox(outbox.current.filter((o) => o.peer !== room));
+        for (const o of waiting) if (o.id.startsWith('local:')) void forgetFile(o.id);
+      }
+      for (const m of messagesRef.current) {
+        if (m.peer === room && m.file) void forgetFile(m.id);
+      }
+      setMessages((prev) => {
+        const next = prev.filter((m) => m.peer !== room);
+        if (next.length !== prev.length) {
+          messagesRef.current = next;
+          save(k('messages'), next);
+        }
+        return next;
+      });
+      setReadAt((prev) => {
+        if (!(room in prev)) return prev;
+        const { [room]: _, ...next } = prev;
+        save(k('readAt'), next);
+        return next;
+      });
+      if (isGroup(room)) {
+        saveGroups((prev) => (prev.some((g) => g.id === room) ? prev.filter((g) => g.id !== room) : prev));
+      }
+    },
+    [saveBox, saveGroups],
+  );
+
   const retrySend = useCallback(() => {
     failures.current = 0;
     clearTimeout(outboxTimer.current);
@@ -1304,12 +1378,15 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     makeTransferLink,
     unlock,
     addContact,
+    removeContact,
+    deleteChat,
     myName,
     setMyName,
     myAvatar,
     setMyAvatar,
     send,
     sendPhoto,
+    forwardFile,
     crashReports,
     setCrashReportsOn,
     exportChats: () =>

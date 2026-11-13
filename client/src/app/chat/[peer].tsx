@@ -1,5 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
-import { Stack, useIsFocused, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
@@ -25,10 +25,13 @@ export default function Chat() {
   const s = styles(c);
   // m: a message to jump to (from search).
   const { peer, m: focus } = useLocalSearchParams<{ peer: string; m?: string }>();
-  const { me, myName, contacts, groups, blocked, block, unblock, report, messages, send, sendPhoto, addContact, markRead, cancelSend, retrySend } = useTegami();
+  const { me, myName, contacts, groups, blocked, block, unblock, report, deleteChat, messages, send, sendPhoto, forwardFile, addContact, markRead, cancelSend, retrySend } = useTegami();
   // A message waiting to be sent that was tapped: it offers to stop sending.
   const [offered, setOffered] = useState<string | null>(null);
   const [replying, setReplying] = useState<Message | null>(null);
+  const [forwarding, setForwarding] = useState<Message | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // The message whose actions are shown: by long press (touch) or by hovering (mouse).
   const [pressed, setPressed] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
@@ -51,13 +54,28 @@ export default function Chat() {
   const thread = useMemo(() => messages.filter((m) => m.peer === peer).reverse(), [messages, peer]);
   const byId = useMemo(() => new Map(thread.map((m, i) => [m.id, i])), [thread]);
   const friends = useMemo(() => new Set(contacts.map((x) => x.pubkey)), [contacts]);
+  const forwardTargets = useMemo(
+    () => [
+      ...contacts.filter((x) => !blocked.includes(x.pubkey)).map((x) => ({ room: x.pubkey, name: personName(x.pubkey, contacts) })),
+      ...groups.map((g) => ({ room: g.id, name: chatName(g.id, contacts, groups) })),
+    ],
+    [contacts, blocked, groups],
+  );
 
   // The report panel: the form (and while sending), or done.
   const [reporting, setReporting] = useState<null | 'form' | 'sending' | 'done'>(null);
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [attach, setAttach] = useState(false);
   const [reportFailed, setReportFailed] = useState(false);
-  useEffect(() => setReporting(null), [peer]);
+  useEffect(() => {
+    setReporting(null);
+    setForwarding(null);
+    setReplying(null);
+    setPressed(null);
+    setHovered(null);
+    setCopied(null);
+  }, [peer]);
+  useEffect(() => () => clearTimeout(copiedTimer.current), []);
 
   const nameOf = (pubkey: string) => (pubkey === me ? myName || '自分' : personName(pubkey, contacts));
   const firstLine = (m: Message) => (m.file ? '写真' : m.text.split('\n')[0]);
@@ -100,10 +118,42 @@ export default function Chat() {
 
   function startReply(m: Message) {
     setReplying(m);
+    setForwarding(null);
+    setReporting(null);
     setPressed(null);
     clearTimeout(hoverTimer.current);
     setHovered(null);
+    setCopied(null);
     input.current?.focus();
+  }
+
+  async function copyMessage(m: Message) {
+    try {
+      await navigator.clipboard.writeText(m.text);
+      setPressed(null);
+      setCopied(m.id);
+      clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopied((cur) => (cur === m.id ? null : cur)), 1500);
+    } catch {}
+  }
+
+  function startForward(m: Message) {
+    setForwarding(m);
+    setReplying(null);
+    setReporting(null);
+    setPressed(null);
+    clearTimeout(hoverTimer.current);
+    setHovered(null);
+    setCopied(null);
+  }
+
+  async function forwardTo(target: string) {
+    if (!forwarding) return;
+    const m = forwarding;
+    setForwarding(null);
+    if (m.file) await forwardFile(target, m.file);
+    else await send(target, m.text);
+    if (target !== peer) router.replace({ pathname: '/chat/[peer]', params: { peer: target } });
   }
 
   // What is on the screen is read. Only on this device; nobody is told (no read receipts).
@@ -125,14 +175,25 @@ export default function Chat() {
     const msg = `${personName(peer, contacts)}さんをブロックしますか？`;
     if (typeof window !== 'undefined' && typeof window.confirm === 'function' && !window.confirm(msg)) return;
     setReplying(null);
+    setForwarding(null);
     setReporting(null);
     block(peer);
+  }
+
+  function confirmDeleteChat() {
+    if (!peer) return;
+    const msg = 'このトークを削除しますか？この端末から消えます。';
+    if (typeof window !== 'undefined' && typeof window.confirm === 'function' && !window.confirm(msg)) return;
+    deleteChat(peer);
+    router.replace('/');
   }
 
   function openReport() {
     setReason(null);
     setAttach(false);
     setReportFailed(false);
+    setForwarding(null);
+    setReplying(null);
     setReporting('form');
   }
 
@@ -195,29 +256,35 @@ export default function Chat() {
               : peer
                 ? shortId(peer)
                 : '',
-          headerRight:
-            !group && peer && !isBlocked
-              ? () => (
-                  <View style={s.callButtons}>
-                    {canCall && (
-                      <>
-                        <Pressable role="button" aria-label="音声通話" style={s.callButton} onPress={() => startCall(peer, false)}>
-                          <Text style={s.callText}>通話</Text>
-                        </Pressable>
-                        <Pressable role="button" aria-label="ビデオ通話" style={s.callButton} onPress={() => startCall(peer, true)}>
-                          <Text style={s.callText}>ビデオ</Text>
-                        </Pressable>
-                      </>
-                    )}
-                    <Pressable role="button" style={s.callButton} onPress={openReport}>
-                      <Text style={s.callText}>通報</Text>
-                    </Pressable>
-                    <Pressable role="button" style={s.callButton} onPress={confirmBlock}>
-                      <Text style={s.callText}>ブロック</Text>
-                    </Pressable>
-                  </View>
-                )
-              : undefined,
+          headerRight: peer
+            ? () => (
+                <View style={s.callButtons}>
+                  {!group && !isBlocked && (
+                    <>
+                      {canCall && (
+                        <>
+                          <Pressable role="button" aria-label="音声通話" style={s.callButton} onPress={() => startCall(peer, false)}>
+                            <Text style={s.callText}>通話</Text>
+                          </Pressable>
+                          <Pressable role="button" aria-label="ビデオ通話" style={s.callButton} onPress={() => startCall(peer, true)}>
+                            <Text style={s.callText}>ビデオ</Text>
+                          </Pressable>
+                        </>
+                      )}
+                      <Pressable role="button" style={s.callButton} onPress={openReport}>
+                        <Text style={s.callText}>通報</Text>
+                      </Pressable>
+                      <Pressable role="button" style={s.callButton} onPress={confirmBlock}>
+                        <Text style={s.callText}>ブロック</Text>
+                      </Pressable>
+                    </>
+                  )}
+                  <Pressable role="button" style={s.callButton} onPress={confirmDeleteChat}>
+                    <Text style={s.callText}>トークを削除</Text>
+                  </Pressable>
+                </View>
+              )
+            : undefined,
         }}
       />
       {!group && !contact && peer && (
@@ -237,6 +304,23 @@ export default function Chat() {
             role="button">
             <Text style={s.sendText}>友達に追加</Text>
           </Pressable>
+        </View>
+      )}
+      {forwarding && (
+        <View style={s.reportPanel}>
+          <Text style={s.reportTitle}>転送先を選ぶ</Text>
+          <View style={s.reasons}>
+            {forwardTargets.map((t) => (
+              <Pressable key={t.room} role="button" style={s.reason} onPress={() => forwardTo(t.room)}>
+                <Text style={s.reasonText}>{t.name}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <View style={s.reportButtons}>
+            <Pressable role="button" style={s.reportButton} onPress={() => setForwarding(null)}>
+              <Text style={s.callText}>キャンセル</Text>
+            </Pressable>
+          </View>
         </View>
       )}
       {reporting && !group && peer && (
@@ -318,15 +402,35 @@ export default function Chat() {
           const unsent = mine && item.pending === 'unsent';
           const original = item.replyTo !== undefined ? byId.get(item.replyTo) : undefined;
           const quoted = original !== undefined ? thread[original] : null;
-          const actions = (pressed === item.id || hovered === item.id) && (
-            <Pressable
-              role="button"
-              style={s.action}
-              onPress={() => startReply(item)}
-              onHoverIn={() => hoverIn(item.id)}
-              onHoverOut={() => hoverOut(item.id)}>
-              <Text style={s.actionText}>リプライ</Text>
-            </Pressable>
+          const actions = (pressed === item.id || hovered === item.id || copied === item.id) && (
+            <View style={s.actions}>
+              <Pressable
+                role="button"
+                style={s.action}
+                onPress={() => startReply(item)}
+                onHoverIn={() => hoverIn(item.id)}
+                onHoverOut={() => hoverOut(item.id)}>
+                <Text style={s.actionText}>リプライ</Text>
+              </Pressable>
+              {!item.file && (
+                <Pressable
+                  role="button"
+                  style={s.action}
+                  onPress={() => copyMessage(item)}
+                  onHoverIn={() => hoverIn(item.id)}
+                  onHoverOut={() => hoverOut(item.id)}>
+                  <Text style={s.actionText}>{copied === item.id ? 'コピーしました' : 'コピー'}</Text>
+                </Pressable>
+              )}
+              <Pressable
+                role="button"
+                style={s.action}
+                onPress={() => startForward(item)}
+                onHoverIn={() => hoverIn(item.id)}
+                onHoverOut={() => hoverOut(item.id)}>
+                <Text style={s.actionText}>転送</Text>
+              </Pressable>
+            </View>
           );
           const bubble = (
             <View
@@ -486,6 +590,7 @@ const styles = (c: Palette) =>
     mine: { backgroundColor: c.mine, borderBottomRightRadius: 4 },
     theirs: { backgroundColor: c.theirs, borderBottomLeftRadius: 4, borderColor: c.line },
     highlight: { borderColor: c.accent, borderWidth: 2 },
+    actions: { flexDirection: 'row', alignItems: 'center' },
     action: { paddingHorizontal: 8, paddingVertical: 4 },
     actionText: { fontSize: 13, color: c.accent, fontWeight: '600' },
     quote: { borderLeftWidth: 3, borderLeftColor: c.accent, paddingLeft: 8, marginBottom: 4, maxWidth: 260 },
