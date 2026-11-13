@@ -10,7 +10,7 @@ import { describeAccount } from './accounts';
 import { clearNewMark } from './sw-store';
 import { createDeviceVault, deviceVaultAvailable, openDeviceVault, type DeviceVault } from './device-vault';
 import { setCrashReports } from './crash';
-import { encryptAndUpload, fileFromRumor, fileTags, forgetFile, isStampRumor, keepSent, keptFile, openFile, shrinkAvatar, shrinkImage, shrinkStamp, validFileRef, type FileRef } from './files';
+import { MAX_FILE_BYTES, encryptAndUpload, fileFromRumor, fileTags, forgetFile, isStampRumor, keepSent, keptFile, openFile, shrinkAvatar, shrinkImage, shrinkStamp, validFileName, validFileRef, type FileRef } from './files';
 import { backoff, loadOutbox, publishOne, saveOutbox, type Outgoing } from './outbox';
 import { k, load, remove, save } from './storage';
 import { bundleSecret, sendTransfer, type Bundle } from './transfer';
@@ -141,8 +141,12 @@ type TegamiState = {
   setCrashReportsOn: (on: boolean) => void;
   /** Everything on this device except the key, as JSON (philosophy #88). */
   exportChats: () => string;
-  /** Makes the photo smaller, encrypts it on this device, uploads it and sends it. */
+  /** Makes a photo smaller (or keeps a video as-is), encrypts, uploads and sends it. */
   sendPhoto: (peer: string, photo: Blob, replyTo?: string) => Promise<void>;
+  /** Encrypts a general file on this device, uploads it with its original name, and sends it. */
+  sendFile: (peer: string, file: Blob, name: string, replyTo?: string) => Promise<void>;
+  /** Encrypts a recorded voice message on this device, uploads it with its duration, and sends it. */
+  sendVoice: (peer: string, audio: Blob, duration: number, replyTo?: string) => Promise<void>;
   /** Sends an already-uploaded photo or file to another chat without uploading again. */
   forwardFile: (peer: string, file: FileRef, stamp?: boolean) => Promise<void>;
   /** My stamps, kept per account on this device. */
@@ -1034,7 +1038,10 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
         const bytes = new Uint8Array(await kept.arrayBuffer());
         let file: FileRef;
         try {
-          file = await encryptAndUpload(bytes, cur.photo.type, secret, cur.photo.dim);
+          file = await encryptAndUpload(bytes, cur.photo.type, secret, cur.photo.dim, {
+            name: cur.photo.name,
+            duration: cur.photo.duration,
+          });
         } catch {
           return false;
         }
@@ -1120,32 +1127,43 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     [build, saveBox, addMessage, me, flush],
   );
 
-  const sendPhoto = useCallback(
-    async (peer: string, photo: Blob, replyTo?: string) => {
+  const uploadAndSend = useCallback(
+    async (
+      peer: string,
+      bytes: Uint8Array<ArrayBuffer>,
+      type: string,
+      opts: { dim?: string; name?: string; duration?: number; replyTo?: string } = {},
+    ) => {
       if (!secret || !me) throw new Error('not open');
       if (!isGroup(peer) && blockedRef.current.includes(peer)) return;
+      const { dim, name, duration, replyTo } = opts;
       const reply = replyTo ? replyTag(15, replyTo) : [];
-      const small = await shrinkImage(photo);
-      const dim = `${small.width}x${small.height}`;
       const at = Math.floor(Date.now() / 1000);
       let file: FileRef | null = null;
       try {
-        file = await encryptAndUpload(small.bytes, small.type, secret, dim);
+        file = await encryptAndUpload(bytes, type, secret, dim, { name, duration });
       } catch {
-        // Offline or the file server refused: keep the photo here and upload it later.
+        // Offline or the file server refused: keep the file here and upload it later.
       }
       if (file) {
         const { rumor, wraps } = build(peer, 15, file.url, [...fileTags(file), ...reply], at);
-        await keepSent(rumor.id, small.bytes, small.type);
+        await keepSent(rumor.id, bytes, type);
         saveBox([...outbox.current, { id: rumor.id, peer, at, wraps, done: [] }]);
         addMessage({ id: rumor.id, from: me, peer, text: '', at, file, pending: 'sending', ...(replyTo ? { replyTo } : {}) });
       } else {
         const id = `local:${bytesToHex(crypto.getRandomValues(new Uint8Array(16)))}`;
-        await keepSent(id, small.bytes, small.type);
-        // Without a place to keep it (no IndexedDB), the photo cannot wait: say it was not sent.
-        if (!(await keptFile(id))) throw new Error('could not keep the photo');
-        const info = { type: small.type, dim, size: small.bytes.byteLength };
-        saveBox([...outbox.current, { id, peer, at, wraps: [], done: [], photo: replyTo ? { ...info, replyTo } : info }]);
+        await keepSent(id, bytes, type);
+        // Without a place to keep it (no IndexedDB), the file cannot wait: say it was not sent.
+        if (!(await keptFile(id))) throw new Error('could not keep the file');
+        const info = {
+          type,
+          size: bytes.byteLength,
+          ...(dim ? { dim } : {}),
+          ...(name ? { name } : {}),
+          ...(duration !== undefined ? { duration } : {}),
+          ...(replyTo ? { replyTo } : {}),
+        };
+        saveBox([...outbox.current, { id, peer, at, wraps: [], done: [], photo: info }]);
         // Shown from this device until it is uploaded; the file fields are filled in then.
         addMessage({
           id,
@@ -1153,7 +1171,17 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
           peer,
           text: '',
           at,
-          file: { url: '', type: info.type, key: '', nonce: '', sha256: '', size: info.size, dim },
+          file: {
+            url: '',
+            type,
+            key: '',
+            nonce: '',
+            sha256: '',
+            size: info.size,
+            ...(dim ? { dim } : {}),
+            ...(name ? { name } : {}),
+            ...(duration !== undefined ? { duration } : {}),
+          },
           pending: 'unsent',
           ...(replyTo ? { replyTo } : {}),
         });
@@ -1161,6 +1189,46 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       void flush();
     },
     [secret, me, build, saveBox, addMessage, flush],
+  );
+
+  const sendPhoto = useCallback(
+    async (peer: string, photo: Blob, replyTo?: string) => {
+      if (!secret || !me) throw new Error('not open');
+      if (photo.type.startsWith('video/')) {
+        if (photo.size > MAX_FILE_BYTES) throw new Error('video too large');
+        const bytes = new Uint8Array(await photo.arrayBuffer());
+        await uploadAndSend(peer, bytes, photo.type, { replyTo });
+        return;
+      }
+      const small = await shrinkImage(photo);
+      await uploadAndSend(peer, small.bytes, small.type, { dim: `${small.width}x${small.height}`, replyTo });
+    },
+    [secret, me, uploadAndSend],
+  );
+
+  const sendFile = useCallback(
+    async (peer: string, file: Blob, name: string, replyTo?: string) => {
+      if (!secret || !me) throw new Error('not open');
+      if (file.size > MAX_FILE_BYTES) throw new Error('file too large');
+      const base = name.split(/[/\\]/).pop()?.slice(0, 200) ?? '';
+      const cleanName = validFileName(base) ?? 'file';
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      await uploadAndSend(peer, bytes, file.type || 'application/octet-stream', { name: cleanName, replyTo });
+    },
+    [secret, me, uploadAndSend],
+  );
+
+  const sendVoice = useCallback(
+    async (peer: string, audio: Blob, duration: number, replyTo?: string) => {
+      if (!secret || !me) throw new Error('not open');
+      if (audio.size > MAX_FILE_BYTES) throw new Error('voice too large');
+      const bytes = new Uint8Array(await audio.arrayBuffer());
+      await uploadAndSend(peer, bytes, audio.type || 'audio/webm', {
+        duration: Math.max(0, Math.round(duration)),
+        replyTo,
+      });
+    },
+    [secret, me, uploadAndSend],
   );
 
   const forwardFile = useCallback(
@@ -1508,6 +1576,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     setMyAvatar,
     send,
     sendPhoto,
+    sendFile,
+    sendVoice,
     forwardFile,
     stamps,
     makeStamp,

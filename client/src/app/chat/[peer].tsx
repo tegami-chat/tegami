@@ -4,11 +4,33 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
-import { Photo, PhotoViewer, Stamp } from '@/components/photo';
+import { FileAttachment, Photo, PhotoViewer, Stamp, Video, Voice } from '@/components/photo';
 import { Palette, usePalette } from '@/constants/theme';
 import { useCall } from '@/lib/calls';
 import { cautionFor } from '@/lib/caution';
-import { chatName, isGroup, personName, shortId, useTegami, type Message, type ReportReason, type Stamp as StampItem } from '@/lib/tegami';
+import { MAX_FILE_BYTES } from '@/lib/files';
+import { chatName, clock, isGroup, personName, shortId, useTegami, type Message, type ReportReason, type Stamp as StampItem } from '@/lib/tegami';
+
+const SEND_ERROR = '送れませんでした。もう一度送ってください';
+const VOICE_MAX_MS = 5 * 60 * 1000;
+const AUDIO_TYPES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+
+function pickWebFile(accept?: string): Promise<File | null> {
+  return new Promise((resolve) => {
+    const el = document.createElement('input');
+    el.type = 'file';
+    if (accept) el.accept = accept;
+    el.style.display = 'none';
+    document.body.appendChild(el);
+    const done = (file: File | null) => {
+      el.remove();
+      resolve(file);
+    };
+    el.addEventListener('change', () => done(el.files?.[0] ?? null), { once: true });
+    el.addEventListener('cancel', () => done(null), { once: true });
+    el.click();
+  });
+}
 
 /** How long a message stays marked after jumping to it. */
 const HIGHLIGHT_MS = 2000;
@@ -25,7 +47,7 @@ export default function Chat() {
   const s = styles(c);
   // m: a message to jump to (from search).
   const { peer, m: focus } = useLocalSearchParams<{ peer: string; m?: string }>();
-  const { me, myName, contacts, groups, blocked, block, unblock, report, deleteChat, messages, send, sendPhoto, forwardFile, stamps, makeStamp, addStamp, removeStamp, sendStamp, addContact, markRead, cancelSend, retrySend } = useTegami();
+  const { me, myName, contacts, groups, blocked, block, unblock, report, deleteChat, messages, send, sendPhoto, sendFile, sendVoice, forwardFile, stamps, makeStamp, addStamp, removeStamp, sendStamp, addContact, markRead, cancelSend, retrySend } = useTegami();
   // A message waiting to be sent that was tapped: it offers to stop sending.
   const [offered, setOffered] = useState<string | null>(null);
   const [stampsOpen, setStampsOpen] = useState(false);
@@ -44,7 +66,18 @@ export default function Chat() {
   const [newName, setNewName] = useState('');
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [recordingSec, setRecordingSec] = useState(0);
+  const recorderRef = useRef<{
+    recorder: MediaRecorder;
+    stream: MediaStream;
+    chunks: BlobPart[];
+    mimeType: string;
+    startedAt: number;
+    timer: ReturnType<typeof setInterval>;
+    limitTimer: ReturnType<typeof setTimeout>;
+  } | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
   const list = useRef<FlatList>(null);
   const { supported, startCall } = useCall();
@@ -80,11 +113,17 @@ export default function Chat() {
     setStampsOpen(false);
     setStampDeleting(null);
     setStampOffer(null);
+    setError(null);
   }, [peer]);
   useEffect(() => () => clearTimeout(copiedTimer.current), []);
 
   const nameOf = (pubkey: string) => (pubkey === me ? myName || '自分' : personName(pubkey, contacts));
-  const firstLine = (m: Message) => (m.stamp ? 'スタンプ' : m.file ? '写真' : m.text.split('\n')[0]);
+  const firstLine = (m: Message) =>
+    m.stamp
+      ? 'スタンプ'
+      : m.file
+        ? m.file.name || (m.file.type.startsWith('video/') ? '動画' : m.file.type.startsWith('audio/') ? '音声メッセージ' : '写真')
+        : m.text.split('\n')[0];
 
   /** Scrolls to a message on this device and marks it for a moment. */
   const jumpTo = useCallback(
@@ -216,19 +255,135 @@ export default function Chat() {
     }
   }
 
+  const stopRecorder = useCallback(() => {
+    const r = recorderRef.current;
+    if (!r) return null;
+    recorderRef.current = null;
+    clearInterval(r.timer);
+    clearTimeout(r.limitTimer);
+    setRecording(false);
+    return r;
+  }, []);
+
+  const cancelRecording = useCallback(() => {
+    const r = stopRecorder();
+    if (!r) return;
+    r.recorder.onstop = null;
+    r.recorder.ondataavailable = null;
+    if (r.recorder.state !== 'inactive') {
+      try {
+        r.recorder.stop();
+      } catch {}
+    }
+    r.stream.getTracks().forEach((t) => t.stop());
+  }, [stopRecorder]);
+
+  useEffect(() => () => cancelRecording(), [peer, cancelRecording]);
+
+  const finishRecording = useCallback(async () => {
+    const r = stopRecorder();
+    if (!r || !peer) return;
+    const duration = Math.max(1, Math.round((Date.now() - r.startedAt) / 1000));
+    setSending(true);
+    setError(null);
+    try {
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        const done = () => {
+          r.stream.getTracks().forEach((t) => t.stop());
+          resolve(new Blob(r.chunks, { type: r.recorder.mimeType || r.mimeType || 'audio/webm' }));
+        };
+        if (r.recorder.state === 'inactive') {
+          done();
+          return;
+        }
+        r.recorder.onstop = done;
+        r.recorder.onerror = () => {
+          r.stream.getTracks().forEach((t) => t.stop());
+          reject(new Error('recording failed'));
+        };
+        r.recorder.stop();
+      });
+      await sendVoice(peer, blob, duration, replying?.id);
+      setReplying(null);
+    } catch {
+      setError(SEND_ERROR);
+    } finally {
+      setSending(false);
+    }
+  }, [stopRecorder, peer, sendVoice, replying]);
+
+  async function startRecording() {
+    if (!peer || sending || isBlocked || recording) return;
+    setError(null);
+    setStampsOpen(false);
+    setStampDeleting(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType =
+        AUDIO_TYPES.find((t) => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported?.(t)) ?? '';
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      const chunks: BlobPart[] = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
+      const startedAt = Date.now();
+      setRecordingSec(0);
+      setRecording(true);
+      const timer = setInterval(() => {
+        setRecordingSec(Math.floor((Date.now() - startedAt) / 1000));
+      }, 250);
+      const limitTimer = setTimeout(() => {
+        void finishRecording();
+      }, VOICE_MAX_MS);
+      recorderRef.current = { recorder, stream, chunks, mimeType, startedAt, timer, limitTimer };
+      recorder.start();
+    } catch {
+      setError(SEND_ERROR);
+    }
+  }
+
   async function pickPhoto() {
     if (!peer || sending || isBlocked) return;
-    const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
-    const asset = picked.canceled ? null : picked.assets[0];
-    if (!asset) return;
+    let blob: Blob | null = null;
+    if (Platform.OS === 'web') {
+      blob = await pickWebFile('image/*,video/*');
+    } else {
+      const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 1 });
+      const asset = picked.canceled ? null : picked.assets[0];
+      if (asset) blob = asset.file ?? (await (await fetch(asset.uri)).blob());
+    }
+    if (!blob) return;
+    if (blob.type.startsWith('video/') && blob.size > MAX_FILE_BYTES) {
+      setError('10MBを超える動画は送れません');
+      return;
+    }
     setSending(true);
-    setFailed(false);
+    setError(null);
     try {
-      const blob = asset.file ?? (await (await fetch(asset.uri)).blob());
       await sendPhoto(peer, blob, replying?.id);
       setReplying(null);
     } catch {
-      setFailed(true);
+      setError(SEND_ERROR);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function pickFile() {
+    if (!peer || sending || isBlocked || Platform.OS !== 'web') return;
+    const file = await pickWebFile();
+    if (!file) return;
+    if (file.size > MAX_FILE_BYTES) {
+      setError('10MBを超えるファイルは送れません');
+      return;
+    }
+    setSending(true);
+    setError(null);
+    try {
+      await sendFile(peer, file, file.name || 'file', replying?.id);
+      setReplying(null);
+    } catch {
+      setError(SEND_ERROR);
     } finally {
       setSending(false);
     }
@@ -240,12 +395,12 @@ export default function Chat() {
     const asset = picked.canceled ? null : picked.assets[0];
     if (!asset) return;
     setSending(true);
-    setFailed(false);
+    setError(null);
     try {
       const blob = asset.file ?? (await (await fetch(asset.uri)).blob());
       await makeStamp(blob);
     } catch {
-      setFailed(true);
+      setError(SEND_ERROR);
     } finally {
       setSending(false);
     }
@@ -256,12 +411,12 @@ export default function Chat() {
     setStampsOpen(false);
     setStampDeleting(null);
     setSending(true);
-    setFailed(false);
+    setError(null);
     try {
       await sendStamp(peer, st, replying?.id);
       setReplying(null);
     } catch {
-      setFailed(true);
+      setError(SEND_ERROR);
     } finally {
       setSending(false);
     }
@@ -270,7 +425,7 @@ export default function Chat() {
   async function submit() {
     const text = draft.trim();
     if (!text || !peer || isBlocked) return;
-    setFailed(false);
+    setError(null);
     // Never lost: without a connection it waits in the chat and goes out later.
     setDraft('');
     try {
@@ -278,7 +433,7 @@ export default function Chat() {
       setReplying(null);
     } catch {
       setDraft(text);
-      setFailed(true);
+      setError(SEND_ERROR);
     }
   }
 
@@ -503,6 +658,12 @@ export default function Chat() {
                     file={item.file}
                     onPress={!mine ? () => setStampOffer((cur) => (cur === item.id ? null : item.id)) : undefined}
                   />
+                ) : item.file.name || (!item.file.type.startsWith('image/') && !item.file.type.startsWith('video/') && !item.file.type.startsWith('audio/')) ? (
+                  <FileAttachment id={item.id} file={item.file} />
+                ) : item.file.type.startsWith('video/') ? (
+                  <Video id={item.id} file={item.file} />
+                ) : item.file.type.startsWith('audio/') ? (
+                  <Voice id={item.id} file={item.file} />
                 ) : (
                   <Photo id={item.id} file={item.file} onOpen={setViewing} />
                 )
@@ -591,7 +752,7 @@ export default function Chat() {
           );
         }}
       />
-      {failed && <Text style={s.error}>送れませんでした。もう一度送ってください</Text>}
+      {error && <Text style={s.error}>{error}</Text>}
       {isBlocked ? (
         <View style={s.blockedBar}>
           <Text style={s.blockedText}>ブロック中です</Text>
@@ -601,7 +762,7 @@ export default function Chat() {
         </View>
       ) : (
         <>
-          {replying && (
+          {replying && !recording && (
             <View style={s.replyBar} testID="replying">
               <View style={s.replyBody}>
                 <Text style={s.quoteName} numberOfLines={1}>
@@ -616,7 +777,7 @@ export default function Chat() {
               </Pressable>
             </View>
           )}
-          {stampsOpen && (
+          {stampsOpen && !recording && (
             <View style={s.stampPanel}>
               <View style={s.stampGrid}>
                 {stamps.map((st) => (
@@ -658,46 +819,64 @@ export default function Chat() {
               </View>
             </View>
           )}
-          <View style={s.composer}>
-            <Pressable style={[s.attach, sending && s.disabled]} onPress={pickPhoto} disabled={sending} role="button">
-              <Text style={s.attachText}>写真</Text>
-            </Pressable>
-            <Pressable
-              style={[s.attach, sending && s.disabled]}
-              onPress={() => {
-                setStampsOpen((v) => !v);
-                setStampDeleting(null);
-              }}
-              disabled={sending}
-              role="button">
-              <Text style={s.attachText}>スタンプ</Text>
-            </Pressable>
-            <TextInput
-              ref={input}
-              style={s.input}
-              value={draft}
-              onChangeText={setDraft}
-              placeholder="メッセージ"
-              placeholderTextColor={c.muted}
-              multiline
-              numberOfLines={1}
-              onKeyPress={(e) => {
-                const ne = e.nativeEvent as unknown as { key: string; shiftKey?: boolean; isComposing?: boolean };
-                if (Platform.OS === 'web' && ne.key === 'Enter' && !ne.shiftKey && !ne.isComposing) {
-                  (e as unknown as { preventDefault: () => void }).preventDefault();
-                  submit();
-                }
-              }}
-            />
-            <Pressable
-              style={[s.send, (!draft.trim() || sending) && s.disabled]}
-              onPress={submit}
-              disabled={!draft.trim() || sending}
-              role="button"
-              aria-label="送る">
-              <Text style={s.sendText}>送る</Text>
-            </Pressable>
-          </View>
+          {recording ? (
+            <View style={s.composer}>
+              <Text style={s.recordTime}>{clock(recordingSec)}</Text>
+              <Pressable style={s.attach} onPress={cancelRecording} role="button">
+                <Text style={s.attachText}>キャンセル</Text>
+              </Pressable>
+              <Pressable style={s.send} onPress={finishRecording} role="button">
+                <Text style={s.sendText}>送る</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={s.composer}>
+              <Pressable style={[s.attach, sending && s.disabled]} onPress={pickPhoto} disabled={sending} role="button">
+                <Text style={s.attachText}>写真</Text>
+              </Pressable>
+              <Pressable style={[s.attach, sending && s.disabled]} onPress={pickFile} disabled={sending} role="button">
+                <Text style={s.attachText}>ファイル</Text>
+              </Pressable>
+              <Pressable style={[s.attach, sending && s.disabled]} onPress={startRecording} disabled={sending} role="button">
+                <Text style={s.attachText}>録音</Text>
+              </Pressable>
+              <Pressable
+                style={[s.attach, sending && s.disabled]}
+                onPress={() => {
+                  setStampsOpen((v) => !v);
+                  setStampDeleting(null);
+                }}
+                disabled={sending}
+                role="button">
+                <Text style={s.attachText}>スタンプ</Text>
+              </Pressable>
+              <TextInput
+                ref={input}
+                style={s.input}
+                value={draft}
+                onChangeText={setDraft}
+                placeholder="メッセージ"
+                placeholderTextColor={c.muted}
+                multiline
+                numberOfLines={1}
+                onKeyPress={(e) => {
+                  const ne = e.nativeEvent as unknown as { key: string; shiftKey?: boolean; isComposing?: boolean };
+                  if (Platform.OS === 'web' && ne.key === 'Enter' && !ne.shiftKey && !ne.isComposing) {
+                    (e as unknown as { preventDefault: () => void }).preventDefault();
+                    submit();
+                  }
+                }}
+              />
+              <Pressable
+                style={[s.send, (!draft.trim() || sending) && s.disabled]}
+                onPress={submit}
+                disabled={!draft.trim() || sending}
+                role="button"
+                aria-label="送る">
+                <Text style={s.sendText}>送る</Text>
+              </Pressable>
+            </View>
+          )}
         </>
       )}
       {viewing && <PhotoViewer uri={viewing} onClose={() => setViewing(null)} />}
@@ -834,6 +1013,7 @@ const styles = (c: Palette) =>
     send: { backgroundColor: c.accent, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10 },
     attach: { paddingHorizontal: 6, paddingVertical: 10 },
     attachText: { color: c.accent, fontSize: 15, fontWeight: '600' },
+    recordTime: { flex: 1, fontSize: 16, color: c.text, paddingHorizontal: 12, paddingVertical: 10 },
     disabled: { opacity: 0.4 },
     callButtons: { flexDirection: 'row', alignItems: 'center' },
     callButton: { paddingHorizontal: 10, paddingVertical: 4 },

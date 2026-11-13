@@ -13,6 +13,9 @@ import { bytesToHex, hexToBytes } from 'nostr-tools/utils';
 
 export const FILE_SERVER = (process.env.EXPO_PUBLIC_TEGAMI_FILES ?? 'https://relay.tegami.chat').replace(/\/$/, '');
 
+/** Maximum size the relay's file server accepts (10 MB). */
+export const MAX_FILE_BYTES = 10 * 1024 * 1024;
+
 /** What a kind 15 message carries about its file. */
 export type FileRef = {
   url: string;
@@ -22,7 +25,17 @@ export type FileRef = {
   sha256: string; // of the encrypted bytes
   size?: number;
   dim?: string; // "WxH"
+  name?: string; // original file name (general files only)
+  duration?: number; // seconds (voice messages)
 };
+
+/** Checks a file name from a message: 1..200 characters, no path separators. */
+export function validFileName(name: unknown): string | undefined {
+  if (typeof name !== 'string') return undefined;
+  const trimmed = name.trim();
+  if (!trimmed || trimmed.length > 200 || /[/\\\0]/.test(trimmed)) return undefined;
+  return trimmed;
+}
 
 const MAX_SIDE = 1600;
 const AVATAR_SIDE = 256;
@@ -108,6 +121,7 @@ export async function encryptAndUpload(
   type: string,
   secret: Uint8Array,
   dim?: string,
+  extra?: { name?: string; duration?: number },
 ): Promise<FileRef> {
   const raw = crypto.getRandomValues(new Uint8Array(32));
   const nonce = crypto.getRandomValues(new Uint8Array(12));
@@ -134,7 +148,22 @@ export async function encryptAndUpload(
   });
   if (!res.ok) throw new Error(`upload failed: ${res.status} ${res.headers.get('X-Reason') ?? ''}`);
   const desc = (await res.json()) as { url: string };
-  return { url: desc.url, type, key: bytesToHex(raw), nonce: bytesToHex(nonce), sha256: hash, size: bytes.byteLength, dim };
+  const name = validFileName(extra?.name);
+  const duration =
+    typeof extra?.duration === 'number' && Number.isFinite(extra.duration) && extra.duration >= 0
+      ? Math.round(extra.duration)
+      : undefined;
+  return {
+    url: desc.url,
+    type,
+    key: bytesToHex(raw),
+    nonce: bytesToHex(nonce),
+    sha256: hash,
+    size: bytes.byteLength,
+    ...(dim ? { dim } : {}),
+    ...(name ? { name } : {}),
+    ...(duration !== undefined ? { duration } : {}),
+  };
 }
 
 /** NIP-17 kind 15 tags for a file (with `["t", "stamp"]` when `stamp` is true). */
@@ -148,6 +177,8 @@ export function fileTags(f: FileRef, stamp?: boolean): string[][] {
   ];
   if (f.size) tags.push(['size', String(f.size)]);
   if (f.dim) tags.push(['dim', f.dim]);
+  if (f.name) tags.push(['name', f.name]);
+  if (f.duration !== undefined) tags.push(['duration', String(Math.round(f.duration))]);
   if (stamp) tags.push(['t', 'stamp']);
   return tags;
 }
@@ -166,6 +197,12 @@ export function fileFromRumor(content: string, tags: string[][]): FileRef | null
   if (tag('encryption-algorithm') !== 'aes-gcm' || !key || !nonce || !sha256) return null;
   // Only https, or this app's own file server (a development address in tests).
   if (!content.startsWith('https://') && !content.startsWith(`${FILE_SERVER}/`)) return null;
+  const rawName = tag('name');
+  if (rawName !== undefined && !validFileName(rawName)) return null;
+  const name = validFileName(rawName);
+  const rawDur = tag('duration');
+  const durNum = rawDur !== undefined ? Number(rawDur) : undefined;
+  const duration = durNum !== undefined && Number.isFinite(durNum) && durNum >= 0 ? Math.round(durNum) : undefined;
   return {
     url: content,
     type: tag('file-type') ?? 'application/octet-stream',
@@ -174,6 +211,8 @@ export function fileFromRumor(content: string, tags: string[][]): FileRef | null
     sha256,
     size: Number(tag('size')) || undefined,
     dim: tag('dim'),
+    ...(name ? { name } : {}),
+    ...(duration !== undefined ? { duration } : {}),
   };
 }
 
@@ -194,6 +233,8 @@ export function validFileRef(raw: unknown): FileRef | null {
   ) {
     return null;
   }
+  if (f.name !== undefined && !validFileName(f.name)) return null;
+  const name = validFileName(f.name);
   return {
     url: f.url,
     type: f.type,
@@ -202,6 +243,8 @@ export function validFileRef(raw: unknown): FileRef | null {
     sha256: f.sha256,
     ...(typeof f.size === 'number' ? { size: f.size } : {}),
     ...(typeof f.dim === 'string' ? { dim: f.dim } : {}),
+    ...(name ? { name } : {}),
+    ...(typeof f.duration === 'number' && Number.isFinite(f.duration) && f.duration >= 0 ? { duration: Math.round(f.duration) } : {}),
   };
 }
 

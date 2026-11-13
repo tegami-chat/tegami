@@ -46,7 +46,11 @@ export function ChatRow({
         </View>
         <View style={s.bottom}>
           <Text style={s.preview} numberOfLines={1}>
-            {last ? (last.file ? '写真' : last.text) : ''}
+            {last
+              ? last.file
+                ? last.file.name || (last.file.type.startsWith('video/') ? '動画' : last.file.type.startsWith('audio/') ? '音声メッセージ' : '写真')
+                : last.text
+              : ''}
           </Text>
           {unread > 0 && <Badge count={unread} />}
         </View>

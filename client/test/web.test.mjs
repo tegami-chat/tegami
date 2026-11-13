@@ -2351,6 +2351,101 @@ async function main() {
       await a.page.waitForFunction(() => document.querySelectorAll('[data-testid="stamp-message"]').length === 2, null, { timeout: 15000 });
       for (const u of [a, b]) await u.context.close();
     });
+
+    await test('Video and file: sent encrypted, the friend can play the video and save the file with its name', async () => {
+      const a = await person(browser, 'あゆみ');
+      const b = await person(browser, 'ばんり');
+      await befriend(b, a);
+      await befriend(a, b);
+
+      const webm = Buffer.from(
+        await a.page.evaluate(async () => {
+          const c = document.createElement('canvas');
+          c.width = 160;
+          c.height = 120;
+          const g = c.getContext('2d');
+          g.fillStyle = '#2f6db5';
+          g.fillRect(0, 0, 160, 120);
+          const stream = c.captureStream(10);
+          const rec = new MediaRecorder(stream, { mimeType: 'video/webm' });
+          const chunks = [];
+          rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+          rec.start();
+          await new Promise((r) => setTimeout(r, 400));
+          rec.stop();
+          await new Promise((r) => (rec.onstop = r));
+          stream.getTracks().forEach((t) => t.stop());
+          const bytes = new Uint8Array(await new Blob(chunks, { type: 'video/webm' }).arrayBuffer());
+          let bin = '';
+          for (const b of bytes) bin += String.fromCharCode(b);
+          return btoa(bin);
+        }),
+        'base64',
+      );
+      const videoChooser = a.page.waitForEvent('filechooser');
+      await button(a.page, '写真').click();
+      await (await videoChooser).setFiles({ name: 'clip.webm', mimeType: 'video/webm', buffer: webm });
+      await a.page.getByTestId('video-message').first().waitFor({ timeout: 15000 });
+      await b.page.getByTestId('video-message').first().waitFor({ timeout: 15000 });
+
+      const plainText = '合計 120,000円\nよろしくお願いします。';
+      const fileChooser = a.page.waitForEvent('filechooser');
+      await button(a.page, 'ファイル').click();
+      await (await fileChooser).setFiles({ name: '見積書.txt', mimeType: 'text/plain', buffer: Buffer.from(plainText, 'utf8') });
+      const bFile = b.page.getByTestId('file-message').first();
+      await bFile.waitFor({ timeout: 15000 });
+      assert((await bFile.innerText()).includes('見積書.txt'), `file message text: ${await bFile.innerText()}`);
+
+      const sentFiles = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages')).filter((m) => m.file).map((m) => m.file));
+      assert(sentFiles.length === 2, `expected 2 sent files, got ${sentFiles.length}`);
+      for (const f of sentFiles) {
+        const stored = Buffer.from(await (await fetch(f.url)).arrayBuffer());
+        assert(
+          stored.length > 0 && !stored.includes(Buffer.from('合計 120,000円')) && stored.subarray(0, 4).toString('hex') !== '1a45dfa3',
+          'the server holds unencrypted file content',
+        );
+      }
+
+      const dlPromise = b.page.waitForEvent('download');
+      await bFile.getByRole('button', { name: '保存', exact: true }).click();
+      const dl = await dlPromise;
+      assert(dl.suggestedFilename() === '見積書.txt', `filename: ${dl.suggestedFilename()}`);
+      const downloaded = readFileSync(await dl.path(), 'utf8');
+      assert(downloaded === plainText, `downloaded content: ${downloaded}`);
+      for (const u of [a, b]) await u.context.close();
+    });
+
+    await test('Voice message: record, send, the friend gets an audio player', async () => {
+      const a = await person(browser, 'あゆみ');
+      const b = await person(browser, 'ばんり');
+      await befriend(b, a);
+      await befriend(a, b);
+
+      await button(a.page, '録音').click();
+      await button(a.page, 'キャンセル').waitFor({ timeout: 5000 });
+      await a.page.waitForTimeout(1500);
+      await button(a.page, '送る').click();
+
+      await a.page.getByTestId('voice-message').first().waitFor({ timeout: 15000 });
+      await b.page.getByTestId('voice-message').first().waitFor({ timeout: 15000 });
+      for (const u of [a, b]) await u.context.close();
+    });
+
+    await test('Too large: a file over 10 MB is not sent', async () => {
+      const a = await person(browser, 'あゆみ');
+      const b = await person(browser, 'ばんり');
+      await befriend(b, a);
+      await befriend(a, b);
+
+      const big = Buffer.alloc(11 * 1024 * 1024, 0x61);
+      const chooser = a.page.waitForEvent('filechooser');
+      await button(a.page, 'ファイル').click();
+      await (await chooser).setFiles({ name: 'huge.bin', mimeType: 'application/octet-stream', buffer: big });
+      await waitText(a.page, '10MBを超えるファイルは送れません');
+      const count = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages') ?? '[]').length);
+      assert(count === 0, `expected 0 messages in chat, got ${count}`);
+      for (const u of [a, b]) await u.context.close();
+    });
   } finally {
     await browser.close();
     server.close();
