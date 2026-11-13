@@ -22,8 +22,8 @@ export type Outgoing = {
   wraps: NostrEvent[];
   /** Ids of the envelopes the relay accepted. */
   done: string[];
-  /** A photo whose upload has not succeeded. Its bytes are kept on this device under id. */
-  photo?: { type: string; dim: string; size: number; replyTo?: string };
+  /** A photo or file whose upload has not succeeded. Its bytes are kept on this device under id. */
+  photo?: { type: string; dim?: string; size: number; name?: string; duration?: number; replyTo?: string };
 };
 
 
