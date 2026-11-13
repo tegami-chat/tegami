@@ -11,8 +11,9 @@ import { join, resolve } from 'node:path';
 const ROOT = resolve(import.meta.dirname, '..');
 const RELAY = 'wss://relay.tegami.chat';
 // Cloudflare Turnstile site key (public) for registering without an invite. Without it the
-// app would send the tests' 'dev-pass', which the real relay refuses.
-const SITEKEY = process.env.EXPO_PUBLIC_TURNSTILE_SITEKEY ?? '';
+// app would send the tests' 'dev-pass', which the real relay refuses. The widget "Tegami"
+// (hostname app.tegami.chat) was made on 2026-11-13; its secret key is the relay's TURNSTILE_SECRET.
+const SITEKEY = process.env.EXPO_PUBLIC_TURNSTILE_SITEKEY || '0x4AAAAAAF_NhcnCt2jIdBpO';
 if (!/^0x[0-9A-Za-z_-]{10,}$/.test(SITEKEY)) {
   console.error('Set EXPO_PUBLIC_TURNSTILE_SITEKEY to the Turnstile site key of app.tegami.chat. Do not deploy.');
   process.exit(1);
