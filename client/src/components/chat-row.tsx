@@ -1,7 +1,9 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Avatar } from '@/components/avatar';
 import { Palette, usePalette } from '@/constants/theme';
+import type { FileRef } from '@/lib/files';
 import type { Message } from '@/lib/tegami';
 
 function time(at: number) {
@@ -16,6 +18,7 @@ export function ChatRow({
   peer,
   name,
   model,
+  avatar,
   last,
   mark,
   unread = 0,
@@ -23,6 +26,7 @@ export function ChatRow({
   peer: string;
   name: string;
   model?: string;
+  avatar?: FileRef;
   last?: Message;
   mark?: string;
   unread?: number;
@@ -31,9 +35,7 @@ export function ChatRow({
   const s = styles(c);
   return (
     <Pressable style={s.row} onPress={() => router.push({ pathname: '/chat/[peer]', params: { peer } })}>
-      <View style={s.avatar}>
-        <Text style={s.avatarText}>{mark ?? name.slice(0, 1)}</Text>
-      </View>
+      <Avatar name={mark ?? name} file={avatar} size={36} />
       <View style={s.body}>
         <View style={s.top}>
           <Text style={s.name} numberOfLines={1}>
@@ -67,8 +69,6 @@ export function Badge({ count }: { count: number }) {
 const styles = (c: Palette) =>
   StyleSheet.create({
     row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
-    avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: c.mine, alignItems: 'center', justifyContent: 'center' },
-    avatarText: { fontSize: 20, color: c.accent, fontWeight: '600' },
     body: { flex: 1, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.line, paddingBottom: 12 },
     top: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
     name: { flex: 1, fontSize: 16, fontWeight: '600', color: c.text },

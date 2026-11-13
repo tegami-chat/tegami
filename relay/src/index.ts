@@ -721,7 +721,9 @@ export class Relay extends DurableObject<Env> {
     if (p !== att.pubkey && !open) {
       const short = ev.tags.some((t) => t[0] === 'expiration');
       const call = ev.tags.some((t) => t[0] === 't' && t[1] === 'call');
-      if (!short) this.ctx.waitUntil(this.notify(p, 'message'));
+      // t=quiet: something for the app that is not a message (a friend's new picture).
+      const quiet = ev.tags.some((t) => t[0] === 't' && t[1] === 'quiet');
+      if (!short && !quiet) this.ctx.waitUntil(this.notify(p, 'message'));
       else if (call) this.ctx.waitUntil(this.notify(p, 'call'));
     }
 

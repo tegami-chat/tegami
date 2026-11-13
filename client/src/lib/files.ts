@@ -25,6 +25,7 @@ export type FileRef = {
 };
 
 const MAX_SIDE = 1600;
+const AVATAR_SIDE = 256;
 const QUALITY = 0.82;
 
 async function sha256Hex(bytes: BufferSource) {
@@ -46,6 +47,24 @@ export async function shrinkImage(file: Blob): Promise<{ bytes: Uint8Array<Array
     canvas.toBlob((b) => (b ? ok(b) : fail(new Error('could not encode the photo'))), 'image/jpeg', QUALITY),
   );
   return { bytes: new Uint8Array(await blob.arrayBuffer()), type: 'image/jpeg', width, height };
+}
+
+/** Crops to a centered square and shrinks to at most 256x256 JPEG. */
+export async function shrinkAvatar(file: Blob): Promise<{ bytes: Uint8Array<ArrayBuffer>; type: string; width: number; height: number }> {
+  const bitmap = await createImageBitmap(file);
+  const short = Math.min(bitmap.width, bitmap.height);
+  const side = Math.max(1, Math.min(AVATAR_SIDE, short));
+  const sx = Math.floor((bitmap.width - short) / 2);
+  const sy = Math.floor((bitmap.height - short) / 2);
+  const canvas = document.createElement('canvas');
+  canvas.width = side;
+  canvas.height = side;
+  canvas.getContext('2d')!.drawImage(bitmap, sx, sy, short, short, 0, 0, side, side);
+  bitmap.close();
+  const blob = await new Promise<Blob>((ok, fail) =>
+    canvas.toBlob((b) => (b ? ok(b) : fail(new Error('could not encode the avatar'))), 'image/jpeg', QUALITY),
+  );
+  return { bytes: new Uint8Array(await blob.arrayBuffer()), type: 'image/jpeg', width: side, height: side };
 }
 
 /** Encrypts and uploads. Returns everything the message needs to carry. */
@@ -117,6 +136,34 @@ export function fileFromRumor(content: string, tags: string[][]): FileRef | null
   };
 }
 
+/** Checks a JSON FileRef (such as an avatar in a profile card). Null when malformed. */
+export function validFileRef(raw: unknown): FileRef | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const f = raw as Record<string, unknown>;
+  if (
+    typeof f.url !== 'string' ||
+    (!f.url.startsWith('https://') && !f.url.startsWith(`${FILE_SERVER}/`)) ||
+    typeof f.type !== 'string' ||
+    typeof f.key !== 'string' ||
+    !f.key ||
+    typeof f.nonce !== 'string' ||
+    !f.nonce ||
+    typeof f.sha256 !== 'string' ||
+    !f.sha256
+  ) {
+    return null;
+  }
+  return {
+    url: f.url,
+    type: f.type,
+    key: f.key,
+    nonce: f.nonce,
+    sha256: f.sha256,
+    ...(typeof f.size === 'number' ? { size: f.size } : {}),
+    ...(typeof f.dim === 'string' ? { dim: f.dim } : {}),
+  };
+}
+
 // ---------- local cache (IndexedDB) ----------
 
 function db(): Promise<IDBDatabase> {
@@ -156,6 +203,7 @@ async function keep(id: string, blob: Blob) {
 }
 
 /** Returns the decrypted file, from this device if kept, otherwise from the server. */
+// (openFile is also used for avatars, cached under avatar:<sha256>.)
 export async function openFile(id: string, f: FileRef): Promise<Blob> {
   const hit = await cached(id).catch(() => undefined);
   if (hit) return hit;

@@ -3,7 +3,8 @@ import { Stack, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
-import { Photo } from '@/components/photo';
+import { Avatar } from '@/components/avatar';
+import { Photo, PhotoViewer } from '@/components/photo';
 import { Palette, usePalette } from '@/constants/theme';
 import { useCall } from '@/lib/calls';
 import { cautionFor } from '@/lib/caution';
@@ -38,6 +39,7 @@ export default function Chat() {
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [viewing, setViewing] = useState<string | null>(null);
   const list = useRef<FlatList>(null);
   const { supported, startCall } = useCall();
 
@@ -347,7 +349,7 @@ export default function Chat() {
                   </View>
                 ))}
               {item.file ? (
-                <Photo id={item.id} file={item.file} />
+                <Photo id={item.id} file={item.file} onOpen={setViewing} />
               ) : (
                 <Text style={s.text} selectable={!unsent}>
                   {item.text}
@@ -369,6 +371,7 @@ export default function Chat() {
                 onHoverOut={() => hoverOut(item.id)}
                 testID={highlight === item.id ? 'highlighted' : undefined}>
                 {mine && actions}
+                {group && !mine && <Avatar name={personName(item.from, contacts)} file={contacts.find((x) => x.pubkey === item.from)?.avatar} size={28} />}
                 {bubble}
                 {!mine && actions}
               </Pressable>
@@ -467,6 +470,7 @@ export default function Chat() {
           </View>
         </>
       )}
+      {viewing && <PhotoViewer uri={viewing} onClose={() => setViewing(null)} />}
     </KeyboardAvoidingView>
   );
 }

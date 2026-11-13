@@ -1,8 +1,10 @@
+import * as ImagePicker from 'expo-image-picker';
 import makeQr from 'qrcode-generator';
 import { useEffect, useState } from 'react';
 import { Image, Linking, Pressable, ScrollView, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { AccountList } from '@/components/account-list';
+import { Avatar } from '@/components/avatar';
 import { Palette, usePalette } from '@/constants/theme';
 import { pushState, type PushState } from '@/lib/push';
 import { personName, useTegami } from '@/lib/tegami';
@@ -15,6 +17,8 @@ export default function Settings() {
   const {
     myName,
     setMyName,
+    myAvatar,
+    setMyAvatar,
     protectedByPasskey,
     crashReports,
     setCrashReportsOn,
@@ -137,6 +141,34 @@ export default function Settings() {
     setExported(true);
   }
 
+  const [avatarBusy, setAvatarBusy] = useState(false);
+
+  async function pickAvatar() {
+    if (avatarBusy) return;
+    const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+    const asset = picked.canceled ? null : picked.assets[0];
+    if (!asset) return;
+    setAvatarBusy(true);
+    try {
+      const blob = asset.file ?? (await (await fetch(asset.uri)).blob());
+      await setMyAvatar(blob);
+    } catch {
+      // Upload failed: leave as it was.
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
+
+  async function removeAvatar() {
+    if (avatarBusy) return;
+    setAvatarBusy(true);
+    try {
+      await setMyAvatar(null);
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
+
   return (
     <ScrollView style={s.fill} contentContainerStyle={s.body}>
       <Text style={s.heading}>アカウント</Text>
@@ -150,6 +182,19 @@ export default function Settings() {
         placeholder="相手に表示される名前"
         placeholderTextColor={c.muted}
       />
+      <View style={[s.card, s.row]}>
+        <Avatar name={myName} file={myAvatar} size={64} />
+        <View style={s.avatarActions}>
+          <Pressable onPress={pickAvatar} disabled={avatarBusy} role="button">
+            <Text style={s.action}>アイコンを変更</Text>
+          </Pressable>
+          {myAvatar && (
+            <Pressable onPress={removeAvatar} disabled={avatarBusy} role="button">
+              <Text style={s.action}>アイコンを削除</Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
 
       <Text style={s.heading}>鍵の守り方</Text>
       <View style={s.card}>
@@ -278,6 +323,7 @@ const styles = (c: Palette) =>
     heading: { fontSize: 14, color: c.muted, marginTop: 14 },
     card: { backgroundColor: c.surface, borderRadius: 12, borderWidth: 1, borderColor: c.line, paddingHorizontal: 14, paddingVertical: 14 },
     row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+    avatarActions: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
     label: { fontSize: 16, color: c.text, flex: 1 },
     value: { fontSize: 16, color: c.text },
     action: { fontSize: 16, color: c.accent, fontWeight: '600' },
