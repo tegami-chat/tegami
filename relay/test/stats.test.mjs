@@ -4,6 +4,7 @@ import * as nip42 from 'nostr-tools/nip42';
 import * as nip59 from 'nostr-tools/nip59';
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import WebSocket from 'ws';
+import { trust } from './join.mjs';
 
 const RELAY = process.env.RELAY ?? 'ws://localhost:8787';
 const BASE = RELAY.replace(/^ws/, 'http').replace(/\/$/, '');
@@ -47,6 +48,7 @@ const sendAndWait = (ws, ev) =>
 
 const before = (await today()).t;
 const keys = [generateSecretKey(), generateSecretKey(), generateSecretKey()];
+for (const k of keys) await trust(k);
 const sockets = [];
 for (const k of keys) sockets.push(await login(k));
 sockets.push(await login(keys[0])); // the same key again: one more login, not one more key

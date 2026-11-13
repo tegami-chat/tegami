@@ -2,6 +2,11 @@
 // Keeps events and uploaded files in memory. Run: npm run relay  (listens on ws://localhost:7447)
 // Files: PUT /upload and GET /<sha256> on the same port, like relay.tegami.chat (Blossom).
 // Recovery backups: GET, PUT and DELETE /backup/<id>, like relay.tegami.chat (NIP-98 signed writes).
+// Registration: POST /register like relay.tegami.chat (an invite code, or the Turnstile token
+// 'dev-pass'). Only registered keys write; envelopes from open keys are marked tegami_open.
+// Tests: POST /_trust {pubkey} registers a key as if invited, GET /_members lists them.
+// Unlike the real relay, 'dev-pass' registers a key as invited (so tests of other features
+// see what invited people see), until POST /_open {on: true} makes it register open keys.
 import { createHash, randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
@@ -38,6 +43,37 @@ const pushDevices = []; // { endpoint, pubkey }
 const crashes = [];
 const backups = new Map(); // id -> { pubkey, data }
 const MAX_BACKUP_BYTES = 64 * 1024;
+const members = new Map(); // pubkey -> { via, invitedBy, code, banned }
+const codes = new Map(); // code -> pubkey
+const openIds = new Set(); // envelopes written by open keys
+let devPassOpen = false;
+const trusted = (m) => !!m && !m.banned && m.via !== 'open';
+const codeOf = (pubkey) => {
+  const m = members.get(pubkey);
+  if (!trusted(m)) return null;
+  if (!m.code) {
+    m.code = randomBytes(12).toString('hex').replace(/[^a-z2-9]/g, 'a').slice(0, 12).replace(/[01lo]/g, 'a');
+    codes.set(m.code, pubkey);
+  }
+  return m.code;
+};
+const describe = (pubkey, extra = {}) => {
+  const m = members.get(pubkey);
+  if (!m) return { member: false };
+  return { member: true, via: m.via, trusted: trusted(m), banned: !!m.banned, code: codeOf(pubkey), ...extra };
+};
+const deliver = (ev) => (openIds.has(ev.id) ? { ...ev, tegami_open: 1 } : ev);
+const nip98 = (req, body, path) => {
+  try {
+    const ev = JSON.parse(Buffer.from((req.headers.authorization ?? '').replace(/^Nostr /, ''), 'base64').toString());
+    const tag = (n) => ev.tags.find((t) => t[0] === n)?.[1];
+    const hash = createHash('sha256').update(body).digest('hex');
+    const ok = ev.kind === 27235 && verifyEvent(ev) && tag('u') === `http://localhost:${PORT}${path}` && tag('method') === req.method && tag('payload') === hash;
+    return ok ? ev.pubkey : null;
+  } catch {
+    return null;
+  }
+};
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, HEAD, PUT, POST, DELETE, OPTIONS',
@@ -65,6 +101,68 @@ const http = createServer((req, res) => {
       send(204);
     });
     return;
+  }
+  if (req.url === '/register' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (c) => (body += c));
+    req.on('end', () => {
+      const json = (status, obj) => send(status, JSON.stringify(obj), 'application/json');
+      const pubkey = nip98(req, body, '/register');
+      if (!pubkey) return json(401, { error: 'auth-required' });
+      let ask = {};
+      try {
+        ask = JSON.parse(body || '{}') ?? {};
+      } catch {
+        return json(400, { error: 'invalid json' });
+      }
+      let m = members.get(pubkey);
+      if (m?.banned) return json(403, { error: 'blocked' });
+      let inviteError = '';
+      if (typeof ask.invite === 'string' && ask.invite && (!m || m.via === 'open')) {
+        const inviter = codes.get(ask.invite);
+        if (!inviter || inviter === pubkey || !trusted(members.get(inviter))) inviteError = 'invite-invalid';
+        else members.set(pubkey, { via: 'invite', invitedBy: inviter });
+      }
+      m = members.get(pubkey);
+      if (!m && typeof ask.turnstile === 'string' && ask.turnstile) {
+        if (ask.turnstile !== 'dev-pass') return json(403, { error: 'turnstile-failed' });
+        members.set(pubkey, { via: devPassOpen ? 'open' : 'invite' });
+      }
+      if (!members.has(pubkey) && inviteError) return json(400, { error: inviteError });
+      json(200, describe(pubkey, inviteError ? { inviteError } : {}));
+    });
+    return;
+  }
+  if (req.url === '/_trust' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (c) => (body += c));
+    req.on('end', () => {
+      try {
+        const { pubkey } = JSON.parse(body);
+        const m = members.get(pubkey);
+        if (!m || m.via === 'open') members.set(pubkey, { ...(m ?? {}), via: 'invite' });
+        send(204);
+      } catch {
+        send(400, 'invalid');
+      }
+    });
+    return;
+  }
+  if (req.url === '/_open' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (c) => (body += c));
+    req.on('end', () => {
+      try {
+        devPassOpen = JSON.parse(body).on === true;
+        send(204);
+      } catch {
+        send(400, 'invalid');
+      }
+    });
+    return;
+  }
+  if (req.url === '/_members' && req.method === 'GET') {
+    return send(200, JSON.stringify([...members].map(([pubkey, m]) => ({ pubkey, ...m }))), 'application/json');
   }
   if (req.url === '/_crashes' && req.method === 'GET') return send(200, JSON.stringify(crashes), 'application/json');
   // Web Push, like relay.tegami.chat: a public key, and registrations signed with NIP-98.
@@ -153,6 +251,7 @@ const http = createServer((req, res) => {
       const hash = createHash('sha256').update(body).digest('hex');
       const ok = auth?.kind === 24242 && verifyEvent(auth) && auth.tags.some((t) => t[0] === 'x' && t[1] === hash);
       if (!ok) return send(401, 'auth-required');
+      if (!members.has(auth.pubkey) || members.get(auth.pubkey).banned) return send(403, 'restricted: register first');
       files.set(hash, body);
       send(200, JSON.stringify({ url: `http://localhost:${PORT}/${hash}`, sha256: hash, size: body.length }), 'application/json');
     });
@@ -198,11 +297,21 @@ wss.on('connection', (ws) => {
         ws.send(JSON.stringify(['OK', ev.id, false, 'invalid: expired']));
         return;
       }
+      const writer = members.get(pubkey);
+      if (!writer) {
+        ws.send(JSON.stringify(['OK', ev.id, false, 'restricted: register first (POST /register)']));
+        return;
+      }
+      if (writer.banned) {
+        ws.send(JSON.stringify(['OK', ev.id, false, 'blocked: this key is stopped']));
+        return;
+      }
       if (!events.some((e) => e.id === ev.id)) {
         events.push(ev);
+        if (writer.via === 'open') openIds.add(ev.id);
         for (const [client, clientSubs] of subs) {
           for (const [subId, filters] of clientSubs) {
-            if (filters.some((f) => matches(f, ev))) client.send(JSON.stringify(['EVENT', subId, ev]));
+            if (filters.some((f) => matches(f, ev))) client.send(JSON.stringify(['EVENT', subId, deliver(ev)]));
           }
         }
       }
@@ -217,7 +326,7 @@ wss.on('connection', (ws) => {
         for (const e of found) {
           if (seen.has(e.id)) continue;
           seen.add(e.id);
-          ws.send(JSON.stringify(['EVENT', subId, e]));
+          ws.send(JSON.stringify(['EVENT', subId, deliver(e)]));
         }
       }
       ws.send(JSON.stringify(['EOSE', subId]));

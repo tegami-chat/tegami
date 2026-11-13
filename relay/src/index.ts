@@ -26,11 +26,16 @@
 // until the person deletes it (no 30-day limit). It cannot read the backup or find one
 // without the code.
 //
-// TODO: accept writes only from registered Tegami accounts.
+// Registration (members.ts): only registered keys may write or upload. POST /register
+// (NIP-98) registers a key with an invite code or a Cloudflare Turnstile token, or just
+// reports its state, and returns its own invite code when it may invite. Envelopes from keys
+// registered without an invite are marked (tegami_open) and ring no notifications.
+// POST /admin lets the operator (ADMIN_PUBKEYS) stop a key and those it invited.
 
 import { DurableObject } from 'cloudflare:workers';
 import { verifyEvent, type NostrEvent } from 'nostr-tools/pure';
 
+import { Members, turnstileOk, type Member } from './members';
 import { MAX_DEVICES, Vapid, allowedEndpoint, nip98, validKeys, type PushKeys } from './push';
 import { STATS_DESCRIPTION, Stats } from './stats';
 
@@ -39,7 +44,17 @@ type Attachment = { challenge: string; ip: string; pubkey?: string; subs: Record
 
 // VAPID_JWK: the relay's Web Push key (Worker secret). DEV_PUSH=1 lets tests push to localhost
 // (and sign requests for localhost). DEV_LOCAL=1 only lets tests sign requests for localhost.
-type Env = { RELAY: DurableObjectNamespace<Relay>; FILES: R2Bucket; VAPID_JWK?: string; DEV_PUSH?: string; DEV_LOCAL?: string };
+// TURNSTILE_SECRET: checks the web app's proof of a person when registering without an invite.
+// ADMIN_PUBKEYS: the operator's keys (comma separated, hex), allowed to use POST /admin.
+type Env = {
+  RELAY: DurableObjectNamespace<Relay>;
+  FILES: R2Bucket;
+  VAPID_JWK?: string;
+  DEV_PUSH?: string;
+  DEV_LOCAL?: string;
+  TURNSTILE_SECRET?: string;
+  ADMIN_PUBKEYS?: string;
+};
 
 const ALLOWED_KINDS = new Set([1059]);
 const MAX_EVENT_BYTES = 128 * 1024;
@@ -51,6 +66,9 @@ const AUTH_WINDOW_SECONDS = 10 * 60;
 const RATE = { ip: { burst: 300, perSecond: 5 }, key: { burst: 120, perSecond: 3 } };
 const MAX_CONNECTIONS_PER_IP = 50;
 const MAX_MAILBOX = 10_000;
+// Envelopes from keys registered without an invite, waiting for one person. Their app
+// shows them only from friends, so a stranger cannot fill someone's mailbox with them.
+const MAX_OPEN_MAILBOX = 200;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_BACKUP_BYTES = 64 * 1024;
 // Backups per signing key. The app derives one signing key and one id from each recovery
@@ -100,6 +118,8 @@ const INFO = {
   keeps: {
     envelopes: 'Gift-wrapped messages (kind 1059), deleted 30 days after they arrive.',
     files: 'Encrypted photos and files, deleted after 30 days. Nothing about the uploader.',
+    members:
+      'Registered keys: the key, whether it registered with an invite or without one, when, and whether it is stopped. Who invited whom is forgotten after 90 days. Each inviting key has one invite code.',
     push: 'For notifications: a device push address and the key it belongs to, until turned off.',
     backups:
       'Recovery backups: an id derived from the recovery code, the ciphertext, a signing key also derived from the code (not the account key) and when it was last uploaded. Kept until the person deletes it.',
@@ -121,6 +141,11 @@ export default {
     if (url.pathname === '/push/key' && req.method === 'GET') {
       if (!env.VAPID_JWK) return new Response('Push is not set up', { status: 503, headers: CORS });
       return Response.json({ key: new Vapid(env.VAPID_JWK).publicKey }, { headers: { ...CORS, 'Cache-Control': 'public, max-age=3600' } });
+    }
+    if ((url.pathname === '/register' || url.pathname === '/admin') && req.method === 'POST') {
+      const headers = new Headers(req.headers);
+      headers.set('X-Tegami-IP', req.headers.get('CF-Connecting-IP') ?? 'unknown');
+      return env.RELAY.get(env.RELAY.idFromName('main')).fetch(new Request(req, { headers }));
     }
     if (url.pathname === '/push' && (req.method === 'POST' || req.method === 'DELETE')) {
       const headers = new Headers(req.headers);
@@ -217,6 +242,13 @@ export class Relay extends DurableObject<Env> {
     // Recovery backups (encrypted on the device). Not touched by the 30-day clean-up.
     this.sql.exec('CREATE TABLE IF NOT EXISTS backups (id TEXT PRIMARY KEY, pubkey TEXT, data TEXT, updated_at INTEGER)');
     this.sql.exec('CREATE INDEX IF NOT EXISTS backups_pubkey ON backups (pubkey)');
+    // Envelopes written by a key registered without an invite (1).
+    try {
+      this.sql.exec('ALTER TABLE events ADD COLUMN open INTEGER DEFAULT 0');
+    } catch {
+      // Already there.
+    }
+    this.members = new Members(this.sql);
     this.vapid = env.VAPID_JWK ? new Vapid(env.VAPID_JWK) : null;
     this.devPush = env.DEV_PUSH === '1';
     this.devLocal = this.devPush || env.DEV_LOCAL === '1';
@@ -228,6 +260,8 @@ export class Relay extends DurableObject<Env> {
     const path = new URL(req.url).pathname;
     if (path === '/upload') return this.upload(req, ip);
     if (path === '/push') return this.pushRoute(req, ip);
+    if (path === '/register') return this.registerRoute(req, ip);
+    if (path === '/admin') return this.adminRoute(req);
     const backup = path.match(BACKUP_PATH);
     if (backup) return this.backupRoute(req, ip, backup[1]);
     if (path === '/crash') return this.crash(req, ip);
@@ -244,6 +278,90 @@ export class Relay extends DurableObject<Env> {
     server.send(JSON.stringify(['AUTH', att.challenge]));
     if ((await this.ctx.storage.getAlarm()) == null) await this.ctx.storage.setAlarm(Date.now() + 60 * 60 * 1000);
     return new Response(null, { status: 101, webSocket: client });
+  }
+
+  members: Members;
+  // Registering: per address. Without an invite 10 at once, then one every 10 minutes;
+  // with one (or just asking) 60 at once, then one a second.
+  openJoinRate = new Buckets(10, 1 / 600);
+  registerRate = new Buckets(60, 1);
+
+  /** The signed URL for a route: the public address, or localhost in tests (wrangler dev rewrites the host). */
+  signedFor(path: string) {
+    const local = new RegExp(`^http://(localhost|127\\.0\\.0\\.1):\\d+${path}$`);
+    return (u: string) => u === `https://relay.tegami.chat${path}` || (this.devLocal && local.test(u));
+  }
+
+  /**
+   * POST /register, signed (NIP-98) by the key itself. Body: {} to ask, {invite} or
+   * {turnstile} to register. An open key sending an invite becomes an invite key.
+   * Answers {member, via, trusted, code}; code is this key's own invite code, if it may invite.
+   */
+  async registerRoute(req: Request, ip: string): Promise<Response> {
+    const fail = (status: number, error: string) => Response.json({ error }, { status, headers: CORS });
+    if (!this.registerRate.take(ip)) return fail(429, 'rate-limited');
+    const body = await req.text();
+    if (body.length > 4096) return fail(413, 'too large');
+    const pubkey = await nip98(req, body, this.signedFor('/register'));
+    if (!pubkey) return fail(401, 'auth-required');
+    let ask: { invite?: unknown; turnstile?: unknown };
+    try {
+      ask = JSON.parse(body || '{}') ?? {};
+    } catch {
+      return fail(400, 'invalid json');
+    }
+    let m = this.members.get(pubkey);
+    if (m?.banned) return fail(403, 'blocked');
+    let inviteError = '';
+    if (typeof ask.invite === 'string' && ask.invite && (!m || m.via === 'open')) {
+      const inviter = /^[a-z2-9]{6,32}$/.test(ask.invite) ? this.members.inviter(ask.invite) : null;
+      if (inviter === 'used-up') inviteError = 'invite-used-up';
+      else if (!inviter || inviter === pubkey) inviteError = 'invite-invalid';
+      else {
+        this.members.joinWithInvite(pubkey, inviter);
+        m = this.members.get(pubkey);
+      }
+    }
+    if (!m && typeof ask.turnstile === 'string' && ask.turnstile) {
+      if (!this.openJoinRate.take(ip)) return fail(429, 'rate-limited');
+      if (!(await turnstileOk(ask.turnstile, this.env.TURNSTILE_SECRET, ip, this.devLocal))) return fail(403, 'turnstile-failed');
+      this.members.joinOpen(pubkey);
+      m = this.members.get(pubkey);
+    }
+    if (!m && inviteError) return fail(400, inviteError);
+    return Response.json(this.describe(m, inviteError), { headers: CORS });
+  }
+
+  describe(m: Member | null, inviteError = '') {
+    if (!m) return { member: false };
+    return {
+      member: true,
+      via: m.via,
+      trusted: this.members.trusted(m),
+      banned: !!m.banned,
+      code: this.members.code(m),
+      ...(inviteError ? { inviteError } : {}),
+    };
+  }
+
+  /** POST /admin, signed (NIP-98) by an operator key. Body: {action, pubkey, invitees?, per_day?}. */
+  async adminRoute(req: Request): Promise<Response> {
+    const body = await req.text();
+    const signer = await nip98(req, body, this.signedFor('/admin'));
+    const admins = (this.env.ADMIN_PUBKEYS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+    if (!signer || !admins.includes(signer)) return new Response('restricted', { status: 403, headers: CORS });
+    let a: { action?: unknown; pubkey?: unknown; invitees?: unknown; per_day?: unknown };
+    try {
+      a = JSON.parse(body);
+    } catch {
+      return new Response('invalid json', { status: 400, headers: CORS });
+    }
+    if (typeof a.action !== 'string' || typeof a.pubkey !== 'string' || !/^[0-9a-f]{64}$/.test(a.pubkey)) {
+      return new Response('invalid', { status: 400, headers: CORS });
+    }
+    const changed = this.members.admin(a.action, a.pubkey, { invitees: a.invitees === true, per_day: a.per_day as number });
+    if (changed === null) return new Response('invalid', { status: 400, headers: CORS });
+    return Response.json({ changed, member: this.describe(this.members.get(a.pubkey)) }, { headers: CORS });
   }
 
   ipBytes = new Buckets(FILE_RATE.ip.burst, FILE_RATE.ip.perSecond);
@@ -293,6 +411,9 @@ export class Relay extends DurableObject<Env> {
     if (auth?.kind !== 24242 || tag('t') !== 'upload' || expiration < now() || !verifyEvent(auth)) {
       return fail(401, 'auth-required: invalid upload authorization');
     }
+    const uploader = this.members.get(auth.pubkey);
+    if (!uploader) return fail(403, 'restricted: register first (POST /register)');
+    if (uploader.banned) return fail(403, 'blocked: this key is stopped');
     const size = Number(req.headers.get('Content-Length') ?? 0);
     if (!size || size > MAX_FILE_BYTES) return fail(413, 'too large: files up to 10 MB');
     if (!this.ipBytes.take(ip, size) || !this.keyBytes.take(auth.pubkey, size)) {
@@ -449,6 +570,7 @@ export class Relay extends DurableObject<Env> {
   async alarm() {
     // received_at, not created_at: NIP-59 wraps carry a randomized past created_at.
     this.sql.exec('DELETE FROM events WHERE received_at < ?', now() - RETENTION_SECONDS);
+    this.members.forgetOldInvites();
     await this.ctx.storage.setAlarm(Date.now() + 24 * 60 * 60 * 1000);
   }
 
@@ -511,6 +633,10 @@ export class Relay extends DurableObject<Env> {
     if (!ev || !ALLOWED_KINDS.has(ev.kind)) return reply(false, 'blocked: only private messages are accepted');
     const ps = ev.tags.filter((t) => t[0] === 'p');
     if (ps.length !== 1) return reply(false, 'invalid: exactly one recipient');
+    const writer = this.members.get(att.pubkey);
+    if (!writer) return reply(false, 'restricted: register first (POST /register)');
+    if (writer.banned) return reply(false, 'blocked: this key is stopped');
+    const open = writer.via === 'open';
     if (!this.ipRate.take(att.ip) || !this.keyRate.take(att.pubkey)) {
       return reply(false, 'rate-limited: slow down');
     }
@@ -520,14 +646,19 @@ export class Relay extends DurableObject<Env> {
     const p = ps[0][1];
     const held = this.sql.exec('SELECT COUNT(*) AS n FROM events WHERE p = ?', p).one().n as number;
     if (held >= MAX_MAILBOX) return reply(false, 'rate-limited: the recipient has too many waiting messages');
+    if (open && p !== att.pubkey) {
+      const fromOpen = this.sql.exec('SELECT COUNT(*) AS n FROM events WHERE p = ? AND open = 1', p).one().n as number;
+      if (fromOpen >= MAX_OPEN_MAILBOX) return reply(false, 'rate-limited: the recipient has too many waiting messages');
+    }
     const res = this.sql.exec(
-      'INSERT OR IGNORE INTO events (id, kind, created_at, received_at, p, raw) VALUES (?, ?, ?, ?, ?, ?)',
+      'INSERT OR IGNORE INTO events (id, kind, created_at, received_at, p, raw, open) VALUES (?, ?, ?, ?, ?, ?, ?)',
       ev.id,
       ev.kind,
       ev.created_at,
       now(),
       p,
       JSON.stringify(ev),
+      open ? 1 : 0,
     );
     reply(true, res.rowsWritten === 0 ? 'duplicate: already have this event' : '');
     if (res.rowsWritten === 0) return;
@@ -535,7 +666,9 @@ export class Relay extends DurableObject<Env> {
     // Not for the sender's own copy: the sending connection is logged in as the sender.
     // Envelopes that expire soon are call signals (or moving an account). Only a ringing call,
     // marked t=call by the app, is worth a notification; the rest of a call's signals are not.
-    if (p !== att.pubkey) {
+    // Nor for keys registered without an invite: their messages show only from friends, and
+    // the relay cannot tell who is whose friend, so it never rings for them.
+    if (p !== att.pubkey && !open) {
       const short = ev.tags.some((t) => t[0] === 'expiration');
       const call = ev.tags.some((t) => t[0] === 't' && t[1] === 'call');
       if (!short) this.ctx.waitUntil(this.notify(p, 'message'));
@@ -546,7 +679,7 @@ export class Relay extends DurableObject<Env> {
       const o = other.deserializeAttachment() as Attachment;
       if (o.pubkey !== p) continue;
       for (const [subId, filters] of Object.entries(o.subs)) {
-        if (filters.some((f) => matches(f, ev))) other.send(JSON.stringify(['EVENT', subId, ev]));
+        if (filters.some((f) => matches(f, ev))) other.send(JSON.stringify(['EVENT', subId, open ? { ...ev, tegami_open: 1 } : ev]));
       }
     }
   }
@@ -568,7 +701,7 @@ export class Relay extends DurableObject<Env> {
       const limit = Math.min(f.limit ?? 500, 500);
       const rows = this.sql
         .exec(
-          'SELECT raw FROM events WHERE p = ? AND created_at >= ? AND created_at <= ? ORDER BY created_at DESC LIMIT ?',
+          'SELECT raw, open FROM events WHERE p = ? AND created_at >= ? AND created_at <= ? ORDER BY created_at DESC LIMIT ?',
           att.pubkey,
           f.since ?? 0,
           f.until ?? 2 ** 40,
@@ -579,7 +712,7 @@ export class Relay extends DurableObject<Env> {
         const ev = JSON.parse(row.raw as string) as NostrEvent;
         if (seen.has(ev.id) || !matches(f, ev)) continue;
         seen.add(ev.id);
-        ws.send(JSON.stringify(['EVENT', subId, ev]));
+        ws.send(JSON.stringify(['EVENT', subId, row.open ? { ...ev, tegami_open: 1 } : ev]));
       }
     }
     ws.send(JSON.stringify(['EOSE', subId]));

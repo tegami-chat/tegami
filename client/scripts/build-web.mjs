@@ -10,11 +10,18 @@ import { join, resolve } from 'node:path';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const RELAY = 'wss://relay.tegami.chat';
+// Cloudflare Turnstile site key (public) for registering without an invite. Without it the
+// app would send the tests' 'dev-pass', which the real relay refuses.
+const SITEKEY = process.env.EXPO_PUBLIC_TURNSTILE_SITEKEY ?? '';
+if (!/^0x[0-9A-Za-z_-]{10,}$/.test(SITEKEY)) {
+  console.error('Set EXPO_PUBLIC_TURNSTILE_SITEKEY to the Turnstile site key of app.tegami.chat. Do not deploy.');
+  process.exit(1);
+}
 
 execSync('npx expo export --platform web --output-dir dist --clear', {
   cwd: ROOT,
   stdio: 'inherit',
-  env: { ...process.env, NODE_ENV: 'production', EXPO_PUBLIC_TEGAMI_RELAYS: RELAY, EXPO_PUBLIC_TEGAMI_FILES: 'https://relay.tegami.chat' },
+  env: { ...process.env, NODE_ENV: 'production', EXPO_PUBLIC_TEGAMI_RELAYS: RELAY, EXPO_PUBLIC_TEGAMI_FILES: 'https://relay.tegami.chat', EXPO_PUBLIC_TURNSTILE_SITEKEY: SITEKEY },
 });
 
 const dir = join(ROOT, 'dist/_expo/static/js/web');

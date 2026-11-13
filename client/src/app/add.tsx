@@ -3,12 +3,12 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Palette, usePalette } from '@/constants/theme';
-import { inviteLink, inviteModel, inviteName, parsePubkey, takePendingInvite, useTegami } from '@/lib/tegami';
+import { inviteCodeOf, inviteLink, inviteModel, inviteName, parsePubkey, takePendingInvite, useTegami } from '@/lib/tegami';
 
 export default function Add() {
   const c = usePalette();
   const s = styles(c);
-  const { npub, me, contacts, addContact, myName, setMyName } = useTegami();
+  const { npub, me, contacts, addContact, myName, setMyName, inviteCode, trusted, registration, registerWith } = useTegami();
   const [opened] = useState(takePendingInvite);
   const [invite, setInvite] = useState(opened);
   const [name, setName] = useState(inviteName(opened));
@@ -18,7 +18,7 @@ export default function Add() {
   const model = inviteModel(invite);
   const known = contacts.find((x) => x.pubkey === peer);
   const canAdd = !!peer && peer !== me && name.trim().length > 0;
-  const myInvite = npub ? inviteLink(npub, myName) : '';
+  const myInvite = npub ? inviteLink(npub, myName, inviteCode) : '';
   const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
   function flash(kind: 'copied' | 'shared') {
@@ -53,6 +53,9 @@ export default function Add() {
   function add() {
     if (!peer || !canAdd) return;
     addContact(peer, name.trim(), model || undefined);
+    // Registered without an invite: a friend's code makes my messages reach strangers too.
+    const code = inviteCodeOf(invite);
+    if (code && registration === 'ok' && !trusted) void registerWith({ invite: code });
     router.replace({ pathname: '/chat/[peer]', params: { peer } });
   }
 

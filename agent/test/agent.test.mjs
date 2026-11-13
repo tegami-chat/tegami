@@ -2,6 +2,7 @@
 // Default: starts the in-memory development relay from ../client/dev/relay.mjs.
 // RELAY=ws://127.0.0.1:8787 npm test   runs against the real relay code (wrangler dev).
 import { execFileSync, spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -65,6 +66,34 @@ function user() {
   return { sk, pk, npub: nip19.npubEncode(pk), pool, inbox, send, waitFor, listen };
 }
 
+const HTTP = RELAY.replace(/^ws/, 'http').replace(/\/$/, '');
+/** Registers a test key as if invited: the dev relay's /_trust, or the real relay's operator route. */
+async function trustKey(sk) {
+  if (!process.env.RELAY) {
+    await fetch(`${HTTP}/_trust`, { method: 'POST', body: JSON.stringify({ pubkey: getPublicKey(sk) }) });
+    return;
+  }
+  const { trust } = await import('../../relay/test/join.mjs');
+  await trust(sk);
+}
+/** What the relay says about a key (POST /register {}). With onlyKnown, null for a key it does not know. */
+async function ask(skOrPub, onlyKnown = false) {
+  if (onlyKnown) {
+    // We do not hold the AI's secret here: look at the dev relay's list, or skip on the real relay.
+    if (process.env.RELAY) return null;
+    const list = await (await fetch(`${HTTP}/_members`)).json();
+    return list.find((m) => m.pubkey === skOrPub) ?? null;
+  }
+  const text = '{}';
+  const url = `${HTTP}/register`;
+  const auth = finalizeEvent(
+    { kind: 27235, created_at: Math.floor(Date.now() / 1000), content: '', tags: [['u', url], ['method', 'POST'], ['payload', createHash('sha256').update(text).digest('hex')]] },
+    skOrPub,
+  );
+  const res = await fetch(url, { method: 'POST', headers: { Authorization: `Nostr ${Buffer.from(JSON.stringify(auth)).toString('base64')}` }, body: text });
+  return res.json();
+}
+
 const relay = process.env.RELAY ? null : spawn(process.execPath, [join(ROOT, '../client/dev/relay.mjs')], { env: { ...process.env, PORT: String(PORT) }, stdio: 'ignore' });
 await new Promise((r) => setTimeout(r, 800));
 let watch;
@@ -77,7 +106,14 @@ try {
   const owner = user();
   const stranger = user();
   const friend = user();
-  cli('add', `https://app.tegami.chat/i#${owner.npub}&n=${encodeURIComponent('よしひろ')}`, '--trust');
+  // Only registered keys may write. The people register as if invited; the AI registers
+  // with the code in its owner's invite link.
+  for (const u of [owner, stranger, friend]) await trustKey(u.sk);
+  const ownerCode = (await ask(owner.sk)).code;
+  check('the owner has an invite code', /^[a-z2-9]{6,32}$/.test(ownerCode ?? ''));
+  check('the AI is not registered before it is given a link', (await ask(nip19.decode(invite.match(/npub1[0-9a-z]+/)[0]).data, true)) === null);
+  const added = cli('add', `https://app.tegami.chat/i#${owner.npub}&n=${encodeURIComponent('よしひろ')}&c=${ownerCode}`, '--trust');
+  check('add registers the AI with the code in the link', added.includes('Registered with the Tegami relay'));
   cli('add', friend.npub, '--name', 'ともだち');
   check('contacts list the trusted owner', /\* よしひろ/.test(cli('contacts')));
 
