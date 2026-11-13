@@ -51,7 +51,8 @@ export function takeLinkKey() {
   return k;
 }
 
-export type Bundle = { v: 1; secretHex: string; myName: string; contacts: Contact[]; groups: Group[] };
+// blocked: the people this account blocked (added 2026-11-13; older bundles have none).
+export type Bundle = { v: 1; secretHex: string; myName: string; contacts: Contact[]; groups: Group[]; blocked?: string[] };
 
 type Auth = (t: EventTemplate) => Promise<VerifiedEvent>;
 
@@ -137,6 +138,7 @@ export function cleanBundle(raw: unknown): Bundle | null {
     myName: String(bundle.myName ?? '').slice(0, 40),
     contacts: Array.isArray(bundle.contacts) ? bundle.contacts : [],
     groups: Array.isArray(bundle.groups) ? bundle.groups : [],
+    blocked: Array.isArray(bundle.blocked) ? bundle.blocked.filter((p) => typeof p === 'string' && /^[0-9a-f]{64}$/.test(p)) : [],
   };
 }
 

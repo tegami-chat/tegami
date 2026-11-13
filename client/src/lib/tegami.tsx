@@ -706,9 +706,12 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     save(k('myName'), moved.myName);
     save(k('contacts'), moved.contacts);
     save(k('groups'), moved.groups);
+    save(k('blocked'), moved.blocked ?? []);
     setMyNameState(moved.myName);
     setContacts(moved.contacts);
     setGroups(moved.groups);
+    blockedRef.current = moved.blocked ?? [];
+    setBlocked(moved.blocked ?? []);
     const keys = takeRestoredKeys();
     if (keys) {
       await saveLocal(sk, { keys, stale: [] });
@@ -760,9 +763,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
 
   const makeTransferLink = useCallback(async () => {
     if (!secret || !pool.current || !authRef.current) throw new Error('not open');
-    const bundle: Bundle = { v: 1, secretHex: bytesToHex(secret), myName, contacts, groups };
+    const bundle: Bundle = { v: 1, secretHex: bytesToHex(secret), myName, contacts, groups, blocked };
     return sendTransfer(pool.current, RELAYS, authRef.current, bundle, globalThis.location?.origin ?? APP_ORIGIN);
-  }, [secret, myName, contacts, groups]);
+  }, [secret, myName, contacts, groups, blocked]);
 
   const unlock = useCallback(async () => {
     if (!vault) return;
@@ -1078,8 +1081,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
   const currentBundle = useCallback(
-    (sk: Uint8Array): Bundle => ({ v: 1, secretHex: bytesToHex(sk), myName, contacts, groups }),
-    [myName, contacts, groups],
+    (sk: Uint8Array): Bundle => ({ v: 1, secretHex: bytesToHex(sk), myName, contacts, groups, blocked }),
+    [myName, contacts, groups, blocked],
   );
 
   const makeRecoveryCode = useCallback(async () => {

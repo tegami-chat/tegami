@@ -2013,6 +2013,25 @@ async function main() {
       await a.page.getByText('設定', { exact: true }).click();
       await waitText(a.page, 'ブロックリスト');
       await waitText(a.page, 'びー');
+
+      // Moving the account to another device brings the block list along.
+      await a.page.getByText('別の端末でも使う').click();
+      await waitText(a.page, 'まで使えます');
+      const moveLink = (await text(a.page)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)?.[0];
+      assert(moveLink, 'no moving link');
+      const a2 = await newUser(browser);
+      await a2.page.goto(moveLink);
+      await button(a2.page, 'この端末で使う').click();
+      await waitOpen(a2.page);
+      await a2.page.goto(ORIGIN + '/settings');
+      await a2.page.waitForFunction(() => /ひらく|ブロックリスト/.test(document.body.innerText), null, { timeout: 15000 });
+      if ((await text(a2.page)).includes('ひらく')) await button(a2.page, 'ひらく').click();
+      await waitText(a2.page, 'ブロックリスト');
+      assert(!(await text(a2.page)).includes('ブロックしている人はいません'), 'the block list did not move');
+      await waitText(a2.page, 'びー');
+      await a2.context.close();
+      await a.page.getByText('閉じる').click().catch(() => {});
+
       await button(a.page, 'ブロック解除').click();
       await waitText(a.page, 'ブロックしている人はいません');
 
