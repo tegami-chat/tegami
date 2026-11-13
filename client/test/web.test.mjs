@@ -1976,6 +1976,57 @@ async function main() {
       }
       await a.context.close();
     });
+
+    await test('Block: a blocked person cannot reach me; their chat and calls disappear; unblocking lets them back', async () => {
+      const a = await person(browser, 'えー');
+      const b = await person(browser, 'びー');
+      await befriend(b, a);
+      await befriend(a, b);
+      await a.page.goto(ORIGIN + '/');
+      await b.page.getByPlaceholder('メッセージ').fill('ブロック前の手紙');
+      await button(b.page, '送る').click();
+      await waitText(a.page, 'ブロック前の手紙');
+      await a.page.getByText('びー').first().click();
+      await waitText(a.page, 'ブロック前の手紙');
+
+      let asked = '';
+      a.page.once('dialog', (d) => {
+        asked = d.message();
+        return d.accept();
+      });
+      await button(a.page, 'ブロック').click();
+      await waitText(a.page, 'ブロック中です');
+      assert(asked === 'びーさんをブロックしますか？', `confirm: ${asked}`);
+
+      await b.page.getByPlaceholder('メッセージ').fill('ブロック中の手紙');
+      await button(b.page, '送る').click();
+      await noText(a.page, 'ブロック中の手紙', 2000);
+      await b.page.getByRole('button', { name: '音声通話' }).click();
+      await waitText(b.page, '呼び出し中');
+      await noText(a.page, '応答', 2000);
+      await button(b.page, '通話を終了').click();
+
+      await a.page.goBack();
+      await noText(a.page, 'ブロック中の手紙', 1000);
+      assert(!(await text(a.page)).includes('びー'), 'blocked chat still in the list');
+
+      await a.page.getByText('設定', { exact: true }).click();
+      await waitText(a.page, 'ブロックリスト');
+      await waitText(a.page, 'びー');
+      await button(a.page, 'ブロック解除').click();
+      await waitText(a.page, 'ブロックしている人はいません');
+
+      await a.page.goBack();
+      await waitText(a.page, 'びー');
+      await b.page.getByPlaceholder('メッセージ').fill('解除後の手紙');
+      await button(b.page, '送る').click();
+      await waitText(a.page, '解除後の手紙');
+      await a.page.getByText('びー').first().click();
+      await waitText(a.page, '解除後の手紙');
+      assert((await text(a.page)).includes('ブロック前の手紙'), 'old message lost');
+      assert(!(await text(a.page)).includes('ブロック中の手紙'), 'message while blocked appeared');
+      for (const u of [a, b]) await u.context.close();
+    });
   } finally {
     await browser.close();
     server.close();

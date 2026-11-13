@@ -16,7 +16,7 @@ export default function Chat() {
   const s = styles(c);
   // m: a message to jump to (from search).
   const { peer, m: focus } = useLocalSearchParams<{ peer: string; m?: string }>();
-  const { me, myName, contacts, groups, messages, send, sendPhoto, addContact, markRead, cancelSend, retrySend } = useTegami();
+  const { me, myName, contacts, groups, blocked, block, unblock, messages, send, sendPhoto, addContact, markRead, cancelSend, retrySend } = useTegami();
   // A message waiting to be sent that was tapped: it offers to stop sending.
   const [offered, setOffered] = useState<string | null>(null);
   const [replying, setReplying] = useState<Message | null>(null);
@@ -34,9 +34,10 @@ export default function Chat() {
   const { supported, startCall } = useCall();
 
   const group = !!peer && isGroup(peer);
+  const isBlocked = !!peer && !group && blocked.includes(peer);
   const contact = contacts.find((x) => x.pubkey === peer);
   // 1:1 with a person (an AI friend cannot pick up). Groups later.
-  const canCall = supported && !group && !!contact && !contact.model;
+  const canCall = supported && !group && !!contact && !contact.model && !isBlocked;
   const thread = useMemo(() => messages.filter((m) => m.peer === peer).reverse(), [messages, peer]);
   const byId = useMemo(() => new Map(thread.map((m, i) => [m.id, i])), [thread]);
 
@@ -101,8 +102,16 @@ export default function Chat() {
     if (peer && focused && visible) markRead(peer);
   }, [peer, focused, visible, thread, markRead]);
 
+  function confirmBlock() {
+    if (!peer || group) return;
+    const msg = `${personName(peer, contacts)}さんをブロックしますか？`;
+    if (typeof window !== 'undefined' && typeof window.confirm === 'function' && !window.confirm(msg)) return;
+    setReplying(null);
+    block(peer);
+  }
+
   async function pickPhoto() {
-    if (!peer || sending) return;
+    if (!peer || sending || isBlocked) return;
     const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
     const asset = picked.canceled ? null : picked.assets[0];
     if (!asset) return;
@@ -121,7 +130,7 @@ export default function Chat() {
 
   async function submit() {
     const text = draft.trim();
-    if (!text || !peer) return;
+    if (!text || !peer || isBlocked) return;
     setFailed(false);
     // Never lost: without a connection it waits in the chat and goes out later.
     setDraft('');
@@ -147,18 +156,26 @@ export default function Chat() {
               : peer
                 ? shortId(peer)
                 : '',
-          headerRight: canCall
-            ? () => (
-                <View style={s.callButtons}>
-                  <Pressable role="button" aria-label="音声通話" style={s.callButton} onPress={() => startCall(peer, false)}>
-                    <Text style={s.callText}>通話</Text>
-                  </Pressable>
-                  <Pressable role="button" aria-label="ビデオ通話" style={s.callButton} onPress={() => startCall(peer, true)}>
-                    <Text style={s.callText}>ビデオ</Text>
-                  </Pressable>
-                </View>
-              )
-            : undefined,
+          headerRight:
+            !group && peer && !isBlocked
+              ? () => (
+                  <View style={s.callButtons}>
+                    {canCall && (
+                      <>
+                        <Pressable role="button" aria-label="音声通話" style={s.callButton} onPress={() => startCall(peer, false)}>
+                          <Text style={s.callText}>通話</Text>
+                        </Pressable>
+                        <Pressable role="button" aria-label="ビデオ通話" style={s.callButton} onPress={() => startCall(peer, true)}>
+                          <Text style={s.callText}>ビデオ</Text>
+                        </Pressable>
+                      </>
+                    )}
+                    <Pressable role="button" style={s.callButton} onPress={confirmBlock}>
+                      <Text style={s.callText}>ブロック</Text>
+                    </Pressable>
+                  </View>
+                )
+              : undefined,
         }}
       />
       {!group && !contact && peer && (
@@ -293,51 +310,62 @@ export default function Chat() {
         }}
       />
       {failed && <Text style={s.error}>送れませんでした。もう一度送ってください</Text>}
-      {replying && (
-        <View style={s.replyBar} testID="replying">
-          <View style={s.replyBody}>
-            <Text style={s.quoteName} numberOfLines={1}>
-              {nameOf(replying.from)}
-            </Text>
-            <Text style={s.quoteText} numberOfLines={1}>
-              {firstLine(replying)}
-            </Text>
-          </View>
-          <Pressable role="button" aria-label="キャンセル" style={s.replyClose} onPress={() => setReplying(null)}>
-            <Text style={s.replyCloseText}>×</Text>
+      {isBlocked ? (
+        <View style={s.blockedBar}>
+          <Text style={s.blockedText}>ブロック中です</Text>
+          <Pressable role="button" onPress={() => unblock(peer)}>
+            <Text style={s.callText}>ブロック解除</Text>
           </Pressable>
         </View>
+      ) : (
+        <>
+          {replying && (
+            <View style={s.replyBar} testID="replying">
+              <View style={s.replyBody}>
+                <Text style={s.quoteName} numberOfLines={1}>
+                  {nameOf(replying.from)}
+                </Text>
+                <Text style={s.quoteText} numberOfLines={1}>
+                  {firstLine(replying)}
+                </Text>
+              </View>
+              <Pressable role="button" aria-label="キャンセル" style={s.replyClose} onPress={() => setReplying(null)}>
+                <Text style={s.replyCloseText}>×</Text>
+              </Pressable>
+            </View>
+          )}
+          <View style={s.composer}>
+            <Pressable style={[s.attach, sending && s.disabled]} onPress={pickPhoto} disabled={sending} role="button">
+              <Text style={s.attachText}>写真</Text>
+            </Pressable>
+            <TextInput
+              ref={input}
+              style={s.input}
+              value={draft}
+              onChangeText={setDraft}
+              placeholder="メッセージ"
+              placeholderTextColor={c.muted}
+              multiline
+              numberOfLines={1}
+              onKeyPress={(e) => {
+                const ne = e.nativeEvent as unknown as { key: string; shiftKey?: boolean; isComposing?: boolean };
+                if (Platform.OS === 'web' && ne.key === 'Enter' && !ne.shiftKey && !ne.isComposing) {
+                  (e as unknown as { preventDefault: () => void }).preventDefault();
+                  submit();
+                }
+              }}
+            />
+            <Pressable
+              style={[s.send, (!draft.trim() || sending) && s.disabled]}
+              onPress={submit}
+              disabled={!draft.trim() || sending}
+              role="button"
+              aria-label="送る">
+              <Text style={s.sendText}>送る</Text>
+            </Pressable>
+          </View>
+        </>
       )}
-      <View style={s.composer}>
-        <Pressable style={[s.attach, sending && s.disabled]} onPress={pickPhoto} disabled={sending} role="button">
-          <Text style={s.attachText}>写真</Text>
-        </Pressable>
-        <TextInput
-          ref={input}
-          style={s.input}
-          value={draft}
-          onChangeText={setDraft}
-          placeholder="メッセージ"
-          placeholderTextColor={c.muted}
-          multiline
-          numberOfLines={1}
-          onKeyPress={(e) => {
-            const ne = e.nativeEvent as unknown as { key: string; shiftKey?: boolean; isComposing?: boolean };
-            if (Platform.OS === 'web' && ne.key === 'Enter' && !ne.shiftKey && !ne.isComposing) {
-              (e as unknown as { preventDefault: () => void }).preventDefault();
-              submit();
-            }
-          }}
-        />
-        <Pressable
-          style={[s.send, (!draft.trim() || sending) && s.disabled]}
-          onPress={submit}
-          disabled={!draft.trim() || sending}
-          role="button"
-          aria-label="送る">
-          <Text style={s.sendText}>送る</Text>
-        </Pressable>
-      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -401,6 +429,17 @@ const styles = (c: Palette) =>
     },
     addButton: { backgroundColor: c.accent, borderRadius: 20, paddingHorizontal: 14, justifyContent: 'center' },
     error: { fontSize: 13, color: c.accent, paddingHorizontal: 16, paddingBottom: 4 },
+    blockedBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: c.line,
+      backgroundColor: c.surface,
+    },
+    blockedText: { fontSize: 15, color: c.muted },
     composer: {
       flexDirection: 'row',
       alignItems: 'flex-end',

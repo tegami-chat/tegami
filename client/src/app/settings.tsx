@@ -5,7 +5,7 @@ import { Image, Linking, Pressable, ScrollView, Share, StyleSheet, Switch, Text,
 import { AccountList } from '@/components/account-list';
 import { Palette, usePalette } from '@/constants/theme';
 import { pushState, type PushState } from '@/lib/push';
-import { useTegami } from '@/lib/tegami';
+import { personName, useTegami } from '@/lib/tegami';
 
 const STATS_URL = 'https://relay.tegami.chat/stats';
 
@@ -27,6 +27,9 @@ export default function Settings() {
     recoveryBehind,
     showUnread,
     setShowUnread,
+    contacts,
+    blocked,
+    unblock,
   } = useTegami();
   // The recovery code is shown once, right after it is made, and never kept on screen after.
   const [newCode, setNewCode] = useState<string | null>(null);
@@ -240,6 +243,24 @@ export default function Settings() {
       <Pressable style={s.card} onPress={exportFile} role="button">
         <Text style={s.action}>{exported ? '書き出しました' : '会話を書き出す'}</Text>
       </Pressable>
+
+      <Text style={s.heading}>ブロックリスト</Text>
+      {blocked.length === 0 ? (
+        <View style={s.card}>
+          <Text style={s.value}>ブロックしている人はいません</Text>
+        </View>
+      ) : (
+        blocked.map((pubkey) => (
+          <View key={pubkey} style={[s.card, s.row]}>
+            <Text style={s.label} numberOfLines={1}>
+              {personName(pubkey, contacts)}
+            </Text>
+            <Pressable onPress={() => unblock(pubkey)} role="button">
+              <Text style={s.action}>ブロック解除</Text>
+            </Pressable>
+          </View>
+        ))
+      )}
 
       <Text style={s.heading}>Tegami が数えていること</Text>
       <Pressable style={s.card} onPress={() => Linking.openURL(STATS_URL)} role="link">
