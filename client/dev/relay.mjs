@@ -7,6 +7,7 @@
 // Tests: POST /_trust {pubkey} registers a key as if invited, GET /_members lists them.
 // Unlike the real relay, 'dev-pass' registers a key as invited (so tests of other features
 // see what invited people see), until POST /_open {on: true} makes it register open keys.
+// Reports: POST /report like relay.tegami.chat (NIP-98, registered keys); GET /_reports lists them for tests.
 import { createHash, randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
@@ -46,6 +47,21 @@ const MAX_BACKUP_BYTES = 64 * 1024;
 const members = new Map(); // pubkey -> { via, invitedBy, code, banned }
 const codes = new Map(); // code -> pubkey
 const openIds = new Set(); // envelopes written by open keys
+const reports = []; // { reporter, reported, reason, messages, at }
+const REPORT_REASONS = ['spam', 'scam', 'harassment', 'other'];
+// Like relay/src/reports.ts: null when the body is a valid report, else why not.
+const reportError = (r) => {
+  if (!r || typeof r !== 'object' || Array.isArray(r)) return 'invalid: not an object';
+  if (typeof r.pubkey !== 'string' || !/^[0-9a-f]{64}$/.test(r.pubkey)) return 'invalid: pubkey';
+  if (!REPORT_REASONS.includes(r.reason)) return 'invalid: reason';
+  if (r.messages === undefined) return null;
+  if (!Array.isArray(r.messages) || r.messages.length > 20) return 'invalid: messages';
+  for (const m of r.messages) {
+    if (typeof m?.text !== 'string' || m.text.length > 2000) return 'invalid: message text';
+    if (!Number.isInteger(m.at) || m.at < 0) return 'invalid: message time';
+  }
+  return null;
+};
 let devPassOpen = false;
 const trusted = (m) => !!m && !m.banned && m.via !== 'open';
 const codeOf = (pubkey) => {
@@ -164,6 +180,36 @@ const http = createServer((req, res) => {
   if (req.url === '/_members' && req.method === 'GET') {
     return send(200, JSON.stringify([...members].map(([pubkey, m]) => ({ pubkey, ...m }))), 'application/json');
   }
+  if (req.url === '/report' && req.method === 'POST') {
+    let body = '';
+    req.setEncoding('utf8'); // attached messages can be long Japanese text, split across chunks
+    req.on('data', (c) => (body += c));
+    req.on('end', () => {
+      const json = (status, obj) => send(status, JSON.stringify(obj), 'application/json');
+      const reporter = nip98(req, body, '/report');
+      if (!reporter) return json(401, { error: 'auth-required' });
+      let r;
+      try {
+        r = JSON.parse(body);
+      } catch {
+        return json(400, { error: 'invalid json' });
+      }
+      const m = members.get(reporter);
+      if (!m) return json(403, { error: 'restricted: register first (POST /register)' });
+      if (m.banned) return json(403, { error: 'blocked' });
+      const why = reportError(r);
+      if (why) return json(400, { error: why });
+      if (r.pubkey === reporter) return json(400, { error: 'invalid: cannot report yourself' });
+      // 20 a day per reporter, one a day about the same key.
+      const today = reports.filter((x) => x.reporter === reporter && x.at > Date.now() / 1000 - 86400);
+      if (today.length >= 20 || today.some((x) => x.reported === r.pubkey)) return json(429, { error: 'rate-limited: too many reports' });
+      const messages = r.messages?.length ? r.messages.map(({ text, at }) => ({ text, at })) : null;
+      reports.push({ reporter, reported: r.pubkey, reason: r.reason, messages, at: Math.floor(Date.now() / 1000) });
+      send(204);
+    });
+    return;
+  }
+  if (req.url === '/_reports' && req.method === 'GET') return send(200, JSON.stringify(reports), 'application/json');
   if (req.url === '/_crashes' && req.method === 'GET') return send(200, JSON.stringify(crashes), 'application/json');
   // Web Push, like relay.tegami.chat: a public key, and registrations signed with NIP-98.
   // Registered devices are listed at GET /_push for tests (no push is sent).
