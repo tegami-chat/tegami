@@ -10,7 +10,7 @@ import { describeAccount } from './accounts';
 import { clearNewMark } from './sw-store';
 import { createDeviceVault, deviceVaultAvailable, openDeviceVault, type DeviceVault } from './device-vault';
 import { setCrashReports } from './crash';
-import { encryptAndUpload, fileFromRumor, fileTags, forgetFile, keepSent, keptFile, openFile, shrinkAvatar, shrinkImage, validFileRef, type FileRef } from './files';
+import { encryptAndUpload, fileFromRumor, fileTags, forgetFile, isStampRumor, keepSent, keptFile, openFile, shrinkAvatar, shrinkImage, shrinkStamp, validFileRef, type FileRef } from './files';
 import { backoff, loadOutbox, publishOne, saveOutbox, type Outgoing } from './outbox';
 import { k, load, remove, save } from './storage';
 import { bundleSecret, sendTransfer, type Bundle } from './transfer';
@@ -34,6 +34,8 @@ export type Message = {
   at: number; // unix seconds
   /** A photo or file (NIP-17 kind 15). text is empty then. */
   file?: FileRef;
+  /** True when file is a stamp (kind 15 with a ["t", "stamp"] tag). */
+  stamp?: true;
   /** A call, recorded on this device only (never sent). text holds what the chat shows. */
   call?: CallRecord;
   /** When this device received it (ms). Only for messages from others. */
@@ -55,6 +57,9 @@ export const PROFILE_KIND = 10100;
 
 /** model: for an AI friend, which company's which model (always shown, philosophy #93). */
 export type Contact = { pubkey: string; name: string; model?: string; avatar?: FileRef };
+
+/** A stamp in my list (`k('stamps')`): an uploaded file and when it was uploaded (unix seconds). */
+export type Stamp = FileRef & { uploadedAt?: number };
 
 /** A group chat (NIP-17): a fixed set of people. A different set is a different chat. */
 export type Group = { id: string; name: string; members: string[] };
@@ -139,7 +144,17 @@ type TegamiState = {
   /** Makes the photo smaller, encrypts it on this device, uploads it and sends it. */
   sendPhoto: (peer: string, photo: Blob, replyTo?: string) => Promise<void>;
   /** Sends an already-uploaded photo or file to another chat without uploading again. */
-  forwardFile: (peer: string, file: FileRef) => Promise<void>;
+  forwardFile: (peer: string, file: FileRef, stamp?: boolean) => Promise<void>;
+  /** My stamps, kept per account on this device. */
+  stamps: Stamp[];
+  /** Shrinks an image, encrypts and uploads it, and adds it to my stamps. */
+  makeStamp: (image: Blob) => Promise<Stamp>;
+  /** Adds someone else's stamp to my stamps, fetching and keeping the image now. */
+  addStamp: (file: FileRef, uploadedAt?: number) => Promise<void>;
+  /** Removes a stamp from my stamps only. */
+  removeStamp: (sha256: string) => void;
+  /** Sends a stamp, uploading it again first if its upload is older than 20 days. */
+  sendStamp: (peer: string, stamp: Stamp, replyTo?: string) => Promise<void>;
   /** Turns notifications for this device on or off. Returns the new state. */
   setNotifications: (on: boolean) => Promise<PushState>;
   /** Sends a call signal to one person, and to my other devices when alsoMe. */
@@ -307,6 +322,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const [myAvatar, setMyAvatarState] = useState<FileRef | null>(null);
   const myAvatarRef = useRef<FileRef | null>(null);
   myAvatarRef.current = myAvatar;
+  const [stamps, setStamps] = useState<Stamp[]>([]);
   const profileAt = useRef(new Map<string, number>());
   const lastProfileAt = useRef(0);
   const [crashReports, setCrashReportsState] = useState(false);
@@ -355,6 +371,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       const loadedAvatar = load<FileRef | null>(k('avatar'), null);
       myAvatarRef.current = loadedAvatar;
       setMyAvatarState(loadedAvatar);
+      setStamps(load<Stamp[]>(k('stamps'), []));
       const loadedBlocked = load<string[]>(k('blocked'), []);
       blockedRef.current = loadedBlocked;
       setBlocked(loadedBlocked);
@@ -598,6 +615,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
           if (rumor.kind !== 14 && rumor.kind !== 15) return;
           const file = rumor.kind === 15 ? fileFromRumor(rumor.content, rumor.tags) : undefined;
           if (file === null) return;
+          const stamp = file && isStampRumor(rumor.tags) ? true : undefined;
           // Everyone in the chat except me: the author and every p tag.
           const others = [rumor.pubkey, ...rumor.tags.filter((t) => t[0] === 'p').map((t) => t[1])].filter(
             (k) => /^[0-9a-f]{64}$/.test(k) && k !== me,
@@ -619,6 +637,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
             text: file ? '' : rumor.content,
             at: rumor.created_at,
             ...(file ? { file } : {}),
+            ...(stamp ? { stamp: true } : {}),
             ...(replyTo ? { replyTo } : {}),
           };
           if (rumor.pubkey !== me) m.got = Date.now();
@@ -1145,12 +1164,115 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   );
 
   const forwardFile = useCallback(
-    async (peer: string, file: FileRef) => {
+    async (peer: string, file: FileRef, stamp?: boolean) => {
       if (!secret || !me) throw new Error('not open');
       if (!isGroup(peer) && blockedRef.current.includes(peer)) return;
-      const { rumor, wraps } = build(peer, 15, file.url, fileTags(file));
+      const { rumor, wraps } = build(peer, 15, file.url, fileTags(file, stamp));
       saveBox([...outbox.current, { id: rumor.id, peer, at: rumor.created_at, wraps, done: [] }]);
-      addMessage({ id: rumor.id, from: me, peer, text: '', at: rumor.created_at, file, pending: 'sending' });
+      addMessage({
+        id: rumor.id,
+        from: me,
+        peer,
+        text: '',
+        at: rumor.created_at,
+        file,
+        ...(stamp ? { stamp: true } : {}),
+        pending: 'sending',
+      });
+      void flush();
+    },
+    [secret, me, build, saveBox, addMessage, flush],
+  );
+
+  const makeStamp = useCallback(
+    async (image: Blob): Promise<Stamp> => {
+      if (!secret) throw new Error('not open');
+      const small = await shrinkStamp(image);
+      const dim = `${small.width}x${small.height}`;
+      const ref = await encryptAndUpload(small.bytes, small.type, secret, dim);
+      await keepSent(`stamp:${ref.sha256}`, small.bytes, small.type);
+      const entry: Stamp = { ...ref, uploadedAt: Math.floor(Date.now() / 1000) };
+      setStamps((prev) => {
+        const next = [...prev.filter((s) => s.sha256 !== entry.sha256), entry];
+        save(k('stamps'), next);
+        return next;
+      });
+      return entry;
+    },
+    [secret],
+  );
+
+  const addStamp = useCallback(
+    // Someone else uploaded it, maybe weeks ago (files are deleted after 30 days): 0 means
+    // "unknown", so the first time I send it, it is uploaded again as my own copy.
+    async (file: FileRef, uploadedAt = 0) => {
+      const { uploadedAt: _, ...clean } = file as Stamp;
+      const entry: Stamp = { ...clean, uploadedAt };
+      setStamps((prev) => {
+        if (prev.some((s) => s.sha256 === clean.sha256)) return prev;
+        const next = [...prev, entry];
+        save(k('stamps'), next);
+        return next;
+      });
+      const blob = await openFile(`stamp:${clean.sha256}`, clean);
+      await keepSent(`stamp:${clean.sha256}`, new Uint8Array(await blob.arrayBuffer()), clean.type);
+    },
+    [],
+  );
+
+  const removeStamp = useCallback((sha256: string) => {
+    setStamps((prev) => {
+      if (!prev.some((s) => s.sha256 === sha256)) return prev;
+      const next = prev.filter((s) => s.sha256 !== sha256);
+      save(k('stamps'), next);
+      return next;
+    });
+  }, []);
+
+  const sendStamp = useCallback(
+    async (peer: string, stamp: Stamp, replyTo?: string) => {
+      if (!secret || !me) throw new Error('not open');
+      if (!isGroup(peer) && blockedRef.current.includes(peer)) return;
+      const now = Math.floor(Date.now() / 1000);
+      const uploadedSec =
+        stamp.uploadedAt === undefined
+          ? 0
+          : stamp.uploadedAt > 1e11
+            ? Math.floor(stamp.uploadedAt / 1000)
+            : stamp.uploadedAt;
+      let file: FileRef;
+      if (now - uploadedSec >= 20 * 24 * 60 * 60) {
+        const blob = (await keptFile(`stamp:${stamp.sha256}`)) ?? (await openFile(`stamp:${stamp.sha256}`, stamp));
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        const fresh = await encryptAndUpload(bytes, stamp.type, secret, stamp.dim);
+        await keepSent(`stamp:${fresh.sha256}`, bytes, fresh.type);
+        const updated: Stamp = { ...fresh, uploadedAt: now };
+        setStamps((prev) => {
+          const next = prev.map((s) => (s.sha256 === stamp.sha256 ? updated : s));
+          save(k('stamps'), next);
+          return next;
+        });
+        file = fresh;
+      } else {
+        const { uploadedAt: _, ...clean } = stamp;
+        file = clean;
+      }
+      const reply = replyTo ? replyTag(15, replyTo) : [];
+      const { rumor, wraps } = build(peer, 15, file.url, [...fileTags(file, true), ...reply], now);
+      const kept = await keptFile(`stamp:${file.sha256}`);
+      if (kept) await keepSent(rumor.id, new Uint8Array(await kept.arrayBuffer()), file.type);
+      saveBox([...outbox.current, { id: rumor.id, peer, at: now, wraps, done: [] }]);
+      addMessage({
+        id: rumor.id,
+        from: me,
+        peer,
+        text: '',
+        at: now,
+        file,
+        stamp: true,
+        pending: 'sending',
+        ...(replyTo ? { replyTo } : {}),
+      });
       void flush();
     },
     [secret, me, build, saveBox, addMessage, flush],
@@ -1387,6 +1509,11 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     send,
     sendPhoto,
     forwardFile,
+    stamps,
+    makeStamp,
+    addStamp,
+    removeStamp,
+    sendStamp,
     crashReports,
     setCrashReportsOn,
     exportChats: () =>

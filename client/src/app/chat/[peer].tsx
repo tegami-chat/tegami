@@ -4,11 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
-import { Photo, PhotoViewer } from '@/components/photo';
+import { Photo, PhotoViewer, Stamp } from '@/components/photo';
 import { Palette, usePalette } from '@/constants/theme';
 import { useCall } from '@/lib/calls';
 import { cautionFor } from '@/lib/caution';
-import { chatName, isGroup, personName, shortId, useTegami, type Message, type ReportReason } from '@/lib/tegami';
+import { chatName, isGroup, personName, shortId, useTegami, type Message, type ReportReason, type Stamp as StampItem } from '@/lib/tegami';
 
 /** How long a message stays marked after jumping to it. */
 const HIGHLIGHT_MS = 2000;
@@ -25,9 +25,12 @@ export default function Chat() {
   const s = styles(c);
   // m: a message to jump to (from search).
   const { peer, m: focus } = useLocalSearchParams<{ peer: string; m?: string }>();
-  const { me, myName, contacts, groups, blocked, block, unblock, report, deleteChat, messages, send, sendPhoto, forwardFile, addContact, markRead, cancelSend, retrySend } = useTegami();
+  const { me, myName, contacts, groups, blocked, block, unblock, report, deleteChat, messages, send, sendPhoto, forwardFile, stamps, makeStamp, addStamp, removeStamp, sendStamp, addContact, markRead, cancelSend, retrySend } = useTegami();
   // A message waiting to be sent that was tapped: it offers to stop sending.
   const [offered, setOffered] = useState<string | null>(null);
+  const [stampsOpen, setStampsOpen] = useState(false);
+  const [stampDeleting, setStampDeleting] = useState<string | null>(null);
+  const [stampOffer, setStampOffer] = useState<string | null>(null);
   const [replying, setReplying] = useState<Message | null>(null);
   const [forwarding, setForwarding] = useState<Message | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -74,11 +77,14 @@ export default function Chat() {
     setPressed(null);
     setHovered(null);
     setCopied(null);
+    setStampsOpen(false);
+    setStampDeleting(null);
+    setStampOffer(null);
   }, [peer]);
   useEffect(() => () => clearTimeout(copiedTimer.current), []);
 
   const nameOf = (pubkey: string) => (pubkey === me ? myName || '自分' : personName(pubkey, contacts));
-  const firstLine = (m: Message) => (m.file ? '写真' : m.text.split('\n')[0]);
+  const firstLine = (m: Message) => (m.stamp ? 'スタンプ' : m.file ? '写真' : m.text.split('\n')[0]);
 
   /** Scrolls to a message on this device and marks it for a moment. */
   const jumpTo = useCallback(
@@ -151,7 +157,7 @@ export default function Chat() {
     if (!forwarding) return;
     const m = forwarding;
     setForwarding(null);
-    if (m.file) await forwardFile(target, m.file);
+    if (m.file) await forwardFile(target, m.file, m.stamp);
     else await send(target, m.text);
     if (target !== peer) router.replace({ pathname: '/chat/[peer]', params: { peer: target } });
   }
@@ -220,6 +226,39 @@ export default function Chat() {
     try {
       const blob = asset.file ?? (await (await fetch(asset.uri)).blob());
       await sendPhoto(peer, blob, replying?.id);
+      setReplying(null);
+    } catch {
+      setFailed(true);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function createStamp() {
+    if (!peer || sending || isBlocked) return;
+    const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+    const asset = picked.canceled ? null : picked.assets[0];
+    if (!asset) return;
+    setSending(true);
+    setFailed(false);
+    try {
+      const blob = asset.file ?? (await (await fetch(asset.uri)).blob());
+      await makeStamp(blob);
+    } catch {
+      setFailed(true);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function pickStamp(st: StampItem) {
+    if (!peer || sending || isBlocked) return;
+    setStampsOpen(false);
+    setStampDeleting(null);
+    setSending(true);
+    setFailed(false);
+    try {
+      await sendStamp(peer, st, replying?.id);
       setReplying(null);
     } catch {
       setFailed(true);
@@ -432,9 +471,15 @@ export default function Chat() {
               </Pressable>
             </View>
           );
+          const isStamp = !!item.file && !!item.stamp;
           const bubble = (
             <View
-              style={[s.bubble, mine ? s.mine : s.theirs, unsent && s.waiting, mine && !!item.pending && s.full, highlight === item.id && s.highlight]}>
+              style={[
+                isStamp ? s.stampBox : [s.bubble, mine ? s.mine : s.theirs],
+                unsent && s.waiting,
+                mine && !!item.pending && s.full,
+                highlight === item.id && s.highlight,
+              ]}>
 
               {group && !mine && <Text style={s.author}>{personName(item.from, contacts)}</Text>}
               {item.replyTo !== undefined &&
@@ -453,7 +498,14 @@ export default function Chat() {
                   </View>
                 ))}
               {item.file ? (
-                <Photo id={item.id} file={item.file} onOpen={setViewing} />
+                isStamp ? (
+                  <Stamp
+                    file={item.file}
+                    onPress={!mine ? () => setStampOffer((cur) => (cur === item.id ? null : item.id)) : undefined}
+                  />
+                ) : (
+                  <Photo id={item.id} file={item.file} onOpen={setViewing} />
+                )
               ) : (
                 <Text style={s.text} selectable={!unsent}>
                   {item.text}
@@ -480,6 +532,28 @@ export default function Chat() {
                 {!mine && actions}
               </Pressable>
             );
+            if (!mine && isStamp && stampOffer === item.id) {
+              return (
+                <View style={s.theirsWrap}>
+                  {row}
+                  <View style={[s.offer, s.offerTheirs]}>
+                    <Pressable
+                      style={s.cancel}
+                      onPress={() => {
+                        const f = item.file!;
+                        setStampOffer(null);
+                        void addStamp(f, item.at);
+                      }}
+                      role="button">
+                      <Text style={s.cancelText}>スタンプに追加</Text>
+                    </Pressable>
+                    <Pressable style={s.cancel} onPress={() => setStampOffer(null)} role="button">
+                      <Text style={s.cancelText}>閉じる</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              );
+            }
             // Money or a link from someone who is not a friend. Checked on this device only.
             if (mine || item.file || friends.has(item.from) || !cautionFor(item.text)) return row;
             return (
@@ -542,9 +616,61 @@ export default function Chat() {
               </Pressable>
             </View>
           )}
+          {stampsOpen && (
+            <View style={s.stampPanel}>
+              <View style={s.stampGrid}>
+                {stamps.map((st) => (
+                  <View key={st.sha256} style={s.stampCell}>
+                    <Stamp
+                      file={st}
+                      max={72}
+                      testID="stamp-item"
+                      onPress={() => pickStamp(st)}
+                      onLongPress={() => setStampDeleting((cur) => (cur === st.sha256 ? null : st.sha256))}
+                    />
+                    {stampDeleting === st.sha256 && (
+                      <Pressable
+                        role="button"
+                        style={s.cancel}
+                        onPress={() => {
+                          removeStamp(st.sha256);
+                          setStampDeleting(null);
+                        }}>
+                        <Text style={s.cancelText}>削除</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                ))}
+              </View>
+              <View style={s.reportButtons}>
+                <Pressable role="button" style={[s.reportButton, sending && s.disabled]} disabled={sending} onPress={createStamp}>
+                  <Text style={s.callText}>スタンプを作る</Text>
+                </Pressable>
+                <Pressable
+                  role="button"
+                  style={s.reportButton}
+                  onPress={() => {
+                    setStampsOpen(false);
+                    setStampDeleting(null);
+                  }}>
+                  <Text style={s.callText}>閉じる</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
           <View style={s.composer}>
             <Pressable style={[s.attach, sending && s.disabled]} onPress={pickPhoto} disabled={sending} role="button">
               <Text style={s.attachText}>写真</Text>
+            </Pressable>
+            <Pressable
+              style={[s.attach, sending && s.disabled]}
+              onPress={() => {
+                setStampsOpen((v) => !v);
+                setStampDeleting(null);
+              }}
+              disabled={sending}
+              role="button">
+              <Text style={s.attachText}>スタンプ</Text>
             </Pressable>
             <TextInput
               ref={input}
@@ -587,6 +713,7 @@ const styles = (c: Palette) =>
     rowMine: { alignSelf: 'flex-end', justifyContent: 'flex-end' },
     rowTheirs: { alignSelf: 'flex-start' },
     bubble: { flexShrink: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: 'transparent' },
+    stampBox: { flexShrink: 1, paddingVertical: 2, borderWidth: 1, borderColor: 'transparent' },
     mine: { backgroundColor: c.mine, borderBottomRightRadius: 4 },
     theirs: { backgroundColor: c.theirs, borderBottomLeftRadius: 4, borderColor: c.line },
     highlight: { borderColor: c.accent, borderWidth: 2 },
@@ -615,7 +742,18 @@ const styles = (c: Palette) =>
     waiting: { opacity: 0.6 },
     full: { maxWidth: '100%' },
     mineWrap: { alignSelf: 'flex-end', alignItems: 'flex-end', maxWidth: '78%' },
+    theirsWrap: { alignSelf: 'flex-start', alignItems: 'flex-start', maxWidth: '88%' },
     offer: { flexDirection: 'row', justifyContent: 'flex-end', gap: 4 },
+    offerTheirs: { justifyContent: 'flex-start' },
+    stampPanel: {
+      gap: 10,
+      padding: 12,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: c.line,
+      backgroundColor: c.surface,
+    },
+    stampGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignItems: 'center' },
+    stampCell: { alignItems: 'center', gap: 4 },
     cancel: { paddingHorizontal: 8, paddingVertical: 6 },
     cancelText: { fontSize: 14, color: c.accent, fontWeight: '600' },
     addBar: {
