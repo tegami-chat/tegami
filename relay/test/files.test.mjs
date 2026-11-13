@@ -1,6 +1,7 @@
 // Tests for the file endpoints (Blossom). Usage: RELAY=ws://127.0.0.1:8787 node test/files.test.mjs
 import { createHash } from 'node:crypto';
 import { finalizeEvent, generateSecretKey } from 'nostr-tools/pure';
+import { trust } from './join.mjs';
 
 const RELAY = process.env.RELAY ?? 'ws://localhost:8787';
 const BASE = RELAY.replace(/^ws/, 'http').replace(/\/$/, '');
@@ -11,6 +12,7 @@ const check = (name, ok) => {
 };
 
 const sk = generateSecretKey();
+await trust(sk);
 const sha = (buf) => createHash('sha256').update(buf).digest('hex');
 function auth(hash, { kind = 24242, t = 'upload', expiration = Math.floor(Date.now() / 1000) + 300 } = {}) {
   const ev = finalizeEvent(

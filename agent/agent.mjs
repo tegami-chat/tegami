@@ -66,7 +66,7 @@ const commands = {
     needsInit(agent);
     console.log(agent.invite);
   },
-  add() {
+  async add() {
     needsInit(agent);
     const trusted = !!flag('trust');
     const name = flag('name');
@@ -74,6 +74,13 @@ const commands = {
     if (!p) throw new Error('Give an invite link or an npub.');
     const c = agent.addContact({ pubkey: p.pubkey, name: typeof name === 'string' ? name : p.name, trusted });
     console.log(`Added ${c.name}${c.trusted ? ' (the AI replies to this person)' : ''}`);
+    // The relay only takes messages from registered keys. An invite link carries its
+    // owner's invite code (&c=); the AI registers with it, as invited by that person.
+    if (p.code) {
+      const r = await agent.register({ invite: p.code }).catch((e) => ({ member: false, error: e.message }));
+      if (r.member && !r.inviteError) console.log('Registered with the Tegami relay (invited by this person).');
+      else if (!r.member) console.log(`Could not register with the relay: ${r.error ?? 'unknown'}. Ask for a new invite link.`);
+    }
   },
   contacts() {
     needsInit(agent);
@@ -121,6 +128,13 @@ const commands = {
       queue.push(m);
       void drain();
     };
+    // Not registered: replies would be refused by the relay. Say so (the log) and keep going.
+    agent
+      .register()
+      .then((r) => {
+        if (!r.member) log('not registered with the relay: replies will be refused. Run: tegami-agent add "<your invite link>" --trust');
+      })
+      .catch(() => {});
     // Listen before connecting: the relay hands over waiting messages right after login.
     agent.listeners.add(consider);
     await agent.connect();

@@ -4,6 +4,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { CallScreen } from '@/components/call-screen';
 import { Gate } from '@/components/gate';
+import { RegisterGate } from '@/components/register-gate';
 import { usePalette } from '@/constants/theme';
 import { goToAccount } from '@/components/account-list';
 import { accountByKey, accounts, useAccounts } from '@/lib/accounts';
@@ -34,10 +35,12 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 
 function Shell() {
   const c = usePalette();
-  const { status } = useTegami();
+  const { status, registration } = useTegami();
   if (status === 'loading') return null;
   // Every screen stays behind the gate until the account is open.
   if (status !== 'open') return <Gate locked={status === 'locked'} />;
+  // Not registered with the relay (no invite code): the Turnstile check first.
+  if (registration === 'needed' || registration === 'blocked') return <RegisterGate />;
   return (
     <CallProvider>
       <Stack

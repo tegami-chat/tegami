@@ -196,8 +196,14 @@ async function noText(page, s, ms) {
   assert(!(await text(page)).includes(s), `"${s}" is shown`);
 }
 
-/** Sends one event to the dev relay as `secret` (logs in with NIP-42 first). */
-function relaySend(secret, event) {
+/** Registers `secret` with the dev relay as if invited (so it may write). */
+const devTrust = (secret) =>
+  fetch(`http://localhost:${RELAY_PORT}/_trust`, { method: 'POST', body: JSON.stringify({ pubkey: getPublicKey(secret) }) });
+/** From now on, keys that register without an invite are open keys (true), or invited (false). */
+const devOpen = (on) => fetch(`http://localhost:${RELAY_PORT}/_open`, { method: 'POST', body: JSON.stringify({ on }) });
+/** Sends one event to the dev relay as `secret` (logs in with NIP-42 first; registers it as invited). */
+async function relaySend(secret, event) {
+  await devTrust(secret);
   return new Promise((ok, fail) => {
     const ws = new WebSocket(`ws://localhost:${RELAY_PORT}`);
     const timer = setTimeout(() => (ws.close(), fail(new Error('relay did not answer'))), 5000);
@@ -358,6 +364,7 @@ async function main() {
     await sh('npx', ['expo', 'export', '--platform', 'web', '--output-dir', 'dist-test', '--clear'], {
       EXPO_PUBLIC_TEGAMI_RELAYS: `ws://localhost:${RELAY_PORT}`,
       EXPO_PUBLIC_TEGAMI_FILES: `http://localhost:${RELAY_PORT}`,
+      EXPO_PUBLIC_TURNSTILE_SITEKEY: '',
     });
   }
   await startRelay();
@@ -1394,6 +1401,8 @@ async function main() {
         await u.page.goto(aiLink.replace('https://app.tegami.chat', ORIGIN));
         await button(u.page, 'はじめる').click();
         await waitText(u.page, 'AI：Anthropic Claude');
+        // My link carries my invite code once the relay has answered: the AI registers with it.
+        await u.page.waitForFunction(() => /&c=[a-z2-9]+/.test(document.body.innerText), null, { timeout: 10000 });
         const myLink = (await text(u.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
         cli('add', myLink, '--name', 'わたし', '--trust');
         watch = spawn(process.execPath, [join(AGENT, 'agent.mjs'), 'watch', '--command', `node "${join(AGENT, 'test/echo.mjs')}"`], { env, stdio: 'pipe' });
@@ -1909,6 +1918,63 @@ async function main() {
       // The test notifications show on the real desktop (Windows): close them.
       await clearNotices();
       await u.context.close();
+    });
+    await test('Registration: an invite link registers as invited and carries my code; without one, only friends get my messages', async () => {
+      const members = async () => (await (await fetch(`http://localhost:${RELAY_PORT}/_members`)).json());
+      const via = async (hex) => (await members()).find((m) => m.pubkey === hex)?.via;
+      // A: registered as invited. Its invite link carries its code.
+      const a = await person(browser, 'えー');
+      await a.page.waitForFunction(() => /&c=[a-z2-9]+/.test(document.body.innerText), null, { timeout: 10000 });
+      a.link = (await text(a.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
+      assert(/&c=[a-z2-9]{6,}/.test(a.link), `no code in the invite link: ${a.link}`);
+      assert((await via(a.hex)) === 'invite', 'A is not registered as invited');
+      // B starts without an invite: an open key, and no code to hand out.
+      await devOpen(true);
+      try {
+        const b = await person(browser, 'びー');
+        await b.page.waitForTimeout(1500);
+        assert((await via(b.hex)) === 'open', `B is ${await via(b.hex)}, not open`);
+        assert(!/&c=/.test(await text(b.page)), 'an open key shows an invite code');
+        // B writes to A, who has not added B: A never sees it, not even under 知らない人から.
+        await befriend(b, a.link.replace(/&c=[a-z2-9]+/, ''));
+        await b.page.getByPlaceholder('メッセージ').fill('知らない人からの手紙');
+        await button(b.page, '送る').click();
+        await b.page.waitForFunction(() => !document.body.innerText.includes('未送信'), null, { timeout: 10000 });
+        const envelopes = await envelopesFor(a.hex);
+        assert(envelopes.some((e) => e.tegami_open === 1), 'the relay did not mark the envelope');
+        await a.page.goto(ORIGIN + '/');
+        await waitOpen(a.page);
+        await noText(a.page, '知らない人から', 2500);
+        // Once A adds B, B's messages arrive.
+        await befriend(a, b);
+        await b.page.getByPlaceholder('メッセージ').fill('友達になった後の手紙');
+        await button(b.page, '送る').click();
+        await waitText(a.page, '友達になった後の手紙');
+        assert(!(await text(a.page)).includes('知らない人からの手紙'), 'the message from before A added B showed up');
+        // C opens A's invite link: registered as invited by A, even though C starts a new account.
+        const c = await newUser(browser, { prf: false });
+        await c.page.goto(a.link.replace('https://app.tegami.chat', ORIGIN));
+        await button(c.page, 'はじめる').click();
+        await button(c.page, 'パスキーを使わずに始める').click();
+        await waitText(c.page, '自分の招待リンク');
+        const cLink = (await text(c.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
+        const cHex = nip19.decode(cLink.match(/npub1[0-9a-z]+/)[0]).data;
+        for (let i = 0; i < 30 && (await via(cHex)) !== 'invite'; i++) await c.page.waitForTimeout(200);
+        const cRow = (await members()).find((m) => m.pubkey === cHex);
+        assert(cRow?.via === 'invite' && cRow.invitedBy === a.hex, `C is ${JSON.stringify(cRow)}`);
+        // B adds A with A's full link (with the code): B becomes invited too.
+        // (A is already B's friend: the button renames, and the code still registers B.)
+        await b.page.goto(ORIGIN + '/add');
+        await waitText(b.page, '自分の招待リンク');
+        await b.page.getByPlaceholder('https://app.tegami.chat/i#npub…').fill(a.link);
+        await button(b.page, '名前を変える').click();
+        for (let i = 0; i < 30 && (await via(b.hex)) !== 'invite'; i++) await b.page.waitForTimeout(200);
+        assert((await via(b.hex)) === 'invite', "B did not become invited with A's code");
+        for (const u of [b, c]) await u.context.close();
+      } finally {
+        await devOpen(false);
+      }
+      await a.context.close();
     });
   } finally {
     await browser.close();

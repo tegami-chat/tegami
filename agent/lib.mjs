@@ -4,6 +4,7 @@
 // ~/.tegami/agents/<name>). key.json holds the AI's secret key in plain text, like
 // an SSH key: the agent has to run unattended, so there is no passkey to unlock it.
 
+import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, chmodSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -65,7 +66,8 @@ export function parseInvite(input) {
       return '';
     }
   };
-  return pubkey ? { pubkey, name: param('n'), model: param('m') } : null;
+  const code = param('c');
+  return pubkey ? { pubkey, name: param('n'), model: param('m'), code: /^[a-z2-9]{6,32}$/.test(code) ? code : '' } : null;
 }
 
 // ---------- the agent ----------
@@ -197,6 +199,31 @@ export class Agent {
     await Promise.any(wraps.flatMap((w) => this.pool.publish(RELAYS, w, { onauth: this.onauth })));
     this.receive(wraps[1]);
     return rumor.id;
+  }
+
+  /**
+   * Asks the relay whether this AI's key is registered ({}), or registers it with an invite
+   * code from its owner's invite link ({invite}). Only registered keys can write to the relay.
+   */
+  async register(body = {}) {
+    const url = `${RELAYS[0].replace(/^ws/, 'http').replace(/\/$/, '')}/register`;
+    const text = JSON.stringify(body);
+    const auth = finalizeEvent(
+      {
+        kind: 27235,
+        created_at: Math.floor(Date.now() / 1000),
+        content: '',
+        tags: [['u', url], ['method', 'POST'], ['payload', createHash('sha256').update(text).digest('hex')]],
+      },
+      this.secret,
+    );
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Nostr ${Buffer.from(JSON.stringify(auth)).toString('base64')}` },
+      body: text,
+    });
+    const json = await res.json().catch(() => ({}));
+    return res.ok ? json : { member: false, error: json.error ?? `HTTP ${res.status}` };
   }
 
   /** Resolves with the next incoming message (not sent by this agent), or null after `ms`. */

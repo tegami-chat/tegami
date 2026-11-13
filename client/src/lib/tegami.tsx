@@ -18,6 +18,7 @@ import { disablePush, enablePush, refreshPush, type PushState } from './push';
 import { SIGNAL_KIND, freshSignal, wrapSignal } from './signal';
 import { BackupGoneError, type BackupRef, clearLocal, deleteBackup, deriveKeys, loadLocal, makeCode, putBackup, recoveryOnHere, saveLocal, takeRestoredKeys } from './recovery';
 import { createVault, unlockVault, type Vault } from './vault';
+import { TURNSTILE_SITEKEY, askRelay, forgetInviteCode, keptInviteCode, type Registration } from './register';
 
 // Tegami relays. In development: the relay in app/relay started with `npm run dev`.
 export const RELAYS = (process.env.EXPO_PUBLIC_TEGAMI_RELAYS ?? 'wss://relay.tegami.chat').split(',');
@@ -70,6 +71,13 @@ type PlainAccount = { secretHex: string };
 const RECOVERY_FAILURES_SHOWN = 3;
 
 export type Status = 'loading' | 'new' | 'locked' | 'open';
+
+/**
+ * Whether this account's key is registered with the relay (lib/register.ts).
+ * checking: not known yet (or the relay cannot be reached and nothing is remembered).
+ * needed: not registered; the web app shows the Turnstile check. blocked: the key was stopped.
+ */
+export type RegistrationState = 'checking' | 'needed' | 'ok' | 'blocked';
 
 type TegamiState = {
   status: Status;
@@ -132,6 +140,13 @@ type TegamiState = {
   cancelSend: (id: string) => void;
   /** Tries to send what is waiting now, without waiting for the next automatic try. */
   retrySend: () => void;
+  registration: RegistrationState;
+  /** Registered with an invite (or before registration existed): my messages reach strangers. */
+  trusted: boolean;
+  /** My invite code, put into my invite link. Null while unknown or when I may not invite. */
+  inviteCode: string | null;
+  /** Registers with a Turnstile token (web) or, with invite, upgrades with a friend's code. Returns whether it worked. */
+  registerWith: (body: { turnstile?: string; invite?: string }) => Promise<boolean>;
 };
 
 const Ctx = createContext<TegamiState | null>(null);
@@ -142,13 +157,20 @@ export function useTegami() {
   return value;
 }
 
-// Invite links: https://app.tegami.chat/i#<npub>&n=<name>
-// Everything sits after '#', so the key and the name never reach any server.
+// Invite links: https://app.tegami.chat/i#<npub>&n=<name>&c=<invite code>
+// Everything sits after '#', so the key, the name and the code never reach any server.
+// The code lets the person who opens the link register as invited (lib/register.ts).
 export const APP_ORIGIN = 'https://app.tegami.chat';
 
-export function inviteLink(npub: string, name: string) {
+export function inviteLink(npub: string, name: string, code?: string | null) {
   const n = name.trim();
-  return `${APP_ORIGIN}/i#${npub}${n ? `&n=${encodeURIComponent(n)}` : ''}`;
+  return `${APP_ORIGIN}/i#${npub}${n ? `&n=${encodeURIComponent(n)}` : ''}${code ? `&c=${code}` : ''}`;
+}
+
+/** Reads the invite code carried by an invite link, if any. */
+export function inviteCodeOf(input: string): string {
+  const code = inviteParam(input, 'c');
+  return /^[a-z2-9]{6,32}$/.test(code) ? code : '';
 }
 
 // An invite opened through /i, waiting for the add screen. Kept in memory only.
@@ -475,6 +497,13 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       {
         try {
           const rumor = nip17.unwrapEvent(wrap, secret);
+          // Written by a key registered without an invite: only from friends and groups I know.
+          // Keys made in bulk cannot reach strangers this way (relay/src/members.ts).
+          if ((wrap as { tegami_open?: number }).tegami_open === 1 && rumor.pubkey !== me) {
+            const known = contactsRef.current.some((c) => c.pubkey === rumor.pubkey);
+            const room = roomOf([rumor.pubkey, ...rumor.tags.filter((t) => t[0] === 'p').map((t) => t[1])].filter((x) => x !== me));
+            if (!known && !(isGroup(room) && groupsRef.current.some((g) => g.id === room))) return;
+          }
           if (rumor.kind === SIGNAL_KIND) {
             // Late envelopes (delivered again after a reconnect) must not ring.
             if (!freshSignal(rumor.created_at) || seenSignals.current.has(rumor.id)) return;
@@ -568,6 +597,72 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       pool.current = null;
     };
   }, [secret, me, addMessage, rememberGroup]);
+
+  // ---------- registration with the relay ----------
+  const [registration, setRegistration] = useState<RegistrationState>('checking');
+  const [trusted, setTrusted] = useState(false);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const applyRegistration = useCallback((r: Registration) => {
+    if (r.banned) {
+      setRegistration('blocked');
+      return;
+    }
+    if (!r.member) {
+      setRegistration('needed');
+      return;
+    }
+    const known = { trusted: !!r.trusted, code: r.code ?? null };
+    save(k('registration'), known);
+    setTrusted(known.trusted);
+    setInviteCode(known.code);
+    setRegistration('ok');
+  }, []);
+  const registerWith = useCallback(
+    async (body: { turnstile?: string; invite?: string }) => {
+      if (!secret) return false;
+      try {
+        const r = await askRelay(secret, body);
+        if (r.member && body.invite && !r.inviteError) forgetInviteCode();
+        if (r.member || r.banned) applyRegistration(r);
+        return r.member;
+      } catch {
+        return false;
+      }
+    },
+    [secret, applyRegistration],
+  );
+  useEffect(() => {
+    if (!secret) return;
+    let alive = true;
+    // What the relay said last time: the app works offline meanwhile.
+    const known = load<{ trusted: boolean; code: string | null } | null>(k('registration'), null);
+    if (known) {
+      setTrusted(known.trusted);
+      setInviteCode(known.code);
+      setRegistration('ok');
+    }
+    (async () => {
+      // A code from an invite link opened here registers this key as invited (or upgrades
+      // a key registered without one). Without a Turnstile site key (tests), 'dev-pass'.
+      const code = keptInviteCode();
+      for (let attempt = 0; alive; attempt++) {
+        try {
+          let r = await askRelay(secret, code ? { invite: code } : {});
+          if (!r.member && !r.banned && !TURNSTILE_SITEKEY) r = await askRelay(secret, { turnstile: 'dev-pass' });
+          if (!alive) return;
+          if (code && (r.member || r.error === 'invite-invalid')) forgetInviteCode();
+          applyRegistration(r);
+          return;
+        } catch {
+          // The relay cannot be reached: try again, less and less often.
+          await new Promise((res) => setTimeout(res, Math.min(60_000, 2000 * 2 ** attempt)));
+        }
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [secret, applyRegistration]);
 
   // An account moved from another device brings its name, contacts and groups.
   // A new account: nothing from an earlier account on this browser applies.
@@ -996,6 +1091,10 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     markRead,
     cancelSend,
     retrySend,
+    registration,
+    trusted,
+    inviteCode,
+    registerWith,
     recoveryOn,
     recoveryBehind: recoveryOn && recoveryFailures >= RECOVERY_FAILURES_SHOWN,
     makeRecoveryCode,

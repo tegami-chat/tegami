@@ -4,6 +4,8 @@ import * as nip42 from 'nostr-tools/nip42';
 import * as nip59 from 'nostr-tools/nip59';
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import WebSocket from 'ws';
+import { trust } from './join.mjs';
+
 
 const RELAY = process.env.RELAY ?? 'ws://localhost:8787';
 let failures = 0;
@@ -46,6 +48,7 @@ const alice = generateSecretKey();
 const bob = generateSecretKey();
 const eve = generateSecretKey();
 const bobPub = getPublicKey(bob);
+for (const k of [alice, bob, eve]) await trust(k);
 
 const a = await connect();
 const b = await connect();
@@ -115,6 +118,7 @@ b3.ws.close();
 
 // One key sending far too fast is slowed down, after a normal burst goes through.
 const flooder = generateSecretKey();
+await trust(flooder);
 const f = await connect();
 await login(f, flooder);
 const target = getPublicKey(generateSecretKey());

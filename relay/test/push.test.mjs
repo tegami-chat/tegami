@@ -6,6 +6,7 @@ import * as nip42 from 'nostr-tools/nip42';
 import * as nip59 from 'nostr-tools/nip59';
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import WebSocket from 'ws';
+import { register as registerKey, trust } from './join.mjs';
 
 const HTTP = process.env.HTTP ?? 'http://localhost:8787';
 const RELAY = HTTP.replace(/^http/, 'ws');
@@ -107,6 +108,8 @@ const wrapTo = (from, to, text) => nip59.createWrap(nip59.createSeal(nip59.creat
 const alice = generateSecretKey();
 const bob = generateSecretKey();
 const bobPub = getPublicKey(bob);
+await trust(alice);
+await trust(bob);
 
 const key = await (await fetch(`${HTTP}/push/key`)).json();
 check('the relay publishes its push key', typeof key.key === 'string' && Buffer.from(key.key, 'base64url').length === 65);
@@ -213,6 +216,18 @@ await wait(4500);
 const burst = await Promise.all(carolGot().slice(before).map((r) => decryptPush(r.body).catch(() => null)));
 check('three messages close together make two pushes', burst.length === 2);
 check('…which tell of three messages together', burst.reduce((sum, d) => sum + (d?.n ?? 0), 0) === 3);
+
+// A key registered without an invite never rings: the relay cannot tell whether the
+// person counts it as a friend, and their app hides it from strangers.
+await wait(3500);
+const loner = generateSecretKey();
+await registerKey(loner, { turnstile: 'dev-pass' });
+const l = await connect(loner);
+const beforeOpen = carolGot().length;
+check('an open key writes to carol', (await l.send(wrapTo(loner, carolPub, 'from an open key'))) === true);
+await wait(1500);
+check('…and carol is not notified', carolGot().length === beforeOpen);
+l.ws.close();
 
 a.ws.close();
 b.ws.close();
