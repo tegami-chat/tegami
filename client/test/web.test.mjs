@@ -2187,6 +2187,121 @@ async function main() {
       await qr.waitFor({ state: 'detached', timeout: 5000 });
       await u.context.close();
     });
+
+    await test('Copy and forward: a text and a photo go to another friend as my own messages', async () => {
+      const a = await person(browser, 'あゆみ');
+      const b = await person(browser, 'ばんり');
+      const c = await person(browser, 'ちえ');
+      await a.context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: ORIGIN });
+      await befriend(b, a);
+      await befriend(c, a);
+      await befriend(a, c);
+      await befriend(a, b);
+
+      await b.page.getByPlaceholder('メッセージ').fill('転送するテキスト');
+      await button(b.page, '送る').click();
+      await waitText(a.page, '転送するテキスト');
+
+      const msg = a.page.getByText('転送するテキスト', { exact: true });
+      await msg.hover();
+      await button(a.page, 'コピー').click();
+      await waitText(a.page, 'コピーしました');
+      assert((await a.page.evaluate(() => navigator.clipboard.readText())) === '転送するテキスト', 'clipboard text mismatch');
+      await msg.hover();
+      await button(a.page, '転送').click();
+      await waitText(a.page, '転送先を選ぶ');
+      await button(a.page, 'ちえ').click();
+      await waitText(c.page, '転送するテキスト');
+      assert(!(await text(c.page)).includes('ばんり'), 'forwarded message mentions original author');
+
+      const png = Buffer.from(
+        await b.page.evaluate(() => {
+          const cv = document.createElement('canvas');
+          cv.width = 400;
+          cv.height = 300;
+          const g = cv.getContext('2d');
+          g.fillStyle = '#b5452f';
+          g.fillRect(0, 0, 400, 300);
+          return cv.toDataURL('image/png').split(',')[1];
+        }),
+        'base64',
+      );
+      const chooser = b.page.waitForEvent('filechooser');
+      await button(b.page, '写真').click();
+      await (await chooser).setFiles({ name: 'test.png', mimeType: 'image/png', buffer: png });
+
+      await a.page.goto(`${ORIGIN}/chat/${b.hex}`);
+      const aImg = a.page.locator('img[alt="写真"]').first();
+      await aImg.waitFor({ timeout: 15000 });
+      await aImg.hover();
+      await button(a.page, '転送').click();
+      await waitText(a.page, '転送先を選ぶ');
+      await button(a.page, 'ちえ').click();
+
+      await c.page.locator('img[alt="写真"]').first().waitFor({ timeout: 15000 });
+      await c.page.waitForFunction(() => {
+        const i = document.querySelector('img[alt="写真"]');
+        return i && i.complete && i.naturalWidth === 400;
+      }, null, { timeout: 15000 });
+      for (const u of [a, b, c]) await u.context.close();
+    });
+
+    await test('Delete a chat and a friend: messages leave this device; the friend stays until deleted; a deleted friend writes again as a stranger', async () => {
+      const a = await person(browser, 'あゆみ');
+      const b = await person(browser, 'ばんり');
+      await befriend(b, a);
+      await befriend(a, b);
+      await b.page.getByPlaceholder('メッセージ').fill('消す前の手紙');
+      await button(b.page, '送る').click();
+      await waitText(a.page, '消す前の手紙');
+      await a.page.getByPlaceholder('メッセージ').fill('こちらからも');
+      await button(a.page, '送る').click();
+      await waitText(b.page, 'こちらからも');
+
+      let askedChat = '';
+      a.page.once('dialog', (d) => {
+        askedChat = d.message();
+        return d.accept();
+      });
+      await button(a.page, 'トークを削除').click();
+      assert(askedChat === 'このトークを削除しますか？この端末から消えます。', `confirm chat: ${askedChat}`);
+      await waitOpen(a.page);
+      await waitText(a.page, 'ばんり');
+      assert(!(await text(a.page)).includes('消す前の手紙'), 'old preview still on chat list');
+      await a.page.getByText('ばんり').first().click();
+      await a.page.getByPlaceholder('メッセージ').waitFor();
+      await noText(a.page, '消す前の手紙', 500);
+      assert(!(await text(a.page)).includes('こちらからも'), 'own message still in chat');
+      // Opening the app again receives the envelopes from the relay again: they stay deleted.
+      await a.page.goto(ORIGIN + '/');
+      await waitOpen(a.page);
+      await a.page.getByText('ばんり').first().click();
+      await a.page.getByPlaceholder('メッセージ').waitFor();
+      await noText(a.page, '消す前の手紙', 2500);
+      assert(!(await text(a.page)).includes('こちらからも'), 'own message came back after reopening');
+
+      await a.page.goto(ORIGIN + '/settings');
+      await waitText(a.page, '友達');
+      await waitText(a.page, 'ばんり');
+      let askedFriend = '';
+      a.page.once('dialog', (d) => {
+        askedFriend = d.message();
+        return d.accept();
+      });
+      await button(a.page, '削除').click();
+      assert(askedFriend === 'ばんりさんを友達から削除しますか？', `confirm friend: ${askedFriend}`);
+      await noText(a.page, 'ばんり', 500);
+
+      await a.page.goto(ORIGIN + '/');
+      await waitOpen(a.page);
+      assert(!(await text(a.page)).includes('ばんり'), 'deleted friend still in chat list');
+      await b.page.getByPlaceholder('メッセージ').fill('もう一度こんにちは');
+      await button(b.page, '送る').click();
+      await waitText(a.page, '知らない人から');
+      await a.page.getByText('知らない人から').click();
+      await waitText(a.page, 'もう一度こんにちは');
+      for (const u of [a, b]) await u.context.close();
+    });
   } finally {
     await browser.close();
     server.close();

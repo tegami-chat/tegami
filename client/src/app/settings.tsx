@@ -32,6 +32,7 @@ export default function Settings() {
     showUnread,
     setShowUnread,
     contacts,
+    removeContact,
     blocked,
     unblock,
   } = useTegami();
@@ -169,6 +170,12 @@ export default function Settings() {
     }
   }
 
+  function confirmRemoveContact(pubkey: string, name: string) {
+    const msg = `${name}さんを友達から削除しますか？`;
+    if (typeof window !== 'undefined' && typeof window.confirm === 'function' && !window.confirm(msg)) return;
+    removeContact(pubkey);
+  }
+
   return (
     <ScrollView style={s.fill} contentContainerStyle={s.body}>
       <Text style={s.heading}>アカウント</Text>
@@ -288,6 +295,18 @@ export default function Settings() {
       <Pressable style={s.card} onPress={exportFile} role="button">
         <Text style={s.action}>{exported ? '書き出しました' : '会話を書き出す'}</Text>
       </Pressable>
+
+      <Text style={s.heading}>友達</Text>
+      {contacts.map((contact) => (
+        <View key={contact.pubkey} style={[s.card, s.row]}>
+          <Text style={s.label} numberOfLines={1}>
+            {contact.name}
+          </Text>
+          <Pressable onPress={() => confirmRemoveContact(contact.pubkey, contact.name)} role="button">
+            <Text style={s.action}>削除</Text>
+          </Pressable>
+        </View>
+      ))}
 
       <Text style={s.heading}>ブロックリスト</Text>
       {blocked.length === 0 ? (
