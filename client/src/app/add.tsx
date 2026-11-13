@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import makeQr from 'qrcode-generator';
+import { useMemo, useState } from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Palette, usePalette } from '@/constants/theme';
 import { inviteCodeOf, inviteLink, inviteModel, inviteName, parsePubkey, takePendingInvite, useTegami } from '@/lib/tegami';
@@ -13,6 +14,7 @@ export default function Add() {
   const [invite, setInvite] = useState(opened);
   const [name, setName] = useState(inviteName(opened));
   const [done, setDone] = useState<'copied' | 'shared' | null>(null);
+  const [showQr, setShowQr] = useState(false);
 
   const peer = parsePubkey(invite);
   const model = inviteModel(invite);
@@ -20,6 +22,13 @@ export default function Add() {
   const canAdd = !!peer && peer !== me && name.trim().length > 0;
   const myInvite = npub ? inviteLink(npub, myName, inviteCode) : '';
   const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+  const qrUri = useMemo(() => {
+    if (!showQr || !myInvite) return '';
+    const qr = makeQr(0, 'M');
+    qr.addData(myInvite);
+    qr.make();
+    return qr.createDataURL(6, 2);
+  }, [showQr, myInvite]);
 
   function flash(kind: 'copied' | 'shared') {
     setDone(kind);
@@ -84,7 +93,20 @@ export default function Add() {
           <Pressable onPress={copy} role="button">
             <Text style={s.action}>{done === 'copied' ? 'コピーしました' : 'コピー'}</Text>
           </Pressable>
+          {!showQr && (
+            <Pressable onPress={() => setShowQr(true)} role="button">
+              <Text style={s.action}>QRコードを表示</Text>
+            </Pressable>
+          )}
         </View>
+        {showQr && qrUri ? (
+          <View style={s.qrBox}>
+            <Image source={{ uri: qrUri }} style={s.qr} testID="invite-qr" />
+            <Pressable onPress={() => setShowQr(false)} role="button">
+              <Text style={s.action}>閉じる</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </View>
 
       <Text style={s.heading}>相手の招待リンク</Text>
@@ -124,8 +146,10 @@ const styles = (c: Palette) =>
     heading: { fontSize: 14, color: c.muted, marginTop: 12 },
     card: { backgroundColor: c.surface, borderRadius: 12, borderWidth: 1, borderColor: c.line, padding: 14, gap: 10 },
     link: { fontSize: 13, color: c.text, fontFamily: 'monospace' },
-    actions: { flexDirection: 'row', gap: 24 },
+    actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 24 },
     action: { fontSize: 15, color: c.accent, fontWeight: '600' },
+    qrBox: { alignItems: 'center', gap: 12, paddingTop: 4 },
+    qr: { width: 240, height: 240, borderRadius: 8, backgroundColor: '#fff' },
     input: {
       backgroundColor: c.surface,
       borderRadius: 12,

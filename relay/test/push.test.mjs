@@ -229,6 +229,17 @@ await wait(1500);
 check('…and carol is not notified', carolGot().length === beforeOpen);
 l.ws.close();
 
+// t=quiet (a friend's new picture): kept for the person, but no push.
+await wait(3500);
+const beforeQuiet = carolGot().length;
+const quietWrap = finalizeEvent(
+  { kind: 1059, created_at: Math.floor(Date.now() / 1000), tags: [['p', carolPub], ['t', 'quiet']], content: 'sealed' },
+  generateSecretKey(),
+);
+check('a quiet envelope is accepted', (await a.send(quietWrap)) === true);
+await wait(1500);
+check('…and rings nothing', carolGot().length === beforeQuiet);
+
 a.ws.close();
 b.ws.close();
 push.close();

@@ -35,6 +35,25 @@ export function wrapSignal(rumor: Rumor, secret: Uint8Array, to: string, call = 
   );
 }
 
+/**
+ * Wraps a rumor that must not ring a notification (a profile card). The wrap carries t=quiet,
+ * visible to the relay, which then sends no push. Like nip59.createWrap, the wrap's time is
+ * randomized up to two days back so it does not tell when it was written.
+ */
+export function wrapQuiet(rumor: Rumor, secret: Uint8Array, to: string, now = Math.floor(Date.now() / 1000)) {
+  const seal = nip59.createSeal(rumor, secret, to);
+  const k = generateSecretKey();
+  return finalizeEvent(
+    {
+      kind: 1059,
+      created_at: now - Math.floor(Math.random() * 2 * 24 * 60 * 60),
+      tags: [['p', to], ['t', 'quiet']],
+      content: nip44.encrypt(JSON.stringify(seal), nip44.getConversationKey(k, to)),
+    },
+    k,
+  );
+}
+
 /** A signal is fresh when its rumor was written within SIGNAL_TTL seconds (some clock skew allowed). */
 export function freshSignal(createdAt: number, now = Math.floor(Date.now() / 1000)) {
   return createdAt >= now - SIGNAL_TTL && createdAt <= now + SIGNAL_TTL;

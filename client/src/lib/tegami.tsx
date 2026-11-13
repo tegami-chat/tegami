@@ -10,12 +10,12 @@ import { describeAccount } from './accounts';
 import { clearNewMark } from './sw-store';
 import { createDeviceVault, deviceVaultAvailable, openDeviceVault, type DeviceVault } from './device-vault';
 import { setCrashReports } from './crash';
-import { encryptAndUpload, fileFromRumor, fileTags, forgetFile, keepSent, keptFile, shrinkImage, type FileRef } from './files';
+import { encryptAndUpload, fileFromRumor, fileTags, forgetFile, keepSent, keptFile, openFile, shrinkAvatar, shrinkImage, validFileRef, type FileRef } from './files';
 import { backoff, loadOutbox, publishOne, saveOutbox, type Outgoing } from './outbox';
 import { k, load, remove, save } from './storage';
 import { bundleSecret, sendTransfer, type Bundle } from './transfer';
 import { disablePush, enablePush, refreshPush, type PushState } from './push';
-import { SIGNAL_KIND, freshSignal, wrapSignal } from './signal';
+import { SIGNAL_KIND, freshSignal, wrapQuiet, wrapSignal } from './signal';
 import { BackupGoneError, type BackupRef, clearLocal, deleteBackup, deriveKeys, loadLocal, makeCode, putBackup, recoveryOnHere, saveLocal, takeRestoredKeys } from './recovery';
 import { createVault, unlockVault, type Vault } from './vault';
 import { TURNSTILE_SITEKEY, askRelay, forgetInviteCode, keptInviteCode, type Registration } from './register';
@@ -50,8 +50,11 @@ export type CallRecord = { video: boolean; result: 'done' | 'missed' | 'unanswer
 /** A call signal from someone (or from my other device: from === me). See lib/signal.ts. */
 export type Signal = { id: string; from: string; to: string; at: number; data: Record<string, unknown> };
 
+/** Rumor kind for a private profile card (Tegami's own, not a standard NIP). */
+export const PROFILE_KIND = 10100;
+
 /** model: for an AI friend, which company's which model (always shown, philosophy #93). */
-export type Contact = { pubkey: string; name: string; model?: string };
+export type Contact = { pubkey: string; name: string; model?: string; avatar?: FileRef };
 
 /** A group chat (NIP-17): a fixed set of people. A different set is a different chat. */
 export type Group = { id: string; name: string; members: string[] };
@@ -108,6 +111,9 @@ type TegamiState = {
   /** My own name, shared through my invite link. Stays on this device otherwise. */
   myName: string;
   setMyName: (name: string) => void;
+  /** My own profile picture, shared privately with contacts only. */
+  myAvatar: FileRef | null;
+  setMyAvatar: (photo: Blob | null) => Promise<void>;
   /**
    * Creates a key protected by a new passkey. Throws PasskeyUnsupportedError when not possible.
    * With a bundle (an account moved from another device), uses that key, name and contacts.
@@ -293,6 +299,11 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const [blocked, setBlocked] = useState<string[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [myName, setMyNameState] = useState('');
+  const [myAvatar, setMyAvatarState] = useState<FileRef | null>(null);
+  const myAvatarRef = useRef<FileRef | null>(null);
+  myAvatarRef.current = myAvatar;
+  const profileAt = useRef(new Map<string, number>());
+  const lastProfileAt = useRef(0);
   const [crashReports, setCrashReportsState] = useState(false);
   const [recoveryOn, setRecoveryOn] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -332,8 +343,13 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       if (!alive) return;
       setVault(v);
       if (sk) setSecret(sk);
-      setContacts(load<Contact[]>(k('contacts'), []));
+      const loadedContacts = load<Contact[]>(k('contacts'), []);
+      contactsRef.current = loadedContacts;
+      setContacts(loadedContacts);
       setGroups(load<Group[]>(k('groups'), []));
+      const loadedAvatar = load<FileRef | null>(k('avatar'), null);
+      myAvatarRef.current = loadedAvatar;
+      setMyAvatarState(loadedAvatar);
       const loadedBlocked = load<string[]>(k('blocked'), []);
       blockedRef.current = loadedBlocked;
       setBlocked(loadedBlocked);
@@ -542,6 +558,30 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
             const data = JSON.parse(rumor.content);
             if (!data || typeof data !== 'object' || !/^[0-9a-f]{64}$/.test(to)) return;
             for (const fn of signalListeners.current) fn({ id: rumor.id, from: rumor.pubkey, to, at: rumor.created_at, data });
+            return;
+          }
+          if (rumor.kind === PROFILE_KIND) {
+            if (!contactsRef.current.some((c) => c.pubkey === rumor.pubkey)) return;
+            if (rumor.created_at < (profileAt.current.get(rumor.pubkey) ?? 0)) return;
+            const data = JSON.parse(rumor.content) as { avatar?: unknown };
+            if (!data || typeof data !== 'object') return;
+            const avatar = data.avatar === null ? null : validFileRef(data.avatar);
+            if (data.avatar !== null && !avatar) return;
+            profileAt.current.set(rumor.pubkey, rumor.created_at);
+            // Fetch it now: the file server deletes files after 30 days.
+            if (avatar) void openFile(`avatar:${avatar.sha256}`, avatar).catch(() => {});
+            setContacts((prev) => {
+              if (!prev.some((c) => c.pubkey === rumor.pubkey)) return prev;
+              const next = prev.map((c) => {
+                if (c.pubkey !== rumor.pubkey) return c;
+                if (avatar) return { ...c, avatar };
+                const { avatar: _, ...rest } = c;
+                return rest;
+              });
+              contactsRef.current = next;
+              save(k('contacts'), next);
+              return next;
+            });
             return;
           }
           if (rumor.kind !== 14 && rumor.kind !== 15) return;
@@ -784,16 +824,87 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     setMyNameState(n);
   }, []);
 
-  const addContact = useCallback((pubkey: string, name: string, model?: string) => {
-    setContacts((prev) => {
-      const old = prev.find((c) => c.pubkey === pubkey);
-      const rest = prev.filter((c) => c.pubkey !== pubkey);
-      const m = model ?? old?.model;
-      const next = [...rest, m ? { pubkey, name, model: m } : { pubkey, name }];
-      save(k('contacts'), next);
-      return next;
-    });
-  }, []);
+  /** Sends a private profile card to each given contact (never to strangers or groups). */
+  const sendProfileTo = useCallback(
+    async (recipients: string[], avatar: FileRef | null) => {
+      if (!secret || !pool.current) return;
+      const targets = recipients.filter((p) => !blockedRef.current.includes(p));
+      if (!targets.length) return;
+      const at = Math.max(Math.floor(Date.now() / 1000), lastProfileAt.current + 1);
+      lastProfileAt.current = at;
+      const content = JSON.stringify({ avatar });
+      await Promise.all(
+        targets.map((to) => {
+          const rumor = nip59.createRumor({ kind: PROFILE_KIND, content, tags: [['p', to]], created_at: at }, secret);
+          // Quiet: changing a picture must not ring "a new message" on every friend's phone.
+          const wrap = wrapQuiet(rumor, secret, to);
+          return publishOne(pool.current!, RELAYS, wrap, authRef.current ?? undefined);
+        }),
+      );
+    },
+    [secret],
+  );
+
+  const setMyAvatar = useCallback(
+    async (photo: Blob | null) => {
+      if (!secret) throw new Error('not open');
+      if (!photo) {
+        const prev = myAvatarRef.current;
+        remove(k('avatar'));
+        myAvatarRef.current = null;
+        setMyAvatarState(null);
+        if (prev?.sha256) void forgetFile(`avatar:${prev.sha256}`);
+        await sendProfileTo(
+          contactsRef.current.map((c) => c.pubkey),
+          null,
+        );
+        return;
+      }
+      const small = await shrinkAvatar(photo);
+      const dim = `${small.width}x${small.height}`;
+      const ref = await encryptAndUpload(small.bytes, small.type, secret, dim);
+      await keepSent(`avatar:${ref.sha256}`, small.bytes, small.type);
+      save(k('avatar'), ref);
+      save(k('avatarAt'), Math.floor(Date.now() / 1000));
+      myAvatarRef.current = ref;
+      setMyAvatarState(ref);
+      await sendProfileTo(
+        contactsRef.current.map((c) => c.pubkey),
+        ref,
+      );
+    },
+    [secret, sendProfileTo],
+  );
+
+  // The file server deletes files after 30 days. Upload my picture again when it is 20 days
+  // old, so a friend added later (or one who was away) still gets a picture that loads.
+  useEffect(() => {
+    if (!secret || !pool.current) return;
+    const ref = myAvatarRef.current;
+    const at = load<number>(k('avatarAt'), 0);
+    if (!ref || Date.now() / 1000 - at < 20 * 24 * 60 * 60) return;
+    void (async () => {
+      const blob = await keptFile(`avatar:${ref.sha256}`).catch(() => undefined);
+      if (blob) await setMyAvatar(blob).catch(() => {});
+    })();
+  }, [secret, me, setMyAvatar]);
+
+  const addContact = useCallback(
+    (pubkey: string, name: string, model?: string) => {
+      setContacts((prev) => {
+        const old = prev.find((c) => c.pubkey === pubkey);
+        const rest = prev.filter((c) => c.pubkey !== pubkey);
+        const m = model ?? old?.model;
+        const avatar = old?.avatar;
+        const next = [...rest, { pubkey, name, ...(m ? { model: m } : {}), ...(avatar ? { avatar } : {}) }];
+        contactsRef.current = next;
+        save(k('contacts'), next);
+        return next;
+      });
+      if (myAvatarRef.current) void sendProfileTo([pubkey], myAvatarRef.current);
+    },
+    [sendProfileTo],
+  );
 
   const block = useCallback((pubkey: string) => {
     setBlocked((prev) => {
@@ -1195,6 +1306,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     addContact,
     myName,
     setMyName,
+    myAvatar,
+    setMyAvatar,
     send,
     sendPhoto,
     crashReports,

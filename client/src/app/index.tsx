@@ -29,8 +29,8 @@ export default function Chats() {
 
   const lastOf = (room: string) => [...messages].reverse().find((m) => m.peer === room);
   const rows = [
-    ...contacts.filter((c) => !blocked.includes(c.pubkey)).map((c) => ({ room: c.pubkey, name: c.name, model: c.model, group: false })),
-    ...groups.map((g) => ({ room: g.id, name: chatName(g.id, contacts, groups), model: undefined, group: true })),
+    ...contacts.filter((c) => !blocked.includes(c.pubkey)).map((c) => ({ room: c.pubkey, name: c.name, model: c.model, avatar: c.avatar, group: false })),
+    ...groups.map((g) => ({ room: g.id, name: chatName(g.id, contacts, groups), model: undefined, avatar: undefined, group: true })),
   ]
     .map((r) => ({ ...r, last: lastOf(r.room) }))
     .sort((a, b) => (b.last?.at ?? 0) - (a.last?.at ?? 0));
@@ -114,7 +114,7 @@ export default function Chats() {
             if (item.heading) return <Text style={s.heading}>{item.heading}</Text>;
             if (item.chat) {
               const r = item.chat;
-              return <ChatRow peer={r.room} name={r.name} model={r.model} last={r.last} mark={r.group ? '◎' : undefined} />;
+              return <ChatRow peer={r.room} name={r.name} model={r.model} avatar={r.avatar} last={r.last} mark={r.group ? '◎' : undefined} />;
             }
             const m = item.message!;
             const e = excerpt(m.text, query);
@@ -151,7 +151,7 @@ export default function Chats() {
           ) : null
         }
         renderItem={({ item }) => (
-          <ChatRow peer={item.room} name={item.name} model={item.model} last={item.last} mark={item.group ? '◎' : undefined} unread={unread[item.room]} />
+          <ChatRow peer={item.room} name={item.name} model={item.model} avatar={item.avatar} last={item.last} mark={item.group ? '◎' : undefined} unread={unread[item.room]} />
         )}
       />
       )}

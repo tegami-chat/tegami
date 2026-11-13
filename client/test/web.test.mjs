@@ -2084,6 +2084,109 @@ async function main() {
       await waitText(a.page, 'ブロック中です');
       for (const u of [a, b]) await u.context.close();
     });
+
+    await test('Avatar: set in settings, sent privately to friends only, shown in their list; removing it reaches them too', async () => {
+      const a = await person(browser, 'あゆみ');
+      const b = await person(browser, 'ばんり');
+      const c = await person(browser, 'ちえ');
+      await befriend(b, a);
+      await befriend(a, b);
+      // C only added A (A did not add C).
+      await befriend(c, a);
+      await b.page.goto(ORIGIN + '/');
+      await c.page.goto(ORIGIN + '/');
+      await waitText(b.page, 'あゆみ');
+      await waitText(c.page, 'あゆみ');
+      assert(await b.page.getByTestId('avatar-initial').isVisible(), 'expected initial placeholder before avatar');
+
+      await a.page.goto(ORIGIN + '/settings');
+      await waitText(a.page, 'アイコンを変更');
+      const png = Buffer.from(
+        await a.page.evaluate(() => {
+          const cv = document.createElement('canvas');
+          cv.width = 400;
+          cv.height = 300;
+          const g = cv.getContext('2d');
+          g.fillStyle = '#b5452f';
+          g.fillRect(0, 0, 400, 300);
+          return cv.toDataURL('image/png').split(',')[1];
+        }),
+        'base64',
+      );
+      const chooser = a.page.waitForEvent('filechooser');
+      await button(a.page, 'アイコンを変更').click();
+      await (await chooser).setFiles({ name: 'avatar.png', mimeType: 'image/png', buffer: png });
+      await a.page.getByTestId('avatar-img').waitFor({ timeout: 15000 });
+      await button(a.page, 'アイコンを削除').waitFor({ timeout: 5000 });
+
+      await b.page.getByTestId('avatar-img').waitFor({ timeout: 15000 });
+      await b.page.waitForFunction(() => {
+        const i = document.querySelector('[data-testid="avatar-img"]');
+        return i && i.tagName === 'IMG' && i.complete && i.naturalWidth === 256 && i.naturalHeight === 256;
+      }, null, { timeout: 15000 });
+
+      const avatar = await b.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.contacts'))[0]?.avatar);
+      assert(avatar && avatar.url, 'no avatar ref on contact');
+      const stored = Buffer.from(await (await fetch(avatar.url)).arrayBuffer());
+      const head = stored.subarray(0, 4).toString('hex');
+      assert(stored.length > 0 && !head.startsWith('ffd8ff') && head !== '89504e47', 'the server holds an unencrypted avatar');
+
+      // Stranger C never receives A's profile card and keeps the initial placeholder.
+      await c.page.waitForTimeout(1000);
+      assert((await c.page.getByTestId('avatar-img').count()) === 0, 'stranger C saw the avatar');
+      assert(await c.page.getByTestId('avatar-initial').isVisible(), 'stranger C lost the initial placeholder');
+      assert((await envelopesFor(c.hex)).length === 0, 'stranger C received a profile card');
+
+      await button(a.page, 'アイコンを削除').click();
+      await a.page.getByTestId('avatar-initial').waitFor({ timeout: 10000 });
+      await b.page.getByTestId('avatar-initial').waitFor({ timeout: 15000 });
+      assert((await b.page.getByTestId('avatar-img').count()) === 0, 'avatar still shown after removal');
+      for (const u of [a, b, c]) await u.context.close();
+    });
+
+    await test('Photo viewer: a tapped photo opens full screen; Escape closes it', async () => {
+      const a = await person(browser, 'あゆみ');
+      const b = await person(browser, 'ばんり');
+      await befriend(b, a);
+      await befriend(a, b);
+      const png = Buffer.from(
+        await a.page.evaluate(() => {
+          const c = document.createElement('canvas');
+          c.width = 400;
+          c.height = 300;
+          const g = c.getContext('2d');
+          g.fillStyle = '#b5452f';
+          g.fillRect(0, 0, 400, 300);
+          return c.toDataURL('image/png').split(',')[1];
+        }),
+        'base64',
+      );
+      const chooser = a.page.waitForEvent('filechooser');
+      await button(a.page, '写真').click();
+      await (await chooser).setFiles({ name: 'test.png', mimeType: 'image/png', buffer: png });
+      const img = a.page.locator('img[alt="写真"]').first();
+      await img.waitFor({ timeout: 15000 });
+      await img.click();
+      await button(a.page, '閉じる').waitFor({ timeout: 5000 });
+      assert(await button(a.page, '保存').isVisible(), 'save button not visible');
+      await a.page.keyboard.press('Escape');
+      await button(a.page, '閉じる').waitFor({ state: 'detached', timeout: 5000 });
+      assert(!(await button(a.page, '保存').count()), 'viewer still visible after Escape');
+      for (const u of [a, b]) await u.context.close();
+    });
+
+    await test('Invite QR: the add screen shows a QR code of the invite link', async () => {
+      const u = await person(browser, 'あゆみ');
+      await u.page.goto(ORIGIN + '/add');
+      await waitText(u.page, '自分の招待リンク');
+      await button(u.page, 'QRコードを表示').click();
+      const qr = u.page.getByTestId('invite-qr');
+      await qr.waitFor({ timeout: 5000 });
+      assert(await qr.isVisible(), 'invite QR not visible');
+      await button(u.page, '閉じる').click();
+      await qr.waitFor({ state: 'detached', timeout: 5000 });
+      await u.context.close();
+    });
   } finally {
     await browser.close();
     server.close();
