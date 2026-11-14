@@ -652,17 +652,25 @@ async function main() {
       // Reloading /settings shows the lock first, then the same screen again.
       await u.page.reload();
       await button(u.page, 'ひらく').click();
-      await waitText(u.page, '鍵の守り方');
+      await waitText(u.page, 'アカウントの守り方');
+      await waitText(u.page, 'アカウントの復旧');
+      await waitText(u.page, 'トーク');
+      await waitText(u.page, '利用状況の統計');
+      await waitText(u.page, '送受信の数などを日ごとに見る');
       assert(await u.page.getByRole('switch', { name: 'Tegami に報告を送る' }).isChecked(), 'the choice was not remembered');
 
       // Export: a JSON file with the chats, never the key.
       const dl = u.page.waitForEvent('download');
-      await u.page.getByText('会話を書き出す').click();
+      await u.page.getByText('トーク履歴を書き出す').click();
       const file = await (await dl).path();
       const data = JSON.parse(readFileSync(file, 'utf8'));
       assert(data.app === 'Tegami' && Array.isArray(data.messages) && data.me.startsWith('npub1'), 'export shape');
       const vault = await u.page.evaluate(() => localStorage.getItem('tegami.vault'));
       assert(!readFileSync(file, 'utf8').includes(JSON.parse(vault).ciphertext), 'export contains the vault');
+
+      // Back button returns from settings to the home screen.
+      await button(u.page, '戻る').click();
+      await waitOpen(u.page);
       await u.context.close();
     });
 
@@ -905,6 +913,7 @@ async function main() {
       await befriend(c, a);
 
       await a.page.goto(ORIGIN + '/');
+      await button(a.page, '友だち').click();
       await a.page.getByText('グループを作る').click();
       await a.page.getByPlaceholder('グループの名前').fill('家族');
       assert(await button(a.page, '作る').isDisabled(), 'can create a group with nobody picked');
@@ -1583,6 +1592,7 @@ async function main() {
       await befriend(b, a);
       await befriend(c, a);
       await a.page.goto(ORIGIN + '/');
+      await button(a.page, '友だち').click();
       await a.page.getByText('グループを作る').click();
       await a.page.getByPlaceholder('グループの名前').fill('家族');
       await a.page.getByRole('checkbox', { name: 'ぶんた' }).click();
@@ -2030,8 +2040,24 @@ async function main() {
       await button(a.page, 'キャンセル').click();
       await button(a.page, '戻る').click();
       await waitText(a.page, 'ブロック中');
+      assert(await button(a.page, 'ブロック解除').isVisible(), 'no unblock button on blocked chat bar');
       assert(!(await a.page.getByPlaceholder('メッセージ').count()), 'input shown while blocked');
       await shot(a.page, 'blocked-chat', 'ブロックした相手とのトーク');
+
+      // The ブロック解除 button in the blocked chat bar opens the unblock dialog and unblocks.
+      await button(a.page, 'ブロック解除').click();
+      await waitText(a.page, 'ブロックを解除しますか？');
+      await a.page.getByTestId('dialog').getByRole('button', { name: 'ブロック解除', exact: true }).click();
+      await a.page.getByPlaceholder('メッセージ').waitFor();
+      // Block again to check that messages and calls while blocked are dropped.
+      await button(a.page, 'メニュー').click();
+      await waitText(a.page, 'ビデオ通話');
+      await button(a.page, 'ブロック').click();
+      await waitText(a.page, 'びーをブロックしますか？');
+      await button(a.page, 'ブロック').click();
+      await button(a.page, 'ブロック解除').waitFor();
+      await button(a.page, '戻る').click();
+      await waitText(a.page, 'ブロック中');
 
       await b.page.getByPlaceholder('メッセージ').fill('ブロック中の手紙');
       await button(b.page, '送る').click();
@@ -2115,7 +2141,12 @@ async function main() {
       await waitText(a.page, '通報する理由');
       await waitText(a.page, 'なりすまし');
       await waitText(a.page, 'メッセージを添える');
+      await waitText(a.page, 'オンにすると、直近のメッセージ（2件）を送ります');
+      await a.page.getByRole('switch', { name: 'メッセージを添える' }).click();
       await waitText(a.page, '直近のメッセージ（2件）を送ります');
+      assert(!(await text(a.page)).includes('オンにすると、'), 'report line did not update when switch turned on');
+      await a.page.getByRole('switch', { name: 'メッセージを添える' }).click();
+      await waitText(a.page, 'オンにすると、直近のメッセージ（2件）を送ります');
       await waitText(a.page, '通報したことは相手に伝わりません。');
       await shot(a.page, 'report-panel', '「通報」を押した時に出る画面');
       await a.page.getByRole('radio', { name: '詐欺', exact: true }).click();
@@ -2241,7 +2272,9 @@ async function main() {
 
     await test('Invite QR: the add screen shows a QR code of the invite link', async () => {
       const u = await person(browser, 'あゆみ');
-      await u.page.goto(ORIGIN + '/add');
+      await u.page.goto(ORIGIN + '/');
+      await waitOpen(u.page);
+      await button(u.page, '友だち追加').click();
       await waitText(u.page, 'マイQRコード');
       const qr = u.page.getByTestId('invite-qr');
       await qr.waitFor({ timeout: 5000 });
@@ -2249,7 +2282,10 @@ async function main() {
       await shot(u.page, 'my-qr', '友だち追加の画面の「マイQRコード」タブ');
       await button(u.page, 'QRコードスキャン').click();
       await waitText(u.page, 'QRコードを読み取ると、友だち追加の画面が開きます。');
+      assert(await button(u.page, '画像から読み取る').isVisible(), 'no QR image picker button');
       await shot(u.page, 'qr-scan', '友だち追加の画面の「QRコードスキャン」タブ');
+      await button(u.page, '戻る').click();
+      await waitOpen(u.page);
       await u.context.close();
     });
 
@@ -2328,7 +2364,7 @@ async function main() {
 
       await button(a.page, 'メニュー').click();
       await button(a.page, 'トークを削除').click();
-      await waitText(a.page, 'このトークを削除しますか？この端末から消えます。');
+      await waitText(a.page, 'ばんりとのトークを削除しますか？この端末から消えます。');
       await shot(a.page, 'delete-chat-confirm', '「トークを削除」を押した時に出る確認');
       await button(a.page, '削除').click();
       await waitOpen(a.page);
@@ -2379,6 +2415,7 @@ async function main() {
       await befriend(c, a);
 
       await a.page.goto(ORIGIN + '/');
+      await button(a.page, '友だち').click();
       await a.page.getByText('グループを作る').click();
       await a.page.getByPlaceholder('グループの名前').fill('家族');
       await a.page.getByRole('checkbox', { name: 'ばんり' }).click();
@@ -2424,7 +2461,7 @@ async function main() {
       await button(a.page, '閉じる').waitFor({ timeout: 5000 });
       await shot(a.page, 'chat-menu', 'トーク一覧の行を長押しした時に出るメニュー');
       await button(a.page, '削除').click();
-      await waitText(a.page, 'このトークを削除しますか？この端末から消えます。');
+      await waitText(a.page, 'ばんりとのトークを削除しますか？この端末から消えます。');
       await shot(a.page, 'chat-delete-dialog', 'トーク一覧のメニューで「削除」を押した時に出る確認');
       await button(a.page, '削除').click();
       await noText(a.page, 'ばんりからの手紙', 500);
@@ -2752,9 +2789,11 @@ async function main() {
       await longPress(target);
       await panel.waitFor();
       await panel.getByRole('button', { name: '通報', exact: true }).click();
-      await waitText(a.page, '選んだメッセージと前後のメッセージ（2件）を送ります');
+      await waitText(a.page, 'オンにすると、選んだメッセージと前後のメッセージ（2件）を送ります');
       await a.page.getByRole('radio', { name: 'なりすまし', exact: true }).click();
       await a.page.getByRole('switch', { name: 'メッセージを添える' }).click();
+      await waitText(a.page, '選んだメッセージと前後のメッセージ（2件）を送ります');
+      assert(!(await text(a.page)).includes('オンにすると、'), 'report line still shows off prefix when switch is on');
       await button(a.page, '同意して送信').click();
       await waitText(a.page, '通報しました');
       await button(a.page, '閉じる').click();

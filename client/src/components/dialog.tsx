@@ -32,7 +32,7 @@ export function Dialog({
         {text ? <Text style={[s.text, !title && s.textOnly]}>{text}</Text> : null}
         <View style={[s.buttons, stacked ? s.buttonsStacked : s.buttonsRow]}>
           {buttons.map((b) => {
-            const v = b.variant ?? 'text';
+            const v = b.variant ?? 'outlined';
             return (
               <Pressable
                 key={b.label}
@@ -42,8 +42,7 @@ export function Dialog({
                 style={[
                   s.button,
                   !stacked && s.buttonRowItem,
-                  v === 'danger' && s.buttonDanger,
-                  v === 'outlined' && s.buttonOutlined,
+                  v === 'danger' ? s.buttonDanger : s.buttonOutlined,
                 ]}>
                 <Text style={[s.buttonText, v === 'danger' && s.buttonTextDanger]}>{b.label}</Text>
               </Pressable>
@@ -71,7 +70,7 @@ const styles = (c: Palette) =>
     },
     card: {
       width: '100%',
-      maxWidth: 320,
+      maxWidth: 340,
       backgroundColor: c.surface,
       borderRadius: 16,
       padding: 20,
@@ -105,17 +104,21 @@ const styles = (c: Palette) =>
     },
     buttonsRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
     },
     button: {
       minHeight: 44,
+      minWidth: 44,
       borderRadius: 22,
       paddingHorizontal: 14,
       paddingVertical: 10,
       alignItems: 'center',
       justifyContent: 'center',
     },
+    // Grow from content width rather than 0% basis so longer labels do not wrap mid-word.
     buttonRowItem: {
-      flex: 1,
+      flexGrow: 1,
+      flexShrink: 1,
     },
     buttonDanger: {
       backgroundColor: c.danger,

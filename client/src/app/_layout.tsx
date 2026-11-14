@@ -1,4 +1,5 @@
-import { Stack, type ErrorBoundaryProps } from 'expo-router';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { Stack, router, type ErrorBoundaryProps, type Href } from 'expo-router';
 import { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -33,6 +34,19 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   );
 }
 
+function BackButton() {
+  const c = usePalette();
+  return (
+    <Pressable
+      role="button"
+      aria-label="戻る"
+      style={{ width: 44, height: 44, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
+      onPress={() => (router.canGoBack() ? router.back() : router.replace('/' as Href))}>
+      <MaterialIcons name="chevron-left" size={24} color={c.text} />
+    </Pressable>
+  );
+}
+
 function Shell() {
   const c = usePalette();
   const { status, registration } = useTegami();
@@ -48,15 +62,17 @@ function Shell() {
           headerStyle: { backgroundColor: c.background },
           headerTintColor: c.text,
           headerShadowVisible: false,
+          headerBackVisible: false,
+          headerLeft: () => <BackButton />,
           contentStyle: { backgroundColor: c.background },
         }}>
-        <Stack.Screen name="index" options={{ title: 'Tegami' }} />
+        <Stack.Screen name="index" options={{ title: 'Tegami', headerLeft: () => null }} />
         <Stack.Screen name="add" options={{ title: '友だち追加' }} />
         <Stack.Screen name="group" options={{ title: 'グループを作る' }} />
         <Stack.Screen name="settings" options={{ title: '設定' }} />
         <Stack.Screen name="accounts" options={{ title: 'アカウント' }} />
         <Stack.Screen name="i" options={{ headerShown: false }} />
-        <Stack.Screen name="link" options={{ title: "" }} />
+        <Stack.Screen name="link" options={{ title: '', headerLeft: () => null }} />
         <Stack.Screen name="strangers" options={{ title: '知らない人から' }} />
         <Stack.Screen name="chat/[peer]" options={{ headerShown: false }} />
         <Stack.Screen name="chat/[peer]/info" options={{ headerShown: false }} />

@@ -80,10 +80,12 @@ export default function ChatInfo() {
                 aria-label={isBlocked ? 'ブロック解除' : 'ブロック'}
                 onPress={() => setDialog(isBlocked ? 'unblock' : 'block')}
                 style={s.actionItem}>
-                <View style={s.roundIcon}>
-                  <MaterialIcons name="block" size={28} color={c.text} />
+                <View style={[s.roundIcon, !isBlocked && s.roundIconDanger]}>
+                  <MaterialIcons name="block" size={28} color={isBlocked ? c.text : c.danger} />
                 </View>
-                <Text style={s.actionLabel}>{isBlocked ? 'ブロック解除' : 'ブロック'}</Text>
+                <Text style={[s.actionLabel, !isBlocked && s.actionLabelDanger]}>
+                  {isBlocked ? 'ブロック解除' : 'ブロック'}
+                </Text>
               </Pressable>
 
               <Pressable
@@ -157,7 +159,7 @@ export default function ChatInfo() {
             },
             {
               label: 'キャンセル',
-              variant: 'text',
+              variant: 'outlined',
               onPress: () => setDialog(null),
             },
           ]}
@@ -172,7 +174,7 @@ export default function ChatInfo() {
           buttons={[
             {
               label: 'キャンセル',
-              variant: 'text',
+              variant: 'outlined',
               onPress: () => setDialog(null),
             },
             {
@@ -189,12 +191,12 @@ export default function ChatInfo() {
 
       {dialog === 'delete' && peer && (
         <Dialog
-          text="このトークを削除しますか？この端末から消えます。"
+          text={`${chatName(peer, contacts, groups)}${group ? 'の' : 'との'}トークを削除しますか？この端末から消えます。`}
           onClose={() => setDialog(null)}
           buttons={[
             {
               label: 'キャンセル',
-              variant: 'text',
+              variant: 'outlined',
               onPress: () => setDialog(null),
             },
             {
@@ -238,6 +240,8 @@ const styles = (c: Palette) =>
       backgroundColor: c.background,
     },
     backButton: {
+      width: 44,
+      height: 44,
       minWidth: 44,
       minHeight: 44,
       alignItems: 'center',
@@ -288,10 +292,16 @@ const styles = (c: Palette) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
+    roundIconDanger: {
+      borderColor: c.danger,
+    },
     actionLabel: {
       fontSize: 13,
       color: c.text,
       fontWeight: '500',
+    },
+    actionLabelDanger: {
+      color: c.danger,
     },
     disabled: {
       opacity: 0.4,

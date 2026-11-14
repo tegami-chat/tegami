@@ -69,8 +69,8 @@ export function ReportSheet({
             <Text style={s.doneTitle}>通報しました</Text>
             <View style={s.buttons}>
               {!isBlocked && (
-                <Pressable role="button" aria-label="ブロックする" style={s.primary} onPress={onRequestBlock}>
-                  <Text style={s.primaryText}>ブロックする</Text>
+                <Pressable role="button" aria-label="ブロックする" style={s.dangerBtn} onPress={onRequestBlock}>
+                  <Text style={s.dangerBtnText}>ブロックする</Text>
                 </Pressable>
               )}
               <Pressable role="button" aria-label="閉じる" style={s.secondary} onPress={onClose}>
@@ -102,12 +102,21 @@ export function ReportSheet({
             <View style={s.attachCard}>
               <View style={s.attachRow}>
                 <Text style={s.attachLabel}>メッセージを添える</Text>
-                <Switch trackColor={{ false: c.line, true: c.accent }} thumbColor="#ffffff" value={attach} onValueChange={setAttach} aria-label="メッセージを添える" />
+                <Switch
+                  trackColor={{ false: c.line, true: c.accent }}
+                  thumbColor="#ffffff"
+                  {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}
+                  value={attach}
+                  onValueChange={setAttach}
+                  aria-label="メッセージを添える"
+                />
               </View>
               <Text style={s.attachSub}>
-                {messageId
-                  ? `選んだメッセージと前後のメッセージ（${attachedCount}件）を送ります`
-                  : `直近のメッセージ（${attachedCount}件）を送ります`}
+                {`${attach ? '' : 'オンにすると、'}${
+                  messageId
+                    ? `選んだメッセージと前後のメッセージ（${attachedCount}件）を送ります`
+                    : `直近のメッセージ（${attachedCount}件）を送ります`
+                }`}
               </Text>
             </View>
 
@@ -158,6 +167,8 @@ const styles = (c: Palette) =>
       backgroundColor: c.background,
     },
     backButton: {
+      width: 44,
+      height: 44,
       minWidth: 44,
       minHeight: 44,
       alignItems: 'center',
@@ -274,6 +285,22 @@ const styles = (c: Palette) =>
       fontSize: 16,
       fontWeight: '600',
       color: c.onAccent,
+    },
+    dangerBtn: {
+      minHeight: 44,
+      borderRadius: 22,
+      borderWidth: 1,
+      borderColor: c.danger,
+      backgroundColor: c.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+    },
+    dangerBtnText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: c.danger,
     },
     secondary: {
       minHeight: 44,
