@@ -248,9 +248,17 @@ export function Video({ id, file, onOpen }: { id: string; file: FileRef; onOpen?
   const c = usePalette();
   const [uri, setUri] = useState<string | null>(null);
   const [duration, setDuration] = useState<number>(file.duration ?? 0);
+  const [muted, setMuted] = useState(true);
   const [error, setError] = useState<'gone' | 'failed' | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const inViewRef = useRef(true);
+
+  function toggleMute() {
+    const el = videoRef.current;
+    if (!el) return;
+    el.muted = !el.muted;
+    setMuted(el.muted);
+  }
 
   useEffect(() => {
     if (file.duration !== undefined) setDuration(file.duration);
@@ -346,18 +354,24 @@ export function Video({ id, file, onOpen }: { id: string; file: FileRef; onOpen?
         <MaterialIcons name="play-arrow" size={14} color="#ffffff" />
         <Text style={styles.videoCornerText}>{formatClock(duration)}</Text>
       </View>
-      <View style={styles.videoSpeaker} pointerEvents="none">
-        <MaterialIcons name="volume-off" size={14} color="#ffffff" />
-      </View>
+      <Pressable
+        role="button"
+        aria-label={muted ? 'ミュート解除' : 'ミュート'}
+        style={styles.videoSpeakerHit}
+        onPress={toggleMute}>
+        <View style={styles.videoSpeaker}>
+          <MaterialIcons name={muted ? 'volume-off' : 'volume-up'} size={14} color="#ffffff" />
+        </View>
+      </Pressable>
     </Pressable>
   );
 }
 
 function formatBytes(size?: number): string {
   if (!size || !Number.isInteger(size) || size <= 0) return '';
-  if (size < 1024) return `${size} B`;
+  if (size < 1024) return '1 KB 未満';
   if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
-  return `${(size / (1024 * 1024)).toFixed(2).replace(/\.?0+$/, '')} MB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function formatExpiry(at: number): string {
@@ -444,6 +458,7 @@ export function FileAttachment({ id, file, at }: { id: string; file: FileRef; at
           </Text>
         ) : null}
       </View>
+      <MaterialIcons name="download" size={20} color={c.muted} />
     </Pressable>
   );
 }
@@ -574,8 +589,10 @@ export function Voice({ id, file }: { id: string; file: FileRef }) {
         aria-label={playing ? '一時停止' : '再生'}
         disabled={!uri}
         onPress={togglePlay}
-        style={[styles.voicePlayBtn, { backgroundColor: c.text }]}>
-        <MaterialIcons name={playing ? 'pause' : 'play-arrow'} size={18} color={c.surface} />
+        style={styles.voicePlayBtn}>
+        <View style={[styles.voicePlayCircle, { backgroundColor: c.accent }]}>
+          <MaterialIcons name={playing ? 'pause' : 'play-arrow'} size={20} color={c.onAccent} />
+        </View>
       </Pressable>
       <View style={styles.waveform} testID="voice-waveform">
         {bars.map((amp, i) => {
@@ -617,10 +634,18 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   videoCornerText: { color: '#ffffff', fontSize: 11, fontWeight: '600' },
-  videoSpeaker: {
+  videoSpeakerHit: {
     position: 'absolute',
-    bottom: 8,
-    right: 8,
+    bottom: 0,
+    right: 0,
+    width: 44,
+    height: 44,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoSpeaker: {
     width: 24,
     height: 24,
     borderRadius: 12,
@@ -643,14 +668,23 @@ const styles = StyleSheet.create({
   fileMeta: { flex: 1, minWidth: 0, gap: 1 },
   fileName: { fontSize: 14, fontWeight: '600' },
   fileSub: { fontSize: 12 },
-  voiceRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 2 },
+  voiceRow: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2 },
   voicePlayBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    minWidth: 44,
+    minHeight: 44,
+    marginLeft: -6,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+  },
+  voicePlayCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   waveform: { flexDirection: 'row', alignItems: 'center', gap: 2, height: 24 },
   waveBar: { width: 2, borderRadius: 1 },
@@ -673,7 +707,10 @@ const styles = StyleSheet.create({
     zIndex: 101,
     width: 44,
     height: 44,
+    minWidth: 44,
+    minHeight: 44,
     borderRadius: 22,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
     alignItems: 'center',
     justifyContent: 'center',
   },

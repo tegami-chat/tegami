@@ -5,7 +5,6 @@ import { Image, Linking, Pressable, ScrollView, Share, StyleSheet, Switch, Text,
 
 import { AccountList } from '@/components/account-list';
 import { Avatar } from '@/components/avatar';
-import { Dialog } from '@/components/dialog';
 import { Palette, usePalette } from '@/constants/theme';
 import { pushState, type PushState } from '@/lib/push';
 import { personName, useTegami } from '@/lib/tegami';
@@ -187,21 +186,19 @@ export default function Settings() {
       <View style={[s.card, s.row]}>
         <Avatar name={myName} file={myAvatar} size={64} />
         <View style={s.avatarActions}>
-          <Pressable onPress={pickAvatar} disabled={avatarBusy} role="button">
+          <Pressable style={s.avatarBtn} onPress={pickAvatar} disabled={avatarBusy} role="button">
             <Text style={s.action}>アイコンを変更</Text>
           </Pressable>
           {myAvatar && (
-            <Pressable onPress={removeAvatar} disabled={avatarBusy} role="button">
-              <Text style={s.action}>アイコンを削除</Text>
+            <Pressable style={[s.avatarBtn, s.avatarBtnDanger]} onPress={removeAvatar} disabled={avatarBusy} role="button">
+              <Text style={s.dangerAction}>アイコンを削除</Text>
             </Pressable>
           )}
         </View>
       </View>
 
-      <Text style={s.heading}>鍵の守り方</Text>
-      <View style={s.card}>
-        <Text style={s.value}>{protectedByPasskey ? 'パスキーで守っています' : 'このブラウザの中だけに保存しています'}</Text>
-      </View>
+      <Text style={s.heading}>アカウントの守り方</Text>
+      <Text style={s.value}>{protectedByPasskey ? 'パスキーで守っています' : 'このブラウザの中だけに保存しています'}</Text>
 
       <Text style={s.heading}>通知</Text>
       {push === 'needs-home-screen' ? (
@@ -212,7 +209,15 @@ export default function Settings() {
         <>
           <View style={[s.card, s.row]}>
             <Text style={s.label}>新しいメッセージを知らせる</Text>
-            <Switch trackColor={{ false: c.line, true: c.accent }} thumbColor="#ffffff" value={push === 'on'} onValueChange={togglePush} disabled={pushBusy} aria-label="新しいメッセージを知らせる" />
+            <Switch
+              trackColor={{ false: c.line, true: c.accent }}
+              thumbColor="#ffffff"
+              {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}
+              value={push === 'on'}
+              onValueChange={togglePush}
+              disabled={pushBusy}
+              aria-label="新しいメッセージを知らせる"
+            />
           </View>
           {push === 'denied' && <Text style={s.note}>通知が許可されていません。ブラウザか端末の設定で、Tegami の通知を許可してください。</Text>}
           {pushFailed && <Text style={s.note}>通知を設定できませんでした。通信を確認して、もう一度お試しください。</Text>}
@@ -226,7 +231,7 @@ export default function Settings() {
           <Text style={s.linkText} selectable>
             {transfer.link}
           </Text>
-          <Pressable onPress={shareLink} role="button">
+          <Pressable style={s.inlineBtn} onPress={shareLink} role="button">
             <Text style={s.action}>{copied ? 'コピーしました' : 'リンクをコピー'}</Text>
           </Pressable>
           <Text style={s.warn}>{until} まで使えます。このリンクを開いた人は、あなたのアカウントを使えます。自分の端末だけで開いてください。</Text>
@@ -238,26 +243,24 @@ export default function Settings() {
       )}
       {transferFailed && <Text style={s.note}>リンクを作成できませんでした。通信を確認して、もう一度お試しください。</Text>}
 
-      <Text style={s.heading}>復旧コード</Text>
+      <Text style={s.heading}>アカウントの復旧</Text>
       {newCode ? (
         <View style={[s.card, s.transfer]}>
           <Text style={s.code} selectable testID="recovery-code">
             {newCode}
           </Text>
-          <Pressable onPress={copyCode} role="button">
+          <Pressable style={s.inlineBtn} onPress={copyCode} role="button">
             <Text style={s.action}>{codeCopied ? 'コピーしました' : 'コードをコピー'}</Text>
           </Pressable>
           <Text style={s.warn}>このコードは今だけ表示されます。パスワード管理アプリか紙に保管してください。</Text>
           <Text style={s.warn}>このコードは誰にも見せないでください。なくすと、Tegami でも復旧できません。</Text>
-          <Pressable onPress={() => setNewCode(null)} role="button">
+          <Pressable style={s.inlineBtn} onPress={() => setNewCode(null)} role="button">
             <Text style={s.action}>保管しました</Text>
           </Pressable>
         </View>
       ) : recoveryOn ? (
         <>
-          <View style={s.card}>
-            <Text style={s.value}>端末をすべて失っても、復旧コードで戻せます</Text>
-          </View>
+          <Text style={s.value}>端末をすべて失っても、復旧コードで戻せます</Text>
           <Pressable style={[s.card, recoveryBusy && s.busy]} onPress={makeCode} disabled={recoveryBusy} role="button">
             <Text style={s.action}>コードを更新</Text>
           </Pressable>
@@ -278,40 +281,52 @@ export default function Settings() {
       <Text style={s.heading}>アプリが落ちた時</Text>
       <View style={[s.card, s.row]}>
         <Text style={s.label}>Tegami に報告を送る</Text>
-        <Switch trackColor={{ false: c.line, true: c.accent }} thumbColor="#ffffff" value={crashReports} onValueChange={setCrashReportsOn} aria-label="Tegami に報告を送る" />
+        <Switch
+          trackColor={{ false: c.line, true: c.accent }}
+          thumbColor="#ffffff"
+          {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}
+          value={crashReports}
+          onValueChange={setCrashReportsOn}
+          aria-label="Tegami に報告を送る"
+        />
       </View>
       <Text style={s.note}>報告には、エラーの内容だけが入ります。名前や会話は入りません。</Text>
 
-      <Text style={s.heading}>会話</Text>
+      <Text style={s.heading}>トーク</Text>
       <View style={[s.card, s.row]}>
         <Text style={s.label}>未読数を表示</Text>
-        <Switch trackColor={{ false: c.line, true: c.accent }} thumbColor="#ffffff" value={showUnread} onValueChange={setShowUnread} aria-label="未読数を表示" />
+        <Switch
+          trackColor={{ false: c.line, true: c.accent }}
+          thumbColor="#ffffff"
+          {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}
+          value={showUnread}
+          onValueChange={setShowUnread}
+          aria-label="未読数を表示"
+        />
       </View>
       <Pressable style={s.card} onPress={exportFile} role="button">
-        <Text style={s.action}>{exported ? '書き出しました' : '会話を書き出す'}</Text>
+        <Text style={s.action}>{exported ? '書き出しました' : 'トーク履歴を書き出す'}</Text>
       </Pressable>
 
       <Text style={s.heading}>ブロックリスト</Text>
       {blocked.length === 0 ? (
-        <View style={s.card}>
-          <Text style={s.value}>ブロックしている人はいません</Text>
-        </View>
+        <Text style={s.value}>ブロックしている人はいません</Text>
       ) : (
         blocked.map((pubkey) => (
           <View key={pubkey} style={[s.card, s.row]}>
             <Text style={s.label} numberOfLines={1}>
               {personName(pubkey, contacts)}
             </Text>
-            <Pressable onPress={() => unblock(pubkey)} role="button">
+            <Pressable style={s.inlineBtn} onPress={() => unblock(pubkey)} role="button">
               <Text style={s.action}>ブロック解除</Text>
             </Pressable>
           </View>
         ))
       )}
 
-      <Text style={s.heading}>Tegami が数えていること</Text>
+      <Text style={s.heading}>利用状況の統計</Text>
       <Pressable style={s.card} onPress={() => Linking.openURL(STATS_URL)} role="link">
-        <Text style={s.action}>日ごとの合計を見る</Text>
+        <Text style={s.action}>送受信の数などを日ごとに見る</Text>
       </Pressable>
       <View style={{ height: 40 }} />
       </ScrollView>
@@ -326,10 +341,34 @@ const styles = (c: Palette) =>
     heading: { fontSize: 14, color: c.muted, marginTop: 14 },
     card: { backgroundColor: c.surface, borderRadius: 12, borderWidth: 1, borderColor: c.line, paddingHorizontal: 14, paddingVertical: 14 },
     row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-    avatarActions: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+    avatarActions: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    avatarBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 22,
+      borderWidth: 1,
+      borderColor: c.line,
+      backgroundColor: c.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarBtnDanger: {
+      borderColor: c.danger,
+    },
+    inlineBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     label: { fontSize: 16, color: c.text, flex: 1 },
-    value: { fontSize: 16, color: c.text },
-    action: { fontSize: 16, color: c.accent, fontWeight: '600' },
+    value: { fontSize: 15, color: c.text, paddingHorizontal: 4, lineHeight: 22 },
+    action: { fontSize: 15, color: c.accent, fontWeight: '600' },
+    dangerAction: { fontSize: 15, color: c.danger, fontWeight: '600' },
     note: { fontSize: 13, color: c.muted, lineHeight: 20 },
     transfer: { alignItems: 'center', gap: 12 },
     qr: { width: 220, height: 220, borderRadius: 8, backgroundColor: '#fff' },

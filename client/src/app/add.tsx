@@ -66,6 +66,23 @@ type BarcodeDetectorLike = {
   detect: (source: CanvasImageSource) => Promise<{ rawValue?: string }[]>;
 };
 
+function pickImageFile(): Promise<File | null> {
+  return new Promise((resolve) => {
+    const el = document.createElement('input');
+    el.type = 'file';
+    el.accept = 'image/*';
+    el.style.display = 'none';
+    document.body.appendChild(el);
+    const done = (file: File | null) => {
+      el.remove();
+      resolve(file);
+    };
+    el.addEventListener('change', () => done(el.files?.[0] ?? null), { once: true });
+    el.addEventListener('cancel', () => done(null), { once: true });
+    el.click();
+  });
+}
+
 export default function Add() {
   const c = usePalette();
   const s = styles(c);
@@ -121,6 +138,64 @@ export default function Add() {
     const code = inviteCodeOf(invite);
     if (code && registration === 'ok' && !trusted) void registerWith({ invite: code });
     router.replace({ pathname: '/chat/[peer]', params: { peer } });
+  }
+
+  function applyScannedQr(raw: string): boolean {
+    const link = inviteFromQr(raw);
+    if (!link) {
+      setScanError('Tegami の招待リンクではありません');
+      return false;
+    }
+    keepInviteCode(inviteCodeOf(link));
+    setInvite(link);
+    const n = inviteName(link);
+    if (n) setName(n);
+    setScanError(null);
+    setTab('qr');
+    return true;
+  }
+
+  async function pickQrImage() {
+    if (Platform.OS !== 'web') return;
+    const file = await pickImageFile();
+    if (!file) return;
+    setScanError(null);
+    try {
+      let raw: string | null = null;
+      const Detector = (window as unknown as { BarcodeDetector?: new (opts: { formats: string[] }) => BarcodeDetectorLike })
+        .BarcodeDetector;
+      const bitmap = await createImageBitmap(file);
+      try {
+        if (Detector) {
+          try {
+            const detector = new Detector({ formats: ['qr_code'] });
+            const hits = await detector.detect(bitmap);
+            raw = hits[0]?.rawValue ?? null;
+          } catch {
+            // Fall back to jsQR on the canvas below.
+          }
+        }
+        if (!raw) {
+          const canvas = document.createElement('canvas');
+          canvas.width = bitmap.width;
+          canvas.height = bitmap.height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+            raw = decodeQrImage(ctx.getImageData(0, 0, canvas.width, canvas.height));
+          }
+        }
+      } finally {
+        bitmap.close();
+      }
+      if (!raw) {
+        setScanError('招待リンクを読み取れません');
+        return;
+      }
+      applyScannedQr(raw);
+    } catch {
+      setScanError('招待リンクを読み取れません');
+    }
   }
 
   useEffect(() => {
@@ -192,18 +267,7 @@ export default function Add() {
             raw = decodeQrImage(ctx.getImageData(0, 0, canvas.width, canvas.height));
           }
           if (!alive || !raw) return;
-          const link = inviteFromQr(raw);
-          if (!link) {
-            setScanError('Tegami の招待リンクではありません');
-            return;
-          }
-          stop();
-          keepInviteCode(inviteCodeOf(link));
-          setInvite(link);
-          const n = inviteName(link);
-          if (n) setName(n);
-          setScanError(null);
-          setTab('qr');
+          if (applyScannedQr(raw)) stop();
         } finally {
           busy = false;
         }
@@ -320,6 +384,10 @@ export default function Add() {
               <View style={s.squareOverlay} pointerEvents="none" />
             </View>
           )}
+          <Pressable role="button" aria-label="画像から読み取る" style={s.pickImageBtn} onPress={pickQrImage}>
+            <MaterialIcons name="image" size={20} color={c.text} />
+            <Text style={s.pickImageText}>画像から読み取る</Text>
+          </Pressable>
           <Text style={s.scanNote}>QRコードを読み取ると、友だち追加の画面が開きます。</Text>
           {scanError && <Text style={s.error}>{scanError}</Text>}
         </View>
@@ -435,5 +503,20 @@ const styles = (c: Palette) =>
       borderWidth: 2,
       borderColor: '#ffffff',
     },
+    pickImageBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      borderRadius: 22,
+      borderWidth: 1,
+      borderColor: c.line,
+      backgroundColor: c.surface,
+    },
+    pickImageText: { fontSize: 15, fontWeight: '600', color: c.text },
     scanNote: { fontSize: 14, color: c.muted, textAlign: 'center' },
   });

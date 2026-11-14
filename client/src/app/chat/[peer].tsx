@@ -52,6 +52,7 @@ export default function Chat() {
     groups,
     blocked,
     block,
+    unblock,
     messages,
     deleteMessage,
     send,
@@ -79,8 +80,13 @@ export default function Chat() {
   const [stampOffer, setStampOffer] = useState<string | null>(null);
   const [replying, setReplying] = useState<Message | null>(null);
   const [forwarding, setForwarding] = useState<Message | null>(null);
-  const [copied, setCopied] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const showToast = useCallback((msg: string, ms = 3000) => {
+    setToast(msg);
+    clearTimeout(copiedTimer.current);
+    copiedTimer.current = setTimeout(() => setToast((cur) => (cur === msg ? null : cur)), ms);
+  }, []);
   // The message whose actions are shown: by long press/right click or by hovering (mouse).
   const [pressed, setPressed] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
@@ -110,6 +116,7 @@ export default function Chat() {
   const [viewingVideo, setViewingVideo] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [blockingPeer, setBlockingPeer] = useState<string | null>(null);
+  const [unblocking, setUnblocking] = useState(false);
   const [reportTarget, setReportTarget] = useState<{ peer: string; messageId?: string } | null>(null);
   const [swiping, setSwiping] = useState<{ id: string; dx: number } | null>(null);
   // When the press that opened the panel by holding was released. The panel pushes the bubble
@@ -156,12 +163,13 @@ export default function Chat() {
   useEffect(() => {
     setReportTarget(null);
     setBlockingPeer(null);
+    setUnblocking(false);
     setDeletingId(null);
     setForwarding(null);
     setReplying(null);
     setPressed(null);
     setHovered(null);
-    setCopied(null);
+    setToast(null);
     setPlusOpen(false);
     setStampsOpen(false);
     setStampDeleting(null);
@@ -241,7 +249,7 @@ export default function Chat() {
     setPressed(null);
     clearTimeout(hoverTimer.current);
     setHovered(null);
-    setCopied(null);
+    setToast(null);
     input.current?.focus();
   }, []);
 
@@ -256,6 +264,9 @@ export default function Chat() {
       if (!d.moved && Math.hypot(dx, dy) > 8) {
         d.moved = true;
         clearTimeout(d.longTimer);
+      }
+      if (d.moved) {
+        window.getSelection?.()?.removeAllRanges();
       }
       if (dx > 8 && dx > Math.abs(dy)) {
         d.dx = dx;
@@ -326,9 +337,7 @@ export default function Chat() {
       await navigator.clipboard.writeText(m.text);
       setPressed(null);
       setHovered(null);
-      setCopied(m.id);
-      clearTimeout(copiedTimer.current);
-      copiedTimer.current = setTimeout(() => setCopied((cur) => (cur === m.id ? null : cur)), 1500);
+      showToast('コピーしました', 1500);
     } catch {}
   }
 
@@ -339,7 +348,7 @@ export default function Chat() {
     setPressed(null);
     clearTimeout(hoverTimer.current);
     setHovered(null);
-    setCopied(null);
+    setToast(null);
   }
 
   async function forwardTo(target: string) {
@@ -538,7 +547,7 @@ export default function Chat() {
   async function sendPickedMedia(blob: Blob | null) {
     if (!blob || !peer) return;
     if (blob.type.startsWith('video/') && blob.size > MAX_FILE_BYTES) {
-      setError('10MBを超える動画は送れません');
+      showToast('10MBを超える動画は送れません');
       return;
     }
     setSending(true);
@@ -587,7 +596,7 @@ export default function Chat() {
     const file = await pickWebFile();
     if (!file) return;
     if (file.size > MAX_FILE_BYTES) {
-      setError('10MBを超えるファイルは送れません');
+      showToast('10MBを超えるファイルは送れません');
       return;
     }
     setSending(true);
@@ -660,7 +669,7 @@ export default function Chat() {
         ? shortId(peer)
         : '';
 
-  const modalOpen = !!deletingId || !!blockingPeer || !!reportTarget;
+  const modalOpen = !!deletingId || !!blockingPeer || unblocking || !!reportTarget;
 
   return (
     <KeyboardAvoidingView style={s.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -758,9 +767,9 @@ export default function Chat() {
           </View>
         )}
 
-        {copied && (
+        {toast && (
           <View style={s.copiedToast}>
-            <Text style={s.copiedText}>コピーしました</Text>
+            <Text style={s.copiedText}>{toast}</Text>
           </View>
         )}
 
@@ -900,7 +909,7 @@ export default function Chat() {
                     <Photo id={item.id} file={item.file} onOpen={setViewing} />
                   )
                 ) : (
-                  <Text style={s.text} selectable={!unsent}>
+                  <Text style={s.text} selectable={false}>
                     {item.text}
                   </Text>
                 )}
@@ -1090,6 +1099,9 @@ export default function Chat() {
         {isBlocked ? (
           <View style={s.blockedBar}>
             <Text style={s.blockedText}>ブロック中</Text>
+            <Pressable role="button" aria-label="ブロック解除" style={s.unblockBtn} onPress={() => setUnblocking(true)}>
+              <Text style={s.unblockBtnText}>ブロック解除</Text>
+            </Pressable>
           </View>
         ) : (
           <>
@@ -1204,7 +1216,7 @@ export default function Chat() {
                         aria-label={previewPlaying ? '一時停止' : '再生'}
                         style={[s.recordBigBtn, s.recordPlayBtn]}
                         onPress={togglePreview}>
-                        <MaterialIcons name={previewPlaying ? 'pause' : 'play-arrow'} size={28} color={c.surface} />
+                        <MaterialIcons name={previewPlaying ? 'pause' : 'play-arrow'} size={28} color={c.onAccent} />
                       </Pressable>
                       <Pressable
                         role="button"
@@ -1354,7 +1366,7 @@ export default function Chat() {
           buttons={[
             {
               label: 'キャンセル',
-              variant: 'text',
+              variant: 'outlined',
               onPress: () => setDeletingId(null),
             },
             {
@@ -1400,8 +1412,31 @@ export default function Chat() {
             },
             {
               label: 'キャンセル',
-              variant: 'text',
+              variant: 'outlined',
               onPress: () => setBlockingPeer(null),
+            },
+          ]}
+        />
+      )}
+
+      {unblocking && peer && (
+        <Dialog
+          title="ブロックを解除しますか？"
+          text="この相手からのメッセージを受け取るようになります。"
+          onClose={() => setUnblocking(false)}
+          buttons={[
+            {
+              label: 'キャンセル',
+              variant: 'outlined',
+              onPress: () => setUnblocking(false),
+            },
+            {
+              label: 'ブロック解除',
+              variant: 'danger',
+              onPress: () => {
+                unblock(peer);
+                setUnblocking(false);
+              },
             },
           ]}
         />
@@ -1501,7 +1536,7 @@ const styles = (c: Palette) =>
       borderColor: c.accent,
       opacity: 1,
     },
-    row: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '80%' },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '80%', userSelect: 'none' },
     rowMine: { alignSelf: 'flex-end', justifyContent: 'flex-end' },
     rowTheirs: { alignSelf: 'flex-start' },
     bubble: {
@@ -1511,6 +1546,7 @@ const styles = (c: Palette) =>
       paddingVertical: 8,
       borderWidth: 1,
       borderColor: 'transparent',
+      userSelect: 'none',
     },
     stampBox: { flexShrink: 1, paddingVertical: 2, borderWidth: 1, borderColor: 'transparent' },
     mine: { backgroundColor: c.mine, borderBottomRightRadius: 4 },
@@ -1573,7 +1609,7 @@ const styles = (c: Palette) =>
     },
     replyBody: { flex: 1 },
     replyClose: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-    text: { fontSize: 16, color: c.text, lineHeight: 22 },
+    text: { fontSize: 16, color: c.text, lineHeight: 22, userSelect: 'none' },
     author: { fontSize: 12, color: c.accent, fontWeight: '600', marginBottom: 2 },
     time: { fontSize: 11, color: c.muted, alignSelf: 'flex-end', marginTop: 2 },
     waiting: { opacity: 0.6 },
@@ -1591,7 +1627,14 @@ const styles = (c: Palette) =>
     },
     stampGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignItems: 'center' },
     stampCell: { alignItems: 'center', gap: 4 },
-    cancel: { paddingHorizontal: 8, paddingVertical: 6 },
+    cancel: {
+      minHeight: 44,
+      minWidth: 44,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     cancelText: { fontSize: 14, color: c.accent, fontWeight: '600' },
     addBar: {
       flexDirection: 'row',
@@ -1615,15 +1658,29 @@ const styles = (c: Palette) =>
     addButton: { backgroundColor: c.accent, borderRadius: 20, paddingHorizontal: 14, minHeight: 44, justifyContent: 'center' },
     error: { fontSize: 13, color: c.danger, paddingHorizontal: 16, paddingBottom: 4 },
     blockedBar: {
+      flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
+      justifyContent: 'space-between',
       paddingHorizontal: 16,
-      paddingVertical: 12,
+      paddingVertical: 8,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: c.line,
       backgroundColor: c.surface,
     },
     blockedText: { fontSize: 14, color: c.muted },
+    unblockBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 22,
+      borderWidth: 1,
+      borderColor: c.line,
+      backgroundColor: c.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    unblockBtnText: { fontSize: 14, color: c.accent, fontWeight: '600' },
     forwardPanel: {
       gap: 10,
       padding: 12,
@@ -1634,16 +1691,27 @@ const styles = (c: Palette) =>
     forwardTitle: { fontSize: 15, color: c.text, fontWeight: '600' },
     forwardList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     forwardTarget: {
-      borderRadius: 16,
+      minHeight: 44,
+      minWidth: 44,
+      borderRadius: 22,
       borderWidth: 1,
       borderColor: c.line,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
       backgroundColor: c.background,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     forwardTargetText: { fontSize: 14, color: c.text },
     forwardButtons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    forwardCancel: { paddingHorizontal: 10, paddingVertical: 8 },
+    forwardCancel: {
+      minHeight: 44,
+      minWidth: 44,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     cautionWrap: { alignSelf: 'stretch', gap: 8 },
     cautionCard: {
       alignSelf: 'center',
@@ -1702,23 +1770,25 @@ const styles = (c: Palette) =>
     plusPanel: {
       flexDirection: 'row',
       flexWrap: 'wrap',
+      flexGrow: 0,
+      flexShrink: 0,
       gap: 16,
       paddingHorizontal: 16,
-      paddingVertical: 14,
+      paddingVertical: 10,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: c.line,
       backgroundColor: c.surface,
     },
     plusItem: {
       alignItems: 'center',
-      gap: 6,
-      minWidth: 64,
+      gap: 4,
+      minWidth: 56,
       minHeight: 44,
     },
     plusIcon: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: c.background,
       borderWidth: 1,
       borderColor: c.line,
@@ -1742,6 +1812,8 @@ const styles = (c: Palette) =>
     barIconBtn: {
       width: 44,
       height: 44,
+      minWidth: 44,
+      minHeight: 44,
       alignItems: 'center',
       justifyContent: 'center',
       flexShrink: 0,
@@ -1801,9 +1873,11 @@ const styles = (c: Palette) =>
       justifyContent: 'flex-end',
     },
     recordCloseBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: 44,
+      height: 44,
+      minWidth: 44,
+      minHeight: 44,
+      borderRadius: 22,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -1844,7 +1918,7 @@ const styles = (c: Palette) =>
       backgroundColor: c.danger,
     },
     recordPlayBtn: {
-      backgroundColor: c.text,
+      backgroundColor: c.accent,
     },
     recordSideBtn: {
       width: 48,

@@ -6,12 +6,13 @@ import { FlatList, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput,
 import { accountName } from '@/components/account-list';
 import { Avatar } from '@/components/avatar';
 import { Badge, ChatRow } from '@/components/chat-row';
-import { Confirm, MenuSheet } from '@/components/confirm';
+import { Dialog } from '@/components/dialog';
+import { MenuSheet } from '@/components/menu-sheet';
 import { Palette, usePalette } from '@/constants/theme';
 import { readyAccounts, useAccounts, useNewMarks } from '@/lib/accounts';
 import { useCall } from '@/lib/calls';
 import { excerpt, matchesName, searchMessages } from '@/lib/search';
-import { chatName, strangers, useTegami, type Contact, type Message } from '@/lib/tegami';
+import { chatName, isGroup, strangers, useTegami, type Contact, type Message } from '@/lib/tegami';
 
 function when(at: number) {
   const d = new Date(at * 1000);
@@ -84,13 +85,6 @@ export default function Chats() {
                   <Text style={s.headerLink}>設定</Text>
                 </Pressable>
               </Link>
-              {contacts.length >= 2 && (
-                <Link href="/group" asChild>
-                  <Pressable role="button" style={s.headerButton}>
-                    <Text style={s.headerLink}>グループを作る</Text>
-                  </Pressable>
-                </Link>
-              )}
               <Link href="/add" asChild>
                 <Pressable role="button" aria-label="友だち追加" style={s.headerButton}>
                   <MaterialIcons name="person-add" size={24} color={c.text} />
@@ -156,7 +150,14 @@ export default function Chats() {
             );
           })}
 
-          <Text style={s.sectionHeading}>{`グループ（${groups.length}）`}</Text>
+          <View style={s.sectionHeaderRow}>
+            <Text style={s.sectionHeadingInline}>{`グループ（${groups.length}）`}</Text>
+            <Link href="/group" asChild>
+              <Pressable role="button" style={s.sectionAction}>
+                <Text style={s.sectionActionText}>グループを作る</Text>
+              </Pressable>
+            </Link>
+          </View>
           {groups.map((g) => (
             <Pressable
               key={g.id}
@@ -265,6 +266,8 @@ export default function Chats() {
 
       {friendMenu && (
         <MenuSheet
+          title={friendMenu.name}
+          onClose={() => setFriendMenu(null)}
           items={[
             {
               label: 'トーク',
@@ -309,36 +312,54 @@ export default function Chats() {
       )}
 
       {confirmFriend?.kind === 'delete' && (
-        <Confirm
+        <Dialog
           title={`${confirmFriend.contact.name}を友だちから削除しますか？`}
-          confirmLabel="削除"
-          cancelLabel="キャンセル"
-          danger
-          onConfirm={() => {
-            removeContact(confirmFriend.contact.pubkey);
-            setConfirmFriend(null);
-          }}
-          onCancel={() => setConfirmFriend(null)}
+          onClose={() => setConfirmFriend(null)}
+          buttons={[
+            {
+              label: 'キャンセル',
+              variant: 'outlined',
+              onPress: () => setConfirmFriend(null),
+            },
+            {
+              label: '削除',
+              variant: 'danger',
+              onPress: () => {
+                removeContact(confirmFriend.contact.pubkey);
+                setConfirmFriend(null);
+              },
+            },
+          ]}
         />
       )}
 
       {confirmFriend?.kind === 'block' && (
-        <Confirm
+        <Dialog
           title={`${confirmFriend.contact.name}をブロックしますか？`}
           text="ブロックした相手とはメッセージの送受信ができなくなります。相手には伝わりません。"
-          confirmLabel="ブロック"
-          cancelLabel="キャンセル"
-          danger
-          onConfirm={() => {
-            block(confirmFriend.contact.pubkey);
-            setConfirmFriend(null);
-          }}
-          onCancel={() => setConfirmFriend(null)}
+          onClose={() => setConfirmFriend(null)}
+          buttons={[
+            {
+              label: 'キャンセル',
+              variant: 'outlined',
+              onPress: () => setConfirmFriend(null),
+            },
+            {
+              label: 'ブロック',
+              variant: 'danger',
+              onPress: () => {
+                block(confirmFriend.contact.pubkey);
+                setConfirmFriend(null);
+              },
+            },
+          ]}
         />
       )}
 
       {chatMenu && (
         <MenuSheet
+          title={chatName(chatMenu, contacts, groups)}
+          onClose={() => setChatMenu(null)}
           items={[
             {
               label: '削除',
@@ -358,16 +379,24 @@ export default function Chats() {
       )}
 
       {confirmChat && (
-        <Confirm
-          title="このトークを削除しますか？この端末から消えます。"
-          confirmLabel="削除"
-          cancelLabel="キャンセル"
-          danger
-          onConfirm={() => {
-            deleteChat(confirmChat);
-            setConfirmChat(null);
-          }}
-          onCancel={() => setConfirmChat(null)}
+        <Dialog
+          text={`${chatName(confirmChat, contacts, groups)}${isGroup(confirmChat) ? 'の' : 'との'}トークを削除しますか？この端末から消えます。`}
+          onClose={() => setConfirmChat(null)}
+          buttons={[
+            {
+              label: 'キャンセル',
+              variant: 'outlined',
+              onPress: () => setConfirmChat(null),
+            },
+            {
+              label: '削除',
+              variant: 'danger',
+              onPress: () => {
+                deleteChat(confirmChat);
+                setConfirmChat(null);
+              },
+            },
+          ]}
         />
       )}
     </View>
@@ -410,6 +439,32 @@ const styles = (c: Palette) =>
       paddingHorizontal: 16,
       paddingTop: 14,
       paddingBottom: 6,
+    },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingLeft: 16,
+      paddingRight: 8,
+      paddingTop: 6,
+    },
+    sectionHeadingInline: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: c.muted,
+    },
+    sectionAction: {
+      minHeight: 44,
+      minWidth: 44,
+      paddingHorizontal: 8,
+      paddingVertical: 6,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sectionActionText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: c.accent,
     },
     friendRow: {
       flexDirection: 'row',
