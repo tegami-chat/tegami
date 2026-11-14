@@ -9,7 +9,7 @@
 // Needs Google Chrome installed. Set CHROME_PATH to use another Chromium build.
 
 import { execFileSync, spawn } from 'node:child_process';
-import { createReadStream, existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createServer } from 'node:http';
 import { extname, join, resolve } from 'node:path';
@@ -112,8 +112,24 @@ const RECORDER = `(() => {
   };
 })();`;
 
+// SHOTS=<folder> saves screenshots of the screens new words appear on (for reviewing the
+// wording before a release), with a shots.json that says what each one shows.
+const SHOTS = process.env.SHOTS;
+const shotList = [];
+async function shot(page, name, note) {
+  if (!SHOTS) return;
+  await page.waitForTimeout(400);
+  const file = `${String(shotList.length + 1).padStart(2, '0')}-${name}.png`;
+  await page.screenshot({ path: join(SHOTS, file) });
+  shotList.push({ file, note });
+}
+/** A browser dialog (confirm) cannot be photographed: its words are kept instead. */
+function shotDialog(name, message, note) {
+  if (SHOTS) shotList.push({ dialog: message, name, note });
+}
+
 async function newUser(browser, { prf = true, wrap = {}, authenticator = true } = {}) {
-  const context = await browser.newContext();
+  const context = await browser.newContext(SHOTS ? { viewport: { width: 390, height: 760 }, deviceScaleFactor: 2 } : {});
   await context.addInitScript(wrapper(wrap));
   await context.addInitScript(RECORDER);
   const page = await context.newPage();
@@ -1989,6 +2005,7 @@ async function main() {
       await a.page.getByText('びー').first().click();
       await waitText(a.page, 'ブロック前の手紙');
 
+      await shot(a.page, 'chat-buttons', 'トークの画面。上の段にブロック・通報・トークを削除のボタン、下の段に写真・ファイル・スタンプ・録音のボタン');
       let asked = '';
       a.page.once('dialog', (d) => {
         asked = d.message();
@@ -1997,6 +2014,8 @@ async function main() {
       await button(a.page, 'ブロック').click();
       await waitText(a.page, 'ブロック中です');
       assert(asked === 'びーさんをブロックしますか？', `confirm: ${asked}`);
+      shotDialog('block-confirm', asked, '「ブロック」を押した時に出る確認');
+      await shot(a.page, 'blocked-chat', 'ブロックした相手とのトーク');
 
       await b.page.getByPlaceholder('メッセージ').fill('ブロック中の手紙');
       await button(b.page, '送る').click();
@@ -2013,6 +2032,8 @@ async function main() {
       await a.page.getByText('設定', { exact: true }).click();
       await waitText(a.page, 'ブロックリスト');
       await waitText(a.page, 'びー');
+      await a.page.getByText('ブロックリスト').scrollIntoViewIfNeeded();
+      await shot(a.page, 'settings-blocklist', '設定の画面のブロックリスト');
 
       // Moving the account to another device brings the block list along.
       await a.page.getByText('別の端末でも使う').click();
@@ -2034,6 +2055,7 @@ async function main() {
 
       await button(a.page, 'ブロック解除').click();
       await waitText(a.page, 'ブロックしている人はいません');
+      await shot(a.page, 'settings-blocklist-empty', 'ブロックを解除した後の設定の画面');
 
       await a.page.goBack();
       await waitText(a.page, 'びー');
@@ -2064,13 +2086,16 @@ async function main() {
       await a.page.getByText('知らない人から').click();
       await a.page.getByText('この投資で必ず儲かります', { exact: false }).first().click();
       await waitText(a.page, caution);
+      await shot(a.page, 'caution', '知らない人から、お金やリンクの話が届いた時の注意');
 
       // Report: scam, without attaching messages.
       await button(a.page, '通報').click();
       await waitText(a.page, '通報する理由');
+      await shot(a.page, 'report-panel', '「通報」を押した時に出る画面');
       await a.page.getByRole('radio', { name: '詐欺', exact: true }).click();
       await button(a.page, '通報する').click();
       await waitText(a.page, '通報しました');
+      await shot(a.page, 'report-done', '通報を送った後の画面');
       const reports = await (await fetch(`http://localhost:${RELAY_PORT}/_reports`)).json();
       const about = reports.filter((r) => r.reported === b.hex);
       assert(about.length === 1, `reports about B: ${JSON.stringify(about)}`);
@@ -2101,6 +2126,7 @@ async function main() {
 
       await a.page.goto(ORIGIN + '/settings');
       await waitText(a.page, 'アイコンを変更');
+      await shot(a.page, 'settings-avatar', '設定の画面のアイコン（まだ設定していない時）');
       const png = Buffer.from(
         await a.page.evaluate(() => {
           const cv = document.createElement('canvas');
@@ -2118,12 +2144,19 @@ async function main() {
       await (await chooser).setFiles({ name: 'avatar.png', mimeType: 'image/png', buffer: png });
       await a.page.getByTestId('avatar-img').waitFor({ timeout: 15000 });
       await button(a.page, 'アイコンを削除').waitFor({ timeout: 5000 });
+      await shot(a.page, 'settings-avatar-set', '設定の画面のアイコン（設定した後）');
 
       await b.page.getByTestId('avatar-img').waitFor({ timeout: 15000 });
       await b.page.waitForFunction(() => {
         const i = document.querySelector('[data-testid="avatar-img"]');
         return i && i.tagName === 'IMG' && i.complete && i.naturalWidth === 256 && i.naturalHeight === 256;
       }, null, { timeout: 15000 });
+      await b.page.goto(ORIGIN + '/settings');
+      await b.page.getByText('友達', { exact: true }).waitFor({ timeout: 15000 });
+      await b.page.getByText('友達', { exact: true }).scrollIntoViewIfNeeded();
+      await shot(b.page, 'settings-friends', '設定の画面の友達の一覧（友達のアイコンと「削除」）');
+      await b.page.goto(ORIGIN + '/');
+      await b.page.getByTestId('avatar-img').first().waitFor({ timeout: 15000 });
 
       const avatar = await b.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.contacts'))[0]?.avatar);
       assert(avatar && avatar.url, 'no avatar ref on contact');
@@ -2169,6 +2202,7 @@ async function main() {
       await img.click();
       await button(a.page, '閉じる').waitFor({ timeout: 5000 });
       assert(await button(a.page, '保存').isVisible(), 'save button not visible');
+      await shot(a.page, 'photo-viewer', '写真を押した時の全画面');
       await a.page.keyboard.press('Escape');
       await button(a.page, '閉じる').waitFor({ state: 'detached', timeout: 5000 });
       assert(!(await button(a.page, '保存').count()), 'viewer still visible after Escape');
@@ -2183,6 +2217,7 @@ async function main() {
       const qr = u.page.getByTestId('invite-qr');
       await qr.waitFor({ timeout: 5000 });
       assert(await qr.isVisible(), 'invite QR not visible');
+      await shot(u.page, 'invite-qr', '友達を追加する画面で「QRコードを表示」を押した時');
       await button(u.page, '閉じる').click();
       await qr.waitFor({ state: 'detached', timeout: 5000 });
       await u.context.close();
@@ -2204,12 +2239,15 @@ async function main() {
 
       const msg = a.page.getByText('転送するテキスト', { exact: true });
       await msg.hover();
+      await shot(a.page, 'message-menu', 'メッセージにマウスを当てた時（スマホでは長押し）に出るボタン');
       await button(a.page, 'コピー').click();
       await waitText(a.page, 'コピーしました');
+      await shot(a.page, 'copied', '「コピー」を押した後');
       assert((await a.page.evaluate(() => navigator.clipboard.readText())) === '転送するテキスト', 'clipboard text mismatch');
       await msg.hover();
       await button(a.page, '転送').click();
       await waitText(a.page, '転送先を選ぶ');
+      await shot(a.page, 'forward-pick', '「転送」を押した時に出る、送り先を選ぶ画面');
       await button(a.page, 'ちえ').click();
       await waitText(c.page, '転送するテキスト');
       assert(!(await text(c.page)).includes('ばんり'), 'forwarded message mentions original author');
@@ -2265,6 +2303,7 @@ async function main() {
       });
       await button(a.page, 'トークを削除').click();
       assert(askedChat === 'このトークを削除しますか？この端末から消えます。', `confirm chat: ${askedChat}`);
+      shotDialog('delete-chat-confirm', askedChat, '「トークを削除」を押した時に出る確認');
       await waitOpen(a.page);
       await waitText(a.page, 'ばんり');
       assert(!(await text(a.page)).includes('消す前の手紙'), 'old preview still on chat list');
@@ -2290,6 +2329,7 @@ async function main() {
       });
       await button(a.page, '削除').click();
       assert(askedFriend === 'ばんりさんを友達から削除しますか？', `confirm friend: ${askedFriend}`);
+      shotDialog('delete-friend-confirm', askedFriend, '設定の友達の一覧で「削除」を押した時に出る確認');
       await noText(a.page, 'ばんり', 500);
 
       await a.page.goto(ORIGIN + '/');
@@ -2327,6 +2367,7 @@ async function main() {
       await (await chooser).setFiles({ name: 'stamp.png', mimeType: 'image/png', buffer: png });
       const aItem = a.page.getByTestId('stamp-item').first();
       await aItem.waitFor({ timeout: 15000 });
+      await shot(a.page, 'stamp-panel', '「スタンプ」を押して、スタンプを1つ作った後');
 
       const saved = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.stamps'))?.[0]);
       assert(saved && saved.dim === '320x320' && saved.type === 'image/png', `stamp not shrunk: ${JSON.stringify(saved)}`);
@@ -2341,6 +2382,8 @@ async function main() {
       assert(bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent', `stamp has a bubble background: ${bg}`);
 
       await bStamp.click();
+      await button(b.page, 'スタンプに追加').waitFor({ timeout: 5000 });
+      await shot(b.page, 'stamp-add', '友達から届いたスタンプを押した時');
       await button(b.page, 'スタンプに追加').click();
       await button(b.page, 'スタンプ').click();
       const bItems = b.page.getByTestId('stamp-item');
@@ -2349,6 +2392,7 @@ async function main() {
 
       await bItems.first().click();
       await a.page.waitForFunction(() => document.querySelectorAll('[data-testid="stamp-message"]').length === 2, null, { timeout: 15000 });
+      await shot(a.page, 'stamp-chat', 'スタンプのやり取りをしたトーク');
       for (const u of [a, b]) await u.context.close();
     });
 
@@ -2395,6 +2439,7 @@ async function main() {
       const bFile = b.page.getByTestId('file-message').first();
       await bFile.waitFor({ timeout: 15000 });
       assert((await bFile.innerText()).includes('見積書.txt'), `file message text: ${await bFile.innerText()}`);
+      await shot(b.page, 'video-file', '動画とファイルが届いたトーク');
 
       const sentFiles = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages')).filter((m) => m.file).map((m) => m.file));
       assert(sentFiles.length === 2, `expected 2 sent files, got ${sentFiles.length}`);
@@ -2424,10 +2469,12 @@ async function main() {
       await button(a.page, '録音').click();
       await button(a.page, 'キャンセル').waitFor({ timeout: 5000 });
       await a.page.waitForTimeout(1500);
+      await shot(a.page, 'recording', '「録音」を押して録音している時');
       await button(a.page, '送る').click();
 
       await a.page.getByTestId('voice-message').first().waitFor({ timeout: 15000 });
       await b.page.getByTestId('voice-message').first().waitFor({ timeout: 15000 });
+      await shot(b.page, 'voice', '音声メッセージが届いたトーク');
       for (const u of [a, b]) await u.context.close();
     });
 
@@ -2442,6 +2489,7 @@ async function main() {
       await button(a.page, 'ファイル').click();
       await (await chooser).setFiles({ name: 'huge.bin', mimeType: 'application/octet-stream', buffer: big });
       await waitText(a.page, '10MBを超えるファイルは送れません');
+      await shot(a.page, 'too-large', '10MBを超えるファイルを選んだ時');
       const count = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages') ?? '[]').length);
       assert(count === 0, `expected 0 messages in chat, got ${count}`);
       for (const u of [a, b]) await u.context.close();
@@ -2452,6 +2500,7 @@ async function main() {
     relay?.kill();
   }
 
+  if (SHOTS) writeFileSync(join(SHOTS, 'shots.json'), JSON.stringify(shotList, null, 2));
   const failed = results.filter(([, ok]) => !ok).length;
   console.log(`\n${results.length - failed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
