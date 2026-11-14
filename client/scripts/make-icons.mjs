@@ -2,7 +2,7 @@
 import { chromium } from 'playwright-core';
 import { writeFileSync } from 'node:fs';
 const root = process.argv[2];
-const P = '#f4f1e8', G = '#1d6b4b', FLAP = '#3f8a67';
+const P = '#f4f1e8', G = '#1d6b4b', FLAP = '#bbd3c9';  // the flap: the colour of ".chat" on the business card (white at 70% over the green)
 // The glyph in a 512 box, computed from the body's size so the proportions can be tuned in one
 // place. Sized like other messaging apps (2026-11-14): the whole glyph about 68% of the icon's
 // width, the body 1.2 : 1 (LINE's glyph is 0.67 wide, Google Chat's 0.76).
@@ -15,8 +15,9 @@ const flap = `M${x0} ${y0 + 20} Q${x0 + 4} ${y0 + 4} ${x0 + 20} ${y0 + 1} L${x1 
 // A short tail from the bottom edge near the lower left corner, with a slight neck (option D).
 const tx = x0 + 32, ty = y1;
 const tail = `M${tx} ${ty - 6} Q${tx + 8} ${ty + 14} ${tx - 4} ${ty + 36} Q${tx - 12} ${ty + 50} ${tx + 4} ${ty + 46} Q${tx + 54} ${ty + 30} ${tx + 94} ${ty - 4} Z`;
-// Centre of the glyph's box (body top to tail tip).
-const CX = 256, CY = (y0 + ty + 50) / 2;
+// Where the glyph sits: halfway between the body's centre and the centre of the whole box (body top
+// to tail tip). The thin tail weighs little, so centring the box left empty space under the body.
+const CX = 256, CY = ((y0 + y1) / 2 + (y0 + ty + 50) / 2) / 2;
 const glyph = (scale, id, mono = false) =>
   `<g transform="translate(512 512) scale(${scale}) translate(${-CX} ${-CY})">` +
   (mono
