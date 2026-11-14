@@ -9,9 +9,14 @@ const P = '#f4f1e8', G = '#1d6b4b', FLAP = '#bbd3c9';  // the flap: the colour o
 const W = 300, H = 250, R = 58;                 // body width, height, corner radius
 const x0 = 256 - W / 2, x1 = 256 + W / 2, y0 = 112, y1 = y0 + H;
 const body = `M${x0 + R} ${y0} H${x1 - R} Q${x1} ${y0} ${x1} ${y0 + R} V${y1 - R} Q${x1} ${y1} ${x1 - R} ${y1} H${x0 + R} Q${x0} ${y1} ${x0} ${y1 - R} V${y0 + R} Q${x0} ${y0} ${x0 + R} ${y0} Z`;
-// The flap: a lighter face from the top corners to a rounded point a little below the middle.
-const ay = y0 + 0.58 * H;
-const flap = `M${x0} ${y0 + 20} Q${x0 + 4} ${y0 + 4} ${x0 + 20} ${y0 + 1} L${x1 - 20} ${y0 + 1} Q${x1 - 4} ${y0 + 4} ${x1} ${y0 + 20} L${256 + 26} ${ay - 20} Q256 ${ay} ${256 - 26} ${ay - 20} Z`;
+// The flap: a lighter face from the whole top edge to a rounded point a little below the middle.
+// Two shapes split the body along the flap's edge, both cut to the body: "flap" above (it reaches past
+// the top edge and the corners, so the body's top edge is light only) and "lower" below (it starts a
+// hair above the flap's edge, so no paper shows through the seam). Painting the dark body first and
+// the flap over it left a dark rim along the top edge.
+const ay = y0 + 0.58 * H, ey = y0 + 14, ex0 = x0 - 20, ex1 = x1 + 20;
+const flap = `M${ex0} ${y0 - 20} L${ex1} ${y0 - 20} L${ex1} ${ey} L${256 + 26} ${ay - 20} Q256 ${ay} ${256 - 26} ${ay - 20} L${ex0} ${ey} Z`;
+const lower = `M${ex0} ${ey - 3} L${256 - 26} ${ay - 23} Q256 ${ay - 3} ${256 + 26} ${ay - 23} L${ex1} ${ey - 3} L${ex1} ${y1 + 20} L${ex0} ${y1 + 20} Z`;
 // A short tail from the bottom edge near the lower left corner, with a slight neck (option D).
 const tx = x0 + 32, ty = y1;
 const tail = `M${tx} ${ty - 6} Q${tx + 8} ${ty + 14} ${tx - 4} ${ty + 36} Q${tx - 12} ${ty + 50} ${tx + 4} ${ty + 46} Q${tx + 54} ${ty + 30} ${tx + 94} ${ty - 4} Z`;
@@ -22,7 +27,7 @@ const glyph = (scale, id, mono = false) =>
   `<g transform="translate(512 512) scale(${scale}) translate(${-CX} ${-CY})">` +
   (mono
     ? `<path d="${body}" fill="#fff"/><path d="${tail}" fill="#fff"/>`
-    : `<defs><clipPath id="${id}"><path d="${body}"/></clipPath></defs><path d="${body}" fill="${G}"/><path d="${tail}" fill="${G}"/><path clip-path="url(#${id})" d="${flap}" fill="${FLAP}"/>`) +
+    : `<defs><clipPath id="${id}"><path d="${body}"/></clipPath></defs><path d="${tail}" fill="${G}"/><path clip-path="url(#${id})" d="${lower}" fill="${G}"/><path clip-path="url(#${id})" d="${flap}" fill="${FLAP}"/>`) +
   `</g>`;
 const svg = (inner, bg = true) => `<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">${bg ? `<rect width="1024" height="1024" fill="${P}"/>` : ''}${inner}</svg>`;
 // Square icons (iOS, web): the glyph about 68% wide, inside Apple's safe margins.
@@ -34,7 +39,7 @@ const bgOnly = svg('');
 // Splash: the glyph alone on transparent, the splash colour comes from app.json.
 const splash = svg(glyph(2.0, 's'), false);
 writeFileSync(`${root}/assets/images/tegami-icon.svg`, main);
-writeFileSync(`${root}/assets/images/tegami-glyph.json`, JSON.stringify({ body, flap, tail, cx: CX, cy: CY, iconScale: 2.27 / 2 }));
+writeFileSync(`${root}/assets/images/tegami-glyph.json`, JSON.stringify({ body, flap, lower, tail, cx: CX, cy: CY, iconScale: 2.27 / 2 }));
 const out = [
   [main, 'assets/images/icon.png', 1024, false],
   [main, 'assets/images/favicon.png', 48, false],
