@@ -1,30 +1,34 @@
 import { useColorScheme } from 'react-native';
 
-// Warm paper colors, shared with tegami.chat.
+// Forest green with a Nostr purple accent (decided 2026-11-13, option A). The tones come from
+// Material Color Utilities (Material Design 3, seed #1d6b4b), so text and backgrounds keep
+// readable contrast in both light and dark.
 export const Colors = {
   light: {
-    background: '#faf7f2',
+    background: '#f5fbf4',
     surface: '#ffffff',
-    text: '#22201c',
-    muted: '#6b655c',
-    line: '#e4ddd2',
-    accent: '#b5452f',
+    text: '#171d19',
+    muted: '#404943',
+    line: '#c0c9c1',
+    accent: '#106c4a',
     onAccent: '#ffffff',
-    danger: '#c8372d',
-    mine: '#f3e1da',
+    danger: '#ba1a1a',
+    mine: '#a1f4c8',
     theirs: '#ffffff',
+    nostr: '#7c2eda',
   },
   dark: {
-    background: '#1a1917',
-    surface: '#23211e',
-    text: '#ece8e1',
-    muted: '#a39c91',
-    line: '#34312c',
-    accent: '#e0775f',
-    onAccent: '#1a1917',
+    background: '#111412',
+    surface: '#1b211d',
+    text: '#dee4de',
+    muted: '#c0c9c1',
+    line: '#404943',
+    accent: '#8fd5b0',
+    onAccent: '#003824',
     danger: '#e05245',
-    mine: '#4a2c24',
-    theirs: '#2b2925',
+    mine: '#005236',
+    theirs: '#1b211d',
+    nostr: '#d8b9ff',
   },
 } as const;
 
