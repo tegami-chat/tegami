@@ -72,6 +72,8 @@ export default function Chat() {
   // A message waiting to be sent that was tapped: it offers to stop sending.
   const [offered, setOffered] = useState<string | null>(null);
   const [plusOpen, setPlusOpen] = useState(false);
+  // The header's call button opens a small menu to choose voice or video (as LINE).
+  const [callMenuOpen, setCallMenuOpen] = useState(false);
   const [stampsOpen, setStampsOpen] = useState(false);
   const [stampDeleting, setStampDeleting] = useState<string | null>(null);
   const [stampOffer, setStampOffer] = useState<string | null>(null);
@@ -678,7 +680,7 @@ export default function Chat() {
           {peer && (
             <View style={s.headerActions}>
               {canCall && (
-                <Pressable role="button" aria-label="音声通話" style={s.headerIconBtn} onPress={() => startCall(peer, false)}>
+                <Pressable role="button" aria-label="通話" style={s.headerIconBtn} onPress={() => setCallMenuOpen((v) => !v)}>
                   <MaterialIcons name="call" size={24} color={c.text} />
                 </Pressable>
               )}
@@ -692,6 +694,31 @@ export default function Chat() {
             </View>
           )}
         </View>
+
+        {callMenuOpen && peer && canCall && (
+          <>
+            <Pressable style={s.callMenuBackdrop} onPress={() => setCallMenuOpen(false)} aria-label="閉じる" />
+            <View style={s.callMenu} testID="call-menu">
+              {([
+                ['音声通話', 'call', false],
+                ['ビデオ通話', 'videocam', true],
+              ] as const).map(([label, icon, video]) => (
+                <Pressable
+                  key={label}
+                  role="button"
+                  aria-label={label}
+                  style={s.callMenuRow}
+                  onPress={() => {
+                    setCallMenuOpen(false);
+                    startCall(peer, video);
+                  }}>
+                  <MaterialIcons name={icon} size={22} color={c.text} />
+                  <Text style={s.callMenuText}>{label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </>
+        )}
 
         {!group && !contact && peer && (
           <View style={s.addBar}>
@@ -1431,6 +1458,25 @@ const styles = (c: Palette) =>
       alignItems: 'center',
       flexShrink: 0,
     },
+    callMenuBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 20 },
+    callMenu: {
+      position: 'absolute',
+      top: 52,
+      right: 8,
+      zIndex: 21,
+      minWidth: 180,
+      backgroundColor: c.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: c.line,
+      paddingVertical: 4,
+      shadowColor: '#000',
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 4 },
+    },
+    callMenuRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, paddingHorizontal: 16 },
+    callMenuText: { fontSize: 16, color: c.text },
     list: { padding: 12, gap: 8 },
     itemWrap: { width: '100%', gap: 4 },
     itemWrapMine: { alignSelf: 'flex-end', alignItems: 'flex-end' },

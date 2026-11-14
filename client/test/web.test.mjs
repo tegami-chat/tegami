@@ -943,7 +943,8 @@ async function main() {
       await befriend(a, b);
       await b.page.goto(ORIGIN + '/'); // B is somewhere else in the app
       const before = await a.page.evaluate(() => window.__sent.length);
-      await a.page.getByRole('button', { name: '音声通話' }).click();
+      await button(a.page, '通話').click();
+      await button(a.page, '音声通話').click();
       await waitText(a.page, '呼び出し中');
       await waitText(b.page, '音声通話');
       assert((await text(b.page)).includes('あおい'), 'B does not see who calls');
@@ -986,7 +987,8 @@ async function main() {
       await befriend(b, a);
       await befriend(a, b);
       await b.page.goto(ORIGIN + '/');
-      await a.page.getByRole('button', { name: '音声通話' }).click();
+      await button(a.page, '通話').click();
+      await button(a.page, '音声通話').click();
       await button(b.page, '応答').click();
       await waitConnected(a.page);
       await button(a.page, '通話を終了').click();
@@ -996,7 +998,8 @@ async function main() {
       await waitOpen(b.page);
       await noText(b.page, '応答', 3000);
       // A calls again: B rings for the new call, answers, and both connect.
-      await a.page.getByRole('button', { name: '音声通話' }).click();
+      await button(a.page, '通話').click();
+      await button(a.page, '音声通話').click();
       await button(b.page, '応答').click();
       await waitConnected(b.page);
       await button(a.page, '通話を終了').click();
@@ -1024,7 +1027,8 @@ async function main() {
       const c = await person(browser, 'ちか');
       await befriend(c, b); // C knows B, B does not know C
       await b.page.goto(ORIGIN + '/');
-      await c.page.getByRole('button', { name: '音声通話' }).click();
+      await button(c.page, '通話').click();
+      await button(c.page, '音声通話').click();
       await waitText(c.page, '呼び出し中');
       await noText(b.page, '応答', 5000);
       const t = await text(b.page);
@@ -2032,7 +2036,8 @@ async function main() {
       await b.page.getByPlaceholder('メッセージ').fill('ブロック中の手紙');
       await button(b.page, '送る').click();
       await noText(a.page, 'ブロック中の手紙', 2000);
-      await b.page.getByRole('button', { name: '音声通話' }).click();
+      await button(b.page, '通話').click();
+      await button(b.page, '音声通話').click();
       await waitText(b.page, '呼び出し中');
       await noText(a.page, '応答', 2000);
       await button(b.page, '通話を終了').click();
@@ -2667,7 +2672,7 @@ async function main() {
       await befriend(a, b);
 
       const title = a.page.getByTestId('chat-title');
-      const callBtn = button(a.page, '音声通話');
+      const callBtn = button(a.page, '通話');
       const menuBtn = button(a.page, 'メニュー');
       const input = a.page.getByPlaceholder('メッセージ');
       const photoBtn = button(a.page, '写真');
@@ -2807,6 +2812,23 @@ async function main() {
       assert((await b.page.getByTestId('quote').innerText()).replace(/\s+/g, ' ').includes('ばんり 右スワイプする手紙'), 'quote not received');
       for (const u of [a, b]) await u.context.close();
     });
+    await test('Call button: the header offers voice and video, as LINE', async () => {
+      const a = await person(browser, 'あん');
+      const b = await person(browser, 'べん');
+      await befriend(b, a);
+      await befriend(a, b);
+      await button(a.page, '通話').click();
+      await a.page.getByTestId('call-menu').waitFor();
+      assert(await button(a.page, '音声通話').isVisible(), 'no voice call in the menu');
+      assert(await button(a.page, 'ビデオ通話').isVisible(), 'no video call in the menu');
+      await shot(a.page, 'call-menu', 'トークの画面の電話のボタンを押した時（音声通話とビデオ通話を選ぶ）');
+      await button(a.page, 'ビデオ通話').click();
+      await waitText(b.page, 'ビデオ通話');
+      await button(b.page, '拒否').click();
+      await waitText(a.page, '応答がありません');
+      for (const u of [a, b]) await u.context.close();
+    });
+
   } finally {
     await browser.close();
     server.close();
