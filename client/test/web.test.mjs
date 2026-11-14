@@ -150,7 +150,7 @@ const button = (page, name) => page.getByRole('button', { name, exact: true });
 async function waitOpen(page) {
   await page.waitForFunction(() => {
     const t = document.body.innerText;
-    return t.includes('＋') && !t.includes('はじめる') && !t.includes('ひらく');
+    return !!document.querySelector('[aria-label="友だち追加"]') && !t.includes('はじめる') && !t.includes('ひらく');
   }, null, { timeout: 15000 }).catch(async () => {
     throw new Error(`account did not open (page: ${(await text(page)).replace(/\s+/g, ' ').slice(0, 160)})`);
   });

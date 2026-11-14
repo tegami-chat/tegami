@@ -1,18 +1,19 @@
 // The call screen: covers the app while a call rings, connects or goes on, wherever the
 // person is. Browser only for now (lib/calls.tsx).
 
-import { useEffect, useRef, useState } from 'react';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useEffect, useRef, useState, type ComponentProps } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useCall } from '@/lib/calls';
 import { clock, personName, useTegami } from '@/lib/tegami';
 
-const BG = '#1a1917';
-const TEXT = '#ece8e1';
-const MUTED = '#a39c91';
-const RED = '#c8432c';
-const GREEN = '#2f8f5b';
-const KEY = '#3a3732';
+const BG = '#111412';
+const TEXT = '#dee4de';
+const MUTED = '#c0c9c1';
+const RED = '#ba1a1a';
+const GREEN = '#106c4a';
+const KEY = '#2a312c';
 
 /** A <video> or <audio> element playing a stream. */
 function Media({ stream, kind, mirror, small }: { stream?: MediaStream; kind: 'video' | 'audio'; mirror?: boolean; small?: boolean }) {
@@ -37,9 +38,20 @@ function Media({ stream, kind, mirror, small }: { stream?: MediaStream; kind: 'v
   );
 }
 
-function Round({ label, color, onPress }: { label: string; color: string; onPress: () => void }) {
+function Round({
+  label,
+  icon,
+  color,
+  onPress,
+}: {
+  label: string;
+  icon: ComponentProps<typeof MaterialIcons>['name'];
+  color: string;
+  onPress: () => void;
+}) {
   return (
     <Pressable onPress={onPress} role="button" aria-label={label} style={[s.round, { backgroundColor: color }]}>
+      <MaterialIcons name={icon} size={24} color="#ffffff" />
       <Text style={s.roundText}>{label}</Text>
     </Pressable>
   );
@@ -122,17 +134,27 @@ export function CallScreen() {
       <View style={s.keys}>
         {call.phase === 'incoming' && (
           <>
-            <Round label="拒否" color={RED} onPress={decline} />
-            <Round label="応答" color={GREEN} onPress={accept} />
+            <Round label="拒否" icon="call-end" color={RED} onPress={decline} />
+            <Round label="応答" icon={call.video ? 'videocam' : 'call'} color={GREEN} onPress={accept} />
           </>
         )}
         {(call.phase === 'outgoing' || call.phase === 'connecting' || call.phase === 'active') && (
           <>
-            <Round label={call.muted ? 'ミュート解除' : 'ミュート'} color={KEY} onPress={toggleMute} />
+            <Round
+              label={call.muted ? 'ミュート解除' : 'ミュート'}
+              icon={call.muted ? 'mic-off' : 'mic'}
+              color={KEY}
+              onPress={toggleMute}
+            />
             {call.video && (
-              <Round label={call.cameraOff ? 'カメラをオン' : 'カメラをオフ'} color={KEY} onPress={toggleCamera} />
+              <Round
+                label={call.cameraOff ? 'カメラをオン' : 'カメラをオフ'}
+                icon={call.cameraOff ? 'videocam-off' : 'videocam'}
+                color={KEY}
+                onPress={toggleCamera}
+              />
             )}
-            <Round label="通話を終了" color={RED} onPress={hangUp} />
+            <Round label="通話を終了" icon="call-end" color={RED} onPress={hangUp} />
           </>
         )}
       </View>
@@ -146,6 +168,6 @@ const s = StyleSheet.create({
   name: { fontSize: 28, fontWeight: '600', color: TEXT, textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 6 },
   status: { fontSize: 16, color: MUTED, textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 6 },
   keys: { flexDirection: 'row', justifyContent: 'center', gap: 28, paddingBottom: 64, paddingHorizontal: 16, flexWrap: 'wrap' },
-  round: { width: 76, height: 76, borderRadius: 38, alignItems: 'center', justifyContent: 'center', padding: 6 },
-  roundText: { color: '#ffffff', fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  round: { width: 76, height: 76, borderRadius: 38, alignItems: 'center', justifyContent: 'center', padding: 6, gap: 2 },
+  roundText: { color: '#ffffff', fontSize: 11, fontWeight: '600', textAlign: 'center' },
 });

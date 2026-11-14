@@ -1,3 +1,4 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
@@ -55,7 +56,7 @@ export function ReportSheet({
     <View style={s.overlay} testID="report-sheet">
       <View style={s.header}>
         <Pressable role="button" aria-label="戻る" style={s.backButton} onPress={onClose}>
-          <Text style={s.backText}>＜</Text>
+          <MaterialIcons name="chevron-left" size={24} color={c.text} />
         </Pressable>
         <Text style={s.headerTitle} numberOfLines={1}>
           通報
@@ -101,7 +102,7 @@ export function ReportSheet({
             <View style={s.attachCard}>
               <View style={s.attachRow}>
                 <Text style={s.attachLabel}>メッセージを添える</Text>
-                <Switch value={attach} onValueChange={setAttach} aria-label="メッセージを添える" />
+                <Switch trackColor={{ false: c.line, true: c.accent }} thumbColor="#ffffff" value={attach} onValueChange={setAttach} aria-label="メッセージを添える" />
               </View>
               <Text style={s.attachSub}>
                 {messageId
@@ -161,11 +162,6 @@ const styles = (c: Palette) =>
       minHeight: 44,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    backText: {
-      fontSize: 20,
-      color: c.text,
-      fontWeight: '600',
     },
     headerTitle: {
       flex: 1,

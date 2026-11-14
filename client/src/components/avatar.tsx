@@ -1,3 +1,4 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useState } from 'react';
 import { Image, Platform, StyleSheet, Text, View } from 'react-native';
 
@@ -56,7 +57,11 @@ export function Avatar({ name, file, size = 36 }: { name: string; file?: FileRef
     <View
       testID="avatar-initial"
       style={[styles.placeholder, { width: size, height: size, borderRadius: size / 2, backgroundColor: c.accent }]}>
-      <Text style={[styles.initial, { fontSize: Math.round(size * 0.44) }]}>{initial}</Text>
+      {initial === '◎' ? (
+        <MaterialIcons name="group" size={Math.round(size * 0.5)} color="#ffffff" />
+      ) : (
+        <Text style={[styles.initial, { fontSize: Math.round(size * 0.44) }]}>{initial}</Text>
+      )}
     </View>
   );
 }
