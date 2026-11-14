@@ -37,6 +37,12 @@ export function validFileName(name: unknown): string | undefined {
   return trimmed;
 }
 
+/** Checks a file size (bytes) from a message: a positive integer. */
+export function validFileSize(raw: unknown): number | undefined {
+  const n = typeof raw === 'string' && /^\d+$/.test(raw) ? Number(raw) : typeof raw === 'number' ? raw : NaN;
+  return Number.isSafeInteger(n) && n > 0 ? n : undefined;
+}
+
 const MAX_SIDE = 1600;
 const AVATAR_SIDE = 256;
 const STAMP_SIDE = 320;
@@ -149,6 +155,7 @@ export async function encryptAndUpload(
   if (!res.ok) throw new Error(`upload failed: ${res.status} ${res.headers.get('X-Reason') ?? ''}`);
   const desc = (await res.json()) as { url: string };
   const name = validFileName(extra?.name);
+  const size = validFileSize(bytes.byteLength);
   const duration =
     typeof extra?.duration === 'number' && Number.isFinite(extra.duration) && extra.duration >= 0
       ? Math.round(extra.duration)
@@ -159,7 +166,7 @@ export async function encryptAndUpload(
     key: bytesToHex(raw),
     nonce: bytesToHex(nonce),
     sha256: hash,
-    size: bytes.byteLength,
+    ...(size !== undefined ? { size } : {}),
     ...(dim ? { dim } : {}),
     ...(name ? { name } : {}),
     ...(duration !== undefined ? { duration } : {}),
@@ -175,7 +182,8 @@ export function fileTags(f: FileRef, stamp?: boolean): string[][] {
     ['decryption-nonce', f.nonce],
     ['x', f.sha256],
   ];
-  if (f.size) tags.push(['size', String(f.size)]);
+  const size = validFileSize(f.size);
+  if (size !== undefined) tags.push(['size', String(size)]);
   if (f.dim) tags.push(['dim', f.dim]);
   if (f.name) tags.push(['name', f.name]);
   if (f.duration !== undefined) tags.push(['duration', String(Math.round(f.duration))]);
@@ -200,6 +208,7 @@ export function fileFromRumor(content: string, tags: string[][]): FileRef | null
   const rawName = tag('name');
   if (rawName !== undefined && !validFileName(rawName)) return null;
   const name = validFileName(rawName);
+  const size = validFileSize(tag('size'));
   const rawDur = tag('duration');
   const durNum = rawDur !== undefined ? Number(rawDur) : undefined;
   const duration = durNum !== undefined && Number.isFinite(durNum) && durNum >= 0 ? Math.round(durNum) : undefined;
@@ -209,7 +218,7 @@ export function fileFromRumor(content: string, tags: string[][]): FileRef | null
     key,
     nonce,
     sha256,
-    size: Number(tag('size')) || undefined,
+    ...(size !== undefined ? { size } : {}),
     dim: tag('dim'),
     ...(name ? { name } : {}),
     ...(duration !== undefined ? { duration } : {}),
@@ -235,13 +244,14 @@ export function validFileRef(raw: unknown): FileRef | null {
   }
   if (f.name !== undefined && !validFileName(f.name)) return null;
   const name = validFileName(f.name);
+  const size = validFileSize(f.size);
   return {
     url: f.url,
     type: f.type,
     key: f.key,
     nonce: f.nonce,
     sha256: f.sha256,
-    ...(typeof f.size === 'number' ? { size: f.size } : {}),
+    ...(size !== undefined ? { size } : {}),
     ...(typeof f.dim === 'string' ? { dim: f.dim } : {}),
     ...(name ? { name } : {}),
     ...(typeof f.duration === 'number' && Number.isFinite(f.duration) && f.duration >= 0 ? { duration: Math.round(f.duration) } : {}),

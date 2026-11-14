@@ -1,11 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { usePalette } from '@/constants/theme';
-import { openFile, type FileRef } from '@/lib/files';
+import { keptFile, openFile, type FileRef } from '@/lib/files';
 
 const WIDTH = 240;
 const STAMP_SIDE = 160;
+const FILE_TTL_SEC = 30 * 24 * 60 * 60;
+const WAVE_BARS = 30;
+const FALLBACK_WAVE: number[] = Array.from({ length: WAVE_BARS }, (_, i) => 0.3 + 0.35 * Math.abs(Math.sin((i + 1) * 0.7)));
+const waveCache = new Map<string, number[]>();
 
 /** A photo in a chat bubble: decrypted on this device, kept on this device. */
 export function Photo({ id, file, onOpen }: { id: string; file: FileRef; onOpen?: (uri: string) => void }) {
@@ -138,8 +142,11 @@ export function Stamp({
   );
 }
 
-/** Shows a decrypted photo full screen over the chat, with save and close controls. */
+/** Shows a decrypted photo full screen over the chat; long press (or right click) offers save. */
 export function PhotoViewer({ uri, onClose }: { uri: string; onClose: () => void }) {
+  const c = usePalette();
+  const [menu, setMenu] = useState(false);
+
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const onKey = (e: KeyboardEvent) => {
@@ -150,6 +157,7 @@ export function PhotoViewer({ uri, onClose }: { uri: string; onClose: () => void
   }, [onClose]);
 
   function savePhoto() {
+    setMenu(false);
     if (Platform.OS !== 'web') return;
     const a = document.createElement('a');
     a.href = uri;
@@ -157,141 +165,91 @@ export function PhotoViewer({ uri, onClose }: { uri: string; onClose: () => void
     a.click();
   }
 
+  const webMenu =
+    Platform.OS === 'web'
+      ? {
+          onContextMenu: (e: { preventDefault: () => void }) => {
+            e.preventDefault();
+            setMenu(true);
+          },
+        }
+      : {};
+
   return (
-    <View style={styles.viewer}>
-      <View style={styles.viewerBar}>
-        <Pressable onPress={savePhoto} role="button" style={styles.viewerButton}>
-          <Text style={styles.viewerButtonText}>保存</Text>
-        </Pressable>
-        <Pressable onPress={onClose} role="button" style={styles.viewerButton}>
-          <Text style={styles.viewerButtonText}>閉じる</Text>
-        </Pressable>
-      </View>
-      <Image source={{ uri }} style={styles.fullImage} resizeMode="contain" />
-    </View>
-  );
-}
-
-/** A video in a chat bubble: decrypted on this device and played in place. */
-export function Video({ id, file }: { id: string; file: FileRef }) {
-  const c = usePalette();
-  const [uri, setUri] = useState<string | null>(null);
-  const [error, setError] = useState<'gone' | 'failed' | null>(null);
-
-  useEffect(() => {
-    let url: string | null = null;
-    let alive = true;
-    openFile(id, file)
-      .then((blob) => {
-        if (!alive) return;
-        url = URL.createObjectURL(blob);
-        setUri(url);
-      })
-      .catch((e: Error) => alive && setError(e.message === 'gone' ? 'gone' : 'failed'));
-    return () => {
-      alive = false;
-      if (url) URL.revokeObjectURL(url);
-    };
-  }, [id, file]);
-
-  if (error) {
-    return (
-      <Text style={[styles.note, { color: c.muted }]}>
-        {error === 'gone' ? '動画の保存期間（30日）が過ぎました' : '動画を開けませんでした'}
-      </Text>
-    );
-  }
-  if (!uri || Platform.OS !== 'web') {
-    return <View style={[styles.videoFrame, { backgroundColor: c.line }]} testID={uri ? 'video-message' : undefined} />;
-  }
-  return (
-    <video
-      src={uri}
-      controls
-      playsInline
-      data-testid="video-message"
-      style={{ maxWidth: 280, width: '100%', borderRadius: 12, display: 'block' }}
-    />
-  );
-}
-
-function formatBytes(size?: number): string {
-  if (!size || size <= 0) return '';
-  if (size < 1024) return `${size}B`;
-  if (size < 1024 * 1024) return `${Math.round(size / 1024)}KB`;
-  return `${(size / (1024 * 1024)).toFixed(1).replace(/\.0$/, '')}MB`;
-}
-
-/** A general file in a chat bubble: shows name and size, and saves the decrypted file. */
-export function FileAttachment({ id, file }: { id: string; file: FileRef }) {
-  const c = usePalette();
-  const [uri, setUri] = useState<string | null>(null);
-  const [error, setError] = useState<'gone' | 'failed' | null>(null);
-  const name = file.name || 'ファイル';
-  const sizeText = formatBytes(file.size);
-
-  useEffect(() => {
-    let url: string | null = null;
-    let alive = true;
-    openFile(id, file)
-      .then((blob) => {
-        if (!alive) return;
-        url = URL.createObjectURL(blob);
-        setUri(url);
-      })
-      .catch((e: Error) => alive && setError(e.message === 'gone' ? 'gone' : 'failed'));
-    return () => {
-      alive = false;
-      if (url) URL.revokeObjectURL(url);
-    };
-  }, [id, file]);
-
-  async function saveFile() {
-    if (Platform.OS !== 'web') return;
-    try {
-      const href = uri ?? URL.createObjectURL(await openFile(id, file));
-      const a = document.createElement('a');
-      a.href = href;
-      a.download = name;
-      a.click();
-      if (!uri) setTimeout(() => URL.revokeObjectURL(href), 1000);
-    } catch (e) {
-      setError((e as Error).message === 'gone' ? 'gone' : 'failed');
-    }
-  }
-
-  if (error) {
-    return (
-      <Text style={[styles.note, { color: c.muted }]}>
-        {error === 'gone' ? 'ファイルの保存期間（30日）が過ぎました' : 'ファイルを開けませんでした'}
-      </Text>
-    );
-  }
-  return (
-    <View style={styles.fileRow} testID="file-message">
-      <Text style={[styles.fileName, { color: c.text }]} numberOfLines={1}>
-        {sizeText ? `${name}・${sizeText}` : name}
-      </Text>
-      <Pressable onPress={saveFile} role="button" style={styles.fileSave}>
-        <Text style={[styles.fileSaveText, { color: c.accent }]}>保存</Text>
+    <View style={styles.viewer} testID="photo-viewer">
+      <Pressable
+        onPress={onClose}
+        role="button"
+        aria-label="閉じる"
+        aria-hidden={menu || undefined}
+        style={styles.viewerClose}>
+        <Text style={styles.viewerCloseText}>×</Text>
       </Pressable>
+      <Pressable
+        style={styles.fullImageWrap}
+        testID="viewer-photo"
+        delayLongPress={400}
+        onLongPress={() => setMenu(true)}
+        {...webMenu}>
+        <Image source={{ uri }} style={styles.fullImage} resizeMode="contain" />
+      </Pressable>
+      {menu && (
+        <View style={styles.viewerMenuBackdrop} role="dialog" aria-modal={true}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setMenu(false)} />
+          <View style={[styles.viewerMenu, { backgroundColor: c.surface, borderColor: c.line }]}>
+            <Pressable role="button" onPress={savePhoto} style={styles.viewerMenuItem}>
+              <Text style={[styles.viewerMenuText, { color: c.text }]}>保存</Text>
+            </Pressable>
+            <Pressable
+              role="button"
+              onPress={() => setMenu(false)}
+              style={[styles.viewerMenuItem, styles.viewerMenuLine, { borderTopColor: c.line }]}>
+              <Text style={[styles.viewerMenuText, { color: c.text }]}>閉じる</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
 
-function formatClock(seconds: number) {
-  const s = Math.max(0, Math.floor(seconds));
-  const m = Math.floor(s / 60);
-  const ss = String(s % 60).padStart(2, '0');
-  return `${m}:${ss}`;
+/** Shows a decrypted video full screen with native controls and sound. */
+export function VideoViewer({ uri, onClose }: { uri: string; onClose: () => void }) {
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <View style={styles.viewer} testID="video-viewer">
+      <Pressable onPress={onClose} role="button" aria-label="閉じる" style={styles.viewerClose}>
+        <Text style={styles.viewerCloseText}>×</Text>
+      </Pressable>
+      {Platform.OS === 'web' && (
+        <video
+          src={uri}
+          controls
+          autoPlay
+          playsInline
+          style={{ width: '100%', height: '100%', maxHeight: '100%', objectFit: 'contain' }}
+        />
+      )}
+    </View>
+  );
 }
 
-/** A recorded voice message in a chat bubble: decrypted audio player and duration. */
-export function Voice({ id, file }: { id: string; file: FileRef }) {
+/** A video in the chat: plays muted and looped while on screen; tapping opens the full-screen player. */
+export function Video({ id, file, onOpen }: { id: string; file: FileRef; onOpen?: (uri: string) => void }) {
   const c = usePalette();
   const [uri, setUri] = useState<string | null>(null);
   const [duration, setDuration] = useState<number>(file.duration ?? 0);
   const [error, setError] = useState<'gone' | 'failed' | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const inViewRef = useRef(true);
 
   useEffect(() => {
     if (file.duration !== undefined) setDuration(file.duration);
@@ -313,6 +271,272 @@ export function Voice({ id, file }: { id: string; file: FileRef }) {
     };
   }, [id, file]);
 
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || !uri || Platform.OS !== 'web') return;
+    el.defaultMuted = true;
+    el.muted = true;
+    el.loop = true;
+    el.playsInline = true;
+    const tryPlay = () => {
+      el.muted = true;
+      void el.play().catch(() => {});
+    };
+    if (typeof IntersectionObserver === 'undefined') {
+      inViewRef.current = true;
+      tryPlay();
+      return;
+    }
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          inViewRef.current = entry.isIntersecting;
+          if (entry.isIntersecting) tryPlay();
+          else el.pause();
+        }
+      },
+      { threshold: 0.1 },
+    );
+    obs.observe(el);
+    tryPlay();
+    return () => {
+      obs.disconnect();
+      el.pause();
+    };
+  }, [uri]);
+
+  if (error) {
+    return (
+      <Text style={[styles.note, { color: c.muted }]}>
+        {error === 'gone' ? '動画の保存期間（30日）が過ぎました' : '動画を開けませんでした'}
+      </Text>
+    );
+  }
+  if (!uri || Platform.OS !== 'web') {
+    return <View style={[styles.videoFrame, { backgroundColor: c.line }]} testID={uri ? 'video-message' : undefined} />;
+  }
+  return (
+    <Pressable
+      style={[styles.videoWrap, { backgroundColor: c.line }]}
+      disabled={!onOpen}
+      onPress={() => onOpen?.(uri)}>
+      <video
+        ref={videoRef}
+        src={uri}
+        muted
+        loop
+        playsInline
+        autoPlay
+        data-testid="video-message"
+        onLoadedMetadata={(e) => {
+          const el = e.currentTarget;
+          el.muted = true;
+          if (Number.isFinite(el.duration) && el.duration > 0) setDuration(Math.round(el.duration));
+          if (inViewRef.current && el.paused) void el.play().catch(() => {});
+        }}
+        onCanPlay={(e) => {
+          const el = e.currentTarget;
+          el.muted = true;
+          if (inViewRef.current && el.paused) void el.play().catch(() => {});
+        }}
+        style={{ width: WIDTH, maxWidth: '100%', borderRadius: 12, display: 'block', objectFit: 'cover' }}
+      />
+      <View style={styles.videoCorner} pointerEvents="none">
+        <Text style={styles.videoCornerText}>{`▶ ${formatClock(duration)}`}</Text>
+      </View>
+      <View style={styles.videoSpeaker} pointerEvents="none">
+        <Text style={styles.videoSpeakerText}>🔇︎</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function formatBytes(size?: number): string {
+  if (!size || !Number.isInteger(size) || size <= 0) return '';
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
+  return `${(size / (1024 * 1024)).toFixed(2).replace(/\.?0+$/, '')} MB`;
+}
+
+function formatExpiry(at: number): string {
+  const d = new Date((at + FILE_TTL_SEC) * 1000);
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `有効期間：${m}/${day} ${hh}:${mm}`;
+}
+
+/** A general file in a chat bubble: icon, name, expiry/kept status and size; tapping saves it. */
+export function FileAttachment({ id, file, at }: { id: string; file: FileRef; at?: number }) {
+  const c = usePalette();
+  const [kept, setKept] = useState(false);
+  const [error, setError] = useState<'gone' | 'failed' | null>(null);
+  const name = file.name || 'ファイル';
+  const sizeText = formatBytes(file.size);
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(name);
+  const uploadedAt = at ?? Math.floor(Date.now() / 1000);
+  const pastPeriod = Date.now() >= (uploadedAt + FILE_TTL_SEC) * 1000;
+  const expired = !kept && (pastPeriod || error === 'gone');
+
+  useEffect(() => {
+    let alive = true;
+    keptFile(id).then((blob) => {
+      if (alive) setKept(!!blob);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+
+  async function saveFile() {
+    if (Platform.OS !== 'web' || expired) return;
+    try {
+      const blob = await openFile(id, file);
+      setKept(true);
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = href;
+      a.download = name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(href), 1000);
+    } catch (e) {
+      setError((e as Error).message === 'gone' ? 'gone' : 'failed');
+    }
+  }
+
+  if (error === 'failed') {
+    return <Text style={[styles.note, { color: c.muted }]}>ファイルを開けませんでした</Text>;
+  }
+
+  const periodLine = kept
+    ? 'この端末に保存済み'
+    : expired
+      ? '有効期間が過ぎました'
+      : formatExpiry(uploadedAt);
+
+  return (
+    <Pressable
+      style={styles.fileRow}
+      testID="file-message"
+      role="button"
+      disabled={expired}
+      onPress={saveFile}>
+      <View
+        style={[
+          styles.fileIconBox,
+          isPdf ? { backgroundColor: c.danger } : { backgroundColor: c.background, borderColor: c.line, borderWidth: 1 },
+        ]}>
+        <Text style={isPdf ? styles.filePdfText : [styles.fileDocGlyph, { color: c.text }]}>
+          {isPdf ? 'PDF' : '📄︎'}
+        </Text>
+      </View>
+      <View style={styles.fileMeta}>
+        <Text style={[styles.fileName, { color: c.text }]} numberOfLines={1} ellipsizeMode="middle">
+          {name}
+        </Text>
+        <Text style={[styles.fileSub, { color: c.muted }]} numberOfLines={1}>
+          {periodLine}
+        </Text>
+        {sizeText ? (
+          <Text style={[styles.fileSub, { color: c.muted }]} numberOfLines={1}>
+            {`サイズ：${sizeText}`}
+          </Text>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+}
+
+function formatClock(seconds: number) {
+  const s = Math.max(0, Math.floor(seconds));
+  const m = Math.floor(s / 60);
+  const ss = String(s % 60).padStart(2, '0');
+  return `${m}:${ss}`;
+}
+
+async function decodeWaveform(id: string, blob: Blob): Promise<number[]> {
+  const hit = waveCache.get(id);
+  if (hit) return hit;
+  const AC =
+    globalThis.AudioContext ??
+    (globalThis as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AC) {
+    waveCache.set(id, FALLBACK_WAVE);
+    return FALLBACK_WAVE;
+  }
+  let ctx: AudioContext | null = null;
+  try {
+    ctx = new AC();
+    const buf = await blob.arrayBuffer();
+    const audio = await ctx.decodeAudioData(buf.slice(0));
+    const data = audio.getChannelData(0);
+    const step = Math.max(1, Math.floor(data.length / WAVE_BARS));
+    const raw: number[] = [];
+    for (let i = 0; i < WAVE_BARS; i++) {
+      const start = i * step;
+      const end = Math.min(data.length, start + step);
+      let sum = 0;
+      for (let j = start; j < end; j++) sum += data[j] * data[j];
+      raw.push(end > start ? Math.sqrt(sum / (end - start)) : 0);
+    }
+    const peak = Math.max(...raw, 0.01);
+    const bars = raw.map((v) => Math.max(0.18, Math.min(1, v / peak)));
+    waveCache.set(id, bars);
+    return bars;
+  } catch {
+    waveCache.set(id, FALLBACK_WAVE);
+    return FALLBACK_WAVE;
+  } finally {
+    void ctx?.close().catch(() => {});
+  }
+}
+
+/** A recorded voice message in a chat bubble: play/pause button, 30-bar waveform and duration. */
+export function Voice({ id, file }: { id: string; file: FileRef }) {
+  const c = usePalette();
+  const [uri, setUri] = useState<string | null>(null);
+  const [duration, setDuration] = useState<number>(file.duration ?? 0);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [bars, setBars] = useState<number[]>(() => waveCache.get(id) ?? FALLBACK_WAVE);
+  const [error, setError] = useState<'gone' | 'failed' | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (file.duration !== undefined) setDuration(file.duration);
+  }, [file.duration]);
+
+  useEffect(() => {
+    let url: string | null = null;
+    let alive = true;
+    openFile(id, file)
+      .then((blob) => {
+        if (!alive) return;
+        url = URL.createObjectURL(blob);
+        setUri(url);
+        return decodeWaveform(id, blob);
+      })
+      .then((w) => {
+        if (alive && w) setBars(w);
+      })
+      .catch((e: Error) => alive && setError(e.message === 'gone' ? 'gone' : 'failed'));
+    return () => {
+      alive = false;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [id, file]);
+
+  function togglePlay() {
+    const el = audioRef.current;
+    if (!el) return;
+    if (el.paused) {
+      void el.play().catch(() => {});
+    } else {
+      el.pause();
+    }
+  }
+
   if (error) {
     return (
       <Text style={[styles.note, { color: c.muted }]}>
@@ -321,19 +545,56 @@ export function Voice({ id, file }: { id: string; file: FileRef }) {
     );
   }
   return (
-    <View style={styles.voiceRow} testID={Platform.OS === 'web' ? undefined : 'voice-message'}>
+    <View style={styles.voiceRow} testID="voice-message">
       {uri && Platform.OS === 'web' && (
         <audio
+          ref={audioRef}
           src={uri}
-          controls
-          data-testid="voice-message"
+          preload="metadata"
           onLoadedMetadata={(e) => {
             const d = e.currentTarget.duration;
             if (file.duration === undefined && Number.isFinite(d) && d > 0) setDuration(Math.round(d));
           }}
-          style={{ maxWidth: 220, height: 36 }}
+          onTimeUpdate={(e) => {
+            const el = e.currentTarget;
+            const d = Number.isFinite(el.duration) && el.duration > 0 ? el.duration : duration || 1;
+            setProgress(Math.min(1, Math.max(0, el.currentTime / d)));
+          }}
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
+          onEnded={() => {
+            setPlaying(false);
+            setProgress(0);
+          }}
+          style={{ display: 'none' }}
         />
       )}
+      <Pressable
+        role="button"
+        aria-label={playing ? '一時停止' : '再生'}
+        disabled={!uri}
+        onPress={togglePlay}
+        style={[styles.voicePlayBtn, { backgroundColor: c.text }]}>
+        <Text style={[styles.voicePlayIcon, { color: c.surface }]}>{playing ? '❚❚' : '▶'}</Text>
+      </Pressable>
+      <View style={styles.waveform} testID="voice-waveform">
+        {bars.map((amp, i) => {
+          const played = playing && i / bars.length <= progress;
+          return (
+            <View
+              key={i}
+              style={[
+                styles.waveBar,
+                {
+                  height: Math.round(4 + amp * 18),
+                  backgroundColor: played ? c.text : c.muted,
+                  opacity: played ? 1 : 0.4,
+                },
+              ]}
+            />
+          );
+        })}
+      </View>
       <Text style={[styles.voiceDuration, { color: c.muted }]}>{formatClock(duration)}</Text>
     </View>
   );
@@ -341,15 +602,60 @@ export function Voice({ id, file }: { id: string; file: FileRef }) {
 
 const styles = StyleSheet.create({
   frame: { borderRadius: 12, overflow: 'hidden', maxWidth: '100%' },
-  videoFrame: { width: 240, height: 150, borderRadius: 12, overflow: 'hidden', maxWidth: '100%' },
+  videoWrap: { width: WIDTH, maxWidth: '100%', borderRadius: 12, overflow: 'hidden', position: 'relative' },
+  videoFrame: { width: WIDTH, height: 150, borderRadius: 12, overflow: 'hidden', maxWidth: '100%' },
+  videoCorner: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.56)',
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  videoCornerText: { color: '#ffffff', fontSize: 11, fontWeight: '600' },
+  videoSpeaker: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.56)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoSpeakerText: { color: '#ffffff', fontSize: 12 },
   image: { width: '100%', height: '100%' },
   note: { fontSize: 14, paddingVertical: 4 },
-  fileRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 2 },
-  fileName: { fontSize: 15, flexShrink: 1 },
-  fileSave: { paddingHorizontal: 6, paddingVertical: 2 },
-  fileSaveText: { fontSize: 14, fontWeight: '600' },
+  // A fixed width: inside a bubble that shrinks to its content, flex: 1 alone collapses the text.
+  fileRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 2, width: 230 },
+  fileIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  filePdfText: { color: '#ffffff', fontSize: 11, fontWeight: '700' },
+  fileDocGlyph: { fontSize: 20 },
+  fileMeta: { flex: 1, minWidth: 0, gap: 1 },
+  fileName: { fontSize: 14, fontWeight: '600' },
+  fileSub: { fontSize: 12 },
   voiceRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 2 },
-  voiceDuration: { fontSize: 13 },
+  voicePlayBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  voicePlayIcon: { fontSize: 11, fontWeight: '700' },
+  waveform: { flexDirection: 'row', alignItems: 'center', gap: 2, height: 24 },
+  waveBar: { width: 2, borderRadius: 1 },
+  voiceDuration: { fontSize: 12, flexShrink: 0 },
   viewer: {
     position: 'absolute',
     top: 0,
@@ -357,23 +663,56 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 100,
-    backgroundColor: 'rgba(0, 0, 0, 0.92)',
+    backgroundColor: '#000000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  viewerClose: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    zIndex: 101,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  viewerBar: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    zIndex: 101,
-    flexDirection: 'row',
-    gap: 12,
+  viewerCloseText: { color: '#ffffff', fontSize: 26, lineHeight: 28 },
+  fullImageWrap: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  viewerButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.16)',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  viewerButtonText: { color: '#ffffff', fontSize: 15, fontWeight: '600' },
   fullImage: { width: '100%', height: '100%' },
+  viewerMenuBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 102,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  viewerMenu: {
+    width: '100%',
+    maxWidth: 280,
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  viewerMenuItem: {
+    minHeight: 48,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewerMenuLine: { borderTopWidth: StyleSheet.hairlineWidth },
+  viewerMenuText: { fontSize: 16, fontWeight: '600' },
 });
