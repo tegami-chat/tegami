@@ -6,8 +6,8 @@ const P = '#f4f1e8', G = '#1d6b4b', FLAP = '#3f8a67';
 // The glyph in a 512 box (body 100..412 x 112..358, tail down to y≈400).
 const body = 'M156 112 H356 Q412 112 412 168 V302 Q412 358 356 358 H156 Q100 358 100 302 V168 Q100 112 156 112 Z';
 const flap = 'M100 132 Q104 116 120 113 L392 113 Q408 116 412 132 L282 234 Q256 254 230 234 Z';
-// Grows out of the left side: the outer edge carries the body's left edge down, so there is no notch.
-const tail = 'M100 290 C100 330 108 346 118 360 C128 374 128 386 123 394 Q117 403 132 400 C166 392 194 374 220 356 L220 290 Z';
+// A short tail from the bottom edge near the lower left corner, with a slight neck (chosen 2026-11-14, option D).
+const tail = 'M132 352 Q140 372 128 394 Q120 408 136 404 Q186 388 226 354 Z';
 // Visual centre of the glyph's box (x 100..412, y 112..402).
 const CX = 256, CY = 257;
 const glyph = (scale, id, mono = false) =>
