@@ -36,12 +36,15 @@ const main = svg(glyph(2.27, 'b'));
 const fg = svg(glyph(1.47, 'f'), false);
 const mono = svg(glyph(1.47, 'm', true), false);
 const bgOnly = svg('');
+// Profile pictures on social networks are cut to a circle: the glyph a little smaller.
+const profile = svg(glyph(1.8, 'p'));
 // Splash: the glyph alone on transparent, the splash colour comes from app.json.
 const splash = svg(glyph(2.0, 's'), false);
 writeFileSync(`${root}/assets/images/tegami-icon.svg`, main);
 writeFileSync(`${root}/assets/images/tegami-glyph.json`, JSON.stringify({ body, flap, lower, tail, cx: CX, cy: CY, iconScale: 2.27 / 2 }));
 const out = [
   [main, 'assets/images/icon.png', 1024, false],
+  [profile, 'assets/images/profile.png', 1024, false],
   [main, 'assets/images/favicon.png', 48, false],
   [main, 'public/apple-touch-icon.png', 180, false],
   [main, 'public/icon-192.png', 192, false],
