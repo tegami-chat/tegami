@@ -5,7 +5,7 @@ import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, 
 
 import { Avatar } from '@/components/avatar';
 import { Dialog } from '@/components/dialog';
-import { FileAttachment, Photo, PhotoViewer, Stamp, Video, Voice } from '@/components/photo';
+import { FileAttachment, Photo, PhotoViewer, Stamp, Video, VideoViewer, Voice } from '@/components/photo';
 import { ReportSheet } from '@/components/report-sheet';
 import { Palette, usePalette } from '@/constants/theme';
 import { useCall } from '@/lib/calls';
@@ -88,8 +88,12 @@ export default function Chat() {
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recordPanel, setRecordPanel] = useState(false);
   const [recording, setRecording] = useState(false);
   const [recordingSec, setRecordingSec] = useState(0);
+  const [recorded, setRecorded] = useState<{ blob: Blob; url: string; duration: number } | null>(null);
+  const [previewPlaying, setPreviewPlaying] = useState(false);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const recorderRef = useRef<{
     recorder: MediaRecorder;
     stream: MediaStream;
@@ -100,6 +104,7 @@ export default function Chat() {
     limitTimer: ReturnType<typeof setTimeout>;
   } | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
+  const [viewingVideo, setViewingVideo] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [blockingPeer, setBlockingPeer] = useState<string | null>(null);
   const [reportTarget, setReportTarget] = useState<{ peer: string; messageId?: string } | null>(null);
@@ -367,27 +372,41 @@ export default function Chat() {
     return r;
   }, []);
 
+  const clearRecorded = useCallback(() => {
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current = null;
+    }
+    setPreviewPlaying(false);
+    setRecorded((prev) => {
+      if (prev?.url) URL.revokeObjectURL(prev.url);
+      return null;
+    });
+  }, []);
+
   const cancelRecording = useCallback(() => {
     const r = stopRecorder();
-    if (!r) return;
-    r.recorder.onstop = null;
-    r.recorder.ondataavailable = null;
-    if (r.recorder.state !== 'inactive') {
-      try {
-        r.recorder.stop();
-      } catch {}
+    if (r) {
+      r.recorder.onstop = null;
+      r.recorder.ondataavailable = null;
+      if (r.recorder.state !== 'inactive') {
+        try {
+          r.recorder.stop();
+        } catch {}
+      }
+      r.stream.getTracks().forEach((t) => t.stop());
     }
-    r.stream.getTracks().forEach((t) => t.stop());
-  }, [stopRecorder]);
+    clearRecorded();
+    setRecordingSec(0);
+    setRecordPanel(false);
+  }, [stopRecorder, clearRecorded]);
 
   useEffect(() => () => cancelRecording(), [peer, cancelRecording]);
 
-  const finishRecording = useCallback(async () => {
+  const stopRecordingToPreview = useCallback(async () => {
     const r = stopRecorder();
-    if (!r || !peer) return;
+    if (!r) return;
     const duration = Math.max(1, Math.round((Date.now() - r.startedAt) / 1000));
-    setSending(true);
-    setError(null);
     try {
       const blob = await new Promise<Blob>((resolve, reject) => {
         const done = () => {
@@ -405,6 +424,53 @@ export default function Chat() {
         };
         r.recorder.stop();
       });
+      const url = URL.createObjectURL(blob);
+      setRecordingSec(duration);
+      setRecorded({ blob, url, duration });
+    } catch {
+      setError(SEND_ERROR);
+    }
+  }, [stopRecorder]);
+
+  const finishRecording = useCallback(async () => {
+    if (!peer || sending) return;
+    let blob: Blob | null = null;
+    let duration = 1;
+    const r = stopRecorder();
+    if (r) {
+      duration = Math.max(1, Math.round((Date.now() - r.startedAt) / 1000));
+      try {
+        blob = await new Promise<Blob>((resolve, reject) => {
+          const done = () => {
+            r.stream.getTracks().forEach((t) => t.stop());
+            resolve(new Blob(r.chunks, { type: r.recorder.mimeType || r.mimeType || 'audio/webm' }));
+          };
+          if (r.recorder.state === 'inactive') {
+            done();
+            return;
+          }
+          r.recorder.onstop = done;
+          r.recorder.onerror = () => {
+            r.stream.getTracks().forEach((t) => t.stop());
+            reject(new Error('recording failed'));
+          };
+          r.recorder.stop();
+        });
+      } catch {
+        setError(SEND_ERROR);
+        return;
+      }
+    } else if (recorded) {
+      blob = recorded.blob;
+      duration = recorded.duration;
+    }
+    if (!blob) return;
+    clearRecorded();
+    setRecordingSec(0);
+    setRecordPanel(false);
+    setSending(true);
+    setError(null);
+    try {
       await sendVoice(peer, blob, duration, replying?.id);
       setReplying(null);
     } catch {
@@ -412,14 +478,25 @@ export default function Chat() {
     } finally {
       setSending(false);
     }
-  }, [stopRecorder, peer, sendVoice, replying]);
+  }, [stopRecorder, recorded, clearRecorded, peer, sending, sendVoice, replying]);
 
-  async function startRecording() {
-    if (!peer || sending || isBlocked || recording) return;
+  function openRecordPanel() {
+    if (!peer || sending || isBlocked) return;
     setError(null);
     setPlusOpen(false);
     setStampsOpen(false);
     setStampDeleting(null);
+    setPressed(null);
+    setHovered(null);
+    clearRecorded();
+    setRecordingSec(0);
+    setRecordPanel(true);
+  }
+
+  async function startRecording() {
+    if (!peer || sending || isBlocked || recording) return;
+    setError(null);
+    clearRecorded();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mimeType =
@@ -436,12 +513,22 @@ export default function Chat() {
         setRecordingSec(Math.floor((Date.now() - startedAt) / 1000));
       }, 250);
       const limitTimer = setTimeout(() => {
-        void finishRecording();
+        void stopRecordingToPreview();
       }, VOICE_MAX_MS);
       recorderRef.current = { recorder, stream, chunks, mimeType, startedAt, timer, limitTimer };
       recorder.start();
     } catch {
       setError(SEND_ERROR);
+    }
+  }
+
+  function togglePreview() {
+    const el = previewAudioRef.current;
+    if (!el) return;
+    if (el.paused) {
+      void el.play().catch(() => {});
+    } else {
+      el.pause();
     }
   }
 
@@ -620,7 +707,7 @@ export default function Chat() {
               disabled={!newName.trim()}
               onPress={() => addContact(peer, newName.trim())}
               role="button">
-              <Text style={s.sendText}>友達に追加</Text>
+              <Text style={s.sendText}>友だちに追加</Text>
             </Pressable>
           </View>
         )}
@@ -736,10 +823,16 @@ export default function Chat() {
             );
 
             const isStamp = !!item.file && !!item.stamp;
+            const isVisualMedia =
+              !!item.file &&
+              !item.stamp &&
+              !item.file.name &&
+              (item.file.type.startsWith('image/') || item.file.type.startsWith('video/'));
+            const frameless = isStamp || (isVisualMedia && item.replyTo === undefined && !(group && !mine));
             const bubble = (
               <View
                 style={[
-                  isStamp ? s.stampBox : [s.bubble, mine ? s.mine : s.theirs],
+                  frameless ? s.stampBox : [s.bubble, mine ? s.mine : s.theirs],
                   unsent && s.waiting,
                   mine && !!item.pending && s.full,
                   highlight === item.id && s.highlight,
@@ -770,9 +863,9 @@ export default function Chat() {
                     (!item.file.type.startsWith('image/') &&
                       !item.file.type.startsWith('video/') &&
                       !item.file.type.startsWith('audio/')) ? (
-                    <FileAttachment id={item.id} file={item.file} />
+                    <FileAttachment id={item.id} file={item.file} at={item.at} />
                   ) : item.file.type.startsWith('video/') ? (
-                    <Video id={item.id} file={item.file} />
+                    <Video id={item.id} file={item.file} onOpen={setViewingVideo} />
                   ) : item.file.type.startsWith('audio/') ? (
                     <Voice id={item.id} file={item.file} />
                   ) : (
@@ -840,7 +933,7 @@ export default function Chat() {
                   : {};
               const row = (
                 <View style={[s.itemWrap, mine ? s.itemWrapMine : s.itemWrapTheirs]}>
-                  <View style={s.swipeLine} {...(webRowHandlers as object)}>
+                  <View style={[s.swipeLine, mine && s.swipeLineMine]} {...(webRowHandlers as object)}>
                     {swipeDx > 12 && (
                       <View
                         style={[s.swipeReplyIcon, swipeDx > SWIPE_REPLY_PX && s.swipeReplyIconReady]}
@@ -968,7 +1061,7 @@ export default function Chat() {
           </View>
         ) : (
           <>
-            {replying && !recording && (
+            {replying && !recordPanel && (
               <View style={s.replyBar} testID="replying">
                 <View style={s.replyBody}>
                   <Text style={s.quoteName} numberOfLines={1}>
@@ -984,7 +1077,7 @@ export default function Chat() {
               </View>
             )}
 
-            {plusOpen && !recording && (
+            {plusOpen && !recordPanel && (
               <View style={s.plusPanel} testID="plus-panel">
                 <Pressable
                   role="button"
@@ -1000,15 +1093,98 @@ export default function Chat() {
               </View>
             )}
 
-            {recording ? (
-              <View style={s.composer}>
-                <Text style={s.recordTime}>{clock(recordingSec)}</Text>
-                <Pressable style={s.recordCancel} onPress={cancelRecording} role="button">
-                  <Text style={s.callText}>キャンセル</Text>
-                </Pressable>
-                <Pressable style={s.recordSend} onPress={finishRecording} role="button">
-                  <Text style={s.sendText}>送る</Text>
-                </Pressable>
+            {recordPanel ? (
+              <View style={s.recordPanel} testID="record-panel">
+                <View style={s.recordPanelTop}>
+                  <Pressable
+                    role="button"
+                    aria-label="閉じる"
+                    style={s.recordCloseBtn}
+                    onPress={cancelRecording}>
+                    <Text style={s.recordCloseText}>×</Text>
+                  </Pressable>
+                </View>
+                {!recording && !recorded ? (
+                  <>
+                    <Text style={s.recordHint}>ボタンをタップして録音してください</Text>
+                    <View style={s.recordControls}>
+                      <Pressable
+                        role="button"
+                        aria-label="録音を開始"
+                        disabled={sending}
+                        style={[s.recordBigBtn, s.recordStartBtn, sending && s.disabled]}
+                        onPress={startRecording}>
+                        <View style={s.recordStartDot} />
+                      </Pressable>
+                    </View>
+                  </>
+                ) : recording ? (
+                  <>
+                    <Text style={s.recordElapsed}>{clock(recordingSec)}</Text>
+                    <View style={s.recordControls}>
+                      <Pressable
+                        role="button"
+                        aria-label="削除"
+                        style={s.recordSideBtn}
+                        onPress={cancelRecording}>
+                        <Text style={s.recordSideIcon}>🗑︎</Text>
+                      </Pressable>
+                      <Pressable
+                        role="button"
+                        aria-label="停止"
+                        style={[s.recordBigBtn, s.recordStopBtn]}
+                        onPress={stopRecordingToPreview}>
+                        <View style={s.recordStopSquare} />
+                      </Pressable>
+                      <Pressable
+                        role="button"
+                        aria-label="送る"
+                        disabled={sending}
+                        style={[s.recordSendBtn, sending && s.disabled]}
+                        onPress={finishRecording}>
+                        <Text style={s.sendBtnIcon}>➤</Text>
+                      </Pressable>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    {recorded && Platform.OS === 'web' && (
+                      <audio
+                        ref={previewAudioRef}
+                        src={recorded.url}
+                        onPlay={() => setPreviewPlaying(true)}
+                        onPause={() => setPreviewPlaying(false)}
+                        onEnded={() => setPreviewPlaying(false)}
+                        style={{ display: 'none' }}
+                      />
+                    )}
+                    <Text style={s.recordStoppedTime}>{clock(recorded?.duration ?? recordingSec)}</Text>
+                    <View style={s.recordControls}>
+                      <Pressable
+                        role="button"
+                        aria-label="削除"
+                        style={s.recordSideBtn}
+                        onPress={cancelRecording}>
+                        <Text style={s.recordSideIcon}>🗑︎</Text>
+                      </Pressable>
+                      <Pressable
+                        role="button"
+                        aria-label={previewPlaying ? '一時停止' : '再生'}
+                        style={[s.recordBigBtn, s.recordPlayBtn]}
+                        onPress={togglePreview}>
+                        <Text style={s.recordPlayIcon}>{previewPlaying ? '❚❚' : '▶'}</Text>
+                      </Pressable>
+                      <Pressable
+                        role="button"
+                        aria-label="送る"
+                        disabled={sending}
+                        style={[s.recordSendBtn, sending && s.disabled]}
+                        onPress={finishRecording}>
+                        <Text style={s.sendBtnIcon}>➤</Text>
+                      </Pressable>
+                    </View>
+                  </>
+                )}
               </View>
             ) : (
               <View style={s.composer}>
@@ -1086,14 +1262,14 @@ export default function Chat() {
                     aria-label="録音"
                     disabled={sending}
                     style={[s.barIconBtn, sending && s.disabled]}
-                    onPress={startRecording}>
+                    onPress={openRecordPanel}>
                     <Text style={s.barIconText}>🎙︎</Text>
                   </Pressable>
                 )}
               </View>
             )}
 
-            {stampsOpen && !recording && (
+            {stampsOpen && !recordPanel && (
               <View style={s.stampPanel}>
                 <View style={s.stampGrid}>
                   {stamps.map((st) => (
@@ -1213,6 +1389,7 @@ export default function Chat() {
       )}
 
       {viewing && <PhotoViewer uri={viewing} onClose={() => setViewing(null)} />}
+      {viewingVideo && <VideoViewer uri={viewingVideo} onClose={() => setViewingVideo(null)} />}
     </KeyboardAvoidingView>
   );
 }
@@ -1259,10 +1436,12 @@ const styles = (c: Palette) =>
       color: c.text,
     },
     list: { padding: 12, gap: 8 },
-    itemWrap: { maxWidth: '100%', gap: 4 },
+    itemWrap: { width: '100%', gap: 4 },
     itemWrapMine: { alignSelf: 'flex-end', alignItems: 'flex-end' },
     itemWrapTheirs: { alignSelf: 'flex-start', alignItems: 'flex-start' },
-    swipeLine: { flexDirection: 'row', alignItems: 'center', maxWidth: '100%' },
+    // Full width, so the bubble's max width is a share of the screen, not of its own content.
+    swipeLine: { flexDirection: 'row', alignItems: 'center', width: '100%' },
+    swipeLineMine: { justifyContent: 'flex-end' },
     swipeReplyIcon: {
       width: 32,
       height: 32,
@@ -1285,7 +1464,7 @@ const styles = (c: Palette) =>
       color: c.text,
       fontWeight: '700',
     },
-    row: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '88%' },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '80%' },
     rowMine: { alignSelf: 'flex-end', justifyContent: 'flex-end' },
     rowTheirs: { alignSelf: 'flex-start' },
     bubble: {
@@ -1596,15 +1775,110 @@ const styles = (c: Palette) =>
       color: c.onAccent,
       fontWeight: '700',
     },
-    recordTime: { flex: 1, fontSize: 16, color: c.text, paddingHorizontal: 12, paddingVertical: 10 },
-    recordCancel: { minHeight: 44, paddingHorizontal: 12, justifyContent: 'center' },
-    recordSend: {
-      minHeight: 44,
-      backgroundColor: c.accent,
-      borderRadius: 22,
+    recordPanel: {
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: c.line,
+      backgroundColor: c.surface,
       paddingHorizontal: 16,
+      paddingTop: 8,
+      paddingBottom: 24,
+      alignItems: 'center',
+      gap: 14,
+    },
+    recordPanelTop: {
+      alignSelf: 'stretch',
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+    },
+    recordCloseBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
       justifyContent: 'center',
-      marginRight: 4,
+    },
+    recordCloseText: {
+      fontSize: 22,
+      color: c.muted,
+      lineHeight: 24,
+    },
+    recordHint: {
+      fontSize: 14,
+      color: c.muted,
+      textAlign: 'center',
+    },
+    recordElapsed: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: '#2f8f5b',
+      textAlign: 'center',
+    },
+    recordStoppedTime: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: c.text,
+      textAlign: 'center',
+    },
+    recordControls: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 28,
+    },
+    recordBigBtn: {
+      width: 68,
+      height: 68,
+      borderRadius: 34,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    recordStartBtn: {
+      backgroundColor: c.danger,
+    },
+    recordStartDot: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: '#ffffff',
+    },
+    recordStopBtn: {
+      backgroundColor: c.danger,
+    },
+    recordStopSquare: {
+      width: 22,
+      height: 22,
+      borderRadius: 4,
+      backgroundColor: '#ffffff',
+    },
+    recordPlayBtn: {
+      backgroundColor: c.text,
+    },
+    recordPlayIcon: {
+      fontSize: 22,
+      color: c.surface,
+      fontWeight: '700',
+    },
+    recordSideBtn: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: c.background,
+      borderWidth: 1,
+      borderColor: c.line,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    recordSideIcon: {
+      fontSize: 20,
+      color: c.text,
+    },
+    recordSendBtn: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: c.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     disabled: { opacity: 0.4 },
     callText: { fontSize: 15, color: c.accent, fontWeight: '600' },

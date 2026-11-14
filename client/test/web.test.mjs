@@ -2223,8 +2223,11 @@ async function main() {
       await img.waitFor({ timeout: 15000 });
       await img.click();
       await button(a.page, '閉じる').waitFor({ timeout: 5000 });
-      assert(await button(a.page, '保存').isVisible(), 'save button not visible');
+      assert(!(await button(a.page, '保存').count()), 'save button shown before long press');
       await shot(a.page, 'photo-viewer', '写真を押した時の全画面');
+      await a.page.getByTestId('viewer-photo').click({ button: 'right' });
+      await button(a.page, '保存').waitFor({ timeout: 5000 });
+      assert(await button(a.page, '閉じる').isVisible(), 'close button not visible in viewer menu');
       await a.page.keyboard.press('Escape');
       await button(a.page, '閉じる').waitFor({ state: 'detached', timeout: 5000 });
       assert(!(await button(a.page, '保存').count()), 'viewer still visible after Escape');
@@ -2568,7 +2571,13 @@ async function main() {
       await button(a.page, '写真').click();
       await (await videoChooser).setFiles({ name: 'clip.webm', mimeType: 'video/webm', buffer: webm });
       await a.page.getByTestId('video-message').first().waitFor({ timeout: 15000 });
-      await b.page.getByTestId('video-message').first().waitFor({ timeout: 15000 });
+      const bVideo = b.page.getByTestId('video-message').first();
+      await bVideo.waitFor({ timeout: 15000 });
+      await b.page.waitForFunction(() => {
+        const video = document.querySelector('[data-testid="video-message"]');
+        return video instanceof HTMLVideoElement && video.muted && !video.paused;
+      }, null, { timeout: 10000 });
+      await shot(b.page, 'video-chat', '動画が届いたトーク');
 
       const plainText = '合計 120,000円\nよろしくお願いします。';
       await button(a.page, 'その他').click();
@@ -2579,7 +2588,10 @@ async function main() {
       await (await fileChooser).setFiles({ name: '見積書.txt', mimeType: 'text/plain', buffer: Buffer.from(plainText, 'utf8') });
       const bFile = b.page.getByTestId('file-message').first();
       await bFile.waitFor({ timeout: 15000 });
-      assert((await bFile.innerText()).includes('見積書.txt'), `file message text: ${await bFile.innerText()}`);
+      const fileText = await bFile.innerText();
+      assert(fileText.includes('見積書.txt'), `file message text: ${fileText}`);
+      assert(fileText.includes('有効期間：'), `file message missing expiry: ${fileText}`);
+      assert(fileText.includes('サイズ：'), `file message missing size: ${fileText}`);
       await shot(b.page, 'video-file', '動画とファイルが届いたトーク');
 
       const sentFiles = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages')).filter((m) => m.file).map((m) => m.file));
@@ -2593,7 +2605,7 @@ async function main() {
       }
 
       const dlPromise = b.page.waitForEvent('download');
-      await bFile.getByRole('button', { name: '保存', exact: true }).click();
+      await bFile.click();
       const dl = await dlPromise;
       assert(dl.suggestedFilename() === '見積書.txt', `filename: ${dl.suggestedFilename()}`);
       const downloaded = readFileSync(await dl.path(), 'utf8');
@@ -2608,13 +2620,23 @@ async function main() {
       await befriend(a, b);
 
       await button(a.page, '録音').click();
-      await button(a.page, 'キャンセル').waitFor({ timeout: 5000 });
+      await waitText(a.page, 'ボタンをタップして録音してください');
+      await button(a.page, '録音を開始').waitFor({ timeout: 5000 });
+      await shot(a.page, 'record-panel', '「録音」を押した時に出るパネル（録音する前）');
+      await button(a.page, '録音を開始').click();
+      await button(a.page, '停止').waitFor({ timeout: 5000 });
+      await button(a.page, '削除').waitFor({ timeout: 5000 });
       await a.page.waitForTimeout(1500);
-      await shot(a.page, 'recording', '「録音」を押して録音している時');
+      await shot(a.page, 'recording', '「録音を開始」を押して録音している時');
       await button(a.page, '送る').click();
 
       await a.page.getByTestId('voice-message').first().waitFor({ timeout: 15000 });
-      await b.page.getByTestId('voice-message').first().waitFor({ timeout: 15000 });
+      const bVoice = b.page.getByTestId('voice-message').first();
+      await bVoice.waitFor({ timeout: 15000 });
+      const waveform = bVoice.getByTestId('voice-waveform');
+      await waveform.waitFor({ timeout: 5000 });
+      const barCount = await waveform.evaluate((el) => el.children.length);
+      assert(barCount >= 20, `expected waveform bars, got ${barCount}`);
       await shot(b.page, 'voice', '音声メッセージが届いたトーク');
       for (const u of [a, b]) await u.context.close();
     });
