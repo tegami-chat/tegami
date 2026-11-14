@@ -109,7 +109,7 @@ class Buckets {
 
 const INFO = {
   name: 'Tegami relay',
-  description: 'Relay for the Tegami messenger. Speak freely.',
+  description: 'Relay for the Tegami messenger. Your chats belong to you.',
   software: 'https://github.com/tegami-chat/tegami',
   supported_nips: [1, 11, 17, 42, 59, 98],
   limitation: {
@@ -194,7 +194,7 @@ export default {
         headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/nostr+json' },
       });
     }
-    return new Response('Tegami relay. Speak freely.\n', { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    return new Response('Tegami relay. Your chats belong to you.\n', { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
   },
 };
 

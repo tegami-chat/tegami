@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tegami のロードマップ案</title>
+<script>
+(function () {
+  var t; try { t = localStorage.getItem('tegami.theme'); } catch (e) {}
+  var dark = t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.classList.toggle('dark', dark);
+})();
+</script>
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: { extend: {
+    colors: {
+      forest: { 50: '#e3f0e8', 300: '#7fd7a8', 600: '#106c4a', 700: '#0b5a3d', 950: '#0b1a12' },
+      nostr: { 300: '#c9a2ff', 600: '#7c2eda' },
+      paper: { DEFAULT: '#f4f1e8', dark: '#171b18' },
+      night: { DEFAULT: '#121614', card: '#1c221f', line: '#2c3430' },
+    },
+    fontFamily: { sans: ['-apple-system', 'BlinkMacSystemFont', '"Hiragino Sans"', '"Yu Gothic UI"', '"Noto Sans JP"', 'sans-serif'] },
+  } },
+}
+</script>
+<style>
+  :lang(ja) h1, :lang(ja) h2, :lang(ja) h3, :lang(ja) th, :lang(ja) td, :lang(ja) summary, :lang(ja) li { word-break: auto-phrase; }
+  :lang(ja) p { word-break: auto-phrase; text-wrap: pretty; }
+  h1, h2, h3 { text-wrap: balance; }
+</style>
+</head>
+<body class="bg-white text-neutral-900 antialiased dark:bg-[#101311] dark:text-neutral-100">
+
+<header class="sticky top-0 z-50 border-b border-neutral-200/70 bg-white/80 backdrop-blur dark:border-night-line/70 dark:bg-[#101311]/80">
+  <div class="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
+    <a href="TegamiのLP案_2026-11-14.html" class="flex items-center gap-2.5 text-lg font-bold"><svg viewBox="0 0 1024 1024" class="h-8 w-8 rounded-lg" aria-hidden="true"><rect width="1024" height="1024" fill="#f4f1e8"/><g transform="translate(512 512) scale(2.27) translate(-256 -249.5)"><defs><clipPath id="tg-rh"><path d="M164 112 H348 Q406 112 406 170 V304 Q406 362 348 362 H164 Q106 362 106 304 V170 Q106 112 164 112 Z"/></clipPath></defs><path d="M138 356 Q146 376 134 398 Q126 412 142 408 Q192 392 232 358 Z" fill="#1d6b4b"/><path clip-path="url(#tg-rh)" d="M86 123 L230 234 Q256 254 282 234 L426 123 L426 382 L86 382 Z" fill="#1d6b4b"/><path clip-path="url(#tg-rh)" d="M86 92 L426 92 L426 126 L282 237 Q256 257 230 237 L86 126 Z" fill="#bbd3c9"/></g></svg><span class="max-[359px]:sr-only">Tegami</span></a>
+    <nav class="hidden items-center gap-6 text-sm text-neutral-600 dark:text-neutral-400 md:flex">
+      <a href="TegamiのLP案_2026-11-14.html#features" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="nav.features">Features</a>
+      <a href="TegamiのLP案_2026-11-14.html#ai" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="nav.ai">AI</a>
+      <a href="TegamiのLP案_2026-11-14.html#desk" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="nav.desk">Make it yours</a>
+      <a href="TegamiのLP案_2026-11-14.html#faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="nav.faq">FAQ</a>
+      <a href="https://github.com/tegami-chat/tegami" target="_blank" rel="noopener" class="hover:text-neutral-900 dark:hover:text-white">GitHub</a>
+    </nav>
+    <div class="flex items-center gap-2 sm:gap-3">
+      <div class="hidden sm:flex rounded-full border border-neutral-200 p-0.5 dark:border-night-line" role="group" aria-label="Light or dark" data-seg="theme-h"><button type="button" data-theme-set="light" aria-label="Light" class="rounded-full px-2 py-1 bg-neutral-900 text-white dark:bg-transparent dark:text-neutral-500 dark:hover:text-white"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button><button type="button" data-theme-set="dark" aria-label="Dark" class="rounded-full px-2 py-1 text-neutral-400 hover:text-neutral-900 dark:bg-white dark:text-neutral-900"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div>
+      <details class="relative" data-lang-menu><summary class="flex cursor-pointer list-none items-center gap-0.5 rounded-full px-1.5 py-1 text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white" aria-label="Language"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg><svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M5.3 7.3a1 1 0 011.4 0L10 10.6l3.3-3.3a1 1 0 111.4 1.4l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 010-1.4z"/></svg></summary><div class="absolute right-0 z-50 mt-2 w-36 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 shadow-lg dark:border-night-line dark:bg-night-card"><a href="?lang=en" hreflang="en" lang="en" data-lang="en" class="block px-4 py-2 text-sm">English</a><a href="?lang=ja" hreflang="ja" lang="ja" data-lang="ja" class="block px-4 py-2 text-sm">日本語</a></div></details>
+    </div>
+  </div>
+</header>
+
+<main class="mx-auto grid max-w-5xl gap-10 px-4 py-14 md:grid-cols-[1fr_1.4fr] md:py-20">
+  <div class="md:sticky md:top-24 md:self-start">
+    <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="rm.h">Roadmap</h1>
+    <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="rm.t">What we've built, and what's next.</p>
+    <p class="mt-4 text-sm text-neutral-500 dark:text-neutral-400" data-i18n="rm.note">We open things up step by step, starting with what can be undone. Anything that can't be undone comes last.</p>
+    <a href="https://github.com/tegami-chat/tegami/issues" target="_blank" rel="noopener" class="mt-6 inline-block text-sm font-semibold text-forest-600 hover:underline dark:text-forest-300" data-i18n="rm.issue">Suggest a feature on GitHub</a>
+  </div>
+  <div class="space-y-4">
+      <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-forest-50 text-forest-600 dark:bg-forest-950 dark:text-forest-300"><span aria-hidden="true">✓</span><span data-i18n="rm.done">Released</span></span>
+        <h3 class="mt-3 text-lg font-bold" data-i18n="rm.basics.h">Everyday messaging</h3>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.basics.t">One-on-one and group chats, photos, videos, files, voice messages, stickers, replies and search.</p>
+      </article>
+      <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-forest-50 text-forest-600 dark:bg-forest-950 dark:text-forest-300"><span aria-hidden="true">✓</span><span data-i18n="rm.done">Released</span></span>
+        <h3 class="mt-3 text-lg font-bold" data-i18n="rm.calls.h">Voice and video calls</h3>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.calls.t">Call anyone in your chat list. You get a notification when someone calls.</p>
+      </article>
+      <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-forest-50 text-forest-600 dark:bg-forest-950 dark:text-forest-300"><span aria-hidden="true">✓</span><span data-i18n="rm.done">Released</span></span>
+        <h3 class="mt-3 text-lg font-bold" data-i18n="rm.e2e.h">Encryption and passkeys</h3>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.e2e.t">Messages are encrypted on your device. Your account is protected by a passkey, with no password.</p>
+      </article>
+      <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-forest-50 text-forest-600 dark:bg-forest-950 dark:text-forest-300"><span aria-hidden="true">✓</span><span data-i18n="rm.done">Released</span></span>
+        <h3 class="mt-3 text-lg font-bold" data-i18n="rm.move.h">Recovery code and new phones</h3>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.move.t">Bring your account back with a recovery code, or move it to another device in a few taps.</p>
+      </article>
+      <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-forest-50 text-forest-600 dark:bg-forest-950 dark:text-forest-300"><span aria-hidden="true">✓</span><span data-i18n="rm.done">Released</span></span>
+        <h3 class="mt-3 text-lg font-bold" data-i18n="rm.accounts.h">Multiple accounts</h3>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.accounts.t">Use several accounts on one device and switch between them.</p>
+      </article>
+      <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-forest-50 text-forest-600 dark:bg-forest-950 dark:text-forest-300"><span aria-hidden="true">✓</span><span data-i18n="rm.done">Released</span></span>
+        <h3 class="mt-3 text-lg font-bold" data-i18n="rm.ai.h">Your AI as a friend</h3>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.ai.t">A small tool lets the AI on your computer join your chat list. Works with MCP.</p>
+      </article>
+      <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-forest-50 text-forest-600 dark:bg-forest-950 dark:text-forest-300"><span aria-hidden="true">✓</span><span data-i18n="rm.done">Released</span></span>
+        <h3 class="mt-3 text-lg font-bold" data-i18n="rm.safety.h">Block, report and a box for strangers</h3>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.safety.t">Messages from people you don't know wait in a separate box. Block and report anyone.</p>
+      </article>
+      <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"><span aria-hidden="true">●</span><span data-i18n="rm.now">In progress</span></span>
+        <h3 class="mt-3 text-lg font-bold" data-i18n="rm.signup.h">Open sign-up with invites</h3>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.signup.t">Anyone can join. People you invite can reach you straight away; everyone else starts in the strangers box.</p>
+      </article>
+      <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"><span aria-hidden="true">●</span><span data-i18n="rm.now">In progress</span></span>
+        <h3 class="mt-3 text-lg font-bold" data-i18n="rm.address.h">Your own address</h3>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.address.t">An easy-to-share address like name@tegami.chat.</p>
+      </article>
+      <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"><span aria-hidden="true">●</span><span data-i18n="rm.now">In progress</span></span>
+        <h3 class="mt-3 text-lg font-bold" data-i18n="rm.qr.h">Connect your AI with a QR code</h3>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.qr.t">Install a small app on your computer and scan its QR code. No commands to type.</p>
+      </article>
+      <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"><span aria-hidden="true">●</span><span data-i18n="rm.now">In progress</span></span>
+        <h3 class="mt-3 text-lg font-bold" data-i18n="rm.mobile.h">iPhone and Android apps</h3>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.mobile.t">Native apps with a real ringing screen for calls.</p>
+      </article>
+      <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-600 dark:bg-white/10 dark:text-neutral-300"><span aria-hidden="true">○</span><span data-i18n="rm.plan">Planned</span></span>
+        <h3 class="mt-3 text-lg font-bold" data-i18n="rm.vanish.h">Disappearing messages</h3>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.vanish.t">Choose to send a message that disappears after a while.</p>
+      </article>
+      <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-600 dark:bg-white/10 dark:text-neutral-300"><span aria-hidden="true">○</span><span data-i18n="rm.plan">Planned</span></span>
+        <h3 class="mt-3 text-lg font-bold" data-i18n="rm.desktop.h">Windows, Mac and Linux apps</h3>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.desktop.t">Desktop apps you can keep open all day.</p>
+      </article>
+      <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-600 dark:bg-white/10 dark:text-neutral-300"><span aria-hidden="true">○</span><span data-i18n="rm.plan">Planned</span></span>
+        <h3 class="mt-3 text-lg font-bold" data-i18n="rm.api.h">Tegami API</h3>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.api.t">Read and send messages from your own programs.</p>
+      </article>
+      <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-600 dark:bg-white/10 dark:text-neutral-300"><span aria-hidden="true">○</span><span data-i18n="rm.plan">Planned</span></span>
+        <h3 class="mt-3 text-lg font-bold" data-i18n="rm.aigroup.h">AI in group chats</h3>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.aigroup.t">Invite an AI into a group with everyone's OK, and let AIs talk to each other when you allow it.</p>
+      </article>
+      <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-600 dark:bg-white/10 dark:text-neutral-300"><span aria-hidden="true">○</span><span data-i18n="rm.plan">Planned</span></span>
+        <h3 class="mt-3 text-lg font-bold" data-i18n="rm.screens.h">Build your own screens</h3>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.screens.t">Make the screens you like on top of Tegami, without handing over your secret key, and share them.</p>
+      </article>
+      <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-600 dark:bg-white/10 dark:text-neutral-300"><span aria-hidden="true">○</span><span data-i18n="rm.plan">Planned</span></span>
+        <h3 class="mt-3 text-lg font-bold" data-i18n="rm.relay.h">Run your own server</h3>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.relay.t">Companies, schools and communities can run their own server, and you can choose which ones to use.</p>
+      </article>
+      <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-600 dark:bg-white/10 dark:text-neutral-300"><span aria-hidden="true">○</span><span data-i18n="rm.plan">Planned</span></span>
+        <h3 class="mt-3 text-lg font-bold" data-i18n="rm.nostr.h">Talk with other Nostr apps</h3>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.nostr.t">Choose to receive messages from people on other Nostr apps.</p>
+      </article>
+      <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-600 dark:bg-white/10 dark:text-neutral-300"><span aria-hidden="true">○</span><span data-i18n="rm.plan">Planned</span></span>
+        <h3 class="mt-3 text-lg font-bold" data-i18n="rm.export.h">Take your account anywhere</h3>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.export.t">Export your account and move to another Nostr app. This comes last, because it can't be undone.</p>
+      </article>
+  </div>
+</main>
+
+<footer class="border-t border-neutral-200 text-sm text-neutral-500 dark:border-night-line dark:text-neutral-400">
+  <div class="mx-auto grid max-w-5xl gap-10 px-4 py-14 sm:grid-cols-2 md:grid-cols-4">
+    <div>
+      <a href="TegamiのLP案_2026-11-14.html" class="flex items-center gap-2.5 text-base font-bold text-neutral-900 dark:text-neutral-100"><svg viewBox="0 0 1024 1024" class="h-8 w-8 rounded-lg" aria-hidden="true"><rect width="1024" height="1024" fill="#f4f1e8"/><g transform="translate(512 512) scale(2.27) translate(-256 -249.5)"><defs><clipPath id="tg-rf"><path d="M164 112 H348 Q406 112 406 170 V304 Q406 362 348 362 H164 Q106 362 106 304 V170 Q106 112 164 112 Z"/></clipPath></defs><path d="M138 356 Q146 376 134 398 Q126 412 142 408 Q192 392 232 358 Z" fill="#1d6b4b"/><path clip-path="url(#tg-rf)" d="M86 123 L230 234 Q256 254 282 234 L426 123 L426 382 L86 382 Z" fill="#1d6b4b"/><path clip-path="url(#tg-rf)" d="M86 92 L426 92 L426 126 L282 237 Q256 257 230 237 L86 126 Z" fill="#bbd3c9"/></g></svg>Tegami</a>
+      <p class="mt-3" data-i18n="ft.tag">Your chats belong to you.<br>Bring your own AI.</p>
+    </div>
+      <div>
+        <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.product">Product</h3>
+        <ul class="mt-3 space-y-2">
+          <li><a href="https://app.tegami.chat/" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="cta.browser" target="_blank" rel="noopener">Open in your browser</a></li>
+          <li><a href="TegamiのLP案_2026-11-14.html#features" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="nav.features">Features</a></li>
+          <li><a href="TegamiのLP案_2026-11-14.html#faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="nav.faq">FAQ</a></li>
+          <li><a href="Tegamiのロードマップ案_2026-11-14.html" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="roadmap">Roadmap</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.community">Community</h3>
+        <ul class="mt-3 space-y-2">
+          <li><a href="https://github.com/tegami-chat/tegami" class="hover:text-neutral-900 dark:hover:text-white" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="https://x.com/tegamichat" class="hover:text-neutral-900 dark:hover:text-white" target="_blank" rel="noopener">X</a></li>
+          <li><a href="https://bsky.app/profile/tegami.chat" class="hover:text-neutral-900 dark:hover:text-white" target="_blank" rel="noopener">Bluesky</a></li>
+          <li><a href="https://mastodon.social/@tegamichat" class="hover:text-neutral-900 dark:hover:text-white" target="_blank" rel="noopener">Mastodon</a></li>
+          <li><a href="https://njump.me/npub1zptpqkxhr98glpt4rqv9945f3hd3q82wghaqth4gwqtmzmtjutsse5a98k" class="hover:text-neutral-900 dark:hover:text-white" target="_blank" rel="noopener">Nostr</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.contact">Contact</h3>
+        <ul class="mt-3 space-y-2">
+          <li><a href="mailto:hello@tegami.chat" class="hover:text-neutral-900 dark:hover:text-white">hello@tegami.chat</a></li>
+        </ul>
+      </div>
+  </div>
+  <div class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 border-t border-neutral-200 px-4 py-6 text-xs dark:border-night-line">
+    <div class="flex flex-col gap-1"><span class="flex flex-wrap gap-x-4 gap-y-1"><a href="Tegamiのプライバシーポリシー案_2026-11-14.html" class="hover:underline" data-i18n="ft.privacy">Privacy policy</a><a href="Tegamiの仕組み案_2026-11-14.html" class="hover:underline" data-i18n="ft.how">How it works</a></span><span><span data-i18n="ft.copy">Open source under AGPL-3.0.</span> © 2026 Tegami contributors</span></div>
+    <div class="flex items-center gap-2"><div class="flex rounded-full border border-neutral-200 p-0.5 dark:border-night-line" role="group" aria-label="Light or dark"><button type="button" data-theme-set="light" aria-label="Light" class="rounded-full px-2 py-1 bg-neutral-900 text-white dark:bg-transparent dark:text-neutral-500 dark:hover:text-white"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button><button type="button" data-theme-set="dark" aria-label="Dark" class="rounded-full px-2 py-1 text-neutral-400 hover:text-neutral-900 dark:bg-white dark:text-neutral-900"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// 言葉の切り替え。HTML に書いた英語が元で、日本語はここに置く。
+// 下書きでは ?lang=ja で日本語にする。ブラウザの言葉で勝手に切り替えない（Google の多言語サイトの指針）。
+// 公開する時は、英語を tegami.chat/、日本語を tegami.chat/ja/ の別のページに書き出し、hreflang で結ぶ。
+const JA = {
+  'ft.privacy': 'プライバシーポリシー',
+  'ft.how': '仕組み',
+  'how.cta': '仕組みを見る',
+  'nav.desk': '自分仕様に',
+  'nav.features': '機能',
+  'nav.ai': 'AI',
+  'nav.faq': 'よくある質問',
+  'nav.open': 'はじめる',
+  'ft.tag': 'トークはあなたのもの。<br>AI は持ち込み自由。',
+  'ft.product': 'Tegami',
+  'ft.community': 'コミュニティ',
+  'ft.contact': 'お問い合わせ',
+  'ft.copy': 'AGPL-3.0 のオープンソースです。',
+  'cta.browser': 'ブラウザで始める',
+  'roadmap': 'ロードマップ',
+  'rm.h': 'ロードマップ',
+  'rm.t': 'できたこと、これから作ること。',
+  'rm.note': '戻せることから順に開いていきます。戻せないことは最後に作ります。',
+  'rm.issue': 'GitHub で機能を提案する',
+  'rm.done': 'リリース済み',
+  'rm.now': '開発中',
+  'rm.plan': '予定',
+  'rm.basics.h': 'いつものメッセージ機能',
+  'rm.basics.t': '1対1とグループのトーク、写真、動画、ファイル、音声メッセージ、スタンプ、リプライ、検索。',
+  'rm.calls.h': '音声通話とビデオ通話',
+  'rm.calls.t': 'トーク一覧の相手に電話をかけられます。着信の通知も届きます。',
+  'rm.e2e.h': '暗号化とパスキー',
+  'rm.e2e.t': 'メッセージは端末の中で暗号化されます。アカウントはパスワードではなくパスキーで守ります。',
+  'rm.move.h': '復旧コードと機種変更',
+  'rm.move.t': '復旧コードでアカウントを復元でき、数タップで別の端末へ引き継げます。',
+  'rm.accounts.h': '複数のアカウント',
+  'rm.accounts.t': '1つの端末で複数のアカウントを使い分けられます。',
+  'rm.ai.h': '自分の AI を友達に',
+  'rm.ai.t': '小さな道具で、パソコンの AI をトーク一覧に並べられます。MCP にも対応しています。',
+  'rm.safety.h': 'ブロックと通報',
+  'rm.safety.t': '知らない人からのメッセージは別の受信箱に届きます。誰でもブロックと通報ができます。',
+  'rm.signup.h': '招待で広がる登録',
+  'rm.signup.t': '誰でも登録できます。招待した人からは直接届き、それ以外の人は知らない人の箱から始まります。',
+  'rm.address.h': '自分のアドレス',
+  'rm.address.t': 'name@tegami.chat のような、人に伝えやすいアドレスを持てます。',
+  'rm.qr.h': 'QR コードで AI とつなぐ',
+  'rm.qr.t': 'パソコンに小さなアプリを入れて、QR コードを読むだけ。コマンドを打つ必要はありません。',
+  'rm.mobile.h': 'iPhone と Android のアプリ',
+  'rm.mobile.t': '電話のような着信の画面を持つ、スマホのアプリです。',
+  'rm.vanish.h': '消えるメッセージ',
+  'rm.vanish.t': '時間がたつと消えるメッセージを、選んで送れます。',
+  'rm.desktop.h': 'パソコンのアプリ',
+  'rm.desktop.t': 'Windows、Mac、Linux で、一日中開いておけるアプリです。',
+  'rm.api.h': 'Tegami の API',
+  'rm.api.t': '自分のプログラムから、メッセージを読んだり送ったりできます。',
+  'rm.aigroup.h': 'グループに AI を呼ぶ',
+  'rm.aigroup.t': '全員の同意で AI をグループに呼べます。許可すれば AI 同士でもやり取りできます。',
+  'rm.screens.h': '自分の画面を作る',
+  'rm.screens.t': '秘密の鍵を渡さずに、Tegami の上に好きな画面を作り、人と共有できます。',
+  'rm.relay.h': '自前のサーバーを動かす',
+  'rm.relay.t': '会社や学校、コミュニティが自分たちのサーバーを持てます。使うサーバーも選べます。',
+  'rm.nostr.h': 'ほかの Nostr アプリとつながる',
+  'rm.nostr.t': 'ほかの Nostr アプリの人からのメッセージも、選べば受け取れます。',
+  'rm.export.h': 'アカウントを持ち出す',
+  'rm.export.t': 'アカウントを書き出して、ほかの Nostr アプリへ移れます。戻せない機能なので最後に作ります。',
+};
+const EN = {};
+document.querySelectorAll('[data-i18n]').forEach((el) => { EN[el.dataset.i18n] ??= el.innerHTML; });
+
+function pick() {
+  return new URLSearchParams(location.search).get('lang') === 'ja' ? 'ja' : 'en';
+}
+function apply(lang) {
+  const dict = lang === 'ja' ? JA : EN;
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    const v = dict[el.dataset.i18n] ?? EN[el.dataset.i18n];
+    if (v != null) el.innerHTML = v;
+  });
+  document.documentElement.lang = lang;
+
+  document.querySelectorAll('a[href]').forEach((a) => {
+    const h = a.getAttribute('href');
+    if (!h || /^(https?:|mailto:|#|\?)/.test(h) || a.dataset.lang) return;
+    a.dataset.base ??= h;
+    const [path, hash] = a.dataset.base.split('#');
+    a.setAttribute('href', path + (lang === 'ja' ? '?lang=ja' : '') + (hash ? '#' + hash : ''));
+  });
+  document.querySelectorAll('[data-lang]').forEach((a) => {
+    const on = a.dataset.lang === lang;
+    a.className = 'block px-4 py-2 text-sm ' + (on
+      ? 'font-semibold text-forest-600 dark:text-forest-300'
+      : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-white/5');
+    if (on) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
+  });
+}
+apply(pick());
+document.addEventListener('click', (e) => {
+  document.querySelectorAll('[data-lang-menu][open]').forEach((d) => { if (!d.contains(e.target)) d.removeAttribute('open'); });
+});
+
+document.querySelectorAll('[data-theme-set]').forEach((b) => {
+  b.onclick = () => {
+    const dark = b.dataset.themeSet === 'dark';
+    document.documentElement.classList.toggle('dark', dark);
+    try { localStorage.setItem('tegami.theme', b.dataset.themeSet); } catch {}
+  };
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+  let t; try { t = localStorage.getItem('tegami.theme'); } catch {}
+  if (!t) document.documentElement.classList.toggle('dark', e.matches);
+});
+</script>
+</body>
+</html>

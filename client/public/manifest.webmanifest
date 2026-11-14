@@ -1,7 +1,7 @@
 {
   "name": "Tegami",
   "short_name": "Tegami",
-  "description": "Speak freely.",
+  "description": "Your chats belong to you. Bring your own AI.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
