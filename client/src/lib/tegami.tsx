@@ -89,11 +89,29 @@ export type Status = 'loading' | 'new' | 'locked' | 'open';
 export type RegistrationState = 'checking' | 'needed' | 'ok' | 'blocked';
 
 /** Why someone is reported to the relay's operator (POST /report). */
-export type ReportReason = 'spam' | 'scam' | 'harassment' | 'other';
+export type ReportReason = 'spam' | 'scam' | 'impersonation' | 'harassment' | 'other';
 
 /** Recent messages attached to a report: at most this many, each cut to this length. */
 const REPORT_MESSAGES = 20;
 const REPORT_TEXT = 2000;
+/** Deleted message ids kept per account so the relay's 30-day replay does not bring them back. */
+const MAX_DELETED_IDS = 500;
+
+/** The messages from `pubkey` that a report will attach (around `messageId` when given, else the latest 20). */
+export function reportMessagesFor(all: Message[], pubkey: string, messageId?: string): Message[] {
+  // Only what they wrote in the chat being reported: the 1:1 chat, or the chat of the chosen
+  // message (a group). Other chats the person is in are not the reporter's to hand over.
+  const target = messageId ? all.find((m) => m.id === messageId) : undefined;
+  const room = target?.peer ?? pubkey;
+  const theirTexts = all.filter((m) => m.peer === room && m.from === pubkey && !m.file && !m.call && m.text);
+  if (!target) return theirTexts.slice(-REPORT_MESSAGES);
+  const idx = theirTexts.findIndex((m) => m.id === messageId);
+  if (idx >= 0) return theirTexts.slice(Math.max(0, idx - 9), idx + 10);
+  // The chosen message itself is not text (a photo): the texts around it in time.
+  const before = theirTexts.filter((m) => m.at <= target.at).slice(-9);
+  const after = theirTexts.filter((m) => m.at > target.at).slice(0, 9);
+  return [...before, ...after];
+}
 
 type TegamiState = {
   status: Status;
@@ -106,11 +124,14 @@ type TegamiState = {
   block: (pubkey: string) => void;
   unblock: (pubkey: string) => void;
   /**
-   * Reports a person to the relay's operator. With attach, the last 20 text messages they
-   * wrote in our 1:1 chat go along. Nothing is sent to them. Throws when it did not go through.
+   * Reports a person to the relay's operator. With attach, the selected message and up to 9
+   * messages before and after it (or the last 20 text messages they wrote) go along.
+   * Nothing is sent to them. Throws when it did not go through.
    */
-  report: (pubkey: string, reason: ReportReason, attach: boolean) => Promise<void>;
+  report: (pubkey: string, reason: ReportReason, attach: boolean, messageId?: string) => Promise<void>;
   messages: Message[];
+  /** Deletes one message on this device only and remembers its id so the relay replay skips it. */
+  deleteMessage: (id: string) => void;
   /** Makes a group with these contacts and returns its chat id. */
   createGroup: (name: string, members: string[]) => string;
   /** My own name, shared through my invite link. Stays on this device otherwise. */
@@ -315,6 +336,13 @@ export function parsePubkey(input: string): string | null {
   return /^[0-9a-f]{64}$/.test(text) ? text : null;
 }
 
+/** Checks whether scanned QR text is a Tegami invite link and returns it, or null. */
+export function inviteFromQr(text: string): string | null {
+  const trimmed = text.trim();
+  if (!/^https:\/\/(?:app\.)?tegami\.chat\/i#\S+$/.test(trimmed)) return null;
+  return parsePubkey(trimmed) ? trimmed : null;
+}
+
 export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const [secret, setSecret] = useState<Uint8Array | null>(null);
   const [vault, setVault] = useState<Vault | null>(null);
@@ -381,8 +409,10 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       setBlocked(loadedBlocked);
       // Messages waiting to be sent: the outbox is what counts. A message still marked as
       // being sent when the app closed is now waiting; a mark without an outbox entry is stale.
+      const deletedSet = new Set(load<string[]>(k('deleted'), []));
+      deletedRef.current = deletedSet;
       const box = loadOutbox();
-      const stored = load<Message[]>(k('messages'), []);
+      const stored = load<Message[]>(k('messages'), []).filter((m) => !deletedSet.has(m.id));
       const ids = new Set(stored.map((m) => m.id));
       outbox.current = box.filter((o) => ids.has(o.id));
       if (outbox.current.length !== box.length) saveOutbox(outbox.current);
@@ -457,6 +487,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const blockedRef = useRef<string[]>([]);
   // Chats deleted on this device: room -> the time up to which their messages stay deleted.
   const clearedRef = useRef<Record<string, number>>({});
+  // Individual messages deleted on this device, kept small so relay replays skip them.
+  const deletedRef = useRef<Set<string>>(new Set());
   blockedRef.current = blocked;
   const rememberGroup = useCallback(
     (id: string, subject: string | undefined, author: string) => {
@@ -626,9 +658,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
           );
           if (!others.length) return;
           const peer = roomOf(others);
-          // A deleted chat: the relay still holds its envelopes for 30 days and hands them
-          // out again on the next start. Messages up to the moment of deleting stay gone.
-          if (rumor.created_at <= (clearedRef.current[peer] ?? 0)) return;
+          // A deleted chat or message: the relay still holds its envelopes for 30 days and hands
+          // them out again on the next start. Messages up to the moment of deleting stay gone.
+          if (rumor.created_at <= (clearedRef.current[peer] ?? 0) || deletedRef.current.has(rumor.id)) return;
           const replyTo = replyOf(rumor.tags);
           if (isGroup(peer)) {
             const subject = rumor.tags.find((t) => t[0] === 'subject')?.[1]?.slice(0, 60);
@@ -979,13 +1011,13 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   // Only the relay's operator sees a report. The relay cannot read chats, so messages go
   // along only when the person chose to attach them, and only what the other person wrote.
   const report = useCallback(
-    async (pubkey: string, reason: ReportReason, attach: boolean) => {
+    async (pubkey: string, reason: ReportReason, attach: boolean, messageId?: string) => {
       if (!secret) throw new Error('not open');
       const messages = attach
-        ? messagesRef.current
-            .filter((m) => m.peer === pubkey && m.from === pubkey && !m.file && !m.call && m.text)
-            .slice(-REPORT_MESSAGES)
-            .map((m) => ({ text: m.text.slice(0, REPORT_TEXT), at: Math.floor(m.at) }))
+        ? reportMessagesFor(messagesRef.current, pubkey, messageId).map((m) => ({
+            text: m.text.slice(0, REPORT_TEXT),
+            at: Math.floor(m.at),
+          }))
         : [];
       const body = JSON.stringify(messages.length ? { pubkey, reason, messages } : { pubkey, reason });
       const res = await signedFetch('POST', '/report', body, secret);
@@ -1381,6 +1413,30 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     [saveBox, saveGroups],
   );
 
+  const deleteMessage = useCallback(
+    (id: string) => {
+      deletedRef.current.add(id);
+      const kept = [...deletedRef.current].slice(-MAX_DELETED_IDS);
+      deletedRef.current = new Set(kept);
+      save(k('deleted'), kept);
+      if (outbox.current.some((o) => o.id === id)) {
+        saveBox(outbox.current.filter((o) => o.id !== id));
+        if (id.startsWith('local:')) void forgetFile(id);
+      }
+      const target = messagesRef.current.find((m) => m.id === id);
+      if (target?.file) void forgetFile(id);
+      setMessages((prev) => {
+        const next = prev.filter((m) => m.id !== id);
+        if (next.length !== prev.length) {
+          messagesRef.current = next;
+          save(k('messages'), next);
+        }
+        return next;
+      });
+    },
+    [saveBox],
+  );
+
   const retrySend = useCallback(() => {
     failures.current = 0;
     clearTimeout(outboxTimer.current);
@@ -1563,6 +1619,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     report,
     createGroup,
     messages,
+    deleteMessage,
     start,
     startWithoutPasskey,
     makeTransferLink,

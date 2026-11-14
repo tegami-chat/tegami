@@ -1,25 +1,29 @@
 import * as ImagePicker from 'expo-image-picker';
-import { Stack, router, useIsFocused, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useIsFocused, useLocalSearchParams, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
+import { Dialog } from '@/components/dialog';
 import { FileAttachment, Photo, PhotoViewer, Stamp, Video, Voice } from '@/components/photo';
+import { ReportSheet } from '@/components/report-sheet';
 import { Palette, usePalette } from '@/constants/theme';
 import { useCall } from '@/lib/calls';
 import { cautionFor } from '@/lib/caution';
 import { MAX_FILE_BYTES } from '@/lib/files';
-import { chatName, clock, isGroup, personName, shortId, useTegami, type Message, type ReportReason, type Stamp as StampItem } from '@/lib/tegami';
+import { chatName, clock, isGroup, personName, shortId, useTegami, type Message, type Stamp as StampItem } from '@/lib/tegami';
 
 const SEND_ERROR = '送れませんでした。もう一度送ってください';
 const VOICE_MAX_MS = 5 * 60 * 1000;
 const AUDIO_TYPES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+const SWIPE_REPLY_PX = 60;
 
-function pickWebFile(accept?: string): Promise<File | null> {
+function pickWebFile(accept?: string, capture?: string): Promise<File | null> {
   return new Promise((resolve) => {
     const el = document.createElement('input');
     el.type = 'file';
     if (accept) el.accept = accept;
+    if (capture) el.setAttribute('capture', capture);
     el.style.display = 'none';
     document.body.appendChild(el);
     const done = (file: File | null) => {
@@ -35,21 +39,38 @@ function pickWebFile(accept?: string): Promise<File | null> {
 /** How long a message stays marked after jumping to it. */
 const HIGHLIGHT_MS = 2000;
 
-const REPORT_REASONS: [ReportReason, string][] = [
-  ['spam', '迷惑なメッセージ'],
-  ['scam', '詐欺'],
-  ['harassment', '嫌がらせ'],
-  ['other', 'その他'],
-];
-
 export default function Chat() {
   const c = usePalette();
   const s = styles(c);
   // m: a message to jump to (from search).
   const { peer, m: focus } = useLocalSearchParams<{ peer: string; m?: string }>();
-  const { me, myName, contacts, groups, blocked, block, unblock, report, deleteChat, messages, send, sendPhoto, sendFile, sendVoice, forwardFile, stamps, makeStamp, addStamp, removeStamp, sendStamp, addContact, markRead, cancelSend, retrySend } = useTegami();
+  const {
+    me,
+    myName,
+    contacts,
+    groups,
+    blocked,
+    block,
+    messages,
+    deleteMessage,
+    send,
+    sendPhoto,
+    sendFile,
+    sendVoice,
+    forwardFile,
+    stamps,
+    makeStamp,
+    addStamp,
+    removeStamp,
+    sendStamp,
+    addContact,
+    markRead,
+    cancelSend,
+    retrySend,
+  } = useTegami();
   // A message waiting to be sent that was tapped: it offers to stop sending.
   const [offered, setOffered] = useState<string | null>(null);
+  const [plusOpen, setPlusOpen] = useState(false);
   const [stampsOpen, setStampsOpen] = useState(false);
   const [stampDeleting, setStampDeleting] = useState<string | null>(null);
   const [stampOffer, setStampOffer] = useState<string | null>(null);
@@ -57,7 +78,7 @@ export default function Chat() {
   const [forwarding, setForwarding] = useState<Message | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  // The message whose actions are shown: by long press (touch) or by hovering (mouse).
+  // The message whose actions are shown: by long press/right click or by hovering (mouse).
   const [pressed, setPressed] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const [highlight, setHighlight] = useState<string | null>(null);
@@ -79,6 +100,24 @@ export default function Chat() {
     limitTimer: ReturnType<typeof setTimeout>;
   } | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [blockingPeer, setBlockingPeer] = useState<string | null>(null);
+  const [reportTarget, setReportTarget] = useState<{ peer: string; messageId?: string } | null>(null);
+  const [swiping, setSwiping] = useState<{ id: string; dx: number } | null>(null);
+  // When the press that opened the panel by holding was released. The panel pushes the bubble
+  // up (the list grows from the bottom), so that release lands on a cell: ignore its tap.
+  const openedAt = useRef(0);
+  const dragRef = useRef<{
+    id: string;
+    msg: Message;
+    startX: number;
+    startY: number;
+    dx: number;
+    moved: boolean;
+    startedAt?: number;
+    longTimer?: ReturnType<typeof setTimeout>;
+    longFired?: boolean;
+  } | null>(null);
   const list = useRef<FlatList>(null);
   const { supported, startCall } = useCall();
 
@@ -90,6 +129,14 @@ export default function Chat() {
   const thread = useMemo(() => messages.filter((m) => m.peer === peer).reverse(), [messages, peer]);
   const byId = useMemo(() => new Map(thread.map((m, i) => [m.id, i])), [thread]);
   const friends = useMemo(() => new Set(contacts.map((x) => x.pubkey)), [contacts]);
+  // Shown once per chat above the first money/link message from someone who is not a friend.
+  const firstCautionId = useMemo(
+    () =>
+      messages.find(
+        (m) => m.peer === peer && m.from !== me && !m.file && !m.call && !friends.has(m.from) && cautionFor(m.text),
+      )?.id ?? null,
+    [messages, peer, me, friends],
+  );
   const forwardTargets = useMemo(
     () => [
       ...contacts.filter((x) => !blocked.includes(x.pubkey)).map((x) => ({ room: x.pubkey, name: personName(x.pubkey, contacts) })),
@@ -98,18 +145,16 @@ export default function Chat() {
     [contacts, blocked, groups],
   );
 
-  // The report panel: the form (and while sending), or done.
-  const [reporting, setReporting] = useState<null | 'form' | 'sending' | 'done'>(null);
-  const [reason, setReason] = useState<ReportReason | null>(null);
-  const [attach, setAttach] = useState(false);
-  const [reportFailed, setReportFailed] = useState(false);
   useEffect(() => {
-    setReporting(null);
+    setReportTarget(null);
+    setBlockingPeer(null);
+    setDeletingId(null);
     setForwarding(null);
     setReplying(null);
     setPressed(null);
     setHovered(null);
     setCopied(null);
+    setPlusOpen(false);
     setStampsOpen(false);
     setStampDeleting(null);
     setStampOffer(null);
@@ -161,21 +206,118 @@ export default function Chat() {
   };
   useEffect(() => () => clearTimeout(hoverTimer.current), []);
 
-  function startReply(m: Message) {
+  // Tapping outside the message action panel closes it.
+  useEffect(() => {
+    if ((!pressed && !hovered) || Platform.OS !== 'web') return;
+    const onDown = (e: Event) => {
+      const el = e.target as HTMLElement | null;
+      if (el?.closest?.('[data-testid="message-panel"]')) return;
+      clearTimeout(hoverTimer.current);
+      setPressed(null);
+      setHovered(null);
+    };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('touchstart', onDown, { passive: true });
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('touchstart', onDown);
+    };
+  }, [pressed, hovered]);
+
+  const startReply = useCallback((m: Message) => {
     setReplying(m);
     setForwarding(null);
-    setReporting(null);
+    setReportTarget(null);
     setPressed(null);
     clearTimeout(hoverTimer.current);
     setHovered(null);
     setCopied(null);
     input.current?.focus();
+  }, []);
+
+  // Pointer/touch swipe right (> 60 px) on a message starts a reply.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const moveAt = (clientX: number, clientY: number) => {
+      const d = dragRef.current;
+      if (!d) return;
+      const dx = clientX - d.startX;
+      const dy = clientY - d.startY;
+      if (!d.moved && Math.hypot(dx, dy) > 8) {
+        d.moved = true;
+        clearTimeout(d.longTimer);
+      }
+      if (dx > 8 && dx > Math.abs(dy)) {
+        d.dx = dx;
+        setSwiping({ id: d.id, dx: Math.min(dx, 96) });
+      } else if (d.dx > 0) {
+        d.dx = 0;
+        setSwiping(null);
+      }
+    };
+    const onPointerMove = (e: MouseEvent) => moveAt(e.clientX, e.clientY);
+    const onTouchMove = (e: TouchEvent) => {
+      const t = e.touches?.[0];
+      if (t) moveAt(t.clientX, t.clientY);
+    };
+    const onUp = () => {
+      const d = dragRef.current;
+      if (!d) return;
+      clearTimeout(d.longTimer);
+      if (d.longFired) openedAt.current = Date.now();
+      dragRef.current = null;
+      setSwiping(null);
+      if (d.dx > SWIPE_REPLY_PX) startReply(d.msg);
+    };
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchend', onUp);
+    window.addEventListener('pointercancel', onUp);
+    window.addEventListener('touchcancel', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('mousemove', onPointerMove);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchend', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      window.removeEventListener('touchcancel', onUp);
+    };
+  }, [startReply]);
+
+  function beginRowPointer(item: Message, clientX: number, clientY: number, button?: number) {
+    if (button !== undefined && button !== 0) return;
+    if (dragRef.current?.id === item.id && Date.now() - (dragRef.current.startedAt ?? 0) < 50) return;
+    if (dragRef.current?.longTimer) clearTimeout(dragRef.current.longTimer);
+    const longTimer = setTimeout(() => {
+      if (dragRef.current && !dragRef.current.moved) {
+        dragRef.current.longFired = true;
+        setPressed(item.id);
+      }
+    }, 450);
+    dragRef.current = {
+      id: item.id,
+      msg: item,
+      startX: clientX,
+      startY: clientY,
+      dx: 0,
+      moved: false,
+      startedAt: Date.now(),
+      longTimer,
+    };
   }
 
   async function copyMessage(m: Message) {
     try {
       await navigator.clipboard.writeText(m.text);
       setPressed(null);
+      setHovered(null);
       setCopied(m.id);
       clearTimeout(copiedTimer.current);
       copiedTimer.current = setTimeout(() => setCopied((cur) => (cur === m.id ? null : cur)), 1500);
@@ -185,7 +327,7 @@ export default function Chat() {
   function startForward(m: Message) {
     setForwarding(m);
     setReplying(null);
-    setReporting(null);
+    setReportTarget(null);
     setPressed(null);
     clearTimeout(hoverTimer.current);
     setHovered(null);
@@ -214,46 +356,6 @@ export default function Chat() {
   useEffect(() => {
     if (peer && focused && visible) markRead(peer);
   }, [peer, focused, visible, thread, markRead]);
-
-  function confirmBlock() {
-    if (!peer || group) return;
-    const msg = `${personName(peer, contacts)}さんをブロックしますか？`;
-    if (typeof window !== 'undefined' && typeof window.confirm === 'function' && !window.confirm(msg)) return;
-    setReplying(null);
-    setForwarding(null);
-    setReporting(null);
-    block(peer);
-  }
-
-  function confirmDeleteChat() {
-    if (!peer) return;
-    const msg = 'このトークを削除しますか？この端末から消えます。';
-    if (typeof window !== 'undefined' && typeof window.confirm === 'function' && !window.confirm(msg)) return;
-    deleteChat(peer);
-    router.replace('/');
-  }
-
-  function openReport() {
-    setReason(null);
-    setAttach(false);
-    setReportFailed(false);
-    setForwarding(null);
-    setReplying(null);
-    setReporting('form');
-  }
-
-  async function submitReport() {
-    if (!peer || group || !reason || reporting === 'sending') return;
-    setReporting('sending');
-    setReportFailed(false);
-    try {
-      await report(peer, reason, attach);
-      setReporting('done');
-    } catch {
-      setReportFailed(true);
-      setReporting('form');
-    }
-  }
 
   const stopRecorder = useCallback(() => {
     const r = recorderRef.current;
@@ -315,6 +417,7 @@ export default function Chat() {
   async function startRecording() {
     if (!peer || sending || isBlocked || recording) return;
     setError(null);
+    setPlusOpen(false);
     setStampsOpen(false);
     setStampDeleting(null);
     try {
@@ -342,17 +445,8 @@ export default function Chat() {
     }
   }
 
-  async function pickPhoto() {
-    if (!peer || sending || isBlocked) return;
-    let blob: Blob | null = null;
-    if (Platform.OS === 'web') {
-      blob = await pickWebFile('image/*,video/*');
-    } else {
-      const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 1 });
-      const asset = picked.canceled ? null : picked.assets[0];
-      if (asset) blob = asset.file ?? (await (await fetch(asset.uri)).blob());
-    }
-    if (!blob) return;
+  async function sendPickedMedia(blob: Blob | null) {
+    if (!blob || !peer) return;
     if (blob.type.startsWith('video/') && blob.size > MAX_FILE_BYTES) {
       setError('10MBを超える動画は送れません');
       return;
@@ -369,8 +463,37 @@ export default function Chat() {
     }
   }
 
+  async function takePhoto() {
+    if (!peer || sending || isBlocked) return;
+    setPlusOpen(false);
+    let blob: Blob | null = null;
+    if (Platform.OS === 'web') {
+      blob = await pickWebFile('image/*,video/*', 'environment');
+    } else {
+      const picked = await ImagePicker.launchCameraAsync({ mediaTypes: ['images', 'videos'], quality: 1 });
+      const asset = picked.canceled ? null : picked.assets[0];
+      if (asset) blob = asset.file ?? (await (await fetch(asset.uri)).blob());
+    }
+    await sendPickedMedia(blob);
+  }
+
+  async function pickPhoto() {
+    if (!peer || sending || isBlocked) return;
+    setPlusOpen(false);
+    let blob: Blob | null = null;
+    if (Platform.OS === 'web') {
+      blob = await pickWebFile('image/*,video/*');
+    } else {
+      const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 1 });
+      const asset = picked.canceled ? null : picked.assets[0];
+      if (asset) blob = asset.file ?? (await (await fetch(asset.uri)).blob());
+    }
+    await sendPickedMedia(blob);
+  }
+
   async function pickFile() {
     if (!peer || sending || isBlocked || Platform.OS !== 'web') return;
+    setPlusOpen(false);
     const file = await pickWebFile();
     if (!file) return;
     if (file.size > MAX_FILE_BYTES) {
@@ -437,448 +560,658 @@ export default function Chat() {
     }
   }
 
+  const title = group
+    ? chatName(peer, contacts, groups)
+    : contact
+      ? contact.model
+        ? `${contact.name}（${contact.model}）`
+        : contact.name
+      : peer
+        ? shortId(peer)
+        : '';
+
+  const modalOpen = !!deletingId || !!blockingPeer || !!reportTarget;
+
   return (
     <KeyboardAvoidingView style={s.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Stack.Screen
-        options={{
-          title: group
-            ? chatName(peer, contacts, groups)
-            : contact
-              ? contact.model
-                ? `${contact.name}（${contact.model}）`
-                : contact.name
-              : peer
-                ? shortId(peer)
-                : '',
-          headerRight: peer
-            ? () => (
-                <View style={s.callButtons}>
-                  {!group && !isBlocked && (
-                    <>
-                      {canCall && (
-                        <>
-                          <Pressable role="button" aria-label="音声通話" style={s.callButton} onPress={() => startCall(peer, false)}>
-                            <Text style={s.callText}>通話</Text>
-                          </Pressable>
-                          <Pressable role="button" aria-label="ビデオ通話" style={s.callButton} onPress={() => startCall(peer, true)}>
-                            <Text style={s.callText}>ビデオ</Text>
-                          </Pressable>
-                        </>
-                      )}
-                      <Pressable role="button" style={s.callButton} onPress={openReport}>
-                        <Text style={s.callText}>通報</Text>
-                      </Pressable>
-                      <Pressable role="button" style={s.callButton} onPress={confirmBlock}>
-                        <Text style={s.callText}>ブロック</Text>
-                      </Pressable>
-                    </>
-                  )}
-                  <Pressable role="button" style={s.callButton} onPress={confirmDeleteChat}>
-                    <Text style={s.callText}>トークを削除</Text>
-                  </Pressable>
-                </View>
-              )
-            : undefined,
-        }}
-      />
-      {!group && !contact && peer && (
-        <View style={s.addBar}>
-          <TextInput
-            style={s.addInput}
-            value={newName}
-            onChangeText={setNewName}
-            placeholder="表示する名前"
-            placeholderTextColor={c.muted}
-            onSubmitEditing={() => newName.trim() && addContact(peer, newName.trim())}
-          />
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={s.fill} aria-hidden={modalOpen}>
+        <View style={s.header}>
           <Pressable
-            style={[s.addButton, !newName.trim() && s.disabled]}
-            disabled={!newName.trim()}
-            onPress={() => addContact(peer, newName.trim())}
-            role="button">
-            <Text style={s.sendText}>友達に追加</Text>
+            role="button"
+            aria-label="戻る"
+            style={s.headerIconBtn}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/' as Href))}>
+            <Text style={s.backText}>＜</Text>
           </Pressable>
-        </View>
-      )}
-      {forwarding && (
-        <View style={s.reportPanel}>
-          <Text style={s.reportTitle}>転送先を選ぶ</Text>
-          <View style={s.reasons}>
-            {forwardTargets.map((t) => (
-              <Pressable key={t.room} role="button" style={s.reason} onPress={() => forwardTo(t.room)}>
-                <Text style={s.reasonText}>{t.name}</Text>
+          <Text style={s.headerTitle} numberOfLines={1} testID="chat-title">
+            {title}
+          </Text>
+          {peer && (
+            <View style={s.headerActions}>
+              {canCall && (
+                <Pressable role="button" aria-label="音声通話" style={s.headerIconBtn} onPress={() => startCall(peer, false)}>
+                  <Text style={s.headerIcon}>☎︎</Text>
+                </Pressable>
+              )}
+              <Pressable
+                role="button"
+                aria-label="メニュー"
+                style={s.headerIconBtn}
+                onPress={() => router.push(`/chat/${encodeURIComponent(peer)}/info` as Href)}>
+                <Text style={s.headerIcon}>☰</Text>
               </Pressable>
-            ))}
-          </View>
-          <View style={s.reportButtons}>
-            <Pressable role="button" style={s.reportButton} onPress={() => setForwarding(null)}>
-              <Text style={s.callText}>キャンセル</Text>
-            </Pressable>
-          </View>
-        </View>
-      )}
-      {reporting && !group && peer && (
-        <View style={s.reportPanel}>
-          {reporting === 'done' ? (
-            <>
-              <Text style={s.reportTitle}>通報しました</Text>
-              <View style={s.reportButtons}>
-                {!isBlocked && (
-                  <Pressable role="button" style={s.reportButton} onPress={confirmBlock}>
-                    <Text style={s.callText}>ブロックする</Text>
-                  </Pressable>
-                )}
-                <Pressable role="button" style={s.reportButton} onPress={() => setReporting(null)}>
-                  <Text style={s.callText}>閉じる</Text>
-                </Pressable>
-              </View>
-            </>
-          ) : (
-            <>
-              <Text style={s.reportTitle}>通報する理由</Text>
-              <View role="radiogroup" aria-label="通報する理由" style={s.reasons}>
-                {REPORT_REASONS.map(([value, label]) => (
-                  <Pressable
-                    key={value}
-                    role="radio"
-                    aria-checked={reason === value}
-                    style={[s.reason, reason === value && s.reasonOn]}
-                    onPress={() => setReason(value)}>
-                    <Text style={[s.reasonText, reason === value && s.reasonTextOn]}>{label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-              <View style={s.reportAttach}>
-                <Text style={s.reportAttachText}>直近のメッセージを添える</Text>
-                <Switch value={attach} onValueChange={setAttach} aria-label="直近のメッセージを添える" />
-              </View>
-              {reportFailed && <Text style={s.reportError}>通信を確認して、もう一度お試しください。</Text>}
-              <View style={s.reportButtons}>
-                <Pressable
-                  role="button"
-                  style={[s.reportSend, (!reason || reporting === 'sending') && s.disabled]}
-                  disabled={!reason || reporting === 'sending'}
-                  onPress={submitReport}>
-                  <Text style={s.sendText}>通報する</Text>
-                </Pressable>
-                <Pressable role="button" style={s.reportButton} onPress={() => setReporting(null)}>
-                  <Text style={s.callText}>キャンセル</Text>
-                </Pressable>
-              </View>
-            </>
+            </View>
           )}
         </View>
-      )}
-      <FlatList
-        ref={list}
-        inverted
-        data={thread}
-        keyExtractor={(m) => m.id}
-        contentContainerStyle={s.list}
-        onScrollToIndexFailed={(info) => {
-          // The row is not drawn yet (far up the chat): get near it, then try again.
-          list.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
-          setTimeout(() => list.current?.scrollToIndex({ index: info.index, viewPosition: 0.5, animated: true }), 100);
-        }}
-        renderItem={({ item }) => {
-          const mine = item.from === me;
-          if (item.call) {
-            return (
-              <View style={s.callRow}>
-                <Text style={[s.callNote, item.call.result === 'missed' && s.missed]}>
-                  {item.text}
-                  {'  '}
-                  {new Date(item.at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </Text>
-              </View>
-            );
-          }
-          const unsent = mine && item.pending === 'unsent';
-          const original = item.replyTo !== undefined ? byId.get(item.replyTo) : undefined;
-          const quoted = original !== undefined ? thread[original] : null;
-          const actions = (pressed === item.id || hovered === item.id || copied === item.id) && (
-            <View style={s.actions}>
-              <Pressable
-                role="button"
-                style={s.action}
-                onPress={() => startReply(item)}
-                onHoverIn={() => hoverIn(item.id)}
-                onHoverOut={() => hoverOut(item.id)}>
-                <Text style={s.actionText}>リプライ</Text>
-              </Pressable>
-              {!item.file && (
-                <Pressable
-                  role="button"
-                  style={s.action}
-                  onPress={() => copyMessage(item)}
-                  onHoverIn={() => hoverIn(item.id)}
-                  onHoverOut={() => hoverOut(item.id)}>
-                  <Text style={s.actionText}>{copied === item.id ? 'コピーしました' : 'コピー'}</Text>
-                </Pressable>
-              )}
-              <Pressable
-                role="button"
-                style={s.action}
-                onPress={() => startForward(item)}
-                onHoverIn={() => hoverIn(item.id)}
-                onHoverOut={() => hoverOut(item.id)}>
-                <Text style={s.actionText}>転送</Text>
-              </Pressable>
-            </View>
-          );
-          const isStamp = !!item.file && !!item.stamp;
-          const bubble = (
-            <View
-              style={[
-                isStamp ? s.stampBox : [s.bubble, mine ? s.mine : s.theirs],
-                unsent && s.waiting,
-                mine && !!item.pending && s.full,
-                highlight === item.id && s.highlight,
-              ]}>
 
-              {group && !mine && <Text style={s.author}>{personName(item.from, contacts)}</Text>}
-              {item.replyTo !== undefined &&
-                (quoted ? (
-                  <Pressable style={s.quote} onPress={() => jumpTo(quoted.id)} role="button" testID="quote">
-                    <Text style={s.quoteName} numberOfLines={1}>
-                      {nameOf(quoted.from)}
-                    </Text>
-                    <Text style={s.quoteText} numberOfLines={1}>
-                      {firstLine(quoted)}
-                    </Text>
-                  </Pressable>
-                ) : (
-                  <View style={s.quote} testID="quote">
-                    <Text style={s.quoteText}>このメッセージはありません</Text>
-                  </View>
-                ))}
-              {item.file ? (
-                isStamp ? (
-                  <Stamp
-                    file={item.file}
-                    onPress={!mine ? () => setStampOffer((cur) => (cur === item.id ? null : item.id)) : undefined}
-                  />
-                ) : item.file.name || (!item.file.type.startsWith('image/') && !item.file.type.startsWith('video/') && !item.file.type.startsWith('audio/')) ? (
-                  <FileAttachment id={item.id} file={item.file} />
-                ) : item.file.type.startsWith('video/') ? (
-                  <Video id={item.id} file={item.file} />
-                ) : item.file.type.startsWith('audio/') ? (
-                  <Voice id={item.id} file={item.file} />
-                ) : (
-                  <Photo id={item.id} file={item.file} onOpen={setViewing} />
-                )
-              ) : (
-                <Text style={s.text} selectable={!unsent}>
-                  {item.text}
-                </Text>
-              )}
-              <Text style={s.time}>
-                {unsent ? '未送信' : new Date(item.at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </Text>
+        {!group && !contact && peer && (
+          <View style={s.addBar}>
+            <TextInput
+              style={s.addInput}
+              value={newName}
+              onChangeText={setNewName}
+              placeholder="表示する名前"
+              placeholderTextColor={c.muted}
+              onSubmitEditing={() => newName.trim() && addContact(peer, newName.trim())}
+            />
+            <Pressable
+              style={[s.addButton, !newName.trim() && s.disabled]}
+              disabled={!newName.trim()}
+              onPress={() => addContact(peer, newName.trim())}
+              role="button">
+              <Text style={s.sendText}>友達に追加</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {forwarding && (
+          <View style={s.forwardPanel}>
+            <Text style={s.forwardTitle}>転送先を選ぶ</Text>
+            <View style={s.forwardList}>
+              {forwardTargets.map((t) => (
+                <Pressable key={t.room} role="button" style={s.forwardTarget} onPress={() => forwardTo(t.room)}>
+                  <Text style={s.forwardTargetText}>{t.name}</Text>
+                </Pressable>
+              ))}
             </View>
-          );
-          // Sent (or someone else's): reply by long press or hover. Waiting to be sent: offer to stop sending.
-          if (!mine || !item.pending) {
-            const row = (
-              <Pressable
-                style={[s.row, mine ? s.rowMine : s.rowTheirs]}
-                onLongPress={() => setPressed(item.id)}
-                onPress={() => pressed && setPressed(null)}
-                onHoverIn={() => hoverIn(item.id)}
-                onHoverOut={() => hoverOut(item.id)}
-                testID={highlight === item.id ? 'highlighted' : undefined}>
-                {mine && actions}
-                {group && !mine && <Avatar name={personName(item.from, contacts)} file={contacts.find((x) => x.pubkey === item.from)?.avatar} size={28} />}
-                {bubble}
-                {!mine && actions}
+            <View style={s.forwardButtons}>
+              <Pressable role="button" style={s.forwardCancel} onPress={() => setForwarding(null)}>
+                <Text style={s.callText}>キャンセル</Text>
               </Pressable>
-            );
-            if (!mine && isStamp && stampOffer === item.id) {
+            </View>
+          </View>
+        )}
+
+        {copied && (
+          <View style={s.copiedToast}>
+            <Text style={s.copiedText}>コピーしました</Text>
+          </View>
+        )}
+
+        <FlatList
+          ref={list}
+          inverted
+          data={thread}
+          keyExtractor={(m) => m.id}
+          contentContainerStyle={s.list}
+          onScrollToIndexFailed={(info) => {
+            // The row is not drawn yet (far up the chat): get near it, then try again.
+            list.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
+            setTimeout(() => list.current?.scrollToIndex({ index: info.index, viewPosition: 0.5, animated: true }), 100);
+          }}
+          renderItem={({ item }) => {
+            const mine = item.from === me;
+            if (item.call) {
               return (
-                <View style={s.theirsWrap}>
-                  {row}
-                  <View style={[s.offer, s.offerTheirs]}>
-                    <Pressable
-                      style={s.cancel}
-                      onPress={() => {
-                        const f = item.file!;
-                        setStampOffer(null);
-                        void addStamp(f, item.at);
-                      }}
-                      role="button">
-                      <Text style={s.cancelText}>スタンプに追加</Text>
-                    </Pressable>
-                    <Pressable style={s.cancel} onPress={() => setStampOffer(null)} role="button">
-                      <Text style={s.cancelText}>閉じる</Text>
-                    </Pressable>
-                  </View>
+                <View style={s.callRow}>
+                  <Text style={[s.callNote, item.call.result === 'missed' && s.missed]}>
+                    {item.text}
+                    {'  '}
+                    {new Date(item.at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
                 </View>
               );
             }
-            // Money or a link from someone who is not a friend. Checked on this device only.
-            if (mine || item.file || friends.has(item.from) || !cautionFor(item.text)) return row;
-            return (
-              <View style={s.cautionWrap}>
-                {row}
-                <Text style={s.caution}>初めての相手からのお金やリンクの話です。気をつけてください。</Text>
-              </View>
-            );
-          }
-          return (
-            <View style={s.mineWrap}>
-              <Pressable
-                onPress={() => setOffered(offered === item.id ? null : item.id)}
-                onLongPress={() => setOffered(item.id)}
-                aria-label={unsent ? '未送信のメッセージ' : undefined}>
-                {bubble}
-              </Pressable>
-              {offered === item.id && (
-                <View style={s.offer}>
+            const unsent = mine && item.pending === 'unsent';
+            const original = item.replyTo !== undefined ? byId.get(item.replyTo) : undefined;
+            const quoted = original !== undefined ? thread[original] : null;
+            // Only a long press or a right click opens it (as LINE): opening on hover pushed the
+            // bubble up under the mouse, so the next click landed on a cell.
+            const showMenu = pressed === item.id;
+            const menuCells: { label: string; icon: string; onPress: () => void }[] = [
+              ...(!item.file ? [{ label: 'コピー', icon: '⎘', onPress: () => void copyMessage(item) }] : []),
+              { label: 'リプライ', icon: '↩', onPress: () => startReply(item) },
+              { label: '転送', icon: '↪', onPress: () => startForward(item) },
+              {
+                label: '削除',
+                icon: '✕',
+                onPress: () => {
+                  setPressed(null);
+                  setHovered(null);
+                  setDeletingId(item.id);
+                },
+              },
+              ...(!mine && !group
+                ? [
+                    {
+                      label: '通報',
+                      icon: '!',
+                      onPress: () => {
+                        setPressed(null);
+                        setHovered(null);
+                        setReportTarget({ peer: item.from, messageId: item.id });
+                      },
+                    },
+                  ]
+                : []),
+            ];
+            const actionPanel = showMenu && (
+              <View
+                style={[s.messagePanel, mine ? s.messagePanelMine : s.messagePanelTheirs]}
+                testID="message-panel"
+                {...((Platform.OS === 'web'
+                  ? {
+                      onMouseEnter: () => hoverIn(item.id),
+                      onMouseLeave: () => hoverOut(item.id),
+                    }
+                  : {}) as object)}>
+                {menuCells.map((cell) => (
                   <Pressable
-                    style={s.cancel}
+                    key={cell.label}
+                    role="button"
+                    aria-label={cell.label}
+                    style={s.panelCell}
                     onPress={() => {
-                      setOffered(null);
-                      retrySend();
+                      if (Date.now() - openedAt.current < 300) return;
+                      cell.onPress();
                     }}
-                    role="button">
-                    <Text style={s.cancelText}>再送する</Text>
+                    onHoverIn={() => hoverIn(item.id)}
+                    onHoverOut={() => hoverOut(item.id)}>
+                    <Text style={s.panelIcon}>{cell.icon}</Text>
+                    <Text style={s.panelLabel}>{cell.label}</Text>
                   </Pressable>
-                  <Pressable style={s.cancel} onPress={() => cancelSend(item.id)} role="button">
-                    <Text style={s.cancelText}>削除する</Text>
-                  </Pressable>
-                </View>
-              )}
-            </View>
-          );
-        }}
-      />
-      {error && <Text style={s.error}>{error}</Text>}
-      {isBlocked ? (
-        <View style={s.blockedBar}>
-          <Text style={s.blockedText}>ブロック中です</Text>
-          <Pressable role="button" onPress={() => unblock(peer)}>
-            <Text style={s.callText}>ブロック解除</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <>
-          {replying && !recording && (
-            <View style={s.replyBar} testID="replying">
-              <View style={s.replyBody}>
-                <Text style={s.quoteName} numberOfLines={1}>
-                  {nameOf(replying.from)}
-                </Text>
-                <Text style={s.quoteText} numberOfLines={1}>
-                  {firstLine(replying)}
-                </Text>
-              </View>
-              <Pressable role="button" aria-label="キャンセル" style={s.replyClose} onPress={() => setReplying(null)}>
-                <Text style={s.replyCloseText}>×</Text>
-              </Pressable>
-            </View>
-          )}
-          {stampsOpen && !recording && (
-            <View style={s.stampPanel}>
-              <View style={s.stampGrid}>
-                {stamps.map((st) => (
-                  <View key={st.sha256} style={s.stampCell}>
-                    <Stamp
-                      file={st}
-                      max={72}
-                      testID="stamp-item"
-                      onPress={() => pickStamp(st)}
-                      onLongPress={() => setStampDeleting((cur) => (cur === st.sha256 ? null : st.sha256))}
-                    />
-                    {stampDeleting === st.sha256 && (
-                      <Pressable
-                        role="button"
-                        style={s.cancel}
-                        onPress={() => {
-                          removeStamp(st.sha256);
-                          setStampDeleting(null);
-                        }}>
-                        <Text style={s.cancelText}>削除</Text>
-                      </Pressable>
-                    )}
-                  </View>
                 ))}
               </View>
-              <View style={s.reportButtons}>
-                <Pressable role="button" style={[s.reportButton, sending && s.disabled]} disabled={sending} onPress={createStamp}>
-                  <Text style={s.callText}>スタンプを作る</Text>
+            );
+
+            const isStamp = !!item.file && !!item.stamp;
+            const bubble = (
+              <View
+                style={[
+                  isStamp ? s.stampBox : [s.bubble, mine ? s.mine : s.theirs],
+                  unsent && s.waiting,
+                  mine && !!item.pending && s.full,
+                  highlight === item.id && s.highlight,
+                ]}>
+                {group && !mine && <Text style={s.author}>{personName(item.from, contacts)}</Text>}
+                {item.replyTo !== undefined &&
+                  (quoted ? (
+                    <Pressable style={s.quote} onPress={() => jumpTo(quoted.id)} role="button" testID="quote">
+                      <Text style={s.quoteName} numberOfLines={1}>
+                        {nameOf(quoted.from)}
+                      </Text>
+                      <Text style={s.quoteText} numberOfLines={1}>
+                        {firstLine(quoted)}
+                      </Text>
+                    </Pressable>
+                  ) : (
+                    <View style={s.quote} testID="quote">
+                      <Text style={s.quoteText}>このメッセージはありません</Text>
+                    </View>
+                  ))}
+                {item.file ? (
+                  isStamp ? (
+                    <Stamp
+                      file={item.file}
+                      onPress={!mine ? () => setStampOffer((cur) => (cur === item.id ? null : item.id)) : undefined}
+                    />
+                  ) : item.file.name ||
+                    (!item.file.type.startsWith('image/') &&
+                      !item.file.type.startsWith('video/') &&
+                      !item.file.type.startsWith('audio/')) ? (
+                    <FileAttachment id={item.id} file={item.file} />
+                  ) : item.file.type.startsWith('video/') ? (
+                    <Video id={item.id} file={item.file} />
+                  ) : item.file.type.startsWith('audio/') ? (
+                    <Voice id={item.id} file={item.file} />
+                  ) : (
+                    <Photo id={item.id} file={item.file} onOpen={setViewing} />
+                  )
+                ) : (
+                  <Text style={s.text} selectable={!unsent}>
+                    {item.text}
+                  </Text>
+                )}
+                <Text style={s.time}>
+                  {unsent
+                    ? '未送信'
+                    : new Date(item.at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
+            );
+
+            // Sent (or someone else's): open dark panel by long press, right click or hover; swipe right to reply.
+            if (!mine || !item.pending) {
+              const swipeDx = swiping && swiping.id === item.id ? swiping.dx : 0;
+              type WebPtrEvent = {
+                clientX?: number;
+                clientY?: number;
+                button?: number;
+                touches?: { clientX: number; clientY: number }[];
+                nativeEvent?: {
+                  clientX?: number;
+                  clientY?: number;
+                  pageX?: number;
+                  pageY?: number;
+                  button?: number;
+                  touches?: { clientX?: number; clientY?: number; pageX?: number; pageY?: number }[];
+                };
+              };
+              const onStartEvt = (e: WebPtrEvent) => {
+                const x =
+                  e.clientX ??
+                  e.nativeEvent?.clientX ??
+                  e.touches?.[0]?.clientX ??
+                  e.nativeEvent?.touches?.[0]?.clientX ??
+                  e.nativeEvent?.pageX;
+                const y =
+                  e.clientY ??
+                  e.nativeEvent?.clientY ??
+                  e.touches?.[0]?.clientY ??
+                  e.nativeEvent?.touches?.[0]?.clientY ??
+                  e.nativeEvent?.pageY;
+                const btn = e.button ?? e.nativeEvent?.button;
+                if (typeof x === 'number' && typeof y === 'number') {
+                  beginRowPointer(item, x, y, btn);
+                }
+              };
+              const webRowHandlers =
+                Platform.OS === 'web'
+                  ? {
+                      onPointerDown: onStartEvt,
+                      onMouseDown: onStartEvt,
+                      onTouchStart: onStartEvt,
+                      onContextMenu: (e: { preventDefault: () => void }) => {
+                        e.preventDefault();
+                        setPressed(item.id);
+                      },
+                    }
+                  : {};
+              const row = (
+                <View style={[s.itemWrap, mine ? s.itemWrapMine : s.itemWrapTheirs]}>
+                  <View style={s.swipeLine} {...(webRowHandlers as object)}>
+                    {swipeDx > 12 && (
+                      <View
+                        style={[s.swipeReplyIcon, swipeDx > SWIPE_REPLY_PX && s.swipeReplyIconReady]}
+                        testID="swipe-reply-icon"
+                        aria-label="リプライ">
+                        <Text style={s.swipeReplyGlyph}>↩</Text>
+                      </View>
+                    )}
+                    <Pressable
+                      style={[
+                        s.row,
+                        mine ? s.rowMine : s.rowTheirs,
+                        swipeDx > 0 && { transform: [{ translateX: Math.min(swipeDx, 76) }] },
+                      ]}
+                      onLongPress={() => {
+                        if (!dragRef.current?.moved) setPressed(item.id);
+                      }}
+                      onHoverIn={() => hoverIn(item.id)}
+                      onHoverOut={() => hoverOut(item.id)}
+                      testID={highlight === item.id ? 'highlighted' : undefined}>
+                      {group && !mine && (
+                        <Avatar
+                          name={personName(item.from, contacts)}
+                          file={contacts.find((x) => x.pubkey === item.from)?.avatar}
+                          size={28}
+                        />
+                      )}
+                      {bubble}
+                    </Pressable>
+                  </View>
+                  {actionPanel}
+                </View>
+              );
+
+              const withStampOffer =
+                !mine && isStamp && stampOffer === item.id ? (
+                  <View style={s.theirsWrap}>
+                    {row}
+                    <View style={[s.offer, s.offerTheirs]}>
+                      <Pressable
+                        style={s.cancel}
+                        onPress={() => {
+                          const f = item.file!;
+                          setStampOffer(null);
+                          void addStamp(f, item.at);
+                        }}
+                        role="button">
+                        <Text style={s.cancelText}>スタンプに追加</Text>
+                      </Pressable>
+                      <Pressable style={s.cancel} onPress={() => setStampOffer(null)} role="button">
+                        <Text style={s.cancelText}>閉じる</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : (
+                  row
+                );
+
+              if (item.id !== firstCautionId) return withStampOffer;
+              return (
+                <View style={s.cautionWrap}>
+                  <View style={s.cautionCard} testID="caution-card" aria-hidden={!!(pressed || hovered)}>
+                    <View style={s.cautionHeader}>
+                      <Text style={s.cautionIcon}>⚠︎</Text>
+                      <Text style={s.cautionTitle}>お金やリンクの話に注意してください</Text>
+                    </View>
+                    <Text style={s.cautionBody}>
+                      この相手は友だちではありません。お金の振り込みやリンクを開くよう求められたら、詐欺かもしれません。
+                    </Text>
+                    <View style={s.cautionButtons}>
+                      <Pressable
+                        role="button"
+                        aria-label="通報"
+                        style={s.cautionButton}
+                        onPress={() => setReportTarget({ peer: item.from })}>
+                        <Text style={s.cautionButtonText}>通報</Text>
+                      </Pressable>
+                      <Pressable
+                        role="button"
+                        aria-label="ブロック"
+                        style={[s.cautionButton, s.cautionButtonDanger]}
+                        onPress={() => setBlockingPeer(item.from)}>
+                        <Text style={[s.cautionButtonText, s.cautionButtonDangerText]}>ブロック</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                  {withStampOffer}
+                </View>
+              );
+            }
+            return (
+              <View style={s.mineWrap}>
+                <Pressable
+                  onPress={() => setOffered(offered === item.id ? null : item.id)}
+                  onLongPress={() => setOffered(item.id)}
+                  aria-label={unsent ? '未送信のメッセージ' : undefined}>
+                  {bubble}
                 </Pressable>
+                {offered === item.id && (
+                  <View style={s.offer}>
+                    <Pressable
+                      style={s.cancel}
+                      onPress={() => {
+                        setOffered(null);
+                        retrySend();
+                      }}
+                      role="button">
+                      <Text style={s.cancelText}>再送する</Text>
+                    </Pressable>
+                    <Pressable style={s.cancel} onPress={() => cancelSend(item.id)} role="button">
+                      <Text style={s.cancelText}>削除する</Text>
+                    </Pressable>
+                  </View>
+                )}
+              </View>
+            );
+          }}
+        />
+
+        {error && <Text style={s.error}>{error}</Text>}
+
+        {isBlocked ? (
+          <View style={s.blockedBar}>
+            <Text style={s.blockedText}>ブロック中</Text>
+          </View>
+        ) : (
+          <>
+            {replying && !recording && (
+              <View style={s.replyBar} testID="replying">
+                <View style={s.replyBody}>
+                  <Text style={s.quoteName} numberOfLines={1}>
+                    {nameOf(replying.from)}
+                  </Text>
+                  <Text style={s.quoteText} numberOfLines={1}>
+                    {firstLine(replying)}
+                  </Text>
+                </View>
+                <Pressable role="button" aria-label="キャンセル" style={s.replyClose} onPress={() => setReplying(null)}>
+                  <Text style={s.replyCloseText}>×</Text>
+                </Pressable>
+              </View>
+            )}
+
+            {plusOpen && !recording && (
+              <View style={s.plusPanel} testID="plus-panel">
                 <Pressable
                   role="button"
-                  style={s.reportButton}
+                  aria-label="ファイル"
+                  disabled={sending}
+                  style={[s.plusItem, sending && s.disabled]}
+                  onPress={pickFile}>
+                  <View style={s.plusIcon}>
+                    <Text style={s.plusGlyph}>📄︎</Text>
+                  </View>
+                  <Text style={s.plusLabel}>ファイル</Text>
+                </Pressable>
+              </View>
+            )}
+
+            {recording ? (
+              <View style={s.composer}>
+                <Text style={s.recordTime}>{clock(recordingSec)}</Text>
+                <Pressable style={s.recordCancel} onPress={cancelRecording} role="button">
+                  <Text style={s.callText}>キャンセル</Text>
+                </Pressable>
+                <Pressable style={s.recordSend} onPress={finishRecording} role="button">
+                  <Text style={s.sendText}>送る</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={s.composer}>
+                <Pressable
+                  role="button"
+                  aria-label="その他"
+                  disabled={sending}
+                  style={[s.barIconBtn, sending && s.disabled]}
                   onPress={() => {
+                    setPlusOpen((v) => !v);
                     setStampsOpen(false);
                     setStampDeleting(null);
                   }}>
-                  <Text style={s.callText}>閉じる</Text>
+                  <Text style={s.barIconText}>＋</Text>
                 </Pressable>
+                <Pressable
+                  role="button"
+                  aria-label="カメラ"
+                  disabled={sending}
+                  style={[s.barIconBtn, sending && s.disabled]}
+                  onPress={takePhoto}>
+                  <Text style={s.barIconText}>📷︎</Text>
+                </Pressable>
+                <Pressable
+                  role="button"
+                  aria-label="写真"
+                  disabled={sending}
+                  style={[s.barIconBtn, sending && s.disabled]}
+                  onPress={pickPhoto}>
+                  <Text style={s.barIconText}>🖼︎</Text>
+                </Pressable>
+                <View style={s.inputWrap}>
+                  <TextInput
+                    ref={input}
+                    style={s.input}
+                    value={draft}
+                    onChangeText={setDraft}
+                    placeholder="メッセージ"
+                    placeholderTextColor={c.muted}
+                    multiline
+                    numberOfLines={1}
+                    onKeyPress={(e) => {
+                      const ne = e.nativeEvent as unknown as { key: string; shiftKey?: boolean; isComposing?: boolean };
+                      if (Platform.OS === 'web' && ne.key === 'Enter' && !ne.shiftKey && !ne.isComposing) {
+                        (e as unknown as { preventDefault: () => void }).preventDefault();
+                        void submit();
+                      }
+                    }}
+                  />
+                  <Pressable
+                    role="button"
+                    aria-label="スタンプ"
+                    disabled={sending}
+                    style={[s.stampTrigger, sending && s.disabled]}
+                    onPress={() => {
+                      setStampsOpen((v) => !v);
+                      setPlusOpen(false);
+                      setStampDeleting(null);
+                    }}>
+                    <Text style={s.stampTriggerIcon}>☺︎</Text>
+                  </Pressable>
+                </View>
+                {draft.trim().length > 0 ? (
+                  <Pressable
+                    role="button"
+                    aria-label="送る"
+                    disabled={sending}
+                    style={[s.sendBtn, sending && s.disabled]}
+                    onPress={submit}>
+                    <Text style={s.sendBtnIcon}>➤</Text>
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    role="button"
+                    aria-label="録音"
+                    disabled={sending}
+                    style={[s.barIconBtn, sending && s.disabled]}
+                    onPress={startRecording}>
+                    <Text style={s.barIconText}>🎙︎</Text>
+                  </Pressable>
+                )}
               </View>
-            </View>
-          )}
-          {recording ? (
-            <View style={s.composer}>
-              <Text style={s.recordTime}>{clock(recordingSec)}</Text>
-              <Pressable style={s.attach} onPress={cancelRecording} role="button">
-                <Text style={s.attachText}>キャンセル</Text>
-              </Pressable>
-              <Pressable style={s.send} onPress={finishRecording} role="button">
-                <Text style={s.sendText}>送る</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <View style={s.composer}>
-              <Pressable style={[s.attach, sending && s.disabled]} onPress={pickPhoto} disabled={sending} role="button">
-                <Text style={s.attachText}>写真</Text>
-              </Pressable>
-              <Pressable style={[s.attach, sending && s.disabled]} onPress={pickFile} disabled={sending} role="button">
-                <Text style={s.attachText}>ファイル</Text>
-              </Pressable>
-              <Pressable style={[s.attach, sending && s.disabled]} onPress={startRecording} disabled={sending} role="button">
-                <Text style={s.attachText}>録音</Text>
-              </Pressable>
-              <Pressable
-                style={[s.attach, sending && s.disabled]}
-                onPress={() => {
-                  setStampsOpen((v) => !v);
-                  setStampDeleting(null);
-                }}
-                disabled={sending}
-                role="button">
-                <Text style={s.attachText}>スタンプ</Text>
-              </Pressable>
-              <TextInput
-                ref={input}
-                style={s.input}
-                value={draft}
-                onChangeText={setDraft}
-                placeholder="メッセージ"
-                placeholderTextColor={c.muted}
-                multiline
-                numberOfLines={1}
-                onKeyPress={(e) => {
-                  const ne = e.nativeEvent as unknown as { key: string; shiftKey?: boolean; isComposing?: boolean };
-                  if (Platform.OS === 'web' && ne.key === 'Enter' && !ne.shiftKey && !ne.isComposing) {
-                    (e as unknown as { preventDefault: () => void }).preventDefault();
-                    submit();
-                  }
-                }}
-              />
-              <Pressable
-                style={[s.send, (!draft.trim() || sending) && s.disabled]}
-                onPress={submit}
-                disabled={!draft.trim() || sending}
-                role="button"
-                aria-label="送る">
-                <Text style={s.sendText}>送る</Text>
-              </Pressable>
-            </View>
-          )}
-        </>
+            )}
+
+            {stampsOpen && !recording && (
+              <View style={s.stampPanel}>
+                <View style={s.stampGrid}>
+                  {stamps.map((st) => (
+                    <View key={st.sha256} style={s.stampCell}>
+                      <Stamp
+                        file={st}
+                        max={72}
+                        testID="stamp-item"
+                        onPress={() => pickStamp(st)}
+                        onLongPress={() => setStampDeleting((cur) => (cur === st.sha256 ? null : st.sha256))}
+                      />
+                      {stampDeleting === st.sha256 && (
+                        <Pressable
+                          role="button"
+                          style={s.cancel}
+                          onPress={() => {
+                            removeStamp(st.sha256);
+                            setStampDeleting(null);
+                          }}>
+                          <Text style={s.cancelText}>削除</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  ))}
+                </View>
+                <View style={s.forwardButtons}>
+                  <Pressable role="button" style={[s.forwardCancel, sending && s.disabled]} disabled={sending} onPress={createStamp}>
+                    <Text style={s.callText}>スタンプを作る</Text>
+                  </Pressable>
+                  <Pressable
+                    role="button"
+                    style={s.forwardCancel}
+                    onPress={() => {
+                      setStampsOpen(false);
+                      setStampDeleting(null);
+                    }}>
+                    <Text style={s.callText}>閉じる</Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
+          </>
+        )}
+      </View>
+
+      {deletingId && (
+        <Dialog
+          text="このメッセージはこの端末でのみ削除されます。相手の端末からは削除されません。"
+          onClose={() => setDeletingId(null)}
+          buttons={[
+            {
+              label: 'キャンセル',
+              variant: 'text',
+              onPress: () => setDeletingId(null),
+            },
+            {
+              label: 'この端末でのみ削除',
+              variant: 'danger',
+              onPress: () => {
+                deleteMessage(deletingId);
+                setDeletingId(null);
+              },
+            },
+          ]}
+        />
       )}
+
+      {blockingPeer && (
+        <Dialog
+          title={`${personName(blockingPeer, contacts)}をブロックしますか？`}
+          text="ブロックした相手とはメッセージの送受信ができなくなります。相手には伝わりません。"
+          stacked
+          onClose={() => setBlockingPeer(null)}
+          buttons={[
+            {
+              label: 'ブロック',
+              variant: 'danger',
+              onPress: () => {
+                block(blockingPeer);
+                setReplying(null);
+                setForwarding(null);
+                setBlockingPeer(null);
+              },
+            },
+            {
+              label: 'ブロックして通報',
+              variant: 'outlined',
+              onPress: () => {
+                const target = blockingPeer;
+                block(target);
+                setReplying(null);
+                setForwarding(null);
+                setBlockingPeer(null);
+                setReportTarget({ peer: target });
+              },
+            },
+            {
+              label: 'キャンセル',
+              variant: 'text',
+              onPress: () => setBlockingPeer(null),
+            },
+          ]}
+        />
+      )}
+
+      {reportTarget && !group && (
+        <ReportSheet
+          peer={reportTarget.peer}
+          messageId={reportTarget.messageId}
+          onClose={() => setReportTarget(null)}
+          onRequestBlock={() => {
+            const target = reportTarget.peer;
+            setReportTarget(null);
+            setBlockingPeer(target);
+          }}
+        />
+      )}
+
       {viewing && <PhotoViewer uri={viewing} onClose={() => setViewing(null)} />}
     </KeyboardAvoidingView>
   );
@@ -887,18 +1220,132 @@ export default function Chat() {
 const styles = (c: Palette) =>
   StyleSheet.create({
     fill: { flex: 1, backgroundColor: c.background },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 4,
+      minHeight: 48,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.line,
+      backgroundColor: c.background,
+    },
+    headerIconBtn: {
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    backText: {
+      fontSize: 20,
+      color: c.text,
+      fontWeight: '600',
+    },
+    headerTitle: {
+      flex: 1,
+      minWidth: 0,
+      fontSize: 17,
+      fontWeight: '600',
+      color: c.text,
+      paddingHorizontal: 4,
+    },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexShrink: 0,
+    },
+    headerIcon: {
+      fontSize: 20,
+      color: c.text,
+    },
     list: { padding: 12, gap: 8 },
+    itemWrap: { maxWidth: '100%', gap: 4 },
+    itemWrapMine: { alignSelf: 'flex-end', alignItems: 'flex-end' },
+    itemWrapTheirs: { alignSelf: 'flex-start', alignItems: 'flex-start' },
+    swipeLine: { flexDirection: 'row', alignItems: 'center', maxWidth: '100%' },
+    swipeReplyIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.line,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 6,
+      opacity: 0.65,
+    },
+    swipeReplyIconReady: {
+      backgroundColor: c.accent,
+      borderColor: c.accent,
+      opacity: 1,
+    },
+    swipeReplyGlyph: {
+      fontSize: 15,
+      color: c.text,
+      fontWeight: '700',
+    },
     row: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '88%' },
     rowMine: { alignSelf: 'flex-end', justifyContent: 'flex-end' },
     rowTheirs: { alignSelf: 'flex-start' },
-    bubble: { flexShrink: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: 'transparent' },
+    bubble: {
+      flexShrink: 1,
+      borderRadius: 16,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderWidth: 1,
+      borderColor: 'transparent',
+    },
     stampBox: { flexShrink: 1, paddingVertical: 2, borderWidth: 1, borderColor: 'transparent' },
     mine: { backgroundColor: c.mine, borderBottomRightRadius: 4 },
     theirs: { backgroundColor: c.theirs, borderBottomLeftRadius: 4, borderColor: c.line },
     highlight: { borderColor: c.accent, borderWidth: 2 },
-    actions: { flexDirection: 'row', alignItems: 'center' },
-    action: { paddingHorizontal: 8, paddingVertical: 4 },
-    actionText: { fontSize: 13, color: c.accent, fontWeight: '600' },
+    messagePanel: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      maxWidth: 268,
+      backgroundColor: '#23211e',
+      borderRadius: 12,
+      padding: 6,
+      zIndex: 50,
+    },
+    messagePanelMine: {
+      alignSelf: 'flex-end',
+    },
+    messagePanelTheirs: {
+      alignSelf: 'flex-start',
+    },
+    panelCell: {
+      width: 64,
+      minHeight: 52,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 6,
+      paddingHorizontal: 2,
+      gap: 2,
+    },
+    panelIcon: {
+      fontSize: 16,
+      color: '#ece8e1',
+    },
+    panelLabel: {
+      fontSize: 11,
+      color: '#ece8e1',
+      fontWeight: '600',
+    },
+    copiedToast: {
+      alignSelf: 'center',
+      backgroundColor: '#23211e',
+      borderRadius: 16,
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      marginTop: 6,
+    },
+    copiedText: {
+      fontSize: 13,
+      color: '#ece8e1',
+      fontWeight: '600',
+    },
     quote: { borderLeftWidth: 3, borderLeftColor: c.accent, paddingLeft: 8, marginBottom: 4, maxWidth: 260 },
     quoteName: { fontSize: 12, color: c.accent, fontWeight: '600' },
     quoteText: { fontSize: 13, color: c.muted },
@@ -913,7 +1360,7 @@ const styles = (c: Palette) =>
       borderLeftColor: c.accent,
     },
     replyBody: { flex: 1 },
-    replyClose: { paddingHorizontal: 12, paddingVertical: 6 },
+    replyClose: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
     replyCloseText: { fontSize: 18, color: c.muted },
     text: { fontSize: 16, color: c.text, lineHeight: 22 },
     author: { fontSize: 12, color: c.accent, fontWeight: '600', marginBottom: 2 },
@@ -954,69 +1401,212 @@ const styles = (c: Palette) =>
       color: c.text,
       backgroundColor: c.background,
     },
-    addButton: { backgroundColor: c.accent, borderRadius: 20, paddingHorizontal: 14, justifyContent: 'center' },
-    error: { fontSize: 13, color: c.accent, paddingHorizontal: 16, paddingBottom: 4 },
+    addButton: { backgroundColor: c.accent, borderRadius: 20, paddingHorizontal: 14, minHeight: 44, justifyContent: 'center' },
+    error: { fontSize: 13, color: c.danger, paddingHorizontal: 16, paddingBottom: 4 },
     blockedBar: {
-      flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
+      justifyContent: 'center',
       paddingHorizontal: 16,
       paddingVertical: 12,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: c.line,
       backgroundColor: c.surface,
     },
-    blockedText: { fontSize: 15, color: c.muted },
-    reportPanel: {
+    blockedText: { fontSize: 14, color: c.muted },
+    forwardPanel: {
       gap: 10,
       padding: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: c.line,
       backgroundColor: c.surface,
     },
-    reportTitle: { fontSize: 15, color: c.text, fontWeight: '600' },
-    reasons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    reason: { borderRadius: 16, borderWidth: 1, borderColor: c.line, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: c.background },
-    reasonOn: { borderColor: c.accent, backgroundColor: c.accent },
-    reasonText: { fontSize: 14, color: c.text },
-    reasonTextOn: { color: c.onAccent, fontWeight: '600' },
-    reportAttach: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-    reportAttachText: { fontSize: 14, color: c.text, flex: 1 },
-    reportError: { fontSize: 13, color: c.accent },
-    reportButtons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    reportSend: { backgroundColor: c.accent, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 },
-    reportButton: { paddingHorizontal: 10, paddingVertical: 8 },
-    cautionWrap: { alignSelf: 'stretch', gap: 2 },
-    caution: { fontSize: 12, color: c.accent, paddingHorizontal: 4 },
+    forwardTitle: { fontSize: 15, color: c.text, fontWeight: '600' },
+    forwardList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    forwardTarget: {
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: c.line,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      backgroundColor: c.background,
+    },
+    forwardTargetText: { fontSize: 14, color: c.text },
+    forwardButtons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    forwardCancel: { paddingHorizontal: 10, paddingVertical: 8 },
+    cautionWrap: { alignSelf: 'stretch', gap: 8 },
+    cautionCard: {
+      alignSelf: 'center',
+      width: '100%',
+      maxWidth: 360,
+      backgroundColor: c.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: c.line,
+      padding: 14,
+      gap: 8,
+    },
+    cautionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    cautionIcon: {
+      fontSize: 18,
+      color: c.danger,
+      fontWeight: '700',
+    },
+    cautionTitle: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: '700',
+      color: c.text,
+    },
+    cautionBody: {
+      fontSize: 13,
+      lineHeight: 19,
+      color: c.muted,
+    },
+    cautionButtons: {
+      flexDirection: 'row',
+      gap: 8,
+      marginTop: 4,
+    },
+    cautionButton: {
+      flex: 1,
+      minHeight: 44,
+      borderRadius: 22,
+      borderWidth: 1,
+      borderColor: c.line,
+      backgroundColor: c.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 12,
+    },
+    cautionButtonDanger: {
+      borderColor: c.danger,
+    },
+    cautionButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: c.text,
+    },
+    cautionButtonDangerText: {
+      color: c.danger,
+    },
+    plusPanel: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: c.line,
+      backgroundColor: c.surface,
+    },
+    plusItem: {
+      alignItems: 'center',
+      gap: 6,
+      minWidth: 64,
+      minHeight: 44,
+    },
+    plusIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: c.background,
+      borderWidth: 1,
+      borderColor: c.line,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    plusGlyph: {
+      fontSize: 20,
+      color: c.text,
+    },
+    plusLabel: {
+      fontSize: 12,
+      color: c.text,
+      fontWeight: '500',
+    },
     composer: {
       flexDirection: 'row',
       alignItems: 'flex-end',
-      gap: 8,
-      padding: 8,
+      paddingHorizontal: 2,
+      paddingVertical: 6,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: c.line,
       backgroundColor: c.background,
     },
-    input: {
+    barIconBtn: {
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    barIconText: {
+      fontSize: 20,
+      color: c.muted,
+    },
+    inputWrap: {
       flex: 1,
+      minWidth: 0,
+      position: 'relative',
+      justifyContent: 'center',
+    },
+    input: {
+      width: '100%',
       maxHeight: 140,
+      minHeight: 44,
       backgroundColor: c.surface,
-      borderRadius: 20,
+      borderRadius: 22,
       borderWidth: 1,
       borderColor: c.line,
-      paddingHorizontal: 14,
+      paddingLeft: 14,
+      paddingRight: 44,
       paddingVertical: 10,
       fontSize: 16,
       lineHeight: 22,
       color: c.text,
     },
-    send: { backgroundColor: c.accent, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10 },
-    attach: { paddingHorizontal: 6, paddingVertical: 10 },
-    attachText: { color: c.accent, fontSize: 15, fontWeight: '600' },
+    stampTrigger: {
+      position: 'absolute',
+      right: 0,
+      bottom: 0,
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    stampTriggerIcon: {
+      fontSize: 20,
+      color: c.muted,
+    },
+    sendBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: c.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    sendBtnIcon: {
+      fontSize: 18,
+      color: c.onAccent,
+      fontWeight: '700',
+    },
     recordTime: { flex: 1, fontSize: 16, color: c.text, paddingHorizontal: 12, paddingVertical: 10 },
+    recordCancel: { minHeight: 44, paddingHorizontal: 12, justifyContent: 'center' },
+    recordSend: {
+      minHeight: 44,
+      backgroundColor: c.accent,
+      borderRadius: 22,
+      paddingHorizontal: 16,
+      justifyContent: 'center',
+      marginRight: 4,
+    },
     disabled: { opacity: 0.4 },
-    callButtons: { flexDirection: 'row', alignItems: 'center' },
-    callButton: { paddingHorizontal: 10, paddingVertical: 4 },
     callText: { fontSize: 15, color: c.accent, fontWeight: '600' },
     callRow: { alignSelf: 'center', paddingVertical: 2 },
     callNote: { fontSize: 13, color: c.muted },

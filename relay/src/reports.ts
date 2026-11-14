@@ -7,7 +7,7 @@
 // automatically: the operator reads the reports (POST /admin) and decides. Reports are
 // deleted after 90 days.
 
-export const REPORT_REASONS = ['spam', 'scam', 'harassment', 'other'] as const;
+export const REPORT_REASONS = ['spam', 'scam', 'impersonation', 'harassment', 'other'] as const;
 export type ReportReason = (typeof REPORT_REASONS)[number];
 export type ReportMessage = { text: string; at: number };
 export type Report = { id: number; reporter: string; reported: string; reason: ReportReason; messages: ReportMessage[] | null; created_at: number };

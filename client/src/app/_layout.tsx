@@ -51,14 +51,15 @@ function Shell() {
           contentStyle: { backgroundColor: c.background },
         }}>
         <Stack.Screen name="index" options={{ title: 'Tegami' }} />
-        <Stack.Screen name="add" options={{ title: '友達を追加' }} />
+        <Stack.Screen name="add" options={{ title: '友だち追加' }} />
         <Stack.Screen name="group" options={{ title: 'グループを作る' }} />
         <Stack.Screen name="settings" options={{ title: '設定' }} />
         <Stack.Screen name="accounts" options={{ title: 'アカウント' }} />
         <Stack.Screen name="i" options={{ headerShown: false }} />
         <Stack.Screen name="link" options={{ title: "" }} />
         <Stack.Screen name="strangers" options={{ title: '知らない人から' }} />
-        <Stack.Screen name="chat/[peer]" options={{ title: '' }} />
+        <Stack.Screen name="chat/[peer]" options={{ headerShown: false }} />
+        <Stack.Screen name="chat/[peer]/info" options={{ headerShown: false }} />
       </Stack>
       {/* Over every screen: an incoming call shows wherever the person is. */}
       <CallScreen />

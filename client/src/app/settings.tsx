@@ -5,6 +5,7 @@ import { Image, Linking, Pressable, ScrollView, Share, StyleSheet, Switch, Text,
 
 import { AccountList } from '@/components/account-list';
 import { Avatar } from '@/components/avatar';
+import { Dialog } from '@/components/dialog';
 import { Palette, usePalette } from '@/constants/theme';
 import { pushState, type PushState } from '@/lib/push';
 import { personName, useTegami } from '@/lib/tegami';
@@ -32,7 +33,6 @@ export default function Settings() {
     showUnread,
     setShowUnread,
     contacts,
-    removeContact,
     blocked,
     unblock,
   } = useTegami();
@@ -170,14 +170,9 @@ export default function Settings() {
     }
   }
 
-  function confirmRemoveContact(pubkey: string, name: string) {
-    const msg = `${name}さんを友達から削除しますか？`;
-    if (typeof window !== 'undefined' && typeof window.confirm === 'function' && !window.confirm(msg)) return;
-    removeContact(pubkey);
-  }
-
   return (
-    <ScrollView style={s.fill} contentContainerStyle={s.body}>
+    <View style={s.fill}>
+      <ScrollView style={s.fill} contentContainerStyle={s.body}>
       <Text style={s.heading}>アカウント</Text>
       <AccountList />
 
@@ -296,18 +291,6 @@ export default function Settings() {
         <Text style={s.action}>{exported ? '書き出しました' : '会話を書き出す'}</Text>
       </Pressable>
 
-      <Text style={s.heading}>友達</Text>
-      {contacts.map((contact) => (
-        <View key={contact.pubkey} style={[s.card, s.row]}>
-          <Text style={s.label} numberOfLines={1}>
-            {contact.name}
-          </Text>
-          <Pressable onPress={() => confirmRemoveContact(contact.pubkey, contact.name)} role="button">
-            <Text style={s.action}>削除</Text>
-          </Pressable>
-        </View>
-      ))}
-
       <Text style={s.heading}>ブロックリスト</Text>
       {blocked.length === 0 ? (
         <View style={s.card}>
@@ -331,7 +314,8 @@ export default function Settings() {
         <Text style={s.action}>日ごとの合計を見る</Text>
       </Pressable>
       <View style={{ height: 40 }} />
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 

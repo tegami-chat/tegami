@@ -185,8 +185,8 @@ async function person(browser, name) {
   await button(u.page, 'パスキーを使わずに始める').click();
   await waitOpen(u.page);
   await u.page.goto(ORIGIN + '/add');
-  await waitText(u.page, '自分の招待リンク');
-  await u.page.getByPlaceholder('相手に表示される名前').fill(name);
+  await waitText(u.page, 'マイQRコード');
+  await u.page.getByPlaceholder('自分の名前').fill(name);
   u.link = (await text(u.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
   u.hex = nip19.decode(u.link.match(/npub1[0-9a-z]+/)[0]).data;
   return u;
@@ -194,7 +194,7 @@ async function person(browser, name) {
 /** u adds other (a person or an invite link) as a friend and ends up in the chat with them. */
 async function befriend(u, other) {
   await u.page.goto(ORIGIN + '/add');
-  await waitText(u.page, '自分の招待リンク');
+  await waitText(u.page, 'マイQRコード');
   await u.page.getByPlaceholder('https://app.tegami.chat/i#npub…').fill(typeof other === 'string' ? other : other.link);
   await button(u.page, '追加').click();
   await u.page.getByPlaceholder('メッセージ').waitFor();
@@ -511,7 +511,7 @@ async function main() {
       await u.page.goto(ORIGIN + '/add');
       await waitText(u.page, 'ひらく');
       const t = await text(u.page);
-      assert(t.includes('ひらく') && !t.includes('自分の招待リンク'), `screen: ${t.slice(0, 80)}`);
+      assert(t.includes('ひらく') && !t.includes('マイQRコード'), `screen: ${t.slice(0, 80)}`);
       await u.context.close();
     });
 
@@ -524,7 +524,7 @@ async function main() {
       const s = await storage(u.page);
       assert(s['tegami.device'] && !s['tegami.account'], `storage: ${Object.keys(s)}`);
       await u.page.goto(ORIGIN + '/add');
-      await waitText(u.page, '自分の招待リンク');
+      await waitText(u.page, 'マイQRコード');
       // npub of secret 0x11..11
       assert((await text(u.page)).includes('npub1'), 'no invite link');
       await u.context.close();
@@ -536,14 +536,14 @@ async function main() {
       await waitOpen(a.page);
       await a.page.goto(ORIGIN + '/add');
       await button(a.page, 'ひらく').click();
-      await waitText(a.page, '自分の招待リンク');
-      await a.page.getByPlaceholder('相手に表示される名前').fill('あ');
+      await waitText(a.page, 'マイQRコード');
+      await a.page.getByPlaceholder('自分の名前').fill('あ');
       const link = (await text(a.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
       const b = await newUser(browser, { prf: false });
       await b.page.goto(link.replace('https://app.tegami.chat', ORIGIN));
       await button(b.page, 'はじめる').click();
       await button(b.page, 'パスキーを使わずに始める').click();
-      await waitText(b.page, '自分の招待リンク');
+      await waitText(b.page, 'マイQRコード');
       assert((await b.page.getByPlaceholder('表示する名前').inputValue()) === 'あ', 'name not carried by the invite');
       await button(b.page, '追加').click();
       await b.page.getByPlaceholder('メッセージ').fill('こんにちは');
@@ -564,13 +564,14 @@ async function main() {
         await button(u.page, 'パスキーを使わずに始める').click();
         await waitOpen(u.page);
         await u.page.goto(ORIGIN + '/add');
-        await u.page.getByPlaceholder('相手に表示される名前').fill(name);
+        await waitText(u.page, 'マイQRコード');
+        await u.page.getByPlaceholder('自分の名前').fill(name);
         u.link = (await text(u.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
         return u;
       }
       async function befriend(u, other) {
         await u.page.goto(ORIGIN + '/add');
-        await waitText(u.page, '自分の招待リンク');
+        await waitText(u.page, 'マイQRコード');
         await u.page.getByPlaceholder('https://app.tegami.chat/i#npub…').fill(other.link);
         await button(u.page, '追加').click();
         await u.page.getByPlaceholder('メッセージ').waitFor();
@@ -673,8 +674,8 @@ async function main() {
       };
       const inviteOf = async (page) => {
         await page.goto(ORIGIN + '/add');
-        await openIfLocked(page, '自分の招待リンク');
-        await waitText(page, '自分の招待リンク');
+        await openIfLocked(page, 'マイQRコード');
+        await waitText(page, 'マイQRコード');
         return (await text(page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
       };
       // A uses a passkey and has a friend B.
@@ -686,13 +687,13 @@ async function main() {
       await button(b.page, 'パスキーを使わずに始める').click();
       await waitOpen(b.page);
       await b.page.goto(ORIGIN + '/add');
-      await waitText(b.page, '自分の招待リンク');
-      await b.page.getByPlaceholder('相手に表示される名前').fill('びー');
+      await waitText(b.page, 'マイQRコード');
+      await b.page.getByPlaceholder('自分の名前').fill('びー');
       const bLink = (await text(b.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
       await a.page.goto(bLink.replace('https://app.tegami.chat', ORIGIN));
       await button(a.page, 'ひらく').click();
-      await waitText(a.page, '自分の招待リンク');
-      await a.page.getByPlaceholder('相手に表示される名前').fill('えー');
+      await waitText(a.page, 'マイQRコード');
+      await a.page.getByPlaceholder('自分の名前').fill('えー');
       await button(a.page, '追加').click();
       await waitText(a.page, 'びー');
       const aInvite = await inviteOf(a.page);
@@ -794,8 +795,8 @@ async function main() {
         await button(u.page, 'パスキーを使わずに始める').click();
         await waitOpen(u.page);
         await u.page.goto(ORIGIN + '/add');
-        await waitText(u.page, '自分の招待リンク');
-        await u.page.getByPlaceholder('相手に表示される名前').fill(name);
+        await waitText(u.page, 'マイQRコード');
+        await u.page.getByPlaceholder('自分の名前').fill(name);
         u.link = (await text(u.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
         return u;
       };
@@ -883,13 +884,14 @@ async function main() {
         await button(u.page, 'パスキーを使わずに始める').click();
         await waitOpen(u.page);
         await u.page.goto(ORIGIN + '/add');
-        await u.page.getByPlaceholder('相手に表示される名前').fill(name);
+        await waitText(u.page, 'マイQRコード');
+        await u.page.getByPlaceholder('自分の名前').fill(name);
         u.link = (await text(u.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
         return u;
       }
       async function befriend(u, other) {
         await u.page.goto(ORIGIN + '/add');
-        await waitText(u.page, '自分の招待リンク');
+        await waitText(u.page, 'マイQRコード');
         await u.page.getByPlaceholder('https://app.tegami.chat/i#npub…').fill(other.link);
         await button(u.page, '追加').click();
         await u.page.getByPlaceholder('メッセージ').waitFor();
@@ -1006,7 +1008,8 @@ async function main() {
       const b = await person(browser, 'べん');
       await befriend(b, a);
       await befriend(a, b);
-      await a.page.getByRole('button', { name: 'ビデオ通話' }).click();
+      await button(a.page, 'メニュー').click();
+      await button(a.page, 'ビデオ通話').click();
       await waitText(b.page, 'ビデオ通話');
       await a.page.waitForFunction(() => document.querySelector('video[data-call="local-video"]')?.srcObject?.getVideoTracks().length === 1, null, { timeout: 5000 });
       await button(b.page, '拒否').click();
@@ -1094,18 +1097,18 @@ async function main() {
       await button(b.page, 'パスキーを使わずに始める').click();
       await waitOpen(b.page);
       await b.page.goto(ORIGIN + '/add');
-      await waitText(b.page, '自分の招待リンク');
-      await b.page.getByPlaceholder('相手に表示される名前').fill('びー');
+      await waitText(b.page, 'マイQRコード');
+      await b.page.getByPlaceholder('自分の名前').fill('びー');
       const bLink = (await text(b.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0].replace('https://app.tegami.chat', ORIGIN);
       await a.page.goto(bLink);
       await button(a.page, 'ひらく').click();
-      await waitText(a.page, '自分の招待リンク');
-      await a.page.getByPlaceholder('相手に表示される名前').fill('えー');
+      await waitText(a.page, 'マイQRコード');
+      await a.page.getByPlaceholder('自分の名前').fill('えー');
       await button(a.page, '追加').click();
       await a.page.getByPlaceholder('メッセージ').waitFor();
       await a.page.goto(ORIGIN + '/add');
-      await openIfLocked(a.page, '自分の招待リンク');
-      await waitText(a.page, '自分の招待リンク');
+      await openIfLocked(a.page, 'マイQRコード');
+      await waitText(a.page, 'マイQRコード');
       const aNpub = (await text(a.page)).match(/npub1[0-9a-z]+/)[0];
       const aHex = nip19.decode(aNpub).data;
 
@@ -1131,7 +1134,7 @@ async function main() {
 
       // Rename the friend: the backup follows (after a short pause).
       await a.page.goto(bLink);
-      await openIfLocked(a.page, '自分の招待リンク');
+      await openIfLocked(a.page, 'マイQRコード');
       await a.page.getByPlaceholder('表示する名前').fill('びーさん');
       await button(a.page, '名前を変える').click();
       await a.page.getByPlaceholder('メッセージ').waitFor();
@@ -1180,9 +1183,9 @@ async function main() {
       await waitOpen(r.u.page);
       await waitText(r.u.page, 'びーさん');
       await r.u.page.goto(ORIGIN + '/add');
-      await waitText(r.u.page, '自分の招待リンク');
+      await waitText(r.u.page, 'マイQRコード');
       assert((await text(r.u.page)).includes(aNpub), 'not the same account');
-      assert((await r.u.page.getByPlaceholder('相手に表示される名前').inputValue()) === 'えー', 'name not restored');
+      assert((await r.u.page.getByPlaceholder('自分の名前').inputValue()) === 'えー', 'name not restored');
       await r.u.page.goto(ORIGIN + '/settings');
       await waitText(r.u.page, '端末をすべて失っても、復旧コードで戻せます');
 
@@ -1455,14 +1458,14 @@ async function main() {
       await a.page.getByText('ばく').first().click();
       await waitText(a.page, 'つづき15');
       const original = a.page.getByText('最初のメッセージ', { exact: true });
-      await original.hover();
+      await original.click({ button: 'right' });
       await button(a.page, 'リプライ').click();
       // The composer shows what the reply is to; キャンセル takes it away.
       const bar = () => a.page.getByRole('button', { name: 'キャンセル' });
       await bar().waitFor();
       await bar().click();
       await bar().waitFor({ state: 'detached' });
-      await original.hover();
+      await original.click({ button: 'right' });
       await button(a.page, 'リプライ').click();
       await bar().waitFor();
       const replying = (await a.page.getByTestId('replying').innerText()).replace(/\s+/g, ' ');
@@ -1512,7 +1515,7 @@ async function main() {
       await waitText(b.page, 'えっくすの一言');
 
       // A text reply: kind 14 with ["e", id, relay].
-      await b.page.getByText('えっくすの一言', { exact: true }).hover();
+      await b.page.getByText('えっくすの一言', { exact: true }).click({ button: 'right' });
       await button(b.page, 'リプライ').click();
       await b.page.getByPlaceholder('メッセージ').fill('べにの返信');
       await button(b.page, '送る').click();
@@ -1540,7 +1543,7 @@ async function main() {
       };
       await sendPng();
       await b.page.locator('img[alt="写真"]').first().waitFor({ timeout: 15000 });
-      await b.page.locator('img[alt="写真"]').first().hover();
+      await b.page.locator('img[alt="写真"]').first().click({ button: 'right' });
       await button(b.page, 'リプライ').click();
       await b.page.getByRole('button', { name: 'キャンセル' }).waitFor();
       assert(/べに\s*写真/.test(await b.page.getByTestId('replying').innerText()), 'the composer does not say 写真');
@@ -1587,7 +1590,7 @@ async function main() {
       await b.page.goto(ORIGIN + '/');
       await b.page.getByText('家族').click();
       await waitText(b.page, 'みんなへ');
-      await b.page.getByText(/みんなへ/).last().hover();
+      await b.page.getByText(/みんなへ/).last().click({ button: 'right' });
       await button(b.page, 'リプライ').click();
       await b.page.getByPlaceholder('メッセージ').fill('了解です');
       await button(b.page, '送る').click();
@@ -1675,8 +1678,8 @@ async function main() {
       let t = await text(u.page);
       assert(!t.includes('えっくす') && !t.includes('あいさんへの手紙'), `the first account's chats show in the second: ${t.slice(0, 200)}`);
       await u.page.goto(ORIGIN + '/add');
-      await waitText(u.page, '自分の招待リンク');
-      await u.page.getByPlaceholder('相手に表示される名前').fill('びい');
+      await waitText(u.page, 'マイQRコード');
+      await u.page.getByPlaceholder('自分の名前').fill('びい');
       const bHex = nip19.decode((await text(u.page)).match(/npub1[0-9a-z]+/)[0]).data;
       assert(bHex !== u.hex, 'the second account has the same key');
       await relaySend(x, wrapTo(x, bHex, rumorTo(x, bHex, 'びいさんへの手紙')));
@@ -1972,7 +1975,7 @@ async function main() {
         await c.page.goto(a.link.replace('https://app.tegami.chat', ORIGIN));
         await button(c.page, 'はじめる').click();
         await button(c.page, 'パスキーを使わずに始める').click();
-        await waitText(c.page, '自分の招待リンク');
+        await waitText(c.page, 'マイQRコード');
         const cLink = (await text(c.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
         const cHex = nip19.decode(cLink.match(/npub1[0-9a-z]+/)[0]).data;
         for (let i = 0; i < 30 && (await via(cHex)) !== 'invite'; i++) await c.page.waitForTimeout(200);
@@ -1981,7 +1984,7 @@ async function main() {
         // B adds A with A's full link (with the code): B becomes invited too.
         // (A is already B's friend: the button renames, and the code still registers B.)
         await b.page.goto(ORIGIN + '/add');
-        await waitText(b.page, '自分の招待リンク');
+        await waitText(b.page, 'マイQRコード');
         await b.page.getByPlaceholder('https://app.tegami.chat/i#npub…').fill(a.link);
         await button(b.page, '名前を変える').click();
         for (let i = 0; i < 30 && (await via(b.hex)) !== 'invite'; i++) await b.page.waitForTimeout(200);
@@ -2005,16 +2008,25 @@ async function main() {
       await a.page.getByText('びー').first().click();
       await waitText(a.page, 'ブロック前の手紙');
 
-      await shot(a.page, 'chat-buttons', 'トークの画面。上の段にブロック・通報・トークを削除のボタン、下の段に写真・ファイル・スタンプ・録音のボタン');
-      let asked = '';
-      a.page.once('dialog', (d) => {
-        asked = d.message();
-        return d.accept();
-      });
+      await shot(a.page, 'chat-buttons', 'トークの画面。上に音声通話・メニュー、下に＋・カメラ・写真・メッセージ入力（スタンプ）・録音のボタン');
+      await button(a.page, 'メニュー').click();
+      await waitText(a.page, 'ビデオ通話');
+      await shot(a.page, 'chat-detail', '「メニュー」を押した時に出る詳細の画面（ビデオ通話・ブロック・通報・トークを削除）');
       await button(a.page, 'ブロック').click();
-      await waitText(a.page, 'ブロック中です');
-      assert(asked === 'びーさんをブロックしますか？', `confirm: ${asked}`);
-      shotDialog('block-confirm', asked, '「ブロック」を押した時に出る確認');
+      await waitText(a.page, 'びーをブロックしますか？');
+      await waitText(a.page, 'ブロックした相手とはメッセージの送受信ができなくなります。相手には伝わりません。');
+      assert(await button(a.page, 'ブロックして通報').isVisible(), 'no block-and-report button');
+      await shot(a.page, 'block-dialog', '「ブロック」を押した時に出る確認のダイアログ');
+      await button(a.page, 'ブロック').click();
+      await button(a.page, 'ブロック解除').waitFor();
+      // The unblock dialog on the detail screen also works (cancel keeps them blocked).
+      await button(a.page, 'ブロック解除').click();
+      await waitText(a.page, 'ブロックを解除しますか？');
+      await waitText(a.page, 'この相手からのメッセージを受け取るようになります。');
+      await button(a.page, 'キャンセル').click();
+      await button(a.page, '戻る').click();
+      await waitText(a.page, 'ブロック中');
+      assert(!(await a.page.getByPlaceholder('メッセージ').count()), 'input shown while blocked');
       await shot(a.page, 'blocked-chat', 'ブロックした相手とのトーク');
 
       await b.page.getByPlaceholder('メッセージ').fill('ブロック中の手紙');
@@ -2076,24 +2088,33 @@ async function main() {
       await befriend(b, a);
       await b.page.getByPlaceholder('メッセージ').fill('この投資で必ず儲かります https://example.com');
       await button(b.page, '送る').click();
+      await b.page.getByPlaceholder('メッセージ').fill('振込先はこちらの口座です');
+      await button(b.page, '送る').click();
       await b.page.waitForFunction(() => !document.body.innerText.includes('未送信'), null, { timeout: 10000 });
-      const caution = '初めての相手からのお金やリンクの話です。気をつけてください。';
-      assert(!(await text(b.page)).includes(caution), 'the caution shows under my own message');
+      const cautionTitle = 'お金やリンクの話に注意してください';
+      const cautionBody = 'この相手は友だちではありません。お金の振り込みやリンクを開くよう求められたら、詐欺かもしれません。';
+      assert(!(await text(b.page)).includes(cautionTitle), 'the caution shows under my own message');
 
       await a.page.goto(ORIGIN + '/');
       await waitOpen(a.page);
       await waitText(a.page, '知らない人から');
       await a.page.getByText('知らない人から').click();
-      await a.page.getByText('この投資で必ず儲かります', { exact: false }).first().click();
-      await waitText(a.page, caution);
-      await shot(a.page, 'caution', '知らない人から、お金やリンクの話が届いた時の注意');
+      await a.page.getByText('振込先はこちらの口座です', { exact: false }).first().click();
+      await waitText(a.page, cautionTitle);
+      await waitText(a.page, cautionBody);
+      assert((await a.page.getByTestId('caution-card').count()) === 1, 'caution card should show once per chat');
+      await shot(a.page, 'caution', '知らない人から、お金やリンクの話が届いた時の注意カード');
 
       // Report: scam, without attaching messages.
       await button(a.page, '通報').click();
       await waitText(a.page, '通報する理由');
+      await waitText(a.page, 'なりすまし');
+      await waitText(a.page, 'メッセージを添える');
+      await waitText(a.page, '直近のメッセージ（2件）を送ります');
+      await waitText(a.page, '通報したことは相手に伝わりません。');
       await shot(a.page, 'report-panel', '「通報」を押した時に出る画面');
       await a.page.getByRole('radio', { name: '詐欺', exact: true }).click();
-      await button(a.page, '通報する').click();
+      await button(a.page, '同意して送信').click();
       await waitText(a.page, '通報しました');
       await shot(a.page, 'report-done', '通報を送った後の画面');
       const reports = await (await fetch(`http://localhost:${RELAY_PORT}/_reports`)).json();
@@ -2103,10 +2124,11 @@ async function main() {
       assert(!about[0].messages, `messages went along without being attached: ${JSON.stringify(about[0].messages)}`);
       // (A second report about B today is refused by the relay; relay/test/report.test.mjs covers it.)
 
-      // Then block, from the same panel.
-      a.page.once('dialog', (d) => d.accept());
+      // Then block, from the same panel (opens the block confirmation dialog).
       await button(a.page, 'ブロックする').click();
-      await waitText(a.page, 'ブロック中です');
+      await waitText(a.page, 'をブロックしますか？');
+      await button(a.page, 'ブロック').click();
+      await waitText(a.page, 'ブロック中');
       for (const u of [a, b]) await u.context.close();
     });
 
@@ -2151,11 +2173,11 @@ async function main() {
         const i = document.querySelector('[data-testid="avatar-img"]');
         return i && i.tagName === 'IMG' && i.complete && i.naturalWidth === 256 && i.naturalHeight === 256;
       }, null, { timeout: 15000 });
-      await b.page.goto(ORIGIN + '/settings');
-      await b.page.getByText('友達', { exact: true }).waitFor({ timeout: 15000 });
-      await b.page.getByText('友達', { exact: true }).scrollIntoViewIfNeeded();
-      await shot(b.page, 'settings-friends', '設定の画面の友達の一覧（友達のアイコンと「削除」）');
-      await b.page.goto(ORIGIN + '/');
+      await button(b.page, '友だち').click();
+      await waitText(b.page, '友だち（1）');
+      await b.page.getByTestId('avatar-img').first().waitFor({ timeout: 15000 });
+      await shot(b.page, 'friends-tab', '友だちタブの一覧（自分の行と友だちのアイコン）');
+      await button(b.page, 'トーク').click();
       await b.page.getByTestId('avatar-img').first().waitFor({ timeout: 15000 });
 
       const avatar = await b.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.contacts'))[0]?.avatar);
@@ -2212,14 +2234,14 @@ async function main() {
     await test('Invite QR: the add screen shows a QR code of the invite link', async () => {
       const u = await person(browser, 'あゆみ');
       await u.page.goto(ORIGIN + '/add');
-      await waitText(u.page, '自分の招待リンク');
-      await button(u.page, 'QRコードを表示').click();
+      await waitText(u.page, 'マイQRコード');
       const qr = u.page.getByTestId('invite-qr');
       await qr.waitFor({ timeout: 5000 });
       assert(await qr.isVisible(), 'invite QR not visible');
-      await shot(u.page, 'invite-qr', '友達を追加する画面で「QRコードを表示」を押した時');
-      await button(u.page, '閉じる').click();
-      await qr.waitFor({ state: 'detached', timeout: 5000 });
+      await shot(u.page, 'my-qr', '友だち追加の画面の「マイQRコード」タブ');
+      await button(u.page, 'QRコードスキャン').click();
+      await waitText(u.page, 'QRコードを読み取ると、友だち追加の画面が開きます。');
+      await shot(u.page, 'qr-scan', '友だち追加の画面の「QRコードスキャン」タブ');
       await u.context.close();
     });
 
@@ -2238,13 +2260,13 @@ async function main() {
       await waitText(a.page, '転送するテキスト');
 
       const msg = a.page.getByText('転送するテキスト', { exact: true });
-      await msg.hover();
+      await msg.click({ button: 'right' });
       await shot(a.page, 'message-menu', 'メッセージにマウスを当てた時（スマホでは長押し）に出るボタン');
       await button(a.page, 'コピー').click();
       await waitText(a.page, 'コピーしました');
       await shot(a.page, 'copied', '「コピー」を押した後');
       assert((await a.page.evaluate(() => navigator.clipboard.readText())) === '転送するテキスト', 'clipboard text mismatch');
-      await msg.hover();
+      await msg.click({ button: 'right' });
       await button(a.page, '転送').click();
       await waitText(a.page, '転送先を選ぶ');
       await shot(a.page, 'forward-pick', '「転送」を押した時に出る、送り先を選ぶ画面');
@@ -2271,7 +2293,7 @@ async function main() {
       await a.page.goto(`${ORIGIN}/chat/${b.hex}`);
       const aImg = a.page.locator('img[alt="写真"]').first();
       await aImg.waitFor({ timeout: 15000 });
-      await aImg.hover();
+      await aImg.click({ button: 'right' });
       await button(a.page, '転送').click();
       await waitText(a.page, '転送先を選ぶ');
       await button(a.page, 'ちえ').click();
@@ -2296,14 +2318,11 @@ async function main() {
       await button(a.page, '送る').click();
       await waitText(b.page, 'こちらからも');
 
-      let askedChat = '';
-      a.page.once('dialog', (d) => {
-        askedChat = d.message();
-        return d.accept();
-      });
+      await button(a.page, 'メニュー').click();
       await button(a.page, 'トークを削除').click();
-      assert(askedChat === 'このトークを削除しますか？この端末から消えます。', `confirm chat: ${askedChat}`);
-      shotDialog('delete-chat-confirm', askedChat, '「トークを削除」を押した時に出る確認');
+      await waitText(a.page, 'このトークを削除しますか？この端末から消えます。');
+      await shot(a.page, 'delete-chat-confirm', '「トークを削除」を押した時に出る確認');
+      await button(a.page, '削除').click();
       await waitOpen(a.page);
       await waitText(a.page, 'ばんり');
       assert(!(await text(a.page)).includes('消す前の手紙'), 'old preview still on chat list');
@@ -2319,27 +2338,146 @@ async function main() {
       await noText(a.page, '消す前の手紙', 2500);
       assert(!(await text(a.page)).includes('こちらからも'), 'own message came back after reopening');
 
-      await a.page.goto(ORIGIN + '/settings');
-      await waitText(a.page, '友達');
-      await waitText(a.page, 'ばんり');
-      let askedFriend = '';
-      a.page.once('dialog', (d) => {
-        askedFriend = d.message();
-        return d.accept();
-      });
-      await button(a.page, '削除').click();
-      assert(askedFriend === 'ばんりさんを友達から削除しますか？', `confirm friend: ${askedFriend}`);
-      shotDialog('delete-friend-confirm', askedFriend, '設定の友達の一覧で「削除」を押した時に出る確認');
-      await noText(a.page, 'ばんり', 500);
-
       await a.page.goto(ORIGIN + '/');
       await waitOpen(a.page);
+      await button(a.page, '友だち').click();
+      await waitText(a.page, '友だち（1）');
+      await waitText(a.page, 'ばんり');
+      await a.page.getByText('ばんり').first().click({ button: 'right' });
+      await waitText(a.page, '音声通話');
+      await button(a.page, '削除').click();
+      await waitText(a.page, 'ばんりを友だちから削除しますか？');
+      await button(a.page, '削除').click();
+      await waitText(a.page, '友だち（0）');
+      await noText(a.page, 'ばんり', 500);
+
+      await button(a.page, 'トーク').click();
       assert(!(await text(a.page)).includes('ばんり'), 'deleted friend still in chat list');
       await b.page.getByPlaceholder('メッセージ').fill('もう一度こんにちは');
       await button(b.page, '送る').click();
       await waitText(a.page, '知らない人から');
       await a.page.getByText('知らない人から').click();
       await waitText(a.page, 'もう一度こんにちは');
+      for (const u of [a, b]) await u.context.close();
+    });
+
+    await test('Friends tab: friends and groups listed with counts; long press 削除 asks and removes the friend; long press on a chat row deletes the chat', async () => {
+      const a = await person(browser, 'あゆみ');
+      const b = await person(browser, 'ばんり');
+      const c = await person(browser, 'ちえ');
+      await befriend(a, b);
+      await befriend(a, c);
+      await befriend(b, a);
+      await befriend(c, a);
+
+      await a.page.goto(ORIGIN + '/');
+      await a.page.getByText('グループを作る').click();
+      await a.page.getByPlaceholder('グループの名前').fill('家族');
+      await a.page.getByRole('checkbox', { name: 'ばんり' }).click();
+      await a.page.getByRole('checkbox', { name: 'ちえ' }).click();
+      await button(a.page, '作る').click();
+      await a.page.getByPlaceholder('メッセージ').fill('みんなへ');
+      await button(a.page, '送る').click();
+
+      await b.page.getByPlaceholder('メッセージ').fill('ばんりからの手紙');
+      await button(b.page, '送る').click();
+
+      await a.page.goto(ORIGIN + '/');
+      await waitOpen(a.page);
+      await waitText(a.page, 'ばんりからの手紙');
+
+      await button(a.page, '友だち').click();
+      await waitText(a.page, '友だち（2）');
+      await waitText(a.page, 'グループ（1）');
+      const ft = await text(a.page);
+      assert(ft.includes('あゆみ') && ft.includes('ばんり') && ft.includes('ちえ') && ft.includes('家族'), `friends tab: ${ft.slice(0, 200)}`);
+
+      // Tapping my own row opens settings.
+      await a.page.getByText('あゆみ', { exact: true }).first().click();
+      await waitText(a.page, 'ブロックリスト');
+      await a.page.goBack();
+      await waitText(a.page, '友だち（2）');
+
+      // Long press (right click) on a friend row opens the menu sheet; 削除 asks and removes the friend.
+      await a.page.getByText('ちえ', { exact: true }).first().click({ button: 'right' });
+      await waitText(a.page, '音声通話');
+      await shot(a.page, 'friend-menu', '友だちの行を長押しした時に出るメニュー');
+      await button(a.page, '削除').click();
+      await waitText(a.page, 'ちえを友だちから削除しますか？');
+      await shot(a.page, 'friend-delete-dialog', '友だちのメニューで「削除」を押した時に出る確認');
+      await button(a.page, '削除').click();
+      await waitText(a.page, '友だち（1）');
+      await noText(a.page, 'ちえ', 500);
+
+      // Long press (right click) on a chat row opens the chat menu sheet; 削除 asks and deletes the chat.
+      await button(a.page, 'トーク').click();
+      await waitText(a.page, 'ばんりからの手紙');
+      await a.page.getByText('ばんり').first().click({ button: 'right' });
+      await button(a.page, '閉じる').waitFor({ timeout: 5000 });
+      await shot(a.page, 'chat-menu', 'トーク一覧の行を長押しした時に出るメニュー');
+      await button(a.page, '削除').click();
+      await waitText(a.page, 'このトークを削除しますか？この端末から消えます。');
+      await shot(a.page, 'chat-delete-dialog', 'トーク一覧のメニューで「削除」を押した時に出る確認');
+      await button(a.page, '削除').click();
+      await noText(a.page, 'ばんりからの手紙', 500);
+      assert((await text(a.page)).includes('ばんり'), 'friend row gone after deleting only the chat');
+      for (const u of [a, b, c]) await u.context.close();
+    });
+
+    await test('QR scan: a QR of an invite link read by the camera opens the add form filled', async () => {
+      const a = await person(browser, 'あゆみ');
+      const b = await person(browser, 'ばんり');
+      await a.page.goto(ORIGIN + '/add');
+      await waitText(a.page, 'マイQRコード');
+
+      const check = await a.page.evaluate((link) => {
+        const qr = window.makeQr(0, 'M');
+        qr.addData(link);
+        qr.make();
+        const count = qr.getModuleCount();
+        const cell = 6;
+        const margin = 12;
+        const size = count * cell + margin * 2;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, size, size);
+        ctx.fillStyle = '#000000';
+        for (let r = 0; r < count; r++) {
+          for (let c = 0; c < count; c++) {
+            if (qr.isDark(r, c)) ctx.fillRect(margin + c * cell, margin + r * cell, cell, cell);
+          }
+        }
+        const img = ctx.getImageData(0, 0, size, size);
+        const decoded = window.decodeQrImage(img);
+        const valid = decoded ? window.inviteFromQr(decoded) : null;
+        const shortHost = window.inviteFromQr(link.replace('https://app.tegami.chat', 'https://tegami.chat'));
+        const invalid = window.inviteFromQr('https://example.com/other');
+        // Feed the drawn QR canvas into the next scanner frame on the QRコードスキャン tab.
+        delete window.BarcodeDetector;
+        const origDraw = CanvasRenderingContext2D.prototype.drawImage;
+        CanvasRenderingContext2D.prototype.drawImage = function (src, ...rest) {
+          if (src instanceof HTMLVideoElement) {
+            this.canvas.width = size;
+            this.canvas.height = size;
+            return origDraw.call(this, canvas, 0, 0, size, size);
+          }
+          return origDraw.call(this, src, ...rest);
+        };
+        return { decoded, valid, shortHost, invalid };
+      }, b.link);
+
+      assert(check.decoded === b.link, `decoded: ${check.decoded}`);
+      assert(check.valid === b.link, `inviteFromQr: ${check.valid}`);
+      assert(check.shortHost === b.link.replace('https://app.tegami.chat', 'https://tegami.chat'), `shortHost: ${check.shortHost}`);
+      assert(check.invalid === null, `invalid did not return null: ${check.invalid}`);
+
+      await button(a.page, 'QRコードスキャン').click();
+      await a.page.getByTestId('invite-qr').waitFor({ timeout: 10000 });
+      assert((await a.page.getByPlaceholder('https://app.tegami.chat/i#npub…').inputValue()) === b.link, 'invite link not filled from QR');
+      assert((await a.page.getByPlaceholder('表示する名前').inputValue()) === 'ばんり', 'friend name not filled from QR');
       for (const u of [a, b]) await u.context.close();
     });
 
@@ -2433,6 +2571,9 @@ async function main() {
       await b.page.getByTestId('video-message').first().waitFor({ timeout: 15000 });
 
       const plainText = '合計 120,000円\nよろしくお願いします。';
+      await button(a.page, 'その他').click();
+      await a.page.getByTestId('plus-panel').waitFor();
+      await shot(a.page, 'plus-panel', '下の段の「＋」を押した時に出るパネル（ファイル）');
       const fileChooser = a.page.waitForEvent('filechooser');
       await button(a.page, 'ファイル').click();
       await (await fileChooser).setFiles({ name: '見積書.txt', mimeType: 'text/plain', buffer: Buffer.from(plainText, 'utf8') });
@@ -2485,6 +2626,7 @@ async function main() {
       await befriend(a, b);
 
       const big = Buffer.alloc(11 * 1024 * 1024, 0x61);
+      await button(a.page, 'その他').click();
       const chooser = a.page.waitForEvent('filechooser');
       await button(a.page, 'ファイル').click();
       await (await chooser).setFiles({ name: 'huge.bin', mimeType: 'application/octet-stream', buffer: big });
@@ -2492,6 +2634,155 @@ async function main() {
       await shot(a.page, 'too-large', '10MBを超えるファイルを選んだ時');
       const count = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages') ?? '[]').length);
       assert(count === 0, `expected 0 messages in chat, got ${count}`);
+      for (const u of [a, b]) await u.context.close();
+    });
+
+    await test('Chat layout at phone width: the name and header buttons do not overlap, the input is at least 150 px wide', async () => {
+      const a = await person(browser, 'あゆみ');
+      const b = await person(browser, 'とても長い名前のともだちテスト用のアカウント');
+      await a.page.setViewportSize({ width: 390, height: 760 });
+      await befriend(b, a);
+      await befriend(a, b);
+
+      const title = a.page.getByTestId('chat-title');
+      const callBtn = button(a.page, '音声通話');
+      const menuBtn = button(a.page, 'メニュー');
+      const input = a.page.getByPlaceholder('メッセージ');
+      const photoBtn = button(a.page, '写真');
+      const micBtn = button(a.page, '録音');
+
+      await title.waitFor();
+      await callBtn.waitFor();
+      await menuBtn.waitFor();
+      await input.waitFor();
+
+      const titleBox = await title.boundingBox();
+      const callBox = await callBtn.boundingBox();
+      const menuBox = await menuBtn.boundingBox();
+      const inputBox = await input.boundingBox();
+      const photoBox = await photoBtn.boundingBox();
+      const micBox = await micBtn.boundingBox();
+
+      assert(titleBox && callBox && menuBox && inputBox && photoBox && micBox, 'missing bounding box');
+      assert(titleBox.width > 0 && titleBox.x + titleBox.width <= callBox.x + 1, `title overlaps call button: ${JSON.stringify({ titleBox, callBox })}`);
+      assert(callBox.x + callBox.width <= menuBox.x + 1, `call button overlaps menu button: ${JSON.stringify({ callBox, menuBox })}`);
+      assert(menuBox.x + menuBox.width <= 390.5, `menu button overflows 390px viewport: ${JSON.stringify(menuBox)}`);
+      assert(inputBox.width >= 150, `input width ${inputBox.width} < 150`);
+      assert(photoBox.x + photoBox.width <= inputBox.x + 1, `photo button overlaps input: ${JSON.stringify({ photoBox, inputBox })}`);
+      assert(inputBox.x + inputBox.width <= micBox.x + 1, `input overlaps mic button: ${JSON.stringify({ inputBox, micBox })}`);
+      for (const u of [a, b]) await u.context.close();
+    });
+
+    await test('Message panel: long press shows コピー/リプライ/転送/削除/通報; 削除 removes the message on this device only and it stays removed after reopening', async () => {
+      const a = await person(browser, 'あゆみ');
+      const b = await person(browser, 'ばんり');
+      await befriend(b, a);
+      await befriend(a, b);
+
+      await b.page.getByPlaceholder('メッセージ').fill('長押しで消す手紙');
+      await button(b.page, '送る').click();
+      await b.page.getByPlaceholder('メッセージ').fill('残る手紙');
+      await button(b.page, '送る').click();
+      await a.page.getByPlaceholder('メッセージ').fill('自分の手紙');
+      await button(a.page, '送る').click();
+      await waitText(a.page, '長押しで消す手紙');
+      await waitText(a.page, '残る手紙');
+      await waitText(a.page, '自分の手紙');
+
+      const longPress = async (locator) => {
+        const box = await locator.boundingBox();
+        assert(box, 'message not visible for long press');
+        await a.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await a.page.mouse.down();
+        await a.page.waitForTimeout(550);
+        await a.page.mouse.up();
+        // The tap that ends the press is ignored for a moment; a person cannot tap again faster.
+        await a.page.waitForTimeout(350);
+      };
+
+      const target = a.page.getByText('長押しで消す手紙', { exact: true });
+      await longPress(target);
+      const panel = a.page.getByTestId('message-panel');
+      await panel.waitFor();
+      for (const label of ['コピー', 'リプライ', '転送', '削除', '通報']) {
+        assert(await panel.getByRole('button', { name: label, exact: true }).isVisible(), `missing ${label} in message panel`);
+      }
+      await shot(a.page, 'message-panel', 'メッセージを長押しした時に出るパネル（コピー・リプライ・転送・削除・通報）');
+
+      // Tapping outside closes the panel.
+      await a.page.getByPlaceholder('メッセージ').click();
+      await panel.waitFor({ state: 'detached' });
+
+      // Own message shows コピー/リプライ/転送/削除, without 通報.
+      const own = a.page.getByText('自分の手紙', { exact: true });
+      await longPress(own);
+      await panel.waitFor();
+      assert((await panel.getByRole('button', { name: '通報', exact: true }).count()) === 0, '通報 shown on own message');
+      await a.page.getByPlaceholder('メッセージ').click();
+      await panel.waitFor({ state: 'detached' });
+
+      // Report from the message panel attaches the selected message and surrounding messages when chosen.
+      await longPress(target);
+      await panel.waitFor();
+      await panel.getByRole('button', { name: '通報', exact: true }).click();
+      await waitText(a.page, '選んだメッセージと前後のメッセージ（2件）を送ります');
+      await a.page.getByRole('radio', { name: 'なりすまし', exact: true }).click();
+      await a.page.getByRole('switch', { name: 'メッセージを添える' }).click();
+      await button(a.page, '同意して送信').click();
+      await waitText(a.page, '通報しました');
+      await button(a.page, '閉じる').click();
+      const reports = await (await fetch(`http://localhost:${RELAY_PORT}/_reports`)).json();
+      const imp = reports.find((r) => r.reported === b.hex && r.reason === 'impersonation');
+      assert(imp && Array.isArray(imp.messages) && imp.messages.length === 2, `impersonation report: ${JSON.stringify(imp)}`);
+
+      // 削除 removes the message on this device only and it stays removed after reopening.
+      await longPress(target);
+      await panel.waitFor();
+      await panel.getByRole('button', { name: '削除', exact: true }).click();
+      await waitText(a.page, 'このメッセージはこの端末でのみ削除されます。相手の端末からは削除されません。');
+      await shot(a.page, 'delete-message-dialog', 'メッセージのパネルで「削除」を押した時に出る確認のダイアログ');
+      await button(a.page, 'この端末でのみ削除').click();
+      await noText(a.page, '長押しで消す手紙', 500);
+      assert((await text(a.page)).includes('残る手紙'), 'other message disappeared');
+      assert((await text(b.page)).includes('長押しで消す手紙'), "deleted message disappeared from friend's device");
+
+      await a.page.goto(ORIGIN + '/');
+      await waitOpen(a.page);
+      await a.page.getByText('ばんり').first().click();
+      await waitText(a.page, '残る手紙');
+      await noText(a.page, '長押しで消す手紙', 2500);
+      for (const u of [a, b]) await u.context.close();
+    });
+
+    await test('Swipe right starts a reply', async () => {
+      const a = await person(browser, 'あゆみ');
+      const b = await person(browser, 'ばんり');
+      await befriend(b, a);
+      await befriend(a, b);
+
+      await b.page.getByPlaceholder('メッセージ').fill('右スワイプする手紙');
+      await button(b.page, '送る').click();
+      await waitText(a.page, '右スワイプする手紙');
+
+      const msg = a.page.getByText('右スワイプする手紙', { exact: true });
+      const box = await msg.boundingBox();
+      assert(box, 'message not visible for swipe');
+      const startX = box.x + 20;
+      const startY = box.y + box.height / 2;
+      await a.page.mouse.move(startX, startY);
+      await a.page.mouse.down();
+      await a.page.mouse.move(startX + 80, startY, { steps: 8 });
+      await a.page.getByTestId('swipe-reply-icon').waitFor();
+      await shot(a.page, 'swipe-reply', 'メッセージを右にスワイプしてリプライを始める時');
+      await a.page.mouse.up();
+
+      const replying = a.page.getByTestId('replying');
+      await replying.waitFor();
+      assert((await replying.innerText()).replace(/\s+/g, ' ').includes('ばんり 右スワイプする手紙'), `reply bar: ${await replying.innerText()}`);
+      await a.page.getByPlaceholder('メッセージ').fill('スワイプからの返信');
+      await button(a.page, '送る').click();
+      await waitText(b.page, 'スワイプからの返信');
+      assert((await b.page.getByTestId('quote').innerText()).replace(/\s+/g, ' ').includes('ばんり 右スワイプする手紙'), 'quote not received');
       for (const u of [a, b]) await u.context.close();
     });
   } finally {
