@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { Palette, usePalette } from '@/constants/theme';
@@ -22,6 +22,7 @@ export function ChatRow({
   last,
   mark,
   unread = 0,
+  onLongPress,
 }: {
   peer: string;
   name: string;
@@ -30,11 +31,25 @@ export function ChatRow({
   last?: Message;
   mark?: string;
   unread?: number;
+  onLongPress?: () => void;
 }) {
   const c = usePalette();
   const s = styles(c);
+  const webMenu =
+    Platform.OS === 'web' && onLongPress
+      ? {
+          onContextMenu: (e: { preventDefault: () => void }) => {
+            e.preventDefault();
+            onLongPress();
+          },
+        }
+      : {};
   return (
-    <Pressable style={s.row} onPress={() => router.push({ pathname: '/chat/[peer]', params: { peer } })}>
+    <Pressable
+      style={s.row}
+      onPress={() => router.push({ pathname: '/chat/[peer]', params: { peer } })}
+      onLongPress={onLongPress}
+      {...webMenu}>
       <Avatar name={mark ?? name} file={avatar} size={36} />
       <View style={s.body}>
         <View style={s.top}>

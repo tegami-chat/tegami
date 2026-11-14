@@ -48,7 +48,7 @@ const members = new Map(); // pubkey -> { via, invitedBy, code, banned }
 const codes = new Map(); // code -> pubkey
 const openIds = new Set(); // envelopes written by open keys
 const reports = []; // { reporter, reported, reason, messages, at }
-const REPORT_REASONS = ['spam', 'scam', 'harassment', 'other'];
+const REPORT_REASONS = ['spam', 'scam', 'impersonation', 'harassment', 'other'];
 // Like relay/src/reports.ts: null when the body is a valid report, else why not.
 const reportError = (r) => {
   if (!r || typeof r !== 'object' || Array.isArray(r)) return 'invalid: not an object';

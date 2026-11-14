@@ -68,5 +68,6 @@ check('the operator lists the reports about one key', about.status === 200 && ab
 check('someone else cannot list reports', (await signedPost('/admin', reporter, { action: 'reports' })).status === 403);
 check('…nor the reports about one key', (await signedPost('/admin', reporter, { action: 'reports', pubkey: scammer })).status === 403);
 
+check('impersonation is a reason', accepted(await report(second, { pubkey: other, reason: 'impersonation' })));
 console.log(failures ? `${failures} failed` : 'all passed');
 process.exit(failures ? 1 : 0);
