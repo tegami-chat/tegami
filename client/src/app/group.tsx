@@ -1,3 +1,4 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -46,7 +47,7 @@ export default function NewGroup() {
                 role="checkbox"
                 aria-checked={on}
                 aria-label={contact.name}>
-                <View style={[s.box, on && s.boxOn]}>{on && <Text style={s.check}>✓</Text>}</View>
+                <View style={[s.box, on && s.boxOn]}>{on && <MaterialIcons name="check" size={16} color={c.onAccent} />}</View>
                 <Text style={s.name}>{contact.name}</Text>
                 {contact.model ? <Text style={s.model}>{contact.model}</Text> : null}
               </Pressable>
@@ -86,7 +87,6 @@ const styles = (c: Palette) =>
     },
     box: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: c.line, alignItems: 'center', justifyContent: 'center' },
     boxOn: { backgroundColor: c.accent, borderColor: c.accent },
-    check: { color: c.onAccent, fontSize: 14, fontWeight: '700' },
     name: { flex: 1, fontSize: 16, color: c.text },
     model: { fontSize: 13, color: c.muted },
     primary: { backgroundColor: c.accent, borderRadius: 999, paddingVertical: 14, alignItems: 'center', marginTop: 8 },

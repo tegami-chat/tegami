@@ -212,7 +212,7 @@ export default function Settings() {
         <>
           <View style={[s.card, s.row]}>
             <Text style={s.label}>新しいメッセージを知らせる</Text>
-            <Switch value={push === 'on'} onValueChange={togglePush} disabled={pushBusy} aria-label="新しいメッセージを知らせる" />
+            <Switch trackColor={{ false: c.line, true: c.accent }} thumbColor="#ffffff" value={push === 'on'} onValueChange={togglePush} disabled={pushBusy} aria-label="新しいメッセージを知らせる" />
           </View>
           {push === 'denied' && <Text style={s.note}>通知が許可されていません。ブラウザか端末の設定で、Tegami の通知を許可してください。</Text>}
           {pushFailed && <Text style={s.note}>通知を設定できませんでした。通信を確認して、もう一度お試しください。</Text>}
@@ -278,14 +278,14 @@ export default function Settings() {
       <Text style={s.heading}>アプリが落ちた時</Text>
       <View style={[s.card, s.row]}>
         <Text style={s.label}>Tegami に報告を送る</Text>
-        <Switch value={crashReports} onValueChange={setCrashReportsOn} aria-label="Tegami に報告を送る" />
+        <Switch trackColor={{ false: c.line, true: c.accent }} thumbColor="#ffffff" value={crashReports} onValueChange={setCrashReportsOn} aria-label="Tegami に報告を送る" />
       </View>
       <Text style={s.note}>報告には、エラーの内容だけが入ります。名前や会話は入りません。</Text>
 
       <Text style={s.heading}>会話</Text>
       <View style={[s.card, s.row]}>
         <Text style={s.label}>未読数を表示</Text>
-        <Switch value={showUnread} onValueChange={setShowUnread} aria-label="未読数を表示" />
+        <Switch trackColor={{ false: c.line, true: c.accent }} thumbColor="#ffffff" value={showUnread} onValueChange={setShowUnread} aria-label="未読数を表示" />
       </View>
       <Pressable style={s.card} onPress={exportFile} role="button">
         <Text style={s.action}>{exported ? '書き出しました' : '会話を書き出す'}</Text>

@@ -1,3 +1,4 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Link, Stack, router, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -92,7 +93,7 @@ export default function Chats() {
               )}
               <Link href="/add" asChild>
                 <Pressable role="button" aria-label="友だち追加" style={s.headerButton}>
-                  <Text style={s.headerButtonText}>＋</Text>
+                  <MaterialIcons name="person-add" size={24} color={c.text} />
                 </Pressable>
               </Link>
             </View>
@@ -185,7 +186,7 @@ export default function Chats() {
             />
             {searching && (
               <Pressable role="button" aria-label="キャンセル" style={s.clear} onPress={() => setQuery('')}>
-                <Text style={s.clearText}>×</Text>
+                <MaterialIcons name="close" size={24} color={c.muted} />
               </Pressable>
             )}
           </View>
@@ -381,7 +382,6 @@ const styles = (c: Palette) =>
     title: { fontSize: 17, fontWeight: '600', color: c.text },
     headerButton: { minHeight: 44, minWidth: 44, paddingHorizontal: 10, paddingVertical: 4, alignItems: 'center', justifyContent: 'center' },
     headerLink: { fontSize: 15, color: c.accent, fontWeight: '600' },
-    headerButtonText: { fontSize: 26, color: c.accent },
     topSwitch: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -457,7 +457,6 @@ const styles = (c: Palette) =>
       color: c.text,
     },
     clear: { minHeight: 44, minWidth: 44, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
-    clearText: { fontSize: 18, color: c.muted },
     empty: { textAlign: 'center', color: c.muted, fontSize: 15, marginTop: 32 },
     heading: { fontSize: 13, color: c.muted, fontWeight: '600', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
     result: { minHeight: 44, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.line },

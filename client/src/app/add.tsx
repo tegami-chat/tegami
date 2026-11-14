@@ -1,3 +1,4 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
 import jsQR from 'jsqr';
 import makeQr from 'qrcode-generator';
@@ -220,14 +221,18 @@ export default function Add() {
       <View style={s.tabs}>
         <Pressable
           role="button"
+          aria-label="マイQRコード"
           style={[s.tab, tab === 'qr' && s.tabActive]}
           onPress={() => setTab('qr')}>
+          <MaterialIcons name="qr-code" size={24} color={tab === 'qr' ? c.onAccent : c.muted} />
           <Text style={[s.tabText, tab === 'qr' && s.tabTextActive]}>マイQRコード</Text>
         </Pressable>
         <Pressable
           role="button"
+          aria-label="QRコードスキャン"
           style={[s.tab, tab === 'scan' && s.tabActive]}
           onPress={() => setTab('scan')}>
+          <MaterialIcons name="qr-code-scanner" size={24} color={tab === 'scan' ? c.onAccent : c.muted} />
           <Text style={[s.tabText, tab === 'scan' && s.tabTextActive]}>QRコードスキャン</Text>
         </Pressable>
       </View>
@@ -256,23 +261,17 @@ export default function Add() {
             </Text>
             <View style={s.qrActions}>
               <Pressable onPress={copy} role="button" aria-label="リンクをコピー" style={s.qrAction}>
-                <Text style={s.qrIcon} aria-hidden>
-                  ⧉
-                </Text>
+                <MaterialIcons name="link" size={24} color={c.text} />
                 <Text style={s.qrActionText}>リンクをコピー</Text>
               </Pressable>
               {canShare && (
                 <Pressable onPress={share} role="button" aria-label="シェア" style={s.qrAction}>
-                  <Text style={s.qrIcon} aria-hidden>
-                    ↗
-                  </Text>
+                  <MaterialIcons name="share" size={24} color={c.text} />
                   <Text style={s.qrActionText}>シェア</Text>
                 </Pressable>
               )}
               <Pressable onPress={saveQr} role="button" aria-label="保存" style={s.qrAction}>
-                <Text style={s.qrIcon} aria-hidden>
-                  ↓
-                </Text>
+                <MaterialIcons name="download" size={24} color={c.text} />
                 <Text style={s.qrActionText}>保存</Text>
               </Pressable>
             </View>
@@ -350,6 +349,7 @@ const styles = (c: Palette) =>
       alignItems: 'center',
       justifyContent: 'center',
       paddingVertical: 8,
+      gap: 2,
     },
     tabActive: { backgroundColor: c.accent },
     tabText: { fontSize: 15, fontWeight: '600', color: c.muted },
@@ -389,7 +389,6 @@ const styles = (c: Palette) =>
       paddingHorizontal: 8,
       gap: 4,
     },
-    qrIcon: { fontSize: 20, color: c.text },
     qrActionText: { fontSize: 13, color: c.text, fontWeight: '600' },
     input: {
       minHeight: 44,

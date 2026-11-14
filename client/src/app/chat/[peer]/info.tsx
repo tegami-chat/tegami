@@ -1,3 +1,4 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Stack, router, useLocalSearchParams, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -50,7 +51,7 @@ export default function ChatInfo() {
       <View style={s.fill} aria-hidden={!!dialog || reporting}>
         <View style={s.header}>
           <Pressable role="button" aria-label="戻る" style={s.backButton} onPress={goBack}>
-            <Text style={s.backText}>＜</Text>
+            <MaterialIcons name="chevron-left" size={24} color={c.text} />
           </Pressable>
         </View>
         <ScrollView style={s.fill} contentContainerStyle={s.body}>
@@ -69,7 +70,7 @@ export default function ChatInfo() {
                 onPress={startVideoCall}
                 style={[s.actionItem, !canCall && s.disabled]}>
                 <View style={s.roundIcon}>
-                  <Text style={s.roundGlyph}>▶</Text>
+                  <MaterialIcons name="videocam" size={28} color={c.text} />
                 </View>
                 <Text style={s.actionLabel}>ビデオ通話</Text>
               </Pressable>
@@ -80,7 +81,7 @@ export default function ChatInfo() {
                 onPress={() => setDialog(isBlocked ? 'unblock' : 'block')}
                 style={s.actionItem}>
                 <View style={s.roundIcon}>
-                  <Text style={s.roundGlyph}>⊘</Text>
+                  <MaterialIcons name="block" size={28} color={c.text} />
                 </View>
                 <Text style={s.actionLabel}>{isBlocked ? 'ブロック解除' : 'ブロック'}</Text>
               </Pressable>
@@ -91,7 +92,7 @@ export default function ChatInfo() {
                 onPress={() => setReporting(true)}
                 style={s.actionItem}>
                 <View style={s.roundIcon}>
-                  <Text style={s.roundGlyph}>!</Text>
+                  <MaterialIcons name="report" size={28} color={c.text} />
                 </View>
                 <Text style={s.actionLabel}>通報</Text>
               </Pressable>
@@ -242,11 +243,6 @@ const styles = (c: Palette) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    backText: {
-      fontSize: 20,
-      color: c.text,
-      fontWeight: '600',
-    },
     body: {
       paddingHorizontal: 16,
       paddingBottom: 32,
@@ -291,11 +287,6 @@ const styles = (c: Palette) =>
       borderColor: c.line,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    roundGlyph: {
-      fontSize: 20,
-      color: c.text,
-      fontWeight: '600',
     },
     actionLabel: {
       fontSize: 13,

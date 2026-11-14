@@ -1,3 +1,4 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useRef, useState } from 'react';
 import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -183,7 +184,7 @@ export function PhotoViewer({ uri, onClose }: { uri: string; onClose: () => void
         aria-label="閉じる"
         aria-hidden={menu || undefined}
         style={styles.viewerClose}>
-        <Text style={styles.viewerCloseText}>×</Text>
+        <MaterialIcons name="close" size={24} color="#ffffff" />
       </Pressable>
       <Pressable
         style={styles.fullImageWrap}
@@ -227,7 +228,7 @@ export function VideoViewer({ uri, onClose }: { uri: string; onClose: () => void
   return (
     <View style={styles.viewer} testID="video-viewer">
       <Pressable onPress={onClose} role="button" aria-label="閉じる" style={styles.viewerClose}>
-        <Text style={styles.viewerCloseText}>×</Text>
+        <MaterialIcons name="close" size={24} color="#ffffff" />
       </Pressable>
       {Platform.OS === 'web' && (
         <video
@@ -342,10 +343,11 @@ export function Video({ id, file, onOpen }: { id: string; file: FileRef; onOpen?
         style={{ width: WIDTH, maxWidth: '100%', borderRadius: 12, display: 'block', objectFit: 'cover' }}
       />
       <View style={styles.videoCorner} pointerEvents="none">
-        <Text style={styles.videoCornerText}>{`▶ ${formatClock(duration)}`}</Text>
+        <MaterialIcons name="play-arrow" size={14} color="#ffffff" />
+        <Text style={styles.videoCornerText}>{formatClock(duration)}</Text>
       </View>
       <View style={styles.videoSpeaker} pointerEvents="none">
-        <Text style={styles.videoSpeakerText}>🔇︎</Text>
+        <MaterialIcons name="volume-off" size={14} color="#ffffff" />
       </View>
     </Pressable>
   );
@@ -427,9 +429,7 @@ export function FileAttachment({ id, file, at }: { id: string; file: FileRef; at
           styles.fileIconBox,
           isPdf ? { backgroundColor: c.danger } : { backgroundColor: c.background, borderColor: c.line, borderWidth: 1 },
         ]}>
-        <Text style={isPdf ? styles.filePdfText : [styles.fileDocGlyph, { color: c.text }]}>
-          {isPdf ? 'PDF' : '📄︎'}
-        </Text>
+        <MaterialIcons name={isPdf ? 'picture-as-pdf' : 'description'} size={24} color={isPdf ? '#ffffff' : c.text} />
       </View>
       <View style={styles.fileMeta}>
         <Text style={[styles.fileName, { color: c.text }]} numberOfLines={1} ellipsizeMode="middle">
@@ -575,7 +575,7 @@ export function Voice({ id, file }: { id: string; file: FileRef }) {
         disabled={!uri}
         onPress={togglePlay}
         style={[styles.voicePlayBtn, { backgroundColor: c.text }]}>
-        <Text style={[styles.voicePlayIcon, { color: c.surface }]}>{playing ? '❚❚' : '▶'}</Text>
+        <MaterialIcons name={playing ? 'pause' : 'play-arrow'} size={18} color={c.surface} />
       </Pressable>
       <View style={styles.waveform} testID="voice-waveform">
         {bars.map((amp, i) => {
@@ -608,6 +608,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
     backgroundColor: 'rgba(0, 0, 0, 0.56)',
     borderRadius: 10,
     paddingHorizontal: 7,
@@ -625,7 +628,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  videoSpeakerText: { color: '#ffffff', fontSize: 12 },
   image: { width: '100%', height: '100%' },
   note: { fontSize: 14, paddingVertical: 4 },
   // A fixed width: inside a bubble that shrinks to its content, flex: 1 alone collapses the text.
@@ -638,8 +640,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  filePdfText: { color: '#ffffff', fontSize: 11, fontWeight: '700' },
-  fileDocGlyph: { fontSize: 20 },
   fileMeta: { flex: 1, minWidth: 0, gap: 1 },
   fileName: { fontSize: 14, fontWeight: '600' },
   fileSub: { fontSize: 12 },
@@ -652,7 +652,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  voicePlayIcon: { fontSize: 11, fontWeight: '700' },
   waveform: { flexDirection: 'row', alignItems: 'center', gap: 2, height: 24 },
   waveBar: { width: 2, borderRadius: 1 },
   voiceDuration: { fontSize: 12, flexShrink: 0 },
@@ -678,7 +677,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  viewerCloseText: { color: '#ffffff', fontSize: 26, lineHeight: 28 },
   fullImageWrap: {
     flex: 1,
     width: '100%',

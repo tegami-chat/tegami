@@ -1,6 +1,7 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, router, useIsFocused, useLocalSearchParams, type Href } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
@@ -669,7 +670,7 @@ export default function Chat() {
             aria-label="戻る"
             style={s.headerIconBtn}
             onPress={() => (router.canGoBack() ? router.back() : router.replace('/' as Href))}>
-            <Text style={s.backText}>＜</Text>
+            <MaterialIcons name="chevron-left" size={24} color={c.text} />
           </Pressable>
           <Text style={s.headerTitle} numberOfLines={1} testID="chat-title">
             {title}
@@ -678,7 +679,7 @@ export default function Chat() {
             <View style={s.headerActions}>
               {canCall && (
                 <Pressable role="button" aria-label="音声通話" style={s.headerIconBtn} onPress={() => startCall(peer, false)}>
-                  <Text style={s.headerIcon}>☎︎</Text>
+                  <MaterialIcons name="call" size={24} color={c.text} />
                 </Pressable>
               )}
               <Pressable
@@ -686,7 +687,7 @@ export default function Chat() {
                 aria-label="メニュー"
                 style={s.headerIconBtn}
                 onPress={() => router.push(`/chat/${encodeURIComponent(peer)}/info` as Href)}>
-                <Text style={s.headerIcon}>☰</Text>
+                <MaterialIcons name="menu" size={24} color={c.text} />
               </Pressable>
             </View>
           )}
@@ -766,13 +767,13 @@ export default function Chat() {
             // Only a long press or a right click opens it (as LINE): opening on hover pushed the
             // bubble up under the mouse, so the next click landed on a cell.
             const showMenu = pressed === item.id;
-            const menuCells: { label: string; icon: string; onPress: () => void }[] = [
-              ...(!item.file ? [{ label: 'コピー', icon: '⎘', onPress: () => void copyMessage(item) }] : []),
-              { label: 'リプライ', icon: '↩', onPress: () => startReply(item) },
-              { label: '転送', icon: '↪', onPress: () => startForward(item) },
+            const menuCells: { label: string; icon: ComponentProps<typeof MaterialIcons>['name']; onPress: () => void }[] = [
+              ...(!item.file ? [{ label: 'コピー', icon: 'content-copy' as const, onPress: () => void copyMessage(item) }] : []),
+              { label: 'リプライ', icon: 'reply', onPress: () => startReply(item) },
+              { label: '転送', icon: 'forward', onPress: () => startForward(item) },
               {
                 label: '削除',
-                icon: '✕',
+                icon: 'delete',
                 onPress: () => {
                   setPressed(null);
                   setHovered(null);
@@ -783,7 +784,7 @@ export default function Chat() {
                 ? [
                     {
                       label: '通報',
-                      icon: '!',
+                      icon: 'report' as const,
                       onPress: () => {
                         setPressed(null);
                         setHovered(null);
@@ -815,7 +816,7 @@ export default function Chat() {
                     }}
                     onHoverIn={() => hoverIn(item.id)}
                     onHoverOut={() => hoverOut(item.id)}>
-                    <Text style={s.panelIcon}>{cell.icon}</Text>
+                    <MaterialIcons name={cell.icon} size={22} color="#ffffff" />
                     <Text style={s.panelLabel}>{cell.label}</Text>
                   </Pressable>
                 ))}
@@ -939,7 +940,11 @@ export default function Chat() {
                         style={[s.swipeReplyIcon, swipeDx > SWIPE_REPLY_PX && s.swipeReplyIconReady]}
                         testID="swipe-reply-icon"
                         aria-label="リプライ">
-                        <Text style={s.swipeReplyGlyph}>↩</Text>
+                        <MaterialIcons
+                          name="reply"
+                          size={18}
+                          color={swipeDx > SWIPE_REPLY_PX ? c.onAccent : c.text}
+                        />
                       </View>
                     )}
                     <Pressable
@@ -997,7 +1002,7 @@ export default function Chat() {
                 <View style={s.cautionWrap}>
                   <View style={s.cautionCard} testID="caution-card" aria-hidden={!!(pressed || hovered)}>
                     <View style={s.cautionHeader}>
-                      <Text style={s.cautionIcon}>⚠︎</Text>
+                      <MaterialIcons name="warning" size={20} color={c.danger} />
                       <Text style={s.cautionTitle}>お金やリンクの話に注意してください</Text>
                     </View>
                     <Text style={s.cautionBody}>
@@ -1072,7 +1077,7 @@ export default function Chat() {
                   </Text>
                 </View>
                 <Pressable role="button" aria-label="キャンセル" style={s.replyClose} onPress={() => setReplying(null)}>
-                  <Text style={s.replyCloseText}>×</Text>
+                  <MaterialIcons name="close" size={24} color={c.muted} />
                 </Pressable>
               </View>
             )}
@@ -1086,7 +1091,7 @@ export default function Chat() {
                   style={[s.plusItem, sending && s.disabled]}
                   onPress={pickFile}>
                   <View style={s.plusIcon}>
-                    <Text style={s.plusGlyph}>📄︎</Text>
+                    <MaterialIcons name="description" size={24} color={c.text} />
                   </View>
                   <Text style={s.plusLabel}>ファイル</Text>
                 </Pressable>
@@ -1101,7 +1106,7 @@ export default function Chat() {
                     aria-label="閉じる"
                     style={s.recordCloseBtn}
                     onPress={cancelRecording}>
-                    <Text style={s.recordCloseText}>×</Text>
+                    <MaterialIcons name="close" size={24} color={c.muted} />
                   </Pressable>
                 </View>
                 {!recording && !recorded ? (
@@ -1114,7 +1119,7 @@ export default function Chat() {
                         disabled={sending}
                         style={[s.recordBigBtn, s.recordStartBtn, sending && s.disabled]}
                         onPress={startRecording}>
-                        <View style={s.recordStartDot} />
+                        <MaterialIcons name="fiber-manual-record" size={28} color="#ffffff" />
                       </Pressable>
                     </View>
                   </>
@@ -1127,14 +1132,14 @@ export default function Chat() {
                         aria-label="削除"
                         style={s.recordSideBtn}
                         onPress={cancelRecording}>
-                        <Text style={s.recordSideIcon}>🗑︎</Text>
+                        <MaterialIcons name="delete" size={24} color={c.text} />
                       </Pressable>
                       <Pressable
                         role="button"
                         aria-label="停止"
                         style={[s.recordBigBtn, s.recordStopBtn]}
                         onPress={stopRecordingToPreview}>
-                        <View style={s.recordStopSquare} />
+                        <MaterialIcons name="stop" size={28} color="#ffffff" />
                       </Pressable>
                       <Pressable
                         role="button"
@@ -1142,7 +1147,7 @@ export default function Chat() {
                         disabled={sending}
                         style={[s.recordSendBtn, sending && s.disabled]}
                         onPress={finishRecording}>
-                        <Text style={s.sendBtnIcon}>➤</Text>
+                        <MaterialIcons name="send" size={24} color={c.onAccent} />
                       </Pressable>
                     </View>
                   </>
@@ -1165,14 +1170,14 @@ export default function Chat() {
                         aria-label="削除"
                         style={s.recordSideBtn}
                         onPress={cancelRecording}>
-                        <Text style={s.recordSideIcon}>🗑︎</Text>
+                        <MaterialIcons name="delete" size={24} color={c.text} />
                       </Pressable>
                       <Pressable
                         role="button"
                         aria-label={previewPlaying ? '一時停止' : '再生'}
                         style={[s.recordBigBtn, s.recordPlayBtn]}
                         onPress={togglePreview}>
-                        <Text style={s.recordPlayIcon}>{previewPlaying ? '❚❚' : '▶'}</Text>
+                        <MaterialIcons name={previewPlaying ? 'pause' : 'play-arrow'} size={28} color={c.surface} />
                       </Pressable>
                       <Pressable
                         role="button"
@@ -1180,7 +1185,7 @@ export default function Chat() {
                         disabled={sending}
                         style={[s.recordSendBtn, sending && s.disabled]}
                         onPress={finishRecording}>
-                        <Text style={s.sendBtnIcon}>➤</Text>
+                        <MaterialIcons name="send" size={24} color={c.onAccent} />
                       </Pressable>
                     </View>
                   </>
@@ -1198,7 +1203,7 @@ export default function Chat() {
                     setStampsOpen(false);
                     setStampDeleting(null);
                   }}>
-                  <Text style={s.barIconText}>＋</Text>
+                  <MaterialIcons name="add" size={24} color={c.muted} />
                 </Pressable>
                 <Pressable
                   role="button"
@@ -1206,7 +1211,7 @@ export default function Chat() {
                   disabled={sending}
                   style={[s.barIconBtn, sending && s.disabled]}
                   onPress={takePhoto}>
-                  <Text style={s.barIconText}>📷︎</Text>
+                  <MaterialIcons name="photo-camera" size={24} color={c.muted} />
                 </Pressable>
                 <Pressable
                   role="button"
@@ -1214,7 +1219,7 @@ export default function Chat() {
                   disabled={sending}
                   style={[s.barIconBtn, sending && s.disabled]}
                   onPress={pickPhoto}>
-                  <Text style={s.barIconText}>🖼︎</Text>
+                  <MaterialIcons name="image" size={24} color={c.muted} />
                 </Pressable>
                 <View style={s.inputWrap}>
                   <TextInput
@@ -1244,7 +1249,7 @@ export default function Chat() {
                       setPlusOpen(false);
                       setStampDeleting(null);
                     }}>
-                    <Text style={s.stampTriggerIcon}>☺︎</Text>
+                    <MaterialIcons name="insert-emoticon" size={24} color={c.muted} />
                   </Pressable>
                 </View>
                 {draft.trim().length > 0 ? (
@@ -1254,7 +1259,7 @@ export default function Chat() {
                     disabled={sending}
                     style={[s.sendBtn, sending && s.disabled]}
                     onPress={submit}>
-                    <Text style={s.sendBtnIcon}>➤</Text>
+                    <MaterialIcons name="send" size={24} color={c.onAccent} />
                   </Pressable>
                 ) : (
                   <Pressable
@@ -1263,7 +1268,7 @@ export default function Chat() {
                     disabled={sending}
                     style={[s.barIconBtn, sending && s.disabled]}
                     onPress={openRecordPanel}>
-                    <Text style={s.barIconText}>🎙︎</Text>
+                    <MaterialIcons name="mic" size={24} color={c.muted} />
                   </Pressable>
                 )}
               </View>
@@ -1413,11 +1418,6 @@ const styles = (c: Palette) =>
       justifyContent: 'center',
       flexShrink: 0,
     },
-    backText: {
-      fontSize: 20,
-      color: c.text,
-      fontWeight: '600',
-    },
     headerTitle: {
       flex: 1,
       minWidth: 0,
@@ -1430,10 +1430,6 @@ const styles = (c: Palette) =>
       flexDirection: 'row',
       alignItems: 'center',
       flexShrink: 0,
-    },
-    headerIcon: {
-      fontSize: 20,
-      color: c.text,
     },
     list: { padding: 12, gap: 8 },
     itemWrap: { width: '100%', gap: 4 },
@@ -1459,11 +1455,6 @@ const styles = (c: Palette) =>
       borderColor: c.accent,
       opacity: 1,
     },
-    swipeReplyGlyph: {
-      fontSize: 15,
-      color: c.text,
-      fontWeight: '700',
-    },
     row: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '80%' },
     rowMine: { alignSelf: 'flex-end', justifyContent: 'flex-end' },
     rowTheirs: { alignSelf: 'flex-start' },
@@ -1483,7 +1474,7 @@ const styles = (c: Palette) =>
       flexDirection: 'row',
       flexWrap: 'wrap',
       maxWidth: 268,
-      backgroundColor: '#23211e',
+      backgroundColor: '#1b211d',
       borderRadius: 12,
       padding: 6,
       zIndex: 50,
@@ -1503,18 +1494,14 @@ const styles = (c: Palette) =>
       paddingHorizontal: 2,
       gap: 2,
     },
-    panelIcon: {
-      fontSize: 16,
-      color: '#ece8e1',
-    },
     panelLabel: {
       fontSize: 11,
-      color: '#ece8e1',
+      color: '#ffffff',
       fontWeight: '600',
     },
     copiedToast: {
       alignSelf: 'center',
-      backgroundColor: '#23211e',
+      backgroundColor: '#1b211d',
       borderRadius: 16,
       paddingHorizontal: 14,
       paddingVertical: 6,
@@ -1522,7 +1509,7 @@ const styles = (c: Palette) =>
     },
     copiedText: {
       fontSize: 13,
-      color: '#ece8e1',
+      color: '#ffffff',
       fontWeight: '600',
     },
     quote: { borderLeftWidth: 3, borderLeftColor: c.accent, paddingLeft: 8, marginBottom: 4, maxWidth: 260 },
@@ -1540,7 +1527,6 @@ const styles = (c: Palette) =>
     },
     replyBody: { flex: 1 },
     replyClose: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-    replyCloseText: { fontSize: 18, color: c.muted },
     text: { fontSize: 16, color: c.text, lineHeight: 22 },
     author: { fontSize: 12, color: c.accent, fontWeight: '600', marginBottom: 2 },
     time: { fontSize: 11, color: c.muted, alignSelf: 'flex-end', marginTop: 2 },
@@ -1629,11 +1615,6 @@ const styles = (c: Palette) =>
       alignItems: 'center',
       gap: 8,
     },
-    cautionIcon: {
-      fontSize: 18,
-      color: c.danger,
-      fontWeight: '700',
-    },
     cautionTitle: {
       flex: 1,
       fontSize: 15,
@@ -1698,10 +1679,6 @@ const styles = (c: Palette) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    plusGlyph: {
-      fontSize: 20,
-      color: c.text,
-    },
     plusLabel: {
       fontSize: 12,
       color: c.text,
@@ -1722,10 +1699,6 @@ const styles = (c: Palette) =>
       alignItems: 'center',
       justifyContent: 'center',
       flexShrink: 0,
-    },
-    barIconText: {
-      fontSize: 20,
-      color: c.muted,
     },
     inputWrap: {
       flex: 1,
@@ -1757,10 +1730,6 @@ const styles = (c: Palette) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    stampTriggerIcon: {
-      fontSize: 20,
-      color: c.muted,
-    },
     sendBtn: {
       width: 44,
       height: 44,
@@ -1769,11 +1738,6 @@ const styles = (c: Palette) =>
       alignItems: 'center',
       justifyContent: 'center',
       flexShrink: 0,
-    },
-    sendBtnIcon: {
-      fontSize: 18,
-      color: c.onAccent,
-      fontWeight: '700',
     },
     recordPanel: {
       borderTopWidth: StyleSheet.hairlineWidth,
@@ -1797,11 +1761,6 @@ const styles = (c: Palette) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    recordCloseText: {
-      fontSize: 22,
-      color: c.muted,
-      lineHeight: 24,
-    },
     recordHint: {
       fontSize: 14,
       color: c.muted,
@@ -1810,7 +1769,7 @@ const styles = (c: Palette) =>
     recordElapsed: {
       fontSize: 20,
       fontWeight: '700',
-      color: '#2f8f5b',
+      color: c.accent,
       textAlign: 'center',
     },
     recordStoppedTime: {
@@ -1835,28 +1794,11 @@ const styles = (c: Palette) =>
     recordStartBtn: {
       backgroundColor: c.danger,
     },
-    recordStartDot: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      backgroundColor: '#ffffff',
-    },
     recordStopBtn: {
       backgroundColor: c.danger,
     },
-    recordStopSquare: {
-      width: 22,
-      height: 22,
-      borderRadius: 4,
-      backgroundColor: '#ffffff',
-    },
     recordPlayBtn: {
       backgroundColor: c.text,
-    },
-    recordPlayIcon: {
-      fontSize: 22,
-      color: c.surface,
-      fontWeight: '700',
     },
     recordSideBtn: {
       width: 48,
@@ -1867,10 +1809,6 @@ const styles = (c: Palette) =>
       borderColor: c.line,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    recordSideIcon: {
-      fontSize: 20,
-      color: c.text,
     },
     recordSendBtn: {
       width: 48,
