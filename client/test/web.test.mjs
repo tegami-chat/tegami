@@ -153,8 +153,7 @@ async function newUser(browser, { prf = true, wrap = {}, authenticator = true } 
   await cdp.send('WebAuthn.enable');
   let authenticatorId = null;
   if (authenticator) ({ authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { ...AUTH, hasPrf: prf } }));
-  page.on('pageerror', (e) => console.log('    page error:', e.message));
-  await page.goto(ORIGIN + '/');
+  page.on('pageerror', (e) => console.log('    page error:', e.message));  await page.goto(ORIGIN + '/');
   return { context, page, cdp, authenticatorId };
 }
 
@@ -817,6 +816,74 @@ async function main() {
       await button(c.page, 'はじめる').click();
       await button(c.page, 'パスキーを使わずに始める').click();
       await waitOpen(c.page);
+      for (const u of [a, a2, b, c]) await u.context.close();
+    });
+
+    await test('Own devices: the link brings messages older than 30 days; friends, groups and blocks changed on one device reach the other', async () => {
+      const a = await person(browser, 'えー');
+      const b = await person(browser, 'びー');
+      const c = await person(browser, 'しー');
+      await befriend(a, b);
+      // A message from 60 days ago: the relay keeps only 30 days, so only A has it.
+      const oldAt = Math.floor(Date.now() / 1000) - 60 * 86400;
+      await a.page.evaluate(
+        ({ peer, at }) => {
+          const list = JSON.parse(localStorage.getItem('tegami.messages') || '[]');
+          list.unshift({ id: '9'.repeat(64), from: peer, peer, text: '六十日前の手紙', at, got: at * 1000 });
+          localStorage.setItem('tegami.messages', JSON.stringify(list));
+        },
+        { peer: b.hex, at: oldAt },
+      );
+      await a.page.goto(ORIGIN + '/settings');
+      await waitText(a.page, '別の端末でも使う');
+      await a.page.getByText('別の端末でも使う').click();
+      await waitText(a.page, 'まで使えます');
+      const moveLink = (await text(a.page)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)?.[0];
+      assert(moveLink, 'no moving link');
+      const a2 = await newUser(browser, { prf: false });
+      await a2.page.goto(moveLink);
+      await button(a2.page, 'この端末で使う').click();
+      await button(a2.page, 'パスキーを使わずに始める').click();
+      await waitOpen(a2.page);
+      await a2.page.getByText('びー').first().click();
+      await waitText(a2.page, '六十日前の手紙');
+      // The relay never had it: it came in the history file, once.
+      const files = await a2.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages') || '[]').filter((m) => m.text === '六十日前の手紙').length);
+      assert(files === 1, `the old message is there ${files} times`);
+
+      // A2 adds C as a friend: A, still open, gets C too.
+      await befriend(a2, c);
+      await a.page.goto(ORIGIN + '/');
+      await button(a.page, '友だち').click();
+      await waitText(a.page, 'しー');
+      const contactsOf = (p) => p.evaluate(() => JSON.parse(localStorage.getItem('tegami.contacts') || '[]').map((x) => x.name).sort().join(','));
+      assert((await contactsOf(a.page)) === 'しー,びー', `A's friends: ${await contactsOf(a.page)}`);
+
+      // A2 makes a group with B and C: it shows on A.
+      await a2.page.goto(ORIGIN + '/');
+      await button(a2.page, '友だち').click();
+      await a2.page.getByText('グループを作る').click();
+      await a2.page.getByPlaceholder('グループの名前').fill('いつもの三人');
+      await a2.page.getByRole('checkbox', { name: 'びー' }).click();
+      await a2.page.getByRole('checkbox', { name: 'しー' }).click();
+      await button(a2.page, '作る').click();
+      await a.page.waitForFunction(() => JSON.parse(localStorage.getItem('tegami.groups') || '[]').some((g) => g.name === 'いつもの三人'), null, { timeout: 15000 });
+
+      // A blocks C: A2 has C blocked too. A2 unblocks: A lets C back.
+      await a.page.goto(`${ORIGIN}/chat/${c.hex}`);
+      await button(a.page, 'メニュー').click();
+      await waitText(a.page, 'ビデオ通話');
+      await button(a.page, 'ブロック').click();
+      await waitText(a.page, 'しーをブロックしますか？');
+      await button(a.page, 'ブロック').click();
+      await button(infoArea(a.page), 'ブロック解除').waitFor();
+      const blockedOn = (p, hex) => p.waitForFunction((h) => JSON.parse(localStorage.getItem('tegami.blocked') || '[]').includes(h), hex, { timeout: 15000 });
+      const notBlockedOn = (p, hex) => p.waitForFunction((h) => !JSON.parse(localStorage.getItem('tegami.blocked') || '[]').includes(h), hex, { timeout: 15000 });
+      await blockedOn(a2.page, c.hex);
+      await openSettings(a2.page);
+      await waitText(a2.page, 'ブロックリスト');
+      await button(a2.page, 'ブロック解除').click();
+      await notBlockedOn(a.page, c.hex);
       for (const u of [a, a2, b, c]) await u.context.close();
     });
 

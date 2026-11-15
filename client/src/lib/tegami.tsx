@@ -16,6 +16,22 @@ import { MAX_FILE_BYTES, deleteStampFile, encryptAndUpload, fileFromRumor, fileT
 import { backoff, loadOutbox, publishOne, saveOutbox, type Outgoing } from './outbox';
 import { k, load, remove, save } from './storage';
 import { replaceAiPermissions, useAiPermissions } from './ai-permissions';
+import { downloadHistory, uploadHistory } from './history';
+import {
+  ACCOUNT_SYNC_KIND,
+  SYNC_RESEND_SECONDS,
+  cleanEntries,
+  ledgerForBundle,
+  materialize,
+  merge,
+  readSyncPart,
+  stamp,
+  stampAll,
+  syncParts,
+  type AccountLists,
+  type Ledger,
+  type Section,
+} from './own-sync';
 import { bundleSecret, cleanStamps, sendTransfer, type Bundle } from './transfer';
 import { disablePush, enablePush, refreshPush, type PushState } from './push';
 import { SIGNAL_KIND, freshSignal, wrapQuiet, wrapSignal } from './signal';
@@ -402,6 +418,10 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const authRef = useRef<((t: EventTemplate) => Promise<ReturnType<typeof finalizeEvent>>) | null>(null);
   const outbox = useRef<Outgoing[]>([]);
   const flushRef = useRef<() => Promise<void>>(async () => {});
+  // When each friend, group, block and AI switch last changed on any of my devices (lib/own-sync.ts).
+  const ledgerRef = useRef<Ledger | null>(null);
+  // A ledger from my other device: applied by the code below the receiving effect.
+  const applySyncRef = useRef<(remote: Ledger) => void>(() => {});
 
   useEffect(() => {
     let alive = true;
@@ -462,6 +482,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
         }),
       );
       setReadAt(load<Record<string, number>>(k('readAt'), {}));
+      ledgerRef.current = load<Ledger | null>(k('sync'), null);
       clearedRef.current = load<Record<string, number>>(k('cleared'), {});
       setShowUnreadState(load<boolean>(k('showUnread'), true));
       // Accounts made before unread counts existed: what is already here counts as read.
@@ -688,6 +709,13 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
             for (const st of list) void openFile(`stamp:${st.sha256}`, st).catch(() => {});
             return;
           }
+          if (rumor.kind === ACCOUNT_SYNC_KIND) {
+            // My friends, groups, blocks and AI switches from my other device: merged entry by entry.
+            if (rumor.pubkey !== me) return;
+            const remote = readSyncPart(rumor.content);
+            if (remote) applySyncRef.current(remote);
+            return;
+          }
           if (rumor.kind === PROFILE_KIND) {
             if (!contactsRef.current.some((c) => c.pubkey === rumor.pubkey)) return;
             if (rumor.created_at < (profileAt.current.get(rumor.pubkey) ?? 0)) return;
@@ -872,6 +900,11 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const forgetRecovery = useCallback(() => {
     clearLocal();
     setRecoveryOn(false);
+    // Nothing of an earlier account on this browser is synced either.
+    ledgerRef.current = null;
+    remove(k('sync'));
+    remove(k('syncSent'));
+    remove(k('historyPending'));
   }, []);
 
   // An account restored with a recovery code keeps recovery on with the same code.
@@ -896,6 +929,15 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     blockedRef.current = moved.blocked ?? [];
     setBlocked(moved.blocked ?? []);
     replaceAiPermissions(moved.ai);
+    // When each item last changed, so later changes on my other devices merge in correctly.
+    // Without it (an older version), what came along counts as the oldest state.
+    ledgerRef.current = moved.sync ? cleanEntries(moved.sync) : null;
+    if (ledgerRef.current) save(k('sync'), ledgerRef.current);
+    else remove(k('sync'));
+    remove(k('syncSent'));
+    // Every message of the old device, fetched once the account is open (lib/history.ts).
+    if (moved.history?.length) save(k('historyPending'), moved.history);
+    else remove(k('historyPending'));
     const keys = takeRestoredKeys();
     if (keys) {
       await saveLocal(sk, { keys, stale: [] });
@@ -949,7 +991,23 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     if (!secret || !pool.current || !authRef.current) throw new Error('not open');
     // Stamps from before the stamp storage are moved there first, so the new device can fetch them.
     const fresh = await keepStampsRef.current();
-    const bundle: Bundle = { v: 1, secretHex: bytesToHex(secret), myName, contacts, groups, blocked, ai: aiPermissions, stamps: fresh };
+    // Every message here, not only the relay's last 30 days. When the upload fails, the account still moves.
+    const history = await uploadHistory(
+      { messages: messagesRef.current, cleared: clearedRef.current, deleted: [...deletedRef.current] },
+      secret,
+    ).catch(() => []);
+    const bundle: Bundle = {
+      v: 1,
+      secretHex: bytesToHex(secret),
+      myName,
+      contacts,
+      groups,
+      blocked,
+      ai: aiPermissions,
+      stamps: fresh,
+      sync: ledgerForBundle(ledgerRef.current),
+      ...(history.length ? { history } : {}),
+    };
     return sendTransfer(pool.current, RELAYS, authRef.current, bundle, globalThis.location?.origin ?? APP_ORIGIN);
   }, [secret, myName, contacts, groups, blocked, aiPermissions]);
 
@@ -1660,6 +1718,117 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     [secret],
   );
 
+  // ---------- my own devices in step (lib/own-sync.ts) ----------
+  const aiPermissionsRef = useRef(aiPermissions);
+  aiPermissionsRef.current = aiPermissions;
+  const listsNow = useCallback(
+    (): AccountLists => ({ contacts: contactsRef.current, groups: groupsRef.current, blocked: blockedRef.current, ai: aiPermissionsRef.current }),
+    [],
+  );
+  const syncTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  /** Sends my ledger to my own key, unless the same ledger went out less than 20 days ago. */
+  const sendSync = useCallback(async () => {
+    if (!secret || !me || !pool.current || !ledgerRef.current) return;
+    const parts = syncParts(ledgerRef.current);
+    const hash = parts.join('\n');
+    const sent = load<{ hash: string; time: number } | null>(k('syncSent'), null);
+    const now = Math.floor(Date.now() / 1000);
+    if (sent?.hash === hash && now - sent.time < SYNC_RESEND_SECONDS) return;
+    for (const content of parts) {
+      const rumor = nip59.createRumor({ kind: ACCOUNT_SYNC_KIND, content, tags: [['p', me]], created_at: now }, secret);
+      if (!(await publishOne(pool.current, RELAYS, wrapQuiet(rumor, secret, me), authRef.current ?? undefined))) return;
+    }
+    save(k('syncSent'), { hash, time: now });
+  }, [secret, me]);
+  const sendSyncRef = useRef(sendSync);
+  sendSyncRef.current = sendSync;
+  /** Sends a moment later, so several changes (or several envelopes merged at the start) go out once. */
+  const scheduleSync = useCallback(() => {
+    clearTimeout(syncTimer.current);
+    syncTimer.current = setTimeout(() => void sendSyncRef.current().catch(() => {}), 1500);
+  }, []);
+  useEffect(() => () => clearTimeout(syncTimer.current), []);
+
+  /** Writes a change made on this device in one section into the ledger. */
+  const stampSection = useCallback(
+    (section: Section, lists: AccountLists) => {
+      if (!loaded || !secret) return;
+      const r = stamp(ledgerRef.current, section, lists, Date.now());
+      if (r.changed) {
+        ledgerRef.current = r.ledger;
+        save(k('sync'), r.ledger);
+      }
+      scheduleSync();
+    },
+    [loaded, secret, scheduleSync],
+  );
+  // One effect per section: a render that already has the other device's AI switches but not
+  // yet its friends must not write the old friends back as a change made here.
+  useEffect(() => stampSection('c', { ...listsNow(), contacts }), [contacts, stampSection, listsNow]);
+  useEffect(() => stampSection('g', { ...listsNow(), groups }), [groups, stampSection, listsNow]);
+  useEffect(() => stampSection('b', { ...listsNow(), blocked }), [blocked, stampSection, listsNow]);
+  useEffect(() => stampSection('a', { ...listsNow(), ai: aiPermissions }), [aiPermissions, stampSection, listsNow]);
+
+  applySyncRef.current = (remote: Ledger) => {
+    if (!loaded || !secret) return;
+    const current = listsNow();
+    // What is here first goes into the ledger, so nothing here is lost by the merge.
+    const { ledger, changed } = merge(stampAll(ledgerRef.current, current, Date.now()), remote);
+    ledgerRef.current = ledger;
+    save(k('sync'), ledger);
+    if (changed.size) {
+      const next = materialize(ledger, current);
+      if (changed.has('c')) {
+        for (const c of current.contacts)
+          if (c.avatar?.sha256 && !next.contacts.some((n) => n.pubkey === c.pubkey)) void forgetFile(`avatar:${c.avatar.sha256}`);
+        contactsRef.current = next.contacts;
+        save(k('contacts'), next.contacts);
+        setContacts(next.contacts);
+      }
+      if (changed.has('g')) {
+        groupsRef.current = next.groups;
+        save(k('groups'), next.groups);
+        setGroups(next.groups);
+      }
+      if (changed.has('b')) {
+        blockedRef.current = next.blocked;
+        save(k('blocked'), next.blocked);
+        setBlocked(next.blocked);
+      }
+      if (changed.has('a')) replaceAiPermissions(next.ai);
+    }
+    scheduleSync();
+  };
+
+  // Every message of the old device, after moving here with a link (lib/history.ts).
+  useEffect(() => {
+    if (!secret || !me) return;
+    const refs = load<FileRef[]>(k('historyPending'), []);
+    if (!refs.length) return;
+    let alive = true;
+    void (async () => {
+      const h = await downloadHistory(refs);      if (!alive) return;
+      remove(k('historyPending'));
+      for (const [room, at] of Object.entries(h.cleared)) clearedRef.current[room] = Math.max(clearedRef.current[room] ?? 0, at);
+      save(k('cleared'), clearedRef.current);
+      const deleted = [...new Set([...deletedRef.current, ...h.deleted])].slice(-MAX_DELETED_IDS);
+      deletedRef.current = new Set(deleted);
+      save(k('deleted'), deleted);
+      const gone = (m: Message) => deletedRef.current.has(m.id) || m.at <= (clearedRef.current[m.peer] ?? 0);
+      setMessages((prev) => {
+        const have = new Set(prev.map((m) => m.id));
+        const next = [...prev.filter((m) => m.pending || !gone(m)), ...h.messages.filter((m) => !have.has(m.id) && !gone(m))].sort((a, b) => a.at - b.at);
+        messagesRef.current = next;
+        save(k('messages'), next);
+        return next;
+      });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [secret, me]);
+
   // ---------- recovery code ----------
   // Every relay call for recovery runs one after another, so turning it off cannot be
   // overtaken by a refresh that is still uploading.
@@ -1683,7 +1852,17 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
   const currentBundle = useCallback(
-    (sk: Uint8Array): Bundle => ({ v: 1, secretHex: bytesToHex(sk), myName, contacts, groups, blocked, ai: aiPermissions, stamps }),
+    (sk: Uint8Array): Bundle => ({
+      v: 1,
+      secretHex: bytesToHex(sk),
+      myName,
+      contacts,
+      groups,
+      blocked,
+      ai: aiPermissions,
+      stamps,
+      sync: ledgerForBundle(ledgerRef.current),
+    }),
     [myName, contacts, groups, blocked, aiPermissions, stamps],
   );
 
