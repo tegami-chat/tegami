@@ -494,6 +494,8 @@ export class Relay extends DurableObject<Env> {
     const servers = await makeTurnCredentials(this.env, api);
     if (!servers) return fail(502, 'turn-unavailable');
     return Response.json({ iceServers: servers, ttl: TURN_TTL }, { headers: { ...CORS, 'Cache-Control': 'no-store' } });
+  }
+
   // Deleting: per address, 10 at once, then one a minute.
   deleteRate = new Buckets(10, 1 / 60);
 
