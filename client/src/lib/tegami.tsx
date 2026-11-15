@@ -23,6 +23,7 @@ import { BackupGoneError, type BackupRef, clearLocal, deleteBackup, deriveKeys, 
 import { createVault, unlockVault, type Vault } from './vault';
 import { TURNSTILE_SITEKEY, askRelay, forgetInviteCode, keptInviteCode, type Registration } from './register';
 import { signedFetch } from './relay-http';
+import { GROUP_KIND, GROUP_TAG, acceptsMessage, applyGroupState, canManage, changeText, earlierJoin, everyone, gidOf, groupRoom, groupTagOf, newGid, parseGroupState, stateOf, type GroupMode, type GroupOp } from './groups';
 
 // Tegami relays. In development: the relay in app/relay started with `npm run dev`.
 export const RELAYS = (process.env.EXPO_PUBLIC_TEGAMI_RELAYS ?? 'wss://relay.tegami.chat').split(',');
@@ -47,6 +48,8 @@ export type Message = {
   pending?: 'sending' | 'unsent';
   /** The id of the message this one replies to (NIP-17 `e` tag). It may not be on this device. */
   replyTo?: string;
+  /** A line about a change to the group (someone added, the name changed). text holds it. */
+  notice?: true;
 };
 
 /** done: we talked. missed: they called, I did not answer. unanswered: I called, no answer. */
@@ -78,15 +81,37 @@ export const STAMPS_KIND = 10101;
 /** How many recently used stamps the stamp panel shows first. */
 export const RECENT_STAMPS = 8;
 
-/** A group chat (NIP-17): a fixed set of people. A different set is a different chat. */
-export type Group = { id: string; name: string; members: string[] };
+/**
+ * A group chat. members: the other people in it (not me). Without gid it is a NIP-17 group: a
+ * fixed set of people (id = their keys), and a different set is a different chat. With gid it is
+ * a Tegami group (id = `g-<gid>`) that stays the same chat when members change (lib/groups.ts).
+ */
+export type Group = {
+  id: string;
+  name: string;
+  members: string[];
+  gid?: string;
+  /** admin: only admins change it. open: any member does (philosophy #86). */
+  mode?: GroupMode;
+  admins?: string[];
+  avatar?: FileRef;
+  /** The time and rumor id of the state I have (the newest wins). */
+  v?: number;
+  vid?: string;
+  /** When I was added: earlier messages are not shown. */
+  since?: number;
+  /** People who were in it and are not any more. */
+  past?: string[];
+  /** I am no longer in it (removed by someone). */
+  left?: true;
+};
 
 /** The chat id for a set of other participants. */
 export function roomOf(members: string[]) {
   return [...new Set(members)].sort().join(',');
 }
 export function isGroup(room: string) {
-  return room.includes(',');
+  return room.includes(',') || gidOf(room) !== null;
 }
 
 // Legacy, unprotected account. Moved into a device vault on first load;
@@ -120,7 +145,7 @@ export function reportMessagesFor(all: Message[], pubkey: string, messageId?: st
   // message (a group). Other chats the person is in are not the reporter's to hand over.
   const target = messageId ? all.find((m) => m.id === messageId) : undefined;
   const room = target?.peer ?? pubkey;
-  const theirTexts = all.filter((m) => m.peer === room && m.from === pubkey && !m.file && !m.call && m.text);
+  const theirTexts = all.filter((m) => m.peer === room && m.from === pubkey && !m.file && !m.call && !m.notice && m.text);
   if (!target) return theirTexts.slice(-REPORT_MESSAGES);
   const idx = theirTexts.findIndex((m) => m.id === messageId);
   if (idx >= 0) return theirTexts.slice(Math.max(0, idx - 9), idx + 10);
@@ -149,8 +174,23 @@ type TegamiState = {
   messages: Message[];
   /** Deletes one message on this device only and remembers its id so the relay replay skips it. */
   deleteMessage: (id: string) => void;
-  /** Makes a group with these contacts and returns its chat id. */
-  createGroup: (name: string, members: string[]) => string;
+  /**
+   * Makes a group with these contacts and returns its chat id. With admin, only admins (me at
+   * first) may change who is in it; otherwise anyone in it may (philosophy #86).
+   */
+  createGroup: (name: string, members: string[], admin?: boolean) => string;
+  /** Adds people to a group (lib/groups.ts). They do not get the messages from before. */
+  addGroupMembers: (room: string, pubkeys: string[]) => void;
+  /** Takes someone out of a group. */
+  removeGroupMember: (room: string, pubkey: string) => void;
+  /** Makes someone in a group with admins an admin too. */
+  makeGroupAdmin: (room: string, pubkey: string) => void;
+  /** Changes a group's name. */
+  renameGroup: (room: string, name: string) => void;
+  /** Changes (or with null removes) a group's picture. */
+  setGroupAvatar: (room: string, photo: Blob | null) => Promise<void>;
+  /** Leaves a group: the others are told, and the chat is removed from this device. */
+  leaveGroup: (room: string) => void;
   /** My own name, shared through my invite link. Stays on this device otherwise. */
   myName: string;
   setMyName: (name: string) => void;
@@ -316,7 +356,7 @@ export function personName(pubkey: string, contacts: Contact[]) {
 export function chatName(room: string, contacts: Contact[], groups: Group[]) {
   if (!isGroup(room)) return personName(room, contacts);
   const g = groups.find((x) => x.id === room);
-  return g?.name || room.split(',').map((k) => personName(k, contacts)).join('、');
+  return g?.name || (g ? g.members : room.split(',')).map((k) => personName(k, contacts)).join('、');
 }
 
 /** Chats that are neither a contact nor a group I know, newest first. */
@@ -345,6 +385,7 @@ export function countUnread(
   for (const m of messages) {
     if (m.from === me || m.at < setupAt || skip.has(m.peer)) continue;
     if (m.call && m.call.result !== 'missed') continue;
+    if (m.notice) continue;
     if ((m.got ?? m.at * 1000) <= (readAt[m.peer] ?? 0)) continue;
     out[m.peer] = (out[m.peer] ?? 0) + 1;
   }
@@ -383,6 +424,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const aiPermissions = useAiPermissions();
   const [messages, setMessages] = useState<Message[]>([]);
   const [myName, setMyNameState] = useState('');
+  const myNameRef = useRef('');
+  myNameRef.current = myName;
   const [myAvatar, setMyAvatarState] = useState<FileRef | null>(null);
   const myAvatarRef = useRef<FileRef | null>(null);
   myAvatarRef.current = myAvatar;
@@ -450,7 +493,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       const box = loadOutbox();
       const stored = load<Message[]>(k('messages'), []).filter((m) => !deletedSet.has(m.id));
       const ids = new Set(stored.map((m) => m.id));
-      outbox.current = box.filter((o) => ids.has(o.id));
+      // Leaving a group has no message left on this device (lib/groups.ts), but must still go.
+      outbox.current = box.filter((o) => ids.has(o.id) || o.peer.endsWith('#leave'));
       if (outbox.current.length !== box.length) saveOutbox(outbox.current);
       const waiting = new Set(outbox.current.map((o) => o.id));
       setMessages(
@@ -541,14 +585,11 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     [me, saveGroups],
   );
 
-  const createGroup = useCallback(
-    (name: string, members: string[]) => {
-      const id = roomOf(members);
-      saveGroups((prev) => [...prev.filter((g) => g.id !== id), { id, name: name.trim().slice(0, 60), members: id.split(',') }]);
-      return id;
-    },
-    [saveGroups],
-  );
+  // Group states (lib/groups.ts), handled further down; the receiver calls it through this ref.
+  const takeGroupStateRef = useRef<(rumor: { id: string; pubkey: string; created_at: number; content: string }) => string | null>(() => null);
+  // Messages of a group I do not know yet wait here for its state (envelopes come in any order).
+  const waitingForGroup = useRef(new Map<string, Parameters<typeof nip17.unwrapEvent>[0][]>());
+  const deleteChatRef = useRef<(room: string) => void>(() => {});
 
   // Call signals go to whoever listens (lib/calls.tsx). Each is handled once.
   const signalListeners = useRef(new Set<(s: Signal) => void>());
@@ -657,7 +698,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
           if ((wrap as { tegami_open?: number }).tegami_open === 1 && rumor.pubkey !== me) {
             const known = contactsRef.current.some((c) => c.pubkey === rumor.pubkey);
             const room = roomOf([rumor.pubkey, ...rumor.tags.filter((t) => t[0] === 'p').map((t) => t[1])].filter((x) => x !== me));
-            if (!known && !(isGroup(room) && groupsRef.current.some((g) => g.id === room))) return;
+            const gidHere = groupTagOf(rumor.tags);
+            const inGroup = gidHere ? groupsRef.current.some((g) => g.gid === gidHere) : isGroup(room) && groupsRef.current.some((g) => g.id === room);
+            if (!known && !inGroup && rumor.kind !== GROUP_KIND) return;
           }
           if (rumor.kind === SIGNAL_KIND) {
             // Late envelopes (delivered again after a reconnect) must not ring.
@@ -712,7 +755,28 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
             });
             return;
           }
+          if (rumor.kind === GROUP_KIND) {
+            const room = takeGroupStateRef.current(rumor);
+            // Messages of this group that came before its state.
+            const gid = room ? gidOf(room) : null;
+            const waiting = gid ? waitingForGroup.current.get(gid) : undefined;
+            if (gid && waiting) {
+              waitingForGroup.current.delete(gid);
+              for (const w of waiting) onevent(w);
+            }
+            return;
+          }
           if (rumor.kind !== 14 && rumor.kind !== 15) return;
+          const gid = groupTagOf(rumor.tags);
+          if (gid) {
+            const g = groupsRef.current.find((x) => x.gid === gid);
+            if (!g) {
+              const list = waitingForGroup.current.get(gid) ?? [];
+              if (list.length < 200) waitingForGroup.current.set(gid, [...list, wrap]);
+              return;
+            }
+            if (!acceptsMessage(g, rumor.pubkey, rumor.created_at, me)) return;
+          }
           const file = rumor.kind === 15 ? fileFromRumor(rumor.content, rumor.tags) : undefined;
           if (file === null) return;
           const stamp = file && isStampRumor(rumor.tags) ? true : undefined;
@@ -721,12 +785,12 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
             (k) => /^[0-9a-f]{64}$/.test(k) && k !== me,
           );
           if (!others.length) return;
-          const peer = roomOf(others);
+          const peer = gid ? groupRoom(gid) : roomOf(others);
           // A deleted chat or message: the relay still holds its envelopes for 30 days and hands
           // them out again on the next start. Messages up to the moment of deleting stay gone.
           if (rumor.created_at <= (clearedRef.current[peer] ?? 0) || deletedRef.current.has(rumor.id)) return;
           const replyTo = replyOf(rumor.tags);
-          if (isGroup(peer)) {
+          if (isGroup(peer) && !gid) {
             const subject = rumor.tags.find((t) => t[0] === 'subject')?.[1]?.slice(0, 60);
             rememberGroup(peer, subject, rumor.pubkey);
           }
@@ -1113,10 +1177,13 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       // One rumor with a p tag for everyone in the chat, sealed and wrapped once
       // per person and once for myself, so my other devices see it too.
       // (nip17.wrapManyEvents gives the self copy a different rumor without the p tags.)
-      const members = peer.split(',');
+      const group = groupsRef.current.find((g) => g.id === peer);
+      if (gidOf(peer) && (!group?.gid || group.left)) throw new Error('not in this group');
+      const members = group?.gid ? group.members : peer.split(',');
       const tags = members.map((m) => ['p', m]);
-      const subject = groupsRef.current.find((g) => g.id === peer)?.name;
+      const subject = group?.name;
       if (isGroup(peer) && subject) tags.push(['subject', subject]);
+      if (group?.gid) tags.push([GROUP_TAG, group.gid]);
       tags.push(...extra);
       const rumor = nip59.createRumor({ kind, content, tags, created_at: at }, secret);
       const wraps = [...members, me].map((to) => nip59.createWrap(nip59.createSeal(rumor, secret, to), to));
@@ -1234,6 +1301,153 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       void flush();
     },
     [build, saveBox, addMessage, me, flush],
+  );
+
+  /** Puts one group in my list now (the ref too, so what follows sees it at once). */
+  const putGroup = useCallback(
+    (g: Group) => {
+      const next = [...groupsRef.current.filter((x) => x.id !== g.id), g];
+      groupsRef.current = next;
+      saveGroups(() => next);
+    },
+    [saveGroups],
+  );
+  const groupNameOf = useCallback(
+    (pubkey: string) => (pubkey === me ? myNameRef.current || '自分' : personName(pubkey, contactsRef.current)),
+    [me],
+  );
+  /** Applies a group state rumor (from anyone, me included). Returns the group's chat id when taken. */
+  const takeGroupState = useCallback(
+    (rumor: { id: string; pubkey: string; created_at: number; content: string }, pending?: true): string | null => {
+      if (!me) return null;
+      const st = parseGroupState(rumor.content, validFileRef);
+      if (!st) return null;
+      const room = groupRoom(st.gid);
+      if (rumor.created_at <= (clearedRef.current[room] ?? 0)) return null;
+      const prev = groupsRef.current.find((g) => g.id === room);
+      const isFriend = (pk: string) => contactsRef.current.some((c) => c.pubkey === pk);
+      const done = applyGroupState(prev, st, rumor.pubkey, rumor.created_at, rumor.id, me, isFriend);
+      if (!done) {
+        const since = earlierJoin(prev, st, rumor.pubkey, rumor.created_at, me);
+        if (prev && since !== null) putGroup({ ...prev, since });
+        return null;
+      }
+      putGroup(done.group);
+      if (done.group.avatar) void openFile(`avatar:${done.group.avatar.sha256}`, done.group.avatar).catch(() => {});
+      addMessage({
+        id: rumor.id,
+        from: rumor.pubkey,
+        peer: room,
+        text: changeText(done.change, groupNameOf),
+        at: rumor.created_at,
+        notice: true,
+        ...(pending ? { pending: 'sending' as const } : {}),
+      });
+      return room;
+    },
+    [me, putGroup, addMessage, groupNameOf],
+  );
+  takeGroupStateRef.current = (rumor) => {
+    // My other device left this group: leave here too.
+    const st = rumor.pubkey === me ? parseGroupState(rumor.content, validFileRef) : null;
+    if (st?.op === 'leave') {
+      const g = groupsRef.current.find((x) => x.gid === st.gid);
+      if (g && rumor.created_at > (g.v ?? 0)) {
+        deleteChatRef.current(g.id);
+        groupsRef.current = groupsRef.current.filter((x) => x.id !== g.id);
+        saveGroups((prev) => prev.filter((x) => x.id !== g.id));
+      }
+      return null;
+    }
+    return takeGroupState(rumor);
+  };
+
+  /**
+   * Seals one change of a group for everyone in it before and after (and my devices), applies
+   * it here and sends it through the outbox. `change` returns the group as it is after.
+   */
+  const sendGroupChange = useCallback(
+    (room: string, op: GroupOp, change: (g: Group) => Group) => {
+      if (!secret || !me) throw new Error('not open');
+      const g = groupsRef.current.find((x) => x.id === room);
+      if (!g?.gid || g.left) throw new Error('not in this group');
+      if (op !== 'leave' && !canManage(g, me)) throw new Error('not an admin');
+      const after = change(g);
+      const at = Math.max(Math.floor(Date.now() / 1000), (g.v ?? 0) + 1);
+      const st = stateOf(after, me, op);
+      const rumor = nip59.createRumor({ kind: GROUP_KIND, content: JSON.stringify(st), tags: [[GROUP_TAG, g.gid]], created_at: at }, secret);
+      const to = [...new Set([...everyone(g, me), ...st.members])].filter((p) => p !== me);
+      // Quiet: a change is not "a new message" on everyone's phone.
+      const wraps = [...to, me].map((p) => wrapQuiet(rumor, secret, p));
+      if (op === 'leave') {
+        // My copy goes too, so my other devices leave as well. The chat is gone here at once.
+        saveBox([...outbox.current, { id: rumor.id, peer: `${room}#leave`, at, wraps, done: [] }]);
+        deleteChatRef.current(room);
+        groupsRef.current = groupsRef.current.filter((x) => x.id !== room);
+        saveGroups((prev) => prev.filter((x) => x.id !== room));
+      } else {
+        if (!takeGroupState(rumor, true)) throw new Error('change not allowed');
+        saveBox([...outbox.current, { id: rumor.id, peer: room, at, wraps, done: [] }]);
+      }
+      void flushRef.current();
+    },
+    [secret, me, takeGroupState, saveBox, saveGroups],
+  );
+
+  const createGroup = useCallback(
+    (name: string, members: string[], admin = false) => {
+      if (!secret || !me) throw new Error('not open');
+      const gid = newGid();
+      const id = groupRoom(gid);
+      const others = [...new Set(members)].filter((p) => p !== me);
+      const mode: GroupMode = admin ? 'admin' : 'open';
+      const at = Math.floor(Date.now() / 1000);
+      const g: Group = { id, gid, name: name.trim().slice(0, 60), members: others, mode, admins: admin ? [me] : [] };
+      const st = stateOf(g, me, 'create');
+      const rumor = nip59.createRumor({ kind: GROUP_KIND, content: JSON.stringify(st), tags: [[GROUP_TAG, gid]], created_at: at }, secret);
+      takeGroupState(rumor, true);
+      const wraps = [...others, me].map((p) => wrapQuiet(rumor, secret, p));
+      saveBox([...outbox.current, { id: rumor.id, peer: id, at, wraps, done: [] }]);
+      void flushRef.current();
+      return id;
+    },
+    [secret, me, takeGroupState, saveBox],
+  );
+
+  const addGroupMembers = useCallback(
+    (room: string, pubkeys: string[]) =>
+      sendGroupChange(room, 'add', (g) => ({ ...g, members: [...new Set([...g.members, ...pubkeys])].filter((p) => p !== me) })),
+    [sendGroupChange, me],
+  );
+  const removeGroupMember = useCallback(
+    (room: string, pubkey: string) =>
+      sendGroupChange(room, 'remove', (g) => ({ ...g, members: g.members.filter((p) => p !== pubkey), admins: (g.admins ?? []).filter((a) => a !== pubkey) })),
+    [sendGroupChange],
+  );
+  const makeGroupAdmin = useCallback(
+    (room: string, pubkey: string) => sendGroupChange(room, 'admin', (g) => ({ ...g, admins: [...new Set([...(g.admins ?? []), pubkey])] })),
+    [sendGroupChange],
+  );
+  const renameGroup = useCallback(
+    (room: string, name: string) => sendGroupChange(room, 'rename', (g) => ({ ...g, name: name.trim().slice(0, 60) })),
+    [sendGroupChange],
+  );
+  const leaveGroup = useCallback((room: string) => sendGroupChange(room, 'leave', (g) => g), [sendGroupChange]);
+  const setGroupAvatar = useCallback(
+    async (room: string, photo: Blob | null) => {
+      if (!secret) throw new Error('not open');
+      let ref: FileRef | null = null;
+      if (photo) {
+        const small = await shrinkAvatar(photo);
+        ref = await encryptAndUpload(small.bytes, small.type, secret, `${small.width}x${small.height}`);
+        await keepSent(`avatar:${ref.sha256}`, small.bytes, small.type);
+      }
+      sendGroupChange(room, 'icon', (g) => {
+        const { avatar: _, ...rest } = g;
+        return ref ? { ...rest, avatar: ref } : rest;
+      });
+    },
+    [secret, sendGroupChange],
   );
 
   const uploadAndSend = useCallback(
@@ -1543,12 +1757,15 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
         save(k('readAt'), next);
         return next;
       });
-      if (isGroup(room)) {
+      // A Tegami group I am still in stays (deleting the chat is not leaving it).
+      if (isGroup(room) && !groupsRef.current.some((g) => g.id === room && g.gid && !g.left)) {
+        groupsRef.current = groupsRef.current.filter((g) => g.id !== room);
         saveGroups((prev) => (prev.some((g) => g.id === room) ? prev.filter((g) => g.id !== room) : prev));
       }
     },
     [saveBox, saveGroups],
   );
+  deleteChatRef.current = deleteChat;
 
   const deleteMessage = useCallback(
     (id: string) => {
@@ -1791,6 +2008,12 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     unblock,
     report,
     createGroup,
+    addGroupMembers,
+    removeGroupMember,
+    makeGroupAdmin,
+    renameGroup,
+    setGroupAvatar,
+    leaveGroup,
     messages,
     deleteMessage,
     start,

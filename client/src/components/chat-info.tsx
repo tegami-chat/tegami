@@ -1,13 +1,15 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import * as ImagePicker from 'expo-image-picker';
 import { router, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { Dialog } from '@/components/dialog';
 import { ReportSheet } from '@/components/report-sheet';
 import { Palette, usePalette } from '@/constants/theme';
 import { useCall } from '@/lib/calls';
+import { canManage } from '@/lib/groups';
 import { chatName, isGroup, personName, shortId, useTegami } from '@/lib/tegami';
 
 /**
@@ -18,10 +20,32 @@ import { chatName, isGroup, personName, shortId, useTegami } from '@/lib/tegami'
 export function ChatInfo({ peer, onClose, panel = false }: { peer: string | undefined; onClose: () => void; panel?: boolean }) {
   const c = usePalette();
   const s = styles(c);
-  const { contacts, groups, blocked, block, unblock, deleteChat } = useTegami();
+  const {
+    me,
+    myName,
+    myAvatar,
+    contacts,
+    groups,
+    blocked,
+    block,
+    unblock,
+    deleteChat,
+    addGroupMembers,
+    removeGroupMember,
+    makeGroupAdmin,
+    renameGroup,
+    setGroupAvatar,
+    leaveGroup,
+  } = useTegami();
   const { supported, startCall } = useCall();
 
-  const [dialog, setDialog] = useState<null | 'block' | 'unblock' | 'delete'>(null);
+  const [dialog, setDialog] = useState<null | 'block' | 'unblock' | 'delete' | 'leave'>(null);
+  // A Tegami group (lib/groups.ts): its members, name and picture can change.
+  const [editing, setEditing] = useState<null | 'name' | 'add'>(null);
+  const [newName, setNewName] = useState('');
+  const [adding, setAdding] = useState<string[]>([]);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [reporting, setReporting] = useState(false);
 
   const group = !!peer && isGroup(peer);
@@ -35,7 +59,45 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
         ? contact.name
         : shortId(peer)
     : '';
-  const members = group && peer ? (groups.find((g) => g.id === peer)?.members ?? peer.split(',')) : [];
+  const groupInfo = group ? groups.find((g) => g.id === peer) : undefined;
+  const tegamiGroup = !!groupInfo?.gid;
+  const manage = !!groupInfo && !!me && canManage(groupInfo, me);
+  const admins = groupInfo?.mode === 'admin' ? (groupInfo.admins ?? []) : [];
+  const members =
+    group && peer
+      ? tegamiGroup && me && !groupInfo?.left
+        ? [me, ...groupInfo!.members]
+        : (groupInfo?.members ?? peer.split(','))
+      : [];
+  const addable = contacts.filter((x) => !members.includes(x.pubkey) && !blocked.includes(x.pubkey));
+  const nameOf = (pubkey: string) => (pubkey === me ? myName || '自分' : personName(pubkey, contacts));
+
+  function saveName() {
+    if (!peer || !newName.trim()) return;
+    renameGroup(peer, newName);
+    setEditing(null);
+  }
+  function addPicked() {
+    if (!peer || !adding.length) return;
+    addGroupMembers(peer, adding);
+    setAdding([]);
+    setEditing(null);
+  }
+  async function pickGroupAvatar() {
+    if (!peer || busy) return;
+    const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+    const asset = picked.canceled ? null : picked.assets[0];
+    if (!asset) return;
+    setBusy(true);
+    try {
+      const blob = asset.file ?? (await (await fetch(asset.uri)).blob());
+      await setGroupAvatar(peer, blob);
+    } catch {
+      // Upload failed: the picture stays as it was.
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const goBack = onClose;
 
@@ -47,7 +109,7 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
 
   return (
     <View style={s.fill}>
-      <View style={s.fill} aria-hidden={!!dialog || reporting}>
+      <View style={s.fill} aria-hidden={!!dialog || reporting || !!removing}>
         <View style={[s.header, panel && s.headerPanel]}>
           {panel ? (
             <Pressable role="button" aria-label="閉じる" style={s.backButton} onPress={goBack}>
@@ -61,7 +123,7 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
         </View>
         <ScrollView style={s.fill} contentContainerStyle={s.body}>
           <View style={s.profile}>
-            <Avatar name={group ? '◎' : displayName} file={contact?.avatar} size={76} />
+            <Avatar name={group ? '◎' : displayName} file={group ? groupInfo?.avatar : contact?.avatar} size={76} />
             <Text style={s.name}>{displayName}</Text>
             {contact?.model ? <Text style={s.model}>{contact.model}</Text> : null}
           </View>
@@ -106,21 +168,121 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
             </View>
           )}
 
+          {group && manage && (
+            <View style={s.actionRow}>
+              <Pressable role="button" aria-label="メンバーを追加" onPress={() => setEditing(editing === 'add' ? null : 'add')} style={s.actionItem}>
+                <View style={s.roundIcon}>
+                  <MaterialIcons name="person-add" size={28} color={c.text} />
+                </View>
+                <Text style={s.actionLabel}>メンバーを追加</Text>
+              </Pressable>
+              <Pressable
+                role="button"
+                aria-label="グループ名を変更"
+                onPress={() => {
+                  setNewName(groupInfo?.name ?? '');
+                  setEditing(editing === 'name' ? null : 'name');
+                }}
+                style={s.actionItem}>
+                <View style={s.roundIcon}>
+                  <MaterialIcons name="edit" size={28} color={c.text} />
+                </View>
+                <Text style={s.actionLabel}>グループ名を変更</Text>
+              </Pressable>
+              <Pressable
+                role="button"
+                aria-label="アイコンを変更"
+                disabled={busy}
+                onPress={() => void pickGroupAvatar()}
+                style={[s.actionItem, busy && s.disabled]}>
+                <View style={s.roundIcon}>
+                  <MaterialIcons name="photo-camera" size={28} color={c.text} />
+                </View>
+                <Text style={s.actionLabel}>アイコンを変更</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {group && manage && editing === 'name' && (
+            <View style={[s.card, s.editRow]}>
+              <TextInput
+                style={s.input}
+                value={newName}
+                onChangeText={setNewName}
+                placeholder="グループの名前"
+                placeholderTextColor={c.muted}
+                maxLength={60}
+                autoFocus
+                onSubmitEditing={saveName}
+              />
+              <Pressable role="button" style={[s.smallButton, !newName.trim() && s.disabled]} disabled={!newName.trim()} onPress={saveName}>
+                <Text style={s.smallButtonText}>保存</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {group && manage && editing === 'add' && (
+            <View style={s.card}>
+              <Text style={s.sectionHeading}>メンバーを追加</Text>
+              {addable.map((x, idx) => {
+                const on = adding.includes(x.pubkey);
+                return (
+                  <Pressable
+                    key={x.pubkey}
+                    role="checkbox"
+                    aria-checked={on}
+                    aria-label={x.name}
+                    style={[s.memberRow, idx > 0 && s.rowBorder]}
+                    onPress={() => setAdding((p) => (on ? p.filter((k) => k !== x.pubkey) : [...p, x.pubkey]))}>
+                    <View style={[s.box, on && s.boxOn]}>{on && <MaterialIcons name="check" size={16} color={c.onAccent} />}</View>
+                    <Avatar name={x.name} file={x.avatar} size={36} />
+                    <Text style={s.memberName} numberOfLines={1}>
+                      {x.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+              <Pressable role="button" style={[s.addButton, !adding.length && s.disabled]} disabled={!adding.length} onPress={addPicked}>
+                <Text style={s.smallButtonText}>追加</Text>
+              </Pressable>
+            </View>
+          )}
+
           {group && (
             <View style={s.card}>
               <Text style={s.sectionHeading}>メンバー（{members.length}）</Text>
               {members.map((pubkey, idx) => {
                 const mContact = contacts.find((x) => x.pubkey === pubkey);
-                const mName = personName(pubkey, contacts);
+                const mName = tegamiGroup ? nameOf(pubkey) : personName(pubkey, contacts);
+                const isAdmin = admins.includes(pubkey);
                 return (
                   <View key={pubkey} style={[s.memberRow, idx > 0 && s.rowBorder]}>
-                    <Avatar name={mName} file={mContact?.avatar} size={36} />
+                    <Avatar name={mName} file={pubkey === me ? myAvatar : mContact?.avatar} size={36} />
                     <Text style={s.memberName} numberOfLines={1}>
                       {mName}
                     </Text>
+                    {isAdmin && <Text style={s.badge}>管理者</Text>}
+                    {manage && admins.length > 0 && !isAdmin && pubkey !== me && (
+                      <Pressable role="button" aria-label={`${mName}を管理者にする`} style={s.rowButton} onPress={() => peer && makeGroupAdmin(peer, pubkey)}>
+                        <Text style={s.rowButtonText}>管理者にする</Text>
+                      </Pressable>
+                    )}
+                    {manage && pubkey !== me && (
+                      <Pressable role="button" aria-label={`${mName}を削除`} style={s.rowButton} onPress={() => setRemoving(pubkey)}>
+                        <Text style={[s.rowButtonText, s.dangerSmall]}>削除</Text>
+                      </Pressable>
+                    )}
                   </View>
                 );
               })}
+            </View>
+          )}
+
+          {tegamiGroup && !groupInfo?.left && (
+            <View style={s.card}>
+              <Pressable role="button" aria-label="グループを退会" style={s.dangerRow} onPress={() => setDialog('leave')}>
+                <Text style={s.dangerText}>グループを退会</Text>
+              </Pressable>
             </View>
           )}
 
@@ -228,6 +390,45 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
                 // the first screen when the app was opened on it, so pop all, then replace).
                 if (router.canDismiss()) router.dismissAll();
                 router.replace('/' as Href);
+              },
+            },
+          ]}
+        />
+      )}
+
+      {dialog === 'leave' && peer && (
+        <Dialog
+          title="グループを退会しますか？"
+          text="退会すると、このグループのトークはこの端末から消えます。"
+          onClose={() => setDialog(null)}
+          buttons={[
+            { label: 'キャンセル', variant: 'outlined', onPress: () => setDialog(null) },
+            {
+              label: '退会',
+              variant: 'danger',
+              onPress: () => {
+                setDialog(null);
+                leaveGroup(peer);
+                if (router.canDismiss()) router.dismissAll();
+                router.replace('/' as Href);
+              },
+            },
+          ]}
+        />
+      )}
+
+      {removing && peer && (
+        <Dialog
+          title={`${nameOf(removing)}をグループから削除しますか？`}
+          onClose={() => setRemoving(null)}
+          buttons={[
+            { label: 'キャンセル', variant: 'outlined', onPress: () => setRemoving(null) },
+            {
+              label: '削除',
+              variant: 'danger',
+              onPress: () => {
+                removeGroupMember(peer, removing);
+                setRemoving(null);
               },
             },
           ]}
@@ -375,6 +576,17 @@ const styles = (c: Palette) =>
       fontSize: 16,
       color: c.text,
     },
+    editRow: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 8 },
+    input: { flex: 1, fontSize: 16, color: c.text, paddingHorizontal: 8, minHeight: 44 },
+    smallButton: { backgroundColor: c.accent, borderRadius: 999, paddingHorizontal: 18, minHeight: 44, justifyContent: 'center' },
+    smallButtonText: { color: c.onAccent, fontSize: 15, fontWeight: '600', textAlign: 'center' },
+    addButton: { backgroundColor: c.accent, borderRadius: 999, margin: 12, minHeight: 44, justifyContent: 'center' },
+    box: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: c.line, alignItems: 'center', justifyContent: 'center' },
+    boxOn: { backgroundColor: c.accent, borderColor: c.accent },
+    badge: { fontSize: 12, color: c.muted },
+    rowButton: { minHeight: 44, minWidth: 44, paddingHorizontal: 8, justifyContent: 'center' },
+    rowButtonText: { fontSize: 14, color: c.accent, fontWeight: '600' },
+    dangerSmall: { color: c.danger },
     dangerText: {
       fontSize: 16,
       color: c.danger,

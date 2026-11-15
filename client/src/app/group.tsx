@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { Palette, usePalette } from '@/constants/theme';
 import { useTegami } from '@/lib/tegami';
@@ -12,6 +12,8 @@ export default function NewGroup() {
   const { contacts, createGroup } = useTegami();
   const [name, setName] = useState('');
   const [picked, setPicked] = useState<string[]>([]);
+  // A group with admins: only admins add and remove people (philosophy #86). Off: anyone in it can.
+  const [admin, setAdmin] = useState(false);
   const canCreate = picked.length >= 2;
 
   function toggle(pubkey: string) {
@@ -20,7 +22,7 @@ export default function NewGroup() {
 
   function create() {
     if (!canCreate) return;
-    const id = createGroup(name, picked);
+    const id = createGroup(name, picked, admin);
     router.replace({ pathname: '/chat/[peer]', params: { peer: id } });
   }
 
@@ -34,6 +36,17 @@ export default function NewGroup() {
         placeholderTextColor={c.muted}
         maxLength={60}
       />
+      <View style={[s.list, s.row, s.switchRow]}>
+        <Text style={s.name}>管理者だけがメンバーを変更できる</Text>
+        <Switch
+          trackColor={{ false: c.line, true: c.accent }}
+          thumbColor="#ffffff"
+          {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}
+          value={admin}
+          onValueChange={setAdmin}
+          aria-label="管理者だけがメンバーを変更できる"
+        />
+      </View>
       <View style={s.list}>
         {[...contacts]
           .sort((a, b) => a.name.localeCompare(b.name))
@@ -88,6 +101,7 @@ const styles = (c: Palette) =>
     box: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: c.line, alignItems: 'center', justifyContent: 'center' },
     boxOn: { backgroundColor: c.accent, borderColor: c.accent },
     name: { flex: 1, fontSize: 16, color: c.text },
+    switchRow: { borderBottomWidth: 1 },
     model: { fontSize: 13, color: c.muted },
     primary: { backgroundColor: c.accent, borderRadius: 999, paddingVertical: 14, alignItems: 'center', marginTop: 8 },
     disabled: { opacity: 0.4 },

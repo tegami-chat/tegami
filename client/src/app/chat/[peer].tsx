@@ -169,6 +169,9 @@ export default function Chat() {
   const group = !!peer && isGroup(peer);
   const isBlocked = !!peer && !group && blocked.includes(peer);
   const contact = contacts.find((x) => x.pubkey === peer);
+  const groupInfo = group ? groups.find((g) => g.id === peer) : undefined;
+  // Taken out of a Tegami group by someone: the chat stays, but nothing can be sent.
+  const notMember = !!groupInfo?.left;
   // 1:1 with a person (an AI friend cannot pick up). Groups later.
   const canCall = supported && !group && !!contact && !contact.model && !isBlocked;
   const thread = useMemo(() => messages.filter((m) => m.peer === peer).reverse(), [messages, peer]);
@@ -858,7 +861,7 @@ export default function Chat() {
               <MaterialIcons name="chevron-left" size={24} color={c.text} />
             </Pressable>
           )}
-          {wide && peer && <Avatar name={group ? '◎' : (contact?.name ?? title)} file={contact?.avatar} size={36} />}
+          {wide && peer && <Avatar name={group ? '◎' : (contact?.name ?? title)} file={group ? groupInfo?.avatar : contact?.avatar} size={36} />}
           <Text style={[s.headerTitle, wide && s.headerTitleWide]} numberOfLines={1} testID="chat-title">
             {title}
           </Text>
@@ -965,10 +968,10 @@ export default function Chat() {
           }}
           renderItem={({ item }) => {
             const mine = item.from === me;
-            if (item.call) {
+            if (item.call || item.notice) {
               return (
                 <View style={s.callRow}>
-                  <Text style={[s.callNote, item.call.result === 'missed' && s.missed]}>
+                  <Text style={[s.callNote, item.call?.result === 'missed' && s.missed]}>
                     {item.text}
                     {'  '}
                     {new Date(item.at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -1299,7 +1302,11 @@ export default function Chat() {
 
         {error && <Text style={s.error}>{error}</Text>}
 
-        {isBlocked ? (
+        {notMember ? (
+          <View style={s.blockedBar}>
+            <Text style={s.blockedText}>このグループのメンバーではありません</Text>
+          </View>
+        ) : isBlocked ? (
           <View style={s.blockedBar}>
             <Text style={s.blockedText}>ブロック中</Text>
             <Pressable role="button" aria-label="ブロック解除" style={s.unblockBtn} onPress={() => setUnblocking(true)}>
