@@ -23,6 +23,8 @@ if (process.env.TURN_OFF === '1') {
   const r = await turn(sk);
   check('without the TURN key the relay says it is not set up (503)', r.status === 503 && r.json?.error === 'turn-not-configured');
   console.log(failures ? `${failures} failed` : 'all passed');
+  // Let the open connection close first (exiting at once trips a libuv assertion on Windows).
+  await new Promise((done) => setTimeout(done, 200));
   process.exit(failures ? 1 : 0);
 }
 
