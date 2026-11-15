@@ -52,6 +52,7 @@ type Attachment = { challenge: string; ip: string; pubkey?: string; subs: Record
 // (and sign requests for localhost). DEV_LOCAL=1 only lets tests sign requests for localhost.
 // TURNSTILE_SECRET: checks the web app's proof of a person when registering without an invite.
 // ADMIN_PUBKEYS: the operator's keys (comma separated, hex), allowed to use POST /admin.
+// COMMIT: the Git commit being deployed (scripts/deploy.mjs sets it), shown in /stats and NIP-11.
 type Env = {
   RELAY: DurableObjectNamespace<Relay>;
   FILES: R2Bucket;
@@ -61,6 +62,7 @@ type Env = {
   DEV_LOCAL?: string;
   TURNSTILE_SECRET?: string;
   ADMIN_PUBKEYS?: string;
+  COMMIT?: string;
 };
 
 const ALLOWED_KINDS = new Set([1059]);
@@ -214,7 +216,7 @@ export default {
       return env.RELAY.get(env.RELAY.idFromName('main')).fetch(new Request(req, { headers }));
     }
     if (req.headers.get('Accept')?.includes('application/nostr+json')) {
-      return Response.json(INFO, {
+      return Response.json({ ...INFO, version: env.COMMIT ?? 'unknown' }, {
         headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/nostr+json' },
       });
     }
@@ -307,7 +309,10 @@ export class Relay extends DurableObject<Env> {
     if (backup) return this.backupRoute(req, ip, backup[1]);
     if (path === '/crash') return this.crash(req, ip);
     if (path === '/stats') {
-      return Response.json({ ...STATS_DESCRIPTION, days: this.stats.recent() }, { headers: { ...CORS, 'Cache-Control': 'public, max-age=300' } });
+      return Response.json(
+        { ...STATS_DESCRIPTION, commit: this.env.COMMIT ?? null, source: 'https://github.com/tegami-chat/tegami/blob/main/relay/src/stats.ts', weeks: this.stats.weekly() },
+        { headers: { ...CORS, 'Cache-Control': 'public, max-age=3600' } },
+      );
     }
     const open = this.ctx.getWebSockets().filter((w) => (w.deserializeAttachment() as Attachment)?.ip === ip).length;
     if (open >= MAX_CONNECTIONS_PER_IP) return new Response('Too many connections', { status: 429 });
@@ -388,6 +393,7 @@ export class Relay extends DurableObject<Env> {
   /**
    * POST /admin, signed (NIP-98) by an operator key. Body: {action, pubkey, invitees?, per_day?}.
    * {action: 'reports'} lists the latest reports; with pubkey, the reports about that key.
+   * {action: 'stats'} the exact daily totals; {action: 'members'} how many keys registered, by how.
    */
   async adminRoute(req: Request): Promise<Response> {
     const body = await req.text();
@@ -401,6 +407,8 @@ export class Relay extends DurableObject<Env> {
       return new Response('invalid json', { status: 400, headers: CORS });
     }
     if (a?.action === 'reports' && a.pubkey === undefined) return Response.json(this.reports.latest(), { headers: CORS });
+    if (a?.action === 'stats') return Response.json(this.stats.recent(400), { headers: CORS });
+    if (a?.action === 'members') return Response.json(this.members.counts(), { headers: CORS });
     if (typeof a?.action !== 'string' || typeof a.pubkey !== 'string' || !/^[0-9a-f]{64}$/.test(a.pubkey)) {
       return new Response('invalid', { status: 400, headers: CORS });
     }

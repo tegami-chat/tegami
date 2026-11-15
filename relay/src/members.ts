@@ -100,6 +100,12 @@ export class Members {
     this.sql.exec("INSERT OR IGNORE INTO members (pubkey, via, created_at) VALUES (?, 'open', ?)", pubkey, now());
   }
 
+  /** How many keys registered, by how, and how many are stopped. Numbers only. */
+  counts() {
+    const n = (where: string) => this.sql.exec(`SELECT COUNT(*) AS n FROM members ${where}`).one().n as number;
+    return { total: n(''), invite: n("WHERE via = 'invite'"), open: n("WHERE via = 'open'"), legacy: n("WHERE via = 'legacy'"), banned: n('WHERE banned = 1') };
+  }
+
   /** Forgets who invited whom after 90 days. */
   forgetOldInvites() {
     this.sql.exec('UPDATE members SET invited_by = NULL WHERE invited_by IS NOT NULL AND created_at < ?', now() - INVITE_MEMORY_SECONDS);
