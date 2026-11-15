@@ -60,6 +60,8 @@ export type Contact = { pubkey: string; name: string; model?: string; avatar?: F
 
 /** A stamp in my list (`k('stamps')`): an uploaded file and when it was uploaded (unix seconds). */
 export type Stamp = FileRef & { uploadedAt?: number };
+/** A stamp uploaded this long ago is uploaded again before it is sent or moved (the server keeps 30 days). */
+const STAMP_REFRESH_SECONDS = 20 * 24 * 60 * 60;
 
 /** A group chat (NIP-17): a fixed set of people. A different set is a different chat. */
 export type Group = { id: string; name: string; members: string[] };
@@ -355,6 +357,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const myAvatarRef = useRef<FileRef | null>(null);
   myAvatarRef.current = myAvatar;
   const [stamps, setStamps] = useState<Stamp[]>([]);
+  const stampsRef = useRef<Stamp[]>([]);
+  stampsRef.current = stamps;
   const profileAt = useRef(new Map<string, number>());
   const lastProfileAt = useRef(0);
   const [crashReports, setCrashReportsState] = useState(false);
@@ -816,6 +820,13 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     save(k('contacts'), moved.contacts);
     save(k('groups'), moved.groups);
     save(k('blocked'), moved.blocked ?? []);
+    save(k('stamps'), moved.stamps ?? []);
+    setStamps(moved.stamps ?? []);
+    // Keep the images on this device now, while the file server still has them. One that is
+    // gone shows as expired in the stamp list and can be removed there.
+    for (const st of moved.stamps ?? []) {
+      void openFile(`stamp:${st.sha256}`, st).catch(() => {});
+    }
     setMyNameState(moved.myName);
     setContacts(moved.contacts);
     setGroups(moved.groups);
@@ -872,7 +883,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
 
   const makeTransferLink = useCallback(async () => {
     if (!secret || !pool.current || !authRef.current) throw new Error('not open');
-    const bundle: Bundle = { v: 1, secretHex: bytesToHex(secret), myName, contacts, groups, blocked };
+    // The new device fetches each stamp image from the file server, so old ones go up again first.
+    const fresh = await refreshStampsRef.current();
+    const bundle: Bundle = { v: 1, secretHex: bytesToHex(secret), myName, contacts, groups, blocked, stamps: fresh };
     return sendTransfer(pool.current, RELAYS, authRef.current, bundle, globalThis.location?.origin ?? APP_ORIGIN);
   }, [secret, myName, contacts, groups, blocked]);
 
@@ -1329,10 +1342,11 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const sendStamp = useCallback(
-    async (peer: string, stamp: Stamp, replyTo?: string) => {
-      if (!secret || !me) throw new Error('not open');
-      if (!isGroup(peer) && blockedRef.current.includes(peer)) return;
+  // The file server deletes an upload after 30 days. A stamp uploaded 20 days ago or more
+  // is uploaded again from this device's copy, and my list points to the new upload.
+  const refreshStamp = useCallback(
+    async (stamp: Stamp): Promise<Stamp> => {
+      if (!secret) throw new Error('not open');
       const now = Math.floor(Date.now() / 1000);
       const uploadedSec =
         stamp.uploadedAt === undefined
@@ -1340,23 +1354,37 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
           : stamp.uploadedAt > 1e11
             ? Math.floor(stamp.uploadedAt / 1000)
             : stamp.uploadedAt;
-      let file: FileRef;
-      if (now - uploadedSec >= 20 * 24 * 60 * 60) {
-        const blob = (await keptFile(`stamp:${stamp.sha256}`)) ?? (await openFile(`stamp:${stamp.sha256}`, stamp));
-        const bytes = new Uint8Array(await blob.arrayBuffer());
-        const fresh = await encryptAndUpload(bytes, stamp.type, secret, stamp.dim);
-        await keepSent(`stamp:${fresh.sha256}`, bytes, fresh.type);
-        const updated: Stamp = { ...fresh, uploadedAt: now };
-        setStamps((prev) => {
-          const next = prev.map((s) => (s.sha256 === stamp.sha256 ? updated : s));
-          save(k('stamps'), next);
-          return next;
-        });
-        file = fresh;
-      } else {
-        const { uploadedAt: _, ...clean } = stamp;
-        file = clean;
-      }
+      if (now - uploadedSec < STAMP_REFRESH_SECONDS) return stamp;
+      const blob = (await keptFile(`stamp:${stamp.sha256}`)) ?? (await openFile(`stamp:${stamp.sha256}`, stamp));
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      const fresh = await encryptAndUpload(bytes, stamp.type, secret, stamp.dim);
+      await keepSent(`stamp:${fresh.sha256}`, bytes, fresh.type);
+      const updated: Stamp = { ...fresh, uploadedAt: now };
+      setStamps((prev) => {
+        const next = prev.map((s) => (s.sha256 === stamp.sha256 ? updated : s));
+        save(k('stamps'), next);
+        return next;
+      });
+      return updated;
+    },
+    [secret],
+  );
+
+  /** Uploads every old stamp again (one that cannot be read stays as it is). Returns my list. */
+  const refreshStamps = useCallback(async (): Promise<Stamp[]> => {
+    const out: Stamp[] = [];
+    for (const st of stampsRef.current) out.push(await refreshStamp(st).catch(() => st));
+    return out;
+  }, [refreshStamp]);
+  const refreshStampsRef = useRef(refreshStamps);
+  refreshStampsRef.current = refreshStamps;
+
+  const sendStamp = useCallback(
+    async (peer: string, stamp: Stamp, replyTo?: string) => {
+      if (!secret || !me) throw new Error('not open');
+      if (!isGroup(peer) && blockedRef.current.includes(peer)) return;
+      const now = Math.floor(Date.now() / 1000);
+      const { uploadedAt: _, ...file }: Stamp = await refreshStamp(stamp);
       const reply = replyTo ? replyTag(15, replyTo) : [];
       const { rumor, wraps } = build(peer, 15, file.url, [...fileTags(file, true), ...reply], now);
       const kept = await keptFile(`stamp:${file.sha256}`);
@@ -1375,7 +1403,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       });
       void flush();
     },
-    [secret, me, build, saveBox, addMessage, flush],
+    [secret, me, build, saveBox, addMessage, flush, refreshStamp],
   );
 
   const deleteChat = useCallback(
@@ -1512,8 +1540,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
   const currentBundle = useCallback(
-    (sk: Uint8Array): Bundle => ({ v: 1, secretHex: bytesToHex(sk), myName, contacts, groups, blocked }),
-    [myName, contacts, groups, blocked],
+    (sk: Uint8Array): Bundle => ({ v: 1, secretHex: bytesToHex(sk), myName, contacts, groups, blocked, stamps }),
+    [myName, contacts, groups, blocked, stamps],
   );
 
   const makeRecoveryCode = useCallback(async () => {
@@ -1587,6 +1615,17 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(t);
   }, [secret, recoveryOn, currentBundle, enqueue, refreshed, recoveryRetry]);
   useEffect(() => () => clearTimeout(retryTimer.current), []);
+
+  // The backup only points to stamp images on the file server, which keeps them 30 days.
+  // While recovery is on, old stamps are uploaded again when the app opens and twice a day,
+  // and the backup follows (the effect above). Someone who does not open Tegami for over
+  // 10 days and then loses every device gets back only stamps uploaded in the last 30 days.
+  useEffect(() => {
+    if (!secret || !recoveryOn) return;
+    void refreshStampsRef.current();
+    const t = setInterval(() => void refreshStampsRef.current(), 12 * 60 * 60 * 1000);
+    return () => clearInterval(t);
+  }, [secret, recoveryOn]);
 
   const value: TegamiState = {
     unread,

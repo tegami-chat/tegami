@@ -2647,6 +2647,133 @@ async function main() {
       for (const u of [a, b]) await u.context.close();
     });
 
+    await test('Stamps move: the link and the recovery code bring my stamps (old ones uploaded again); a gone image can be removed; a backup from before stamps still restores', async () => {
+      const DAY = 24 * 60 * 60;
+      const a = await person(browser, 'あゆみ');
+      const b = await person(browser, 'ばんり');
+      await befriend(b, a);
+      await befriend(a, b);
+
+      // A makes a stamp, then it is made to look 25 days old, and a stamp whose image the
+      // file server no longer has is added (as if it had been deleted after 30 days).
+      const png = Buffer.from(
+        await a.page.evaluate(() => {
+          const c = document.createElement('canvas');
+          c.width = 200;
+          c.height = 200;
+          const g = c.getContext('2d');
+          g.fillStyle = '#1d6b4b';
+          g.fillRect(20, 20, 160, 160);
+          return c.toDataURL('image/png').split(',')[1];
+        }),
+        'base64',
+      );
+      await button(a.page, 'スタンプ').click();
+      const chooser = a.page.waitForEvent('filechooser');
+      await button(a.page, 'スタンプを作る').click();
+      await (await chooser).setFiles({ name: 'stamp.png', mimeType: 'image/png', buffer: png });
+      await a.page.getByTestId('stamp-item').first().waitFor({ timeout: 15000 });
+      const made = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.stamps'))[0]);
+      const ghostSha = 'e'.repeat(64);
+      const ghost = { ...made, url: made.url.replace(made.sha256, ghostSha), sha256: ghostSha, uploadedAt: Math.floor(Date.now() / 1000) };
+      const old = { ...made, uploadedAt: Math.floor(Date.now() / 1000) - 25 * DAY };
+      await a.page.evaluate((list) => localStorage.setItem('tegami.stamps', JSON.stringify(list)), [old, ghost]);
+
+      // The link: the old stamp is uploaded again first, so the new device can fetch it.
+      await a.page.goto(ORIGIN + '/settings');
+      await a.page.getByText('別の端末でも使う').click();
+      await waitText(a.page, 'まで使えます');
+      const moveLink = (await text(a.page)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)[0];
+      const aList = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.stamps')));
+      assert(aList.length === 2 && aList[0].sha256 !== made.sha256 && aList[0].uploadedAt > old.uploadedAt, `old stamp not uploaded again: ${JSON.stringify(aList)}`);
+      assert(aList[1].sha256 === ghostSha, 'the gone stamp changed on the old device');
+
+      const a2 = await newUser(browser, { prf: false });
+      await a2.page.goto(moveLink);
+      await waitText(a2.page, 'あゆみさんのアカウントを受け取りました');
+      await button(a2.page, 'この端末で使う').click();
+      await button(a2.page, 'パスキーを使わずに始める').click();
+      await waitOpen(a2.page);
+      const moved = await a2.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.stamps') ?? '[]'));
+      assert(moved.length === 2 && moved[0].sha256 === aList[0].sha256 && moved[1].sha256 === ghostSha, `stamps on the new device: ${JSON.stringify(moved)}`);
+      await a2.page.goto(`${ORIGIN}/chat/${b.hex}`);
+      await a2.page.getByPlaceholder('メッセージ').waitFor();
+      await button(a2.page, 'スタンプ').click();
+      await a2.page.getByTestId('stamp-item').first().waitFor({ timeout: 15000 });
+      const gone = a2.page.getByTestId('stamp-item-unavailable');
+      await gone.waitFor({ timeout: 15000 });
+      await shot(a2.page, 'stamp-moved', '別の端末に移したスタンプ（右は置き場から消えたもの）');
+      // The moved stamp is sent from the new device and reaches B.
+      await a2.page.getByTestId('stamp-item').first().click();
+      await b.page.getByTestId('stamp-message').first().waitFor({ timeout: 15000 });
+      // The gone one is removed with a long press (right click on a computer).
+      await button(a2.page, 'スタンプ').click();
+      await gone.click({ button: 'right' });
+      await button(a2.page, '削除').click();
+      await a2.page.waitForFunction(() => JSON.parse(localStorage.getItem('tegami.stamps')).length === 1, null, { timeout: 5000 });
+      await a2.context.close();
+
+      // The recovery code: the backup holds the stamps, and a restored device gets them.
+      await a.page.goto(ORIGIN + '/settings');
+      await button(a.page, '復旧コードを作成').click();
+      await waitText(a.page, 'このコードは今だけ表示されます');
+      const code = (await a.page.getByTestId('recovery-code').innerText()).trim();
+      await button(a.page, '保管しました').click();
+      const r = await newUser(browser, { prf: false });
+      await button(r.page, '復旧コードを使う').click();
+      await r.page.getByPlaceholder('復旧コード').fill(code);
+      await button(r.page, '復旧').click();
+      await waitText(r.page, 'あゆみさんのアカウントを受け取りました');
+      await button(r.page, 'この端末で使う').click();
+      await button(r.page, 'パスキーを使わずに始める').click();
+      await waitOpen(r.page);
+      const restored = await r.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.stamps') ?? '[]'));
+      assert(restored.length === 2 && restored[0].sha256 === aList[0].sha256, `stamps after restoring: ${JSON.stringify(restored)}`);
+      await r.page.goto(`${ORIGIN}/chat/${b.hex}`);
+      await r.page.getByPlaceholder('メッセージ').waitFor();
+      await button(r.page, 'スタンプ').click();
+      await r.page.getByTestId('stamp-item').first().waitFor({ timeout: 15000 });
+      await r.context.close();
+
+      // A backup written before stamps existed (no "stamps", no "blocked") restores with no stamps.
+      const SYMBOLS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+      const raw = [...crypto.getRandomValues(new Uint8Array(28))].map((x) => SYMBOLS[x & 31]).join('');
+      const oldCode = raw.match(/.{4}/g).join('-');
+      const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(raw), 'HKDF', false, ['deriveBits']);
+      const bits = async (info) =>
+        new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt: new TextEncoder().encode('tegami/recovery/v1'), info: new TextEncoder().encode(info) }, base, 256));
+      const id = Buffer.from(await bits('backup id')).toString('hex');
+      const signer = await bits('backup signer');
+      const key = await crypto.subtle.importKey('raw', await bits('backup key'), 'AES-GCM', false, ['encrypt']);
+      const json = JSON.stringify({ v: 1, secretHex: Buffer.from(generateSecretKey()).toString('hex'), myName: 'むかし', contacts: [{ pubkey: b.hex, name: 'ばんり' }], groups: [] });
+      const padded = json + ' '.repeat(1024 - (Buffer.byteLength(json) % 1024));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: new TextEncoder().encode(id) }, key, new TextEncoder().encode(padded));
+      const body = JSON.stringify({ v: 1, iv: Buffer.from(iv).toString('base64url'), ct: Buffer.from(ct).toString('base64url') });
+      const url = `http://localhost:${RELAY_PORT}/backup/${id}`;
+      const payload = Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body))).toString('hex');
+      const auth = finalizeEvent({ kind: 27235, created_at: Math.floor(Date.now() / 1000), content: '', tags: [['u', url], ['method', 'PUT'], ['payload', payload]] }, signer);
+      const put = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Nostr ${btoa(JSON.stringify(auth))}` }, body });
+      assert(put.ok, `old backup upload: ${put.status}`);
+      const o = await newUser(browser, { prf: false });
+      await button(o.page, '復旧コードを使う').click();
+      await o.page.getByPlaceholder('復旧コード').fill(oldCode);
+      await button(o.page, '復旧').click();
+      await waitText(o.page, 'むかしさんのアカウントを受け取りました');
+      await button(o.page, 'この端末で使う').click();
+      await button(o.page, 'パスキーを使わずに始める').click();
+      await waitOpen(o.page);
+      await waitText(o.page, 'ばんり');
+      const none = await o.page.evaluate(() => localStorage.getItem('tegami.stamps'));
+      assert(JSON.parse(none ?? '[]').length === 0, `stamps from an old backup: ${none}`);
+      await o.page.goto(`${ORIGIN}/chat/${b.hex}`);
+      await o.page.getByPlaceholder('メッセージ').waitFor();
+      await button(o.page, 'スタンプ').click();
+      await button(o.page, 'スタンプを作る').waitFor({ timeout: 5000 });
+      assert((await o.page.getByTestId('stamp-item').count()) === 0, 'stamps shown from an old backup');
+      for (const u of [a, b, o]) await u.context.close();
+    });
+
     await test('Video and file: sent encrypted, the friend can play the video and save the file with its name', async () => {
       const a = await person(browser, 'あゆみ');
       const b = await person(browser, 'ばんり');
