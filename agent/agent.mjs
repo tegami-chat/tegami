@@ -1,6 +1,16 @@
 #!/usr/bin/env node
 // tegami-agent: puts an AI on your own computer into Tegami as a friend.
 //
+//   tegami-agent pair [--name Claude] [--minutes 10] [--browser]
+//       Shows the AI's invite link with a one-time code as a QR code. Reading it in Tegami
+//       adds the AI, and the app sends the code back: the AI trusts that person and registers.
+//   tegami-agent backend [claude-code | ollama | local | anthropic | openai | gemini | openrouter | command]
+//       [--model <name>] [--url <address>] [--label <shown model>]
+//       Which AI writes the replies (default: Claude Code). Without a name, shows the current one.
+//   tegami-agent key [backend] [--remove]
+//       Saves the API key for a backend, typed hidden or piped on stdin.
+//   tegami-agent try [text]
+//       Asks the AI once with the current backend.
 //   tegami-agent init [--name Claude] [--model "Anthropic Claude"]
 //       Makes the AI's own Tegami key and prints its invite link.
 //       Open the link in Tegami to add the AI as a friend.
@@ -9,7 +19,7 @@
 //   tegami-agent contacts | invite | send <name or link> <text>
 //   tegami-agent watch [--command "<cmd>"]
 //       Keeps running. Each message from a trusted contact is answered by the AI.
-//       Default: Claude Code (`claude -p`), one conversation that continues over time.
+//       The backend writes the reply (Claude Code by default: one conversation that continues).
 //       --command: any program that reads the prompt on stdin and prints the reply.
 //       --log <file>: also write the log to a file (used when started at login).
 //       Only one watcher runs per AI friend; a second one exits (code 3).
@@ -18,7 +28,8 @@
 //       their chats (the app decides what the AI may read: its AI permissions). The chat
 //       is kept in memory only, and Claude Code runs once, with no tools and no saved session.
 //   tegami-agent autostart on | off | status
-//       Windows: a Task Scheduler task runs `keep`, hidden, every time you sign in.
+//       Runs `keep` every time you log in: a Task Scheduler task (Windows), a launchd agent
+//       (macOS) or a systemd user unit (Linux).
 //   tegami-agent keep [--log <file>]
 //       Runs `watch` and starts it again 10 seconds after it stops.
 //   tegami-agent mcp
@@ -29,9 +40,15 @@
 
 import { spawn, execFileSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { homedir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Agent, DRAFT_TTL, needsInit, parseAsk, parseInvite, shortId } from './lib.mjs';
+import { autostartCommands, autostartFile, carriedEnv, keepArgs, launchdPlist, systemdUnit } from './autostart.mjs';
+import { BACKENDS, backendLabel, loadBackend, loadKeys, makeResponder, ownEnv, saveBackend, saveKey } from './backends.mjs';
+import { Agent, DRAFT_TTL, PAIR_TTL, needsInit, parseAsk, parseInvite, shortId } from './lib.mjs';
+import { qrHtml, qrTerminal } from './qr.mjs';
+
+export { ownEnv };
 
 const SCRIPT = fileURLToPath(import.meta.url);
 const DAY = 86400;
@@ -55,7 +72,7 @@ const SYSTEM = [
   '前置きや見出しを付けず、話し言葉で短く返してください。',
 ].join('');
 
-// No double quotes: it is put inside "..." on the command line (see runClaude).
+// No double quotes: it is put inside "..." on the command line (backends.mjs runClaude).
 const DRAFT_SYSTEM = [
   'あなたは Tegami というメッセージアプリで、持ち主の返信の下書きを作る AI です。',
   '渡すのは、持ち主と友だちのトークの直近のメッセージです。',
@@ -110,6 +127,7 @@ const commands = {
     const command = flag('command');
     const logTo = flag('log');
     if (typeof logTo === 'string') logFile = logTo;
+    const reply = responder(typeof command === 'string' ? command : undefined);
     if (!takeLock()) {
       log('another watcher is already running for this AI friend');
       process.exit(3);
@@ -131,6 +149,8 @@ const commands = {
     const seen = new Set();
     let busy = false;
     const consider = (m) => {
+      // `pair` or `add` may have trusted someone since this watcher started.
+      agent.reloadContacts();
       if (m.from === agent.pubkey || m.at < started || !agent.isTrusted(m.from)) return;
       // Groups: an AI joins a group only when every member agrees (not built yet), so no replies there.
       if (m.peer.includes(',')) return;
@@ -149,6 +169,7 @@ const commands = {
     // Reply drafts: only for a trusted contact (the owner's app), only fresh asks, one at a time.
     let drafting = Promise.resolve();
     const onAsk = (a) => {
+      agent.reloadContacts();
       if (!agent.isTrusted(a.from)) {
         log('ignored a draft request from someone who is not trusted');
         return;
@@ -160,7 +181,7 @@ const commands = {
       drafting = drafting.then(async () => {
         const prompt = ask.messages.map((m) => `${m.mine ? ask.me : ask.friend}: ${m.text}`).join('\n');
         try {
-          const text = typeof command === 'string' ? await runCommand(command, prompt) : await runClaude(prompt, { draft: true });
+          const text = await reply(prompt, { draft: true });
           if (text.trim()) await agent.sendDraft(a.from, a.id, text.trim());
           log(`made a reply draft for ${name}`);
         } catch (e) {
@@ -169,6 +190,8 @@ const commands = {
       });
     };
     agent.askListeners.add(onAsk);
+    // A pairing code shown by `pair` may be answered while this watcher runs too.
+    agent.pairListeners.add((r) => void onPair(r, log));
     // Listen before connecting: the relay hands over waiting messages right after login.
     agent.listeners.add(consider);
     await agent.connect();
@@ -184,8 +207,8 @@ const commands = {
         const name = agent.contacts.find((c) => c.pubkey === peer)?.name ?? shortId(peer);
         const prompt = batch.map((m) => `${name}: ${m.text}`).join('\n');
         try {
-          const reply = typeof command === 'string' ? await runCommand(command, prompt) : await runClaude(prompt);
-          if (reply.trim()) await agent.send(peer, reply.trim());
+          const text = await reply(prompt, { peer });
+          if (text.trim()) await agent.send(peer, text.trim());
           log(`replied to ${name}`);
         } catch (e) {
           log(`could not reply to ${name}: ${e.message}`);
@@ -197,13 +220,102 @@ const commands = {
     }
     log(`${agent.profile.name} is listening. Trusted: ${agent.contacts.filter((c) => c.trusted).map((c) => c.name).join(', ') || 'nobody yet'}`);
   },
+  async pair() {
+    // Shows the AI's invite link with a one-time code as a QR code. Reading it with Tegami's
+    // QR code scan adds the AI as a friend, and the app sends the code back: the AI then
+    // trusts that person and registers with the code in their invite link.
+    const name = flag('name');
+    const minutes = Number(flag('minutes') ?? PAIR_TTL / 60);
+    const browser = !!flag('browser');
+    if (!(minutes > 0 && minutes <= 60)) throw new Error('--minutes is 1 to 60.');
+    if (!agent.ready) agent.init({ name: typeof name === 'string' ? name : undefined, model: backendLabel(loadBackend(agent.dir)) });
+    else if (typeof name === 'string') agent.init({ name });
+    const { link, expires } = agent.startPairing(Math.round(minutes * 60));
+    const until = new Date(expires * 1000).toLocaleTimeString();
+    console.log(`AI friend: ${agent.profile.name}${agent.profile.model ? ` (${agent.profile.model})` : ''}\n`);
+    console.log(qrTerminal(link));
+    console.log(`In Tegami, open 友だち追加 > QRコードスキャン and read this code (works once, until ${until}).`);
+    console.log(`Or open this link on your phone:\n${link}\n`);
+    const page = join(agent.dir, 'pair.html');
+    if (browser) {
+      writeFileSync(page, qrHtml(link, agent.profile.name, until));
+      openFile(page);
+      console.log(`The QR code is also open in your browser (${page}).`);
+    }
+    const end = () => {
+      agent.stopPairing();
+      rmSync(page, { force: true });
+    };
+    process.on('SIGINT', () => {
+      end();
+      process.exit(130);
+    });
+    const done = new Promise((resolve) => agent.pairListeners.add(async (r) => (await onPair(r, console.log)) && resolve(true)));
+    await agent.connect();
+    const ok = await Promise.race([done, new Promise((r) => setTimeout(() => r(false), expires * 1000 - Date.now()))]);
+    end();
+    agent.close();
+    if (!ok) {
+      console.log('The code has expired. Run `tegami-agent pair` again for a new one.');
+      process.exit(1);
+    }
+    console.log('\nNext: keep the AI answering with `tegami-agent autostart on` (or `tegami-agent watch`).');
+    process.exit(0);
+  },
+  backend() {
+    // Which AI writes the replies. Without arguments, shows the current one.
+    const model = flag('model');
+    const url = flag('url');
+    const label = flag('label');
+    const type = argv[0];
+    if (!type) {
+      const b = loadBackend(agent.dir);
+      const keys = loadKeys(agent.dir);
+      console.log(`Backend: ${b.type}${b.model ? `  model: ${b.model}` : ''}${b.url ? `  url: ${b.url}` : ''}`);
+      if (BACKENDS[b.type]?.key) console.log(`API key: ${keys[b.type] ? 'saved' : `not saved (tegami-agent key ${b.type})`}`);
+      console.log(`Shown as: ${agent.profile.model || '(nothing)'}`);
+      console.log(`\nBackends: ${Object.keys(BACKENDS).join(', ')}`);
+      return;
+    }
+    const b = saveBackend(agent.dir, { type, model: typeof model === 'string' ? model : undefined, url: typeof url === 'string' ? url : undefined });
+    // The model people see (philosophy #93) follows the backend, unless --label says otherwise.
+    agent.init({ model: typeof label === 'string' ? label : backendLabel(b) || agent.profile.model });
+    console.log(`Backend: ${b.type}${b.model ? ` (${b.model})` : ''}. Shown as: ${agent.profile.model}`);
+    if (BACKENDS[type].key === true && !loadKeys(agent.dir)[type]) console.log(`Now save the API key: tegami-agent key ${type}`);
+    console.log('People who added this AI before see the new model after they read a new QR code (tegami-agent pair).');
+    console.log('A watcher that is running uses the new backend after it starts again.');
+  },
+  async key() {
+    // Saves an API key, read from the keyboard (hidden) or from stdin. Never from the command
+    // line, so it does not end up in the shell's history. --remove deletes it.
+    const remove = !!flag('remove');
+    const type = argv[0] ?? loadBackend(agent.dir).type;
+    if (!BACKENDS[type]?.key) throw new Error(`${type} does not take an API key.`);
+    if (remove) {
+      saveKey(agent.dir, type, '');
+      console.log(`Removed the API key for ${type}.`);
+      return;
+    }
+    const value = (await readSecret(`API key for ${type} (hidden): `)).trim();
+    if (!value) throw new Error('No key was given.');
+    saveKey(agent.dir, type, value);
+    console.log(`Saved the API key for ${type} in ${join(agent.dir, 'keys.json')}.`);
+  },
+  async try() {
+    // Asks the AI one question with the current backend, to check that it answers.
+    needsInit(agent);
+    const command = flag('command');
+    const text = argv.join(' ') || 'こんにちは';
+    const reply = responder(typeof command === 'string' ? command : undefined);
+    console.log(await reply(text, { draft: true }));
+  },
   autostart() {
     needsInit(agent);
     const action = argv[0] ?? 'status';
-    if (process.platform !== 'win32') {
-      throw new Error('autostart is only built for Windows so far. Run `watch` under launchd (macOS) or systemd (Linux).');
-    }
     const logPath = join(agent.dir, 'watch.log');
+    const platform = process.env.TEGAMI_PLATFORM ?? process.platform;
+    if (platform === 'darwin' || platform === 'linux') return autostartUnix(platform, action, logPath);
+    if (platform !== 'win32') throw new Error(`autostart is not built for ${platform}. Run \`watch\` with your system's own service manager.`);
     const task = `Tegami agent ${agentName}`;
     // The first version put a script in the Startup folder; it vanished around a Windows upgrade.
     const legacy = join(process.env.APPDATA, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup', `tegami-agent-${agentName}.vbs`);
@@ -382,74 +494,133 @@ function taskXml(logPath) {
 `;
 }
 
-/** Runs a shell command line, feeding `input` on stdin. Resolves with the exit code and output. */
-function run(commandLine, input, cwd, env = process.env) {
-  return new Promise((resolve, reject) => {
-    // One command line through the shell, so `claude` (claude.cmd on Windows) is found.
-    const p = spawn(commandLine, { cwd, env, shell: true, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
-    let out = '';
-    let err = '';
-    p.stdout.on('data', (d) => (out += d));
-    p.stderr.on('data', (d) => (err += d));
-    p.on('error', reject);
-    p.on('exit', (code) => resolve({ code, out, err }));
-    p.stdin.end(input);
+/** The function that writes replies, with the backend set for this AI friend (or --command). */
+function responder(command) {
+  return makeResponder({ dir: agent.dir, config: loadBackend(agent.dir), system: SYSTEM, draftSystem: DRAFT_SYSTEM, state: agent.state, saveState: () => agent.saveState(), command });
+}
+
+/** Handles a pairing message: trusts the sender when the code is right, then registers. Returns whether it paired. */
+async function onPair(r, say) {
+  const res = agent.acceptPair(r);
+  if (!res.ok) {
+    if (res.reason !== 'not pairing') say(`ignored a pairing message: ${res.reason}`);
+    return false;
+  }
+  say(`Paired with ${res.contact.name}. The AI replies to this person.`);
+  if (res.invite.code) {
+    const reg = await agent.register({ invite: res.invite.code }).catch((e) => ({ member: false, error: e.message }));
+    if (reg.member) say('Registered with the Tegami relay (invited by this person).');
+    else say(`Could not register with the relay: ${reg.error ?? 'unknown'}.`);
+  } else {
+    const reg = await agent.register().catch(() => ({ member: false }));
+    if (!reg.member) say('Not registered with the relay yet: their invite link had no invite code. Replies will be refused until it is.');
+  }
+  return true;
+}
+
+/** Reads one line without showing it (a terminal), or the first line piped in. */
+function readSecret(prompt) {
+  const input = process.stdin;
+  if (!input.isTTY) {
+    return new Promise((resolve) => {
+      let s = '';
+      input.setEncoding('utf8');
+      input.on('data', (d) => (s += d)).on('end', () => resolve(s.split(/\r?\n/)[0] ?? ''));
+    });
+  }
+  return new Promise((resolve) => {
+    process.stdout.write(prompt);
+    let s = '';
+    input.setRawMode(true);
+    input.setEncoding('utf8');
+    const onData = (d) => {
+      for (const ch of d) {
+        if (ch === '\r' || ch === '\n') {
+          input.setRawMode(false);
+          input.pause();
+          input.off('data', onData);
+          process.stdout.write('\n');
+          resolve(s);
+          return;
+        }
+        if (ch === '\u0003') {
+          input.setRawMode(false);
+          process.stdout.write('\n');
+          process.exit(130);
+        }
+        if (ch === '\u007f' || ch === '\b') s = s.slice(0, -1);
+        else s += ch;
+      }
+    };
+    input.on('data', onData);
+    input.resume();
   });
 }
 
-async function runCommand(command, prompt) {
-  const r = await run(command, prompt, agent.dir);
-  if (r.code !== 0) throw new Error(r.err.trim() || `exit ${r.code}`);
-  return r.out;
-}
-
-/**
- * The environment for the AI's own Claude Code. When the watcher was started from inside
- * a Claude Code session (CLAUDECODE is set), that session's variables point Claude Code at
- * the session's own connection instead of the owner's sign-in, so they are removed.
- */
-export function ownEnv(env = process.env) {
-  if (!env.CLAUDECODE) return env;
-  const clean = {};
-  for (const [k, v] of Object.entries(env)) {
-    if (k === 'CLAUDECODE' || k.startsWith('CLAUDE_CODE_') || k.startsWith('CLAUDE_AGENT_SDK_') || k === 'ANTHROPIC_BASE_URL') continue;
-    if (['CLAUDE_PID', 'CLAUDE_EFFORT', 'CLAUDE_PREVIEW_CLASSIFIER_FLOOR'].includes(k)) continue;
-    clean[k] = v;
-  }
-  return clean;
-}
-
-/**
- * Claude Code, headless. One conversation continues across messages (the AI remembers).
- * draft: a reply draft for a friend's chat instead. It runs once on its own: no tools (the
- * friend's words must not make it act), no saved session, and not added to the conversation.
- */
-async function runClaude(prompt, { draft = false } = {}) {
-  const work = join(agent.dir, draft ? 'draft' : 'work');
-  mkdirSync(work, { recursive: true });
-  // SYSTEM and DRAFT_SYSTEM have no double quotes, so quoting them is safe in both cmd.exe and sh.
-  let line = draft
-    ? `claude -p --output-format json --no-session-persistence --tools "" --append-system-prompt "${DRAFT_SYSTEM}"`
-    : `claude -p --output-format json --append-system-prompt "${SYSTEM}"`;
-  if (!draft && agent.state.claudeSession) line += ` --resume ${agent.state.claudeSession}`;
-  const r = await run(line, prompt, work, ownEnv());
-  let out;
+/** Opens a file with the system's default program (the browser for .html). */
+function openFile(path) {
+  const [cmd, args] =
+    process.platform === 'win32' ? ['cmd', ['/c', 'start', '""', path]] : process.platform === 'darwin' ? ['open', [path]] : ['xdg-open', [path]];
   try {
-    out = JSON.parse(r.out);
+    spawn(cmd, args, { stdio: 'ignore', detached: true, windowsHide: true }).unref();
   } catch {
-    throw new Error(r.err.trim() || r.out.trim() || `claude exited ${r.code}`);
+    // the link is printed too
   }
-  if (out.session_id && !draft) {
-    agent.state.claudeSession = out.session_id;
-    agent.saveState();
+}
+
+/**
+ * autostart on macOS (a launchd agent in ~/Library/LaunchAgents) and Linux (a systemd user
+ * unit in ~/.config/systemd/user). For tests on Windows: TEGAMI_PLATFORM picks the system,
+ * TEGAMI_AUTOSTART_HOME the home folder, and TEGAMI_AUTOSTART_DRY=1 writes the file but only
+ * prints the launchctl / systemctl commands.
+ */
+function autostartUnix(platform, action, logPath) {
+  const dry = !!process.env.TEGAMI_AUTOSTART_DRY;
+  const home = process.env.TEGAMI_AUTOSTART_HOME ?? homedir();
+  const file = autostartFile(platform, agentName, home);
+  const uid = typeof process.getuid === 'function' ? process.getuid() : 501;
+  const exec = (list) => {
+    for (const { cmd, ignoreFail } of list) {
+      if (dry) {
+        console.log(`would run: ${cmd.join(' ')}`);
+        continue;
+      }
+      try {
+        execFileSync(cmd[0], cmd.slice(1), { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+      } catch (e) {
+        if (!ignoreFail) throw new Error(`${cmd.join(' ')} failed: ${String(e.stderr || e.message).trim()}`);
+      }
+    }
+  };
+  if (action === 'on') {
+    const spec = { agentName, args: keepArgs({ node: process.execPath, script: SCRIPT, agentName, logPath }), env: carriedEnv(), workDir: agent.dir };
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, platform === 'darwin' ? launchdPlist(spec) : systemdUnit(spec));
+    exec(autostartCommands(platform, 'on', { agentName, file, uid }));
+    console.log(`On. ${agent.profile.name} starts every time you log in (${file}).`);
+    if (platform === 'linux') console.log('To keep it running while you are logged out too: loginctl enable-linger');
+    console.log(`Log: ${logPath}`);
+  } else if (action === 'off') {
+    exec(autostartCommands(platform, 'off', { agentName, file, uid }));
+    rmSync(file, { force: true });
+    console.log(`Off. ${agent.profile.name} no longer starts at login.`);
+  } else if (action === 'status') {
+    const pid = runningPid();
+    console.log(`Starts at login:   ${existsSync(file) ? 'yes' : 'no'} (${file})`);
+    console.log(`Running now:       ${pid ? `yes (process ${pid})` : 'no'}`);
+    if (agent.state.alive) console.log(`Last heartbeat:    ${new Date(agent.state.alive * 1000).toLocaleString()}`);
+    if (existsSync(logPath)) {
+      const tail = readFileSync(logPath, 'utf8').trimEnd().split('\n').slice(-5);
+      console.log(`\nLast log lines (${logPath}):\n${tail.join('\n')}`);
+    }
+  } else {
+    throw new Error('Use: autostart on | off | status');
   }
-  if (out.is_error) throw new Error(String(out.result ?? 'Claude returned an error'));
-  return String(out.result ?? '');
 }
 
 const fn = commands[cmd];
 if (!fn) {
-  console.log("Commands: init, invite, add, contacts, send, watch, keep, autostart, mcp");
+  console.log('Commands: pair, init, invite, add, contacts, send, backend, key, try, watch, keep, autostart, mcp');
   process.exit(cmd ? 1 : 0);
 }
 Promise.resolve(fn()).catch((e) => {

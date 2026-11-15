@@ -9,6 +9,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { accounts, describeAccount, removeAccountHere } from './accounts';
 import { FEEDBACK_NAME, FEEDBACK_PUBKEY } from './feedback';
 import { AI_DRAFT_ASK_KIND, AI_DRAFT_KIND, draftAsk, parseDraft, wrapExpiring } from './ai-draft';
+import { pairWrap } from './ai-pair';
 import { askAi, checkAi, decideAi, gateAi, getAiPermissions, removePeerAi } from './ai-permissions';
 import {
   AI_ACTION_KINDS,
@@ -306,6 +307,8 @@ type TegamiState = {
    * Returns the ask's id.
    */
   askAiDraft: (ai: string, friend: string, confirmed?: boolean) => Promise<string>;
+  /** Answers the one-time code in an AI's invite link (lib/ai-pair.ts): the AI then replies to me. */
+  pairAi: (ai: string, code: string, myInvite: string) => Promise<void>;
   /** Listens for drafts coming back from AI friends. Returns the function that stops listening. */
   onAiDraft: (fn: (d: AiDraft) => void) => () => void;
   /** Messages my AI friends wrote for a friend, waiting for me to press 送る (lib/ai-actions.ts). */
@@ -2077,6 +2080,15 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     [secret],
   );
 
+  /** Answers an AI's one-time pairing code (lib/ai-pair.ts): the code and my invite link, for the AI only. */
+  const pairAi = useCallback(
+    async (ai: string, code: string, myInvite: string) => {
+      if (!secret || !pool.current) throw new Error('not open');
+      if (!(await publishOne(pool.current, RELAYS, pairWrap(secret, ai, code, myInvite), authRef.current ?? undefined))) throw new Error('not sent');
+    },
+    [secret],
+  );
+
   /** Only a friend who is a person (not another AI), not blocked. Never a stranger. */
   const isPersonFriend = useCallback(
     (pk: string) => contactsRef.current.some((c) => c.pubkey === pk && !c.model) && !blockedRef.current.includes(pk),
@@ -2546,6 +2558,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     callIceServers,
     onSignal,
     askAiDraft,
+    pairAi,
     onAiDraft,
     aiProposals,
     acceptAiProposal,
