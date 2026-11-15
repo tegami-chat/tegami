@@ -10,6 +10,8 @@
 //   node scripts/admin.mjs allow-invites <key>
 //   node scripts/admin.mjs set-limit <key> <n>      invites per day for that key
 //   node scripts/admin.mjs trust <key>              treat the key as invited (official accounts, tests)
+//   node scripts/admin.mjs members                  how many keys registered, by how (numbers only)
+//   node scripts/admin.mjs stats                    the exact daily totals (the public /stats is weekly and rounded)
 //
 // <key> is an npub or 64 hex characters. The operator key lives in ~/.tegami/admin/key.json,
 // outside the repository. Its public key must be listed in the relay's ADMIN_PUBKEYS
@@ -85,6 +87,10 @@ try {
       console.log(nip19.npubEncode(pk));
       break;
     }
+    case 'members':
+    case 'stats':
+      console.log(JSON.stringify(await admin({ action: cmd }), null, 2));
+      break;
     case 'reports':
       console.log(JSON.stringify(await admin(args[0] ? { action: 'reports', pubkey: toHex(args[0]) } : { action: 'reports' }), null, 2));
       break;
@@ -99,7 +105,7 @@ try {
       console.log(JSON.stringify(await admin({ action: 'set-limit', pubkey: toHex(args[0]), per_day: Number(args[1]) }), null, 2));
       break;
     default:
-      console.log(readFileSync(new URL(import.meta.url), 'utf8').split('\n').slice(1, 14).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
+      console.log(readFileSync(new URL(import.meta.url), 'utf8').split('\n').slice(1, 16).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
       process.exitCode = cmd ? 1 : 0;
   }
 } catch (e) {

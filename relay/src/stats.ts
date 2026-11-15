@@ -1,6 +1,6 @@
-// Daily totals, and nothing about any one person.
+// Totals across everyone, and nothing about any one person.
 //
-// What is counted, per UTC day:
+// What is counted, per UTC day (kept inside the relay):
 //   envelopes   message envelopes accepted (one message to N people is N + 1 envelopes)
 //   files       files accepted, and file_bytes their total size
 //   logins      successful logins (NIP-42)
@@ -11,13 +11,37 @@
 // 1024 small counters. The salt is deleted when the day is over, so even the relay
 // cannot later test whether a given key was active that day.
 //
-// GET /stats publishes these totals for the last 90 days.
+// GET /stats publishes weekly totals, not the daily ones, because at a small scale an exact
+// daily number can tell who was there:
+// - only weeks that are over (a week starts on Monday, UTC), so a number never changes
+//   while someone watches it;
+// - every number rounded up to a multiple of 10, and 0 to 9 all reported as 0, so a quiet
+//   week and an empty week look the same;
+// - file sizes in MB, rounded the same way;
+// - the key estimate merges the week's daily counters, so a key active on several days of
+//   the week counts once.
+// The exact daily rows are for the operator only (POST /admin {action: 'stats'}).
 
 const P = 10;
 const M = 1 << P; // 1024 registers
 const KEEP_DAYS = 400;
 
 export type DayTotals = { day: string; envelopes: number; files: number; file_bytes: number; logins: number; keys: number };
+export type WeekTotals = { week: string; envelopes: number; files: number; file_mb: number; logins: number; keys: number };
+
+const PUBLISH_WEEKS = 26;
+
+/** Rounds up to a multiple of 10; 0 to 9 become 0. */
+export function publishable(n: number): number {
+  return n < 10 ? 0 : Math.ceil(n / 10) * 10;
+}
+
+/** The Monday (UTC) that starts the week of `day` (YYYY-MM-DD). */
+export function weekOf(day: string): string {
+  const d = new Date(day + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+}
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -92,6 +116,39 @@ export class Stats {
     }
   }
 
+  /** Weeks that are over, newest first, rounded for publishing. */
+  weekly(weeks = PUBLISH_WEEKS): WeekTotals[] {
+    const current = weekOf(today());
+    const rows = this.sql
+      .exec('SELECT day, envelopes, files, file_bytes, logins, hll FROM stats ORDER BY day DESC LIMIT ?', (weeks + 1) * 7)
+      .toArray();
+    const byWeek = new Map<string, { envelopes: number; files: number; bytes: number; logins: number; hll: Uint8Array }>();
+    for (const r of rows) {
+      const w = weekOf(r.day as string);
+      if (w >= current) continue;
+      const cur = byWeek.get(w) ?? { envelopes: 0, files: 0, bytes: 0, logins: 0, hll: new Uint8Array(M) };
+      cur.envelopes += r.envelopes as number;
+      cur.files += r.files as number;
+      cur.bytes += r.file_bytes as number;
+      cur.logins += r.logins as number;
+      const reg = new Uint8Array(r.hll as ArrayBuffer);
+      for (let i = 0; i < M; i++) if (reg[i] > cur.hll[i]) cur.hll[i] = reg[i];
+      byWeek.set(w, cur);
+    }
+    return [...byWeek.entries()]
+      .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+      .slice(0, weeks)
+      .map(([week, c]) => ({
+        week,
+        envelopes: publishable(c.envelopes),
+        files: publishable(c.files),
+        file_mb: publishable(Math.ceil(c.bytes / 1048576)),
+        logins: publishable(c.logins),
+        keys: publishable(estimate(c.hll)),
+      }));
+  }
+
+  /** The exact daily rows, for the operator only. */
   recent(days = 90): DayTotals[] {
     return this.sql
       .exec('SELECT day, envelopes, files, file_bytes, logins, hll FROM stats ORDER BY day DESC LIMIT ?', days)
@@ -108,12 +165,13 @@ export class Stats {
 }
 
 export const STATS_DESCRIPTION = {
-  about: 'Daily totals only. Nothing about any one person is stored.',
+  about:
+    'Weekly totals across everyone, only for weeks that are over (weeks start on Monday, UTC). Every number is rounded up to a multiple of 10, and 0 to 9 are all reported as 0. There are no numbers for any one account.',
   counted: {
     envelopes: 'message envelopes accepted (a message to N people is N + 1 envelopes)',
     files: 'files accepted',
-    file_bytes: 'total size of accepted files',
+    file_mb: 'total size of accepted files, in MB',
     logins: 'successful logins',
-    keys: 'about how many different keys logged in (HyperLogLog with a salt deleted at the end of the day)',
+    keys: 'about how many different keys logged in during the week (HyperLogLog; each day uses a salt deleted at the end of that day)',
   },
 };
