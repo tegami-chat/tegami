@@ -2049,9 +2049,9 @@ async function main() {
       await p.goto(ORIGIN + '/settings');
       await button(p, 'AI の権限').click();
       await waitText(p, 'AI の使用');
-      await waitText(p, 'AI ごと');
-      await waitText(p, 'モデルごと');
-      await waitText(p, '友だちごと');
+      await waitText(p, 'AI友だち');
+      await waitText(p, 'AIモデル');
+      await waitText(p, '友だち');
       for (const name of ['友だちの一覧を見る', 'トークを読む', '確認なしで送る'])
         assert(!(await sw(name).isChecked()), `${name} starts on`);
       await shot(p, 'ai-permissions', 'AI の権限：すべて最初はオフ');

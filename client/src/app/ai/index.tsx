@@ -43,7 +43,7 @@ export default function AiPermissionsScreen() {
 
       {ais.length > 0 && (
         <>
-          <Text style={s.heading}>AI ごと</Text>
+          <Text style={s.heading}>AI友だち</Text>
           <View style={s.list}>
             {ais.map((x, i) => (
               <Pressable key={x.pubkey} style={[s.row, i > 0 && s.border]} onPress={() => open('ai', x.pubkey)} role="button">
@@ -65,7 +65,7 @@ export default function AiPermissionsScreen() {
 
       {models.length > 0 && (
         <>
-          <Text style={s.heading}>モデルごと</Text>
+          <Text style={s.heading}>AIモデル</Text>
           <View style={s.list}>
             {models.map((m, i) => (
               <Pressable key={m} style={[s.row, i > 0 && s.border]} onPress={() => open('model', m)} role="button">
@@ -81,7 +81,7 @@ export default function AiPermissionsScreen() {
 
       {friends.length > 0 && (
         <>
-          <Text style={s.heading}>友だちごと</Text>
+          <Text style={s.heading}>友だち</Text>
           <View style={s.list}>
             {friends.map((x, i) => {
               const n = onCount(p, x.pubkey);
