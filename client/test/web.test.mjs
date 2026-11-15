@@ -3689,7 +3689,7 @@ async function main() {
       // With one account, the list offers no removing (settings has "この端末から削除").
       await openSettings(u.page);
       await waitText(u.page, '使用中');
-      assert((await u.page.getByRole('button', { name: /をこの端末から削除$/ }).count()) === 0, 'removing offered in the list with one account');
+      assert((await u.page.getByRole('button', { name: /^この端末から削除（/ }).count()) === 0, 'removing offered in the list with one account');
       await button(u.page, 'アカウントを追加').click();
       await button(u.page, 'はじめる').click();
       await button(u.page, 'パスキーを使わずに始める').click();
@@ -3703,12 +3703,12 @@ async function main() {
       const before = await storage(u.page);
       assert(before['tegami.messages'] && Object.keys(before).some((k) => k.startsWith('tegami@')), 'setup: both accounts keep storage');
       // Remove the first account (not the open one) from the list.
-      await button(u.page, 'いちをこの端末から削除').click();
+      await button(u.page, 'この端末から削除（いち）').click();
       await waitText(u.page, 'いちをこの端末から削除しますか？');
       await shot(u.page, 'account-remove-dialog', '一覧の「削除」を押した時の確認');
       await u.page.getByTestId('dialog').getByRole('button', { name: 'キャンセル', exact: true }).click();
       assert((await storage(u.page))['tegami.messages'], 'cancel removed the account');
-      await button(u.page, 'いちをこの端末から削除').click();
+      await button(u.page, 'この端末から削除（いち）').click();
       await u.page.getByTestId('dialog').getByRole('button', { name: '削除', exact: true }).click();
       await u.page.waitForFunction(() => !localStorage.getItem('tegami.messages'), null, { timeout: 5000 }).catch(() => {
         throw new Error('the removed account kept its messages');

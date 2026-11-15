@@ -67,7 +67,7 @@ export function AccountList({ add = true }: { add?: boolean }) {
               {fresh > 0 && <Badge count={fresh} />}
             </Pressable>
             {canRemove && (
-              <Pressable style={s.remove} onPress={() => setRemoving(a)} role="button" aria-label={`${accountName(a)}をこの端末から削除`}>
+              <Pressable style={s.remove} onPress={() => setRemoving(a)} role="button" aria-label={`この端末から削除（${accountName(a)}）`}>
                 <Text style={s.removeText}>削除</Text>
               </Pressable>
             )}
