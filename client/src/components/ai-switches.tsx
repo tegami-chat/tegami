@@ -21,8 +21,8 @@ export const AI_ACTION_LABEL: Record<AiAction, string> = {
 
 type Scope = { layer: 'all' } | { layer: 'model' | 'ai' | 'friend'; id: string };
 
-/** One card of switches for one layer. `blocked` marks actions a layer above has turned off. */
-export function AiSwitches({ scope, blocked }: { scope: Scope; blocked?: (a: AiAction) => boolean }) {
+/** One card of switches for one layer. `blocked` returns why a layer above has turned an action off. */
+export function AiSwitches({ scope, blocked }: { scope: Scope; blocked?: (a: AiAction) => string | null }) {
   const c = usePalette();
   const s = styles(c);
   const p = useAiPermissions();
@@ -30,10 +30,14 @@ export function AiSwitches({ scope, blocked }: { scope: Scope; blocked?: (a: AiA
   return (
     <View style={s.card}>
       {actions.map((a, i) => {
-        const off = blocked?.(a) ?? false;
+        const why = blocked?.(a) ?? null;
+        const off = why !== null;
         return (
           <View key={a} style={[s.row, i > 0 && s.border]}>
-            <Text style={[s.label, off && s.off]}>{AI_ACTION_LABEL[a]}</Text>
+            <View style={s.text}>
+              <Text style={[s.label, off && s.off]}>{AI_ACTION_LABEL[a]}</Text>
+              {why ? <Text style={s.why}>{why}</Text> : null}
+            </View>
             <Switch
               trackColor={{ false: c.line, true: c.accent }}
               thumbColor="#ffffff"
@@ -55,6 +59,8 @@ const styles = (c: Palette) =>
     card: { backgroundColor: c.surface, borderRadius: 12, borderWidth: 1, borderColor: c.line, overflow: 'hidden' },
     row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingHorizontal: 14, minHeight: 52 },
     border: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line },
-    label: { fontSize: 16, color: c.text, flex: 1 },
+    text: { flex: 1, paddingVertical: 8 },
+    label: { fontSize: 16, color: c.text },
+    why: { fontSize: 12, color: c.muted, marginTop: 2 },
     off: { color: c.muted },
   });

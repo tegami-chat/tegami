@@ -27,11 +27,11 @@ export default function AiPermissionsScreen() {
 
   return (
     <ScrollView style={s.fill} contentContainerStyle={s.body}>
-      <Text style={s.heading}>すべての AI</Text>
+      <Text style={s.heading}>AI の使用</Text>
       <AiSwitches scope={{ layer: 'all' }} />
       {anyOn && (
         <Pressable style={s.card} onPress={stopAllAi} role="button">
-          <Text style={s.danger}>すべての AI を止める</Text>
+          <Text style={s.danger}>すべてオフにする</Text>
         </Pressable>
       )}
 
