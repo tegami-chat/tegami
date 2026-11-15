@@ -12,6 +12,7 @@ import { ReportSheet } from '@/components/report-sheet';
 import { Palette, usePalette } from '@/constants/theme';
 import { AI_DRAFT_MESSAGES, markReadNoticeSeen, mayDraft, readNoticeSeen } from '@/lib/ai-draft';
 import { useAiPermissions } from '@/lib/ai-permissions';
+import { aiApproved, everyoneIn, myAiMayRead } from '@/lib/ai-actions';
 import { useCall } from '@/lib/calls';
 import { cautionFor } from '@/lib/caution';
 import { isFeedback } from '@/lib/feedback';
@@ -82,6 +83,10 @@ export default function Chat() {
     retrySend,
     askAiDraft,
     onAiDraft,
+    aiGroups,
+    aiMembersOf,
+    inviteAiToGroup,
+    answerAiInGroup,
   } = useTegami();
   const aiPermissions = useAiPermissions();
   // Asking an AI friend for a reply draft (lib/ai-draft.ts): the ask it is waiting for, and
@@ -90,6 +95,8 @@ export default function Chat() {
   const [aiNotice, setAiNotice] = useState<string | null>(null);
   // The gate wants this one ask confirmed by the person (per-ask permission).
   const [aiConfirm, setAiConfirm] = useState<string | null>(null);
+  // One of my AI friends I am about to invite into this group (every member must say yes).
+  const [aiInviting, setAiInviting] = useState<string | null>(null);
   // A message waiting to be sent that was tapped: it offers to stop sending.
   const [offered, setOffered] = useState<string | null>(null);
   const [plusOpen, setPlusOpen] = useState(false);
@@ -182,6 +189,31 @@ export default function Chat() {
     const isFriend = (pk: string) => contacts.some((x) => x.pubkey === pk && !x.model) && !blocked.includes(pk);
     return contacts.filter((x) => x.model && mayDraft(aiPermissions, x, peer, isFriend));
   }, [peer, group, contact, isBlocked, contacts, blocked, aiPermissions]);
+  // AIs invited into this group, or called into this 1:1 chat (lib/ai-actions.ts), and my AI
+  // friends I could invite. Every member (in a 1:1 chat: the other person) must say yes.
+  const withPerson = group || (!!contact && !contact.model && !isBlocked);
+  const groupAis = useMemo(() => {
+    if (!peer || !withPerson || !me) return [];
+    // A Tegami group (g-<gid>) is agreed with by the people in it now.
+    const members = aiMembersOf(peer);
+    if (!members) return [];
+    const everyone = everyoneIn(members, me);
+    return Object.entries(aiGroups[everyone] ?? {}).map(([ai, e]) => ({
+      ai,
+      ...e,
+      approved: aiApproved(e, everyone),
+      yes: everyone.split(',').filter((m) => e.answers[m]?.yes === true).length,
+      total: everyone.split(',').length,
+      refused: everyone.split(',').some((m) => e.answers[m]?.yes === false),
+      mine: e.answers[me]?.yes,
+    }));
+  }, [peer, withPerson, me, aiGroups, aiMembersOf, group]);
+  const invitableAis = useMemo(() => {
+    if (!withPerson) return [];
+    return contacts.filter(
+      (x) => x.model && myAiMayRead(aiPermissions, x) && !groupAis.some((g) => g.ai === x.pubkey && !g.refused),
+    );
+  }, [withPerson, contacts, aiPermissions, groupAis]);
   const byId = useMemo(() => new Map(thread.map((m, i) => [m.id, i])), [thread]);
   const friends = useMemo(() => new Set(contacts.map((x) => x.pubkey)), [contacts]);
   // Shown once per chat above the first money/link message from someone who is not a friend.
@@ -1080,7 +1112,9 @@ export default function Chat() {
                   mine && !!item.pending && s.full,
                   highlight === item.id && s.highlight,
                 ]}>
-                {group && !mine && <Text style={s.author}>{personName(item.from, contacts)}</Text>}
+                {(group || item.from !== peer) && !mine && (
+                  <Text style={s.author}>{groupAis.find((g) => g.ai === item.from)?.name ?? personName(item.from, contacts)}</Text>
+                )}
                 {item.replyTo !== undefined &&
                   (quoted ? (
                     <Pressable style={s.quote} onPress={() => jumpTo(quoted.id)} role="button" testID="quote">
@@ -1117,6 +1151,11 @@ export default function Chat() {
                 ) : (
                   <Text style={s.text} selectable={false}>
                     {item.text}
+                  </Text>
+                )}
+                {item.ai && (
+                  <Text style={s.aiMark} testID="ai-mark">
+                    AIが書いた{item.ai.model ? `（${item.ai.model}）` : ''}
                   </Text>
                 )}
                 <Text style={s.time}>
@@ -1332,6 +1371,39 @@ export default function Chat() {
               </View>
             )}
 
+            {groupAis
+              .filter((g) => !g.refused)
+              .map((g) => (
+                <View key={g.ai} style={s.replyBar} testID="ai-in-group">
+                  <View style={s.replyBody}>
+                    <Text style={s.quoteName} numberOfLines={2}>
+                      {g.approved
+                        ? `${g.name}${g.model ? `（${g.model}）` : ''}が参加しています`
+                        : `${g.by === me ? '自分' : personName(g.by, contacts)}が${g.name}${g.model ? `（${g.model}）` : ''}を${group ? '招待しています' : '呼んでいます'}`}
+                    </Text>
+                    {!g.approved && (
+                      <Text style={s.quoteText} numberOfLines={1}>
+                        同意 {g.yes}/{g.total}人
+                      </Text>
+                    )}
+                  </View>
+                  {g.mine === true ? (
+                    <Pressable role="button" aria-label="同意をやめる" style={s.aiGroupBtn} onPress={() => void answerAiInGroup(peer!, g.ai, false).catch(() => showToast('送れませんでした'))}>
+                      <Text style={s.aiGroupBtnText}>同意をやめる</Text>
+                    </Pressable>
+                  ) : (
+                    <>
+                      <Pressable role="button" aria-label="同意しない" style={s.aiGroupBtn} onPress={() => void answerAiInGroup(peer!, g.ai, false).catch(() => showToast('送れませんでした'))}>
+                        <Text style={s.aiGroupBtnText}>同意しない</Text>
+                      </Pressable>
+                      <Pressable role="button" aria-label="同意する" style={[s.aiGroupBtn, s.aiGroupBtnMain]} onPress={() => void answerAiInGroup(peer!, g.ai, true).catch(() => showToast('送れませんでした'))}>
+                        <Text style={[s.aiGroupBtnText, s.aiGroupBtnTextMain]}>同意する</Text>
+                      </Pressable>
+                    </>
+                  )}
+                </View>
+              ))}
+
             {aiWaiting && !recordPanel && (
               <View style={s.replyBar} testID="ai-waiting">
                 <View style={s.replyBody}>
@@ -1358,6 +1430,24 @@ export default function Chat() {
                   </View>
                   <Text style={s.plusLabel}>ファイル</Text>
                 </Pressable>
+                {invitableAis.map((ai) => (
+                  <Pressable
+                    key={`invite-${ai.pubkey}`}
+                    role="button"
+                    aria-label={group ? `${ai.name}をグループに招待` : `${ai.name}をトークに呼ぶ`}
+                    style={s.plusItem}
+                    onPress={() => {
+                      setPlusOpen(false);
+                      setAiInviting(ai.pubkey);
+                    }}>
+                    <View style={s.plusIcon}>
+                      <MaterialIcons name="smart-toy" size={24} color={c.text} />
+                    </View>
+                    <Text style={s.plusLabel} numberOfLines={2}>
+                      {group ? `${ai.name}をグループに招待` : `${ai.name}をトークに呼ぶ`}
+                    </Text>
+                  </Pressable>
+                ))}
                 {draftAis.map((ai) => (
                   <Pressable
                     key={ai.pubkey}
@@ -1652,6 +1742,25 @@ export default function Chat() {
                 markReadNoticeSeen();
                 setAiNotice(null);
                 void askDraft(ai);
+              },
+            },
+          ]}
+        />
+      )}
+
+      {aiInviting && (
+        <Dialog
+          title={group ? `${personName(aiInviting, contacts)}をこのグループに招待しますか？` : `${personName(aiInviting, contacts)}をこのトークに呼びますか？`}
+          text={group ? '全員が同意すると、このグループのメッセージが届くようになります。' : '相手が同意すると、このトークのメッセージが届くようになります。'}
+          onClose={() => setAiInviting(null)}
+          buttons={[
+            { label: 'キャンセル', variant: 'outlined', onPress: () => setAiInviting(null) },
+            {
+              label: group ? '招待' : '呼ぶ',
+              onPress: () => {
+                const ai = aiInviting;
+                setAiInviting(null);
+                if (peer) void inviteAiToGroup(peer, ai).catch(() => showToast('招待できませんでした'));
               },
             },
           ]}
@@ -2000,6 +2109,11 @@ const styles = (c: Palette) =>
     replyClose: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
     text: { fontSize: 16, color: c.text, lineHeight: 22, userSelect: 'none' },
     author: { fontSize: 12, color: c.accent, fontWeight: '600', marginBottom: 2 },
+    aiMark: { fontSize: 11, color: c.muted, marginTop: 4 },
+    aiGroupBtn: { minHeight: 36, borderRadius: 18, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: c.line },
+    aiGroupBtnMain: { backgroundColor: c.accent, borderColor: c.accent },
+    aiGroupBtnText: { fontSize: 13, fontWeight: '600', color: c.text },
+    aiGroupBtnTextMain: { color: '#ffffff' },
     time: { fontSize: 11, color: c.muted, alignSelf: 'flex-end', marginTop: 2 },
     waiting: { opacity: 0.6 },
     full: { maxWidth: '100%' },

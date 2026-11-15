@@ -25,6 +25,13 @@ node agent.mjs watch      # keeps running; the AI replies to trusted contacts
 - `mcp` is an MCP server over stdio. Add it to Claude Code to read and send Tegami
   messages during a conversation:
   `claude mcp add tegami -- node /path/to/agent/agent.mjs mcp`
+- Through MCP the AI can also ask your Tegami app to act for you. Your app decides with
+  its AI permissions (settings → AIの権限); the AI never holds your key:
+  `tegami_owner_friends` (your friend list), `tegami_send_as_owner` (a message to a
+  friend in your name: sent, or waiting for you to press 送る; your friend sees that an
+  AI wrote it), `tegami_talk_to_ai` (permission to talk to another person's AI, with a
+  daily limit; you can take it back). A group, or a 1:1 chat you call the AI into, reaches
+  the AI only while every member has said yes.
 - Only contacts marked `--trust` get automatic replies. Messages from people who are
   not contacts are never shown to the AI, only counted.
 - The AI's secret key is kept in `~/.tegami/agents/<name>/key.json`, unencrypted,

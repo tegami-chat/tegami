@@ -6,16 +6,35 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { shortId } from './lib.mjs';
+import { parseInvite, shortId } from './lib.mjs';
 
 const text = (value) => ({ content: [{ type: 'text', text: typeof value === 'string' ? value : JSON.stringify(value, null, 2) }] });
 
 export async function startMcp(agent) {
   const server = new McpServer({ name: 'tegami', version: '0.1.0' });
-  const nameOf = (pubkey) => (pubkey === agent.pubkey ? agent.profile.name : agent.contacts.find((c) => c.pubkey === pubkey)?.name ?? shortId(pubkey));
-  // A chat is known when every other participant is a contact (groups included).
-  const known = (room) => room.split(',').every((k) => agent.contacts.some((c) => c.pubkey === k));
-  const view = (m) => ({ from: nameOf(m.from), with: m.peer.split(',').map(nameOf).join(', '), text: m.text, at: new Date(m.at * 1000).toISOString() });
+  const nameOf = (pubkey) =>
+    pubkey === agent.pubkey
+      ? agent.profile.name
+      : (agent.contacts.find((c) => c.pubkey === pubkey)?.name ?? agent.state.peerAis[pubkey]?.name ?? agent.ownerFriends.find((f) => f.pubkey === pubkey)?.name ?? shortId(pubkey));
+  // A chat is known when it is with a contact, with another person's AI the owner allowed, or a
+  // group whose every member said yes to this AI. Anything else is only counted.
+  const known = (room) => agent.known(room) || room.split(',').every((k) => agent.contacts.some((c) => c.pubkey === k));
+  const view = (m) => ({
+    from: nameOf(m.from),
+    with: m.peer.split(',').map(nameOf).join(', '),
+    ...(m.peer.includes(',') ? { group: m.peer } : {}),
+    text: m.text,
+    at: new Date(m.at * 1000).toISOString(),
+  });
+  /** A contact or an allowed AI by name or link, or a group by its id (from tegami_inbox). */
+  const target = (to) => {
+    if (to.includes(',')) return agent.groupApproved(to) ? { pubkey: to, name: 'group' } : null;
+    const c = agent.contact(to);
+    if (c && known(c.pubkey)) return c;
+    const p = parseInvite(to);
+    const pk = p?.pubkey ?? Object.entries(agent.state.peerAis).find(([, g]) => g.name === to)?.[0];
+    return pk && agent.peerGrant(pk) ? { pubkey: pk, name: nameOf(pk) } : null;
+  };
 
   server.registerTool(
     'tegami_contacts',
@@ -53,14 +72,71 @@ export async function startMcp(agent) {
   server.registerTool(
     'tegami_send',
     {
-      description: 'Send a Tegami message as this AI to one of its contacts.',
-      inputSchema: { to: z.string().describe('Contact name.'), text: z.string().min(1).max(20000) },
+      description:
+        "Send a Tegami message as this AI: to a contact, to another person's AI your owner allowed (daily limit), or to a group (its id from tegami_inbox) whose every member said yes.",
+      inputSchema: { to: z.string().describe('Contact name, an allowed AI, or a group id.'), text: z.string().min(1).max(20000) },
     },
     async ({ to, text: body }) => {
-      const c = agent.contact(to);
-      if (!c || !known(c.pubkey)) return text(`Unknown contact: ${to}`);
-      await agent.send(c.pubkey, body);
+      const c = target(to);
+      if (!c) return text(`Unknown contact: ${to}`);
+      try {
+        await agent.send(c.pubkey, body);
+      } catch (e) {
+        return text(e.message);
+      }
       return text(`Sent to ${c.name}.`);
+    },
+  );
+
+  // ---------- asks to the owner's app: it decides with its AI permissions ----------
+
+  server.registerTool(
+    'tegami_owner_friends',
+    {
+      description: "Ask your owner's Tegami app for the owner's friend list. The app answers only if the owner allows it.",
+      inputSchema: {},
+    },
+    async () => {
+      const friends = await agent.ownerContacts(60_000).catch((e) => e);
+      if (friends instanceof Error) return text(friends.message);
+      if (!friends) return text("The owner's app did not hand over the friend list (not allowed, or no answer).");
+      return text(friends.map((f) => ({ name: f.name })));
+    },
+  );
+
+  server.registerTool(
+    'tegami_send_as_owner',
+    {
+      description:
+        "Ask your owner's Tegami app to send a message to one of the owner's friends, in the owner's name. The owner's AI permissions decide: it may be sent, wait for the owner to press send, or be refused. The friend sees that an AI wrote it.",
+      inputSchema: { to: z.string().describe("A friend's name from tegami_owner_friends."), text: z.string().min(1).max(2000) },
+    },
+    async ({ to, text: body }) => {
+      const f = agent.ownerFriends.find((x) => x.name === to || x.pubkey === to);
+      if (!f) return text(`Unknown friend: ${to}. Call tegami_owner_friends first.`);
+      const status = await agent.sendAsOwner(f.pubkey, body, 60_000).catch((e) => e.message);
+      const said = {
+        sent: `Sent to ${f.name} in your owner's name.`,
+        waiting: 'Waiting for your owner to press send.',
+        declined: 'Your owner did not send it.',
+        stopped: "Stopped by your owner's AI permissions.",
+      };
+      return text(said[status] ?? (status ? String(status) : "No answer from the owner's app."));
+    },
+  );
+
+  server.registerTool(
+    'tegami_talk_to_ai',
+    {
+      description:
+        "Ask your owner's Tegami app for permission to talk to another person's AI (its invite link). The owner answers; the permission can be taken back and has a daily message limit.",
+      inputSchema: { ai: z.string().describe("The other AI's invite link or npub.") },
+    },
+    async ({ ai }) => {
+      const p = parseInvite(ai);
+      if (!p) return text('Give an invite link or an npub.');
+      const ok = await agent.askPeer({ pubkey: p.pubkey, ...(p.name ? { name: p.name } : {}), ...(p.model ? { model: p.model } : {}) }, 120_000).catch(() => false);
+      return text(ok ? `Allowed. Send to it with tegami_send (to: ${p.name || ai}).` : 'Not allowed.');
     },
   );
 
