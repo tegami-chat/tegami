@@ -2370,7 +2370,7 @@ async function main() {
         await p.goto(ORIGIN + '/settings');
         await button(p, 'AI の権限').click();
         await p.getByText('テストB', { exact: true }).click();
-        await waitText(p, 'テストBのトークで AI ができること');
+        await waitText(p, 'テストBとのトークで AI ができること');
         await sw('トークを読む').click();
         await sw('返信の下書きを作る').click();
 
@@ -2444,7 +2444,7 @@ async function main() {
         // The log: what was handed over, and when it was stopped.
         await p.goto(ORIGIN + '/ai/log');
         await waitText(p, '渡したメッセージ：2通');
-        await waitText(p, '止めた：友だちの設定でオフ');
+        await waitText(p, '止めました：この友だちの設定でオフ');
         await shot(p, 'ai-draft-log', 'AI の記録。読ませたメッセージの数と時刻');
 
         // A stranger's chat: never, even with a friend switch stored for them.
