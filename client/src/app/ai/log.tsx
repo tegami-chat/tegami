@@ -2,7 +2,7 @@ import { FlatList, StyleSheet, Text, View } from 'react-native';
 
 import { AI_ACTION_LABEL } from '@/components/ai-switches';
 import { Palette, usePalette } from '@/constants/theme';
-import { useAiLog, type AiLogEntry, type Layer } from '@/lib/ai-permissions';
+import { useAiLog, type AiLogEntry, type AiRange, type Layer } from '@/lib/ai-permissions';
 import { personName, useTegami, type Contact } from '@/lib/tegami';
 
 const STOPPED_BY: Record<Layer, string> = {
@@ -37,6 +37,14 @@ function whom(e: AiLogEntry, contacts: Contact[]) {
   return `（${personName(e.friend, contacts)}）`;
 }
 
+const at = (t: number) => new Date(t * 1000).toLocaleString([], { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+/** Which messages were handed to the AI: how many, and from when to when. */
+function rangeText(r: AiRange) {
+  if (!r.count) return '渡したメッセージ：なし';
+  return `渡したメッセージ：${r.count}通、${at(r.from)}〜${at(r.to)}`;
+}
+
 /** What each AI asked to do, newest first, and whether the app let it. */
 export default function AiLogScreen() {
   const c = usePalette();
@@ -60,6 +68,7 @@ export default function AiLogScreen() {
             {actionText(e)}
             {whom(e, contacts)}
           </Text>
+          {e.range ? <Text style={s.range}>{rangeText(e.range)}</Text> : null}
           <Text style={e.allowed ? s.allowed : s.stopped}>{result(e)}</Text>
         </View>
       )}
@@ -75,6 +84,7 @@ const styles = (c: Palette) =>
     row: { backgroundColor: c.surface, borderRadius: 12, borderWidth: 1, borderColor: c.line, padding: 12, gap: 4 },
     time: { fontSize: 12, color: c.muted },
     text: { fontSize: 15, color: c.text },
+    range: { fontSize: 13, color: c.muted },
     allowed: { fontSize: 13, color: c.accent, fontWeight: '600' },
     stopped: { fontSize: 13, color: c.danger, fontWeight: '600' },
   });

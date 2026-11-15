@@ -7,6 +7,8 @@ import { bytesToHex, hexToBytes } from 'nostr-tools/utils';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { describeAccount } from './accounts';
+import { AI_DRAFT_ASK_KIND, AI_DRAFT_KIND, draftAsk, parseDraft, wrapExpiring } from './ai-draft';
+import { gateAi } from './ai-permissions';
 import { clearNewMark } from './sw-store';
 import { createDeviceVault, deviceVaultAvailable, openDeviceVault, type DeviceVault } from './device-vault';
 import { setCrashReports } from './crash';
@@ -49,6 +51,14 @@ export type Message = {
 
 /** done: we talked. missed: they called, I did not answer. unanswered: I called, no answer. */
 export type CallRecord = { video: boolean; result: 'done' | 'missed' | 'unanswered'; seconds?: number };
+
+/** A reply draft from an AI friend, answering my ask `re` (lib/ai-draft.ts). Never a message. */
+export type AiDraft = { ai: string; re: string; text: string };
+
+/** Thrown when the AI gate does not let this AI read this friend's chat. */
+export class AiNotAllowedError extends Error {}
+/** Thrown when the AI gate wants the person to confirm this one ask first (askAiDraft with confirmed). */
+export class AiConfirmNeededError extends Error {}
 
 /** A call signal from someone (or from my other device: from === me). See lib/signal.ts. */
 export type Signal = { id: string; from: string; to: string; at: number; data: Record<string, unknown> };
@@ -185,6 +195,15 @@ type TegamiState = {
   setNotifications: (on: boolean) => Promise<PushState>;
   /** Sends a call signal to one person, and to my other devices when alsoMe. */
   sendSignal: (to: string, data: Record<string, unknown>, alsoMe?: boolean) => Promise<void>;
+  /**
+   * Asks an AI friend for a reply draft in a 1:1 chat with a friend. The gate must allow both
+   * reading and drafting (each logged); else throws AiNotAllowedError. When the gate wants the
+   * person asked first, throws AiConfirmNeededError until called again with confirmed.
+   * Returns the ask's id.
+   */
+  askAiDraft: (ai: string, friend: string, confirmed?: boolean) => Promise<string>;
+  /** Listens for drafts coming back from AI friends. Returns the function that stops listening. */
+  onAiDraft: (fn: (d: AiDraft) => void) => () => void;
   /** Listens for fresh call signals. Returns the function that stops listening. */
   onSignal: (fn: (s: Signal) => void) => () => void;
   /** Adds a call record to a chat on this device. */
@@ -527,6 +546,15 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Drafts from AI friends go to whoever listens (the chat screen that asked).
+  const draftListeners = useRef(new Set<(d: AiDraft) => void>());
+  const onAiDraft = useCallback((fn: (d: AiDraft) => void) => {
+    draftListeners.current.add(fn);
+    return () => {
+      draftListeners.current.delete(fn);
+    };
+  }, []);
+
   const addMessage = useCallback((m: Message) => {
     setMessages((prev) => {
       if (prev.some((p) => p.id === m.id)) return prev;
@@ -625,6 +653,13 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
             const data = JSON.parse(rumor.content);
             if (!data || typeof data !== 'object' || !/^[0-9a-f]{64}$/.test(to)) return;
             for (const fn of signalListeners.current) fn({ id: rumor.id, from: rumor.pubkey, to, at: rumor.created_at, data });
+            return;
+          }
+          if (rumor.kind === AI_DRAFT_KIND) {
+            // Only from an AI friend; the chat screen matches it to the ask it made.
+            if (!contactsRef.current.some((c) => c.pubkey === rumor.pubkey && c.model)) return;
+            const d = parseDraft(rumor.content);
+            if (d) for (const fn of draftListeners.current) fn({ ai: rumor.pubkey, ...d });
             return;
           }
           if (rumor.kind === PROFILE_KIND) {
@@ -1473,6 +1508,40 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     [secret, me],
   );
 
+  const askAiDraft = useCallback(
+    async (ai: string, friend: string, confirmed = false) => {
+      if (!secret || !me || !pool.current) throw new Error('not open');
+      const people = contactsRef.current;
+      const aiContact = people.find((c) => c.pubkey === ai && c.model);
+      const friendContact = people.find((c) => c.pubkey === friend && !c.model);
+      // Only a friend (a person, not another AI) in a 1:1 chat, not blocked. Never a stranger.
+      const isFriend = (pk: string) => people.some((c) => c.pubkey === pk && !c.model) && !blockedRef.current.includes(pk);
+      if (!aiContact || !friendContact || isGroup(friend)) throw new AiNotAllowedError('not an AI friend and a friend');
+      const { ask, range } = draftAsk(messagesRef.current, friend, me, { friend: friendContact.name, me: myName || '自分' });
+      const r = { ai, model: aiContact.model, friend };
+      // The gate answers allow, refuse, or (with per-ask permissions) "ask the person first".
+      const pass = (answer: unknown, what: string) => {
+        if (answer === true) return;
+        if (answer === 'ask') {
+          if (confirmed) return;
+          throw new AiConfirmNeededError(what);
+        }
+        throw new AiNotAllowedError(what);
+      };
+      pass(gateAi({ ...r, action: 'read', range }, isFriend), 'read');
+      pass(gateAi({ ...r, action: 'draft' }, isFriend), 'draft');
+      const rumor = nip59.createRumor(
+        { kind: AI_DRAFT_ASK_KIND, content: JSON.stringify(ask), tags: [['p', ai]], created_at: Math.floor(Date.now() / 1000) },
+        secret,
+      );
+      // For the AI only: no copy for my other devices, and it expires (lib/ai-draft.ts).
+      const wrap = wrapExpiring(rumor, secret, ai);
+      if (!(await publishOne(pool.current, RELAYS, wrap, authRef.current ?? undefined))) throw new Error('not sent');
+      return rumor.id;
+    },
+    [secret, me, myName],
+  );
+
   const recordCall = useCallback(
     (peer: string, from: string, record: CallRecord, id: string) => {
       addMessage({ id: `call:${id}`, from, peer, text: callText(record), at: Math.floor(Date.now() / 1000), call: record });
@@ -1610,6 +1679,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     setNotifications,
     sendSignal,
     onSignal,
+    askAiDraft,
+    onAiDraft,
     recordCall,
     status,
     me,

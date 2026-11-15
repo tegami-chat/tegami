@@ -57,6 +57,9 @@ export type AiPermissions = {
   peerAis: Record<string, { until: number }>;
 };
 
+/** What an AI was given to read: how many messages, from when to when (unix seconds). */
+export type AiRange = { count: number; from: number; to: number };
+
 export type AiLogEntry = {
   at: number;
   /** The AI friend; empty for a switch that ran out (no AI asked). */
@@ -66,6 +69,8 @@ export type AiLogEntry = {
   friend?: string;
   /** The other person's AI: the name it gave, to show instead of its key. */
   peerName?: string;
+  /** For reading: which messages were handed to the AI. */
+  range?: AiRange;
   allowed: boolean;
   /** Which layer stopped it, or why the user was asked. */
   stoppedBy?: Layer;
@@ -241,6 +246,8 @@ export type AiRequest = {
   content?: AiContent;
   /** The other person's AI (otherAi only). */
   peer?: { pubkey: string; name?: string; model?: string };
+  /** For reading: the messages that will be handed over, kept in the log. */
+  range?: AiRange;
 };
 
 const MONEY = ['振込', '振り込', '送金', '入金', '支払', '払って', '払う', '返金', '請求', '口座', '暗号資産', '仮想通貨', 'ビットコイン', 'ギフトカード', 'カード番号', '暗証番号', 'bitcoin', 'sats', 'lightning', 'paypay'];
@@ -312,6 +319,7 @@ function logRequest(r: AiRequest, allowed: boolean, by?: Layer, answer?: 'allowe
     action: r.action,
     ...(r.friend ? { friend: r.friend } : r.peer ? { friend: r.peer.pubkey } : {}),
     ...(!r.friend && r.peer?.name ? { peerName: r.peer.name.slice(0, 60) } : {}),
+    ...(r.range && allowed ? { range: r.range } : {}),
     allowed,
     ...(by ? { stoppedBy: by } : {}),
     ...(answer ? { answer } : {}),

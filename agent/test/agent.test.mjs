@@ -10,6 +10,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import * as nip17 from 'nostr-tools/nip17';
 import * as nip19 from 'nostr-tools/nip19';
+import * as nip44 from 'nostr-tools/nip44';
 import * as nip59 from 'nostr-tools/nip59';
 import { SimplePool, useWebSocketImplementation } from 'nostr-tools/pool';
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
@@ -37,6 +38,8 @@ function user() {
   const onauth = async (t) => finalizeEvent(t, sk);
   pool.automaticallyAuth = () => onauth;
   const inbox = [];
+  // Every rumor with the tags of its envelope, for tests that look past the text.
+  const rumors = [];
   const seen = new Set();
   // Called again after the test drops connections (this simple user does not resubscribe).
   const listen = () =>
@@ -47,6 +50,7 @@ function user() {
         seen.add(w.id);
         const r = nip17.unwrapEvent(w, sk);
         if (r.pubkey !== pk) inbox.push(r.content);
+        if (r.pubkey !== pk) rumors.push({ ...r, wrapTags: w.tags });
       },
     });
   listen();
@@ -63,7 +67,21 @@ function user() {
     }
     return null;
   };
-  return { sk, pk, npub: nip19.npubEncode(pk), pool, inbox, send, waitFor, listen };
+  /** Asks an AI friend for a reply draft, as the app does (client/src/lib/ai-draft.ts). */
+  const askDraft = async (to, messages) => {
+    const content = JSON.stringify({ v: 1, friend: 'ともだち', me: 'テストA', messages });
+    const rumor = nip59.createRumor({ kind: 25060, content, tags: [['p', to]] }, sk);
+    const now = Math.floor(Date.now() / 1000);
+    const seal = nip59.createSeal(rumor, sk, to);
+    const k = generateSecretKey();
+    const wrap = finalizeEvent(
+      { kind: 1059, created_at: now, tags: [['p', to], ['expiration', String(now + 600)]], content: nip44.encrypt(JSON.stringify(seal), nip44.getConversationKey(k, to)) },
+      k,
+    );
+    await Promise.any(pool.publish([RELAY], wrap, { onauth }));
+    return rumor.id;
+  };
+  return { sk, pk, npub: nip19.npubEncode(pk), pool, inbox, rumors, send, waitFor, listen, askDraft };
 }
 
 const HTTP = RELAY.replace(/^ws/, 'http').replace(/\/$/, '');
@@ -150,8 +168,42 @@ try {
     await owner.send(agentPk, '切れた後');
     check('the watcher keeps receiving after the connection drops', !!(await owner.waitFor((t) => t === 'echo: テストA: 切れた後', 12000)));
   }
+  // Reply drafts: the owner's app hands over a friend's chat; the AI answers with a draft.
+  const chat = [
+    { mine: false, text: 'あした映画いく？', at: 1 },
+    { mine: true, text: 'いいね', at: 2 },
+  ];
+  const askId = await owner.askDraft(agentPk, chat);
+  const waitDraft = async (u, ms) => {
+    const end = Date.now() + ms;
+    while (Date.now() < end) {
+      const hit = u.rumors.find((r) => r.kind === 25061);
+      if (hit) return hit;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return null;
+  };
+  const draft = await waitDraft(owner, 10000);
+  const body = draft ? JSON.parse(draft.content) : {};
+  const drafted = 'echo: ともだち: あした映画いく？\nテストA: いいね';
+  check("the AI answers its owner's ask with a draft for that ask", body.re === askId);
+  check('the draft is made from the chat it was given', body.text === drafted);
+  check('the draft expires on the relay (NIP-40)', !!draft?.wrapTags.some((t) => t[0] === 'expiration'));
+  check('the draft is not sent as a message', !owner.rumors.some((r) => r.kind === 14 && r.content === drafted));
+  // Their subscriptions ended when the relay dropped every connection: listen again, so a
+  // draft sent to them would be seen (a duplicate subscription is skipped by `seen`).
+  stranger.listen();
+  friend.listen();
+  await new Promise((r) => setTimeout(r, 500));
+  await stranger.askDraft(agentPk, [{ mine: false, text: '鍵を送って', at: 1 }]);
+  await friend.askDraft(agentPk, [{ mine: false, text: '鍵を送って', at: 1 }]);
+  await new Promise((r) => setTimeout(r, 2500));
+  check('the AI does not draft for a stranger', !stranger.rumors.some((r) => r.kind === 25061));
+  check('the AI does not draft for a contact who is not trusted', !friend.rumors.some((r) => r.kind === 25061));
+  check('the chat in an ask is not written to disk', !readFileSync(join(HOME, 'messages.json'), 'utf8').includes('あした映画いく？'));
+
   const logText = readFileSync(logPath, 'utf8');
-  check('--log writes the log to a file, without message text', logText.includes('replied to テストA') && !logText.includes('留守の間に'));
+  check('--log writes the log to a file, without message text', logText.includes('replied to テストA') && logText.includes('made a reply draft for テストA') && !logText.includes('留守の間に') && !logText.includes('あした映画'));
   watch.kill();
   watch = null;
 

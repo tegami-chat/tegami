@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Link, router, usePathname } from 'expo-router';
+import { Link, router, usePathname, type Href } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -113,7 +113,7 @@ export function ChatList({ wide = false }: { wide?: boolean }) {
       {wide ? (
         <View style={s.columnHead}>
           {account ? (
-            <Pressable role="button" onPress={() => router.push('/accounts')} style={s.accountButton}>
+            <Pressable role="button" onPress={() => router.push('/accounts' as Href)} style={s.accountButton}>
               <Text style={s.columnTitle} numberOfLines={1}>
                 {accountName(account)} ▾
               </Text>

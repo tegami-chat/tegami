@@ -2311,6 +2311,162 @@ async function main() {
       for (const u of [a, b]) await u.context.close();
     });
 
+    await test('AI draft: only when allowed, the AI reads that chat and its draft lands in the composer, unsent', async () => {
+      const AGENT = join(ROOT, '../agent');
+      const home = mkdtempSync(join(tmpdir(), 'tegami-agent-'));
+      const env = { ...process.env, TEGAMI_AGENT_HOME: home, TEGAMI_RELAYS: `ws://localhost:${RELAY_PORT}` };
+      const cli = (...a) => execFileSync(process.execPath, [join(AGENT, 'agent.mjs'), ...a], { env, encoding: 'utf8' });
+      let watch;
+      try {
+        const a = await person(browser, 'あおい');
+        const b = await person(browser, 'テストB');
+        const st = await person(browser, 'しらない');
+        const p = a.page;
+        const aiLink = cli('init', '--name', 'クロード', '--model', 'Anthropic Claude').match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
+        const aiHex = nip19.decode(aiLink.match(/npub1[0-9a-z]+/)[0]).data;
+        await befriend(a, aiLink.replace('https://app.tegami.chat', ORIGIN));
+        await p.goto(ORIGIN + '/add');
+        await p.waitForFunction(() => /&c=[a-z2-9]+/.test(document.body.innerText), null, { timeout: 10000 });
+        cli('add', (await text(p)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0], '--name', 'あおい', '--trust');
+        watch = spawn(process.execPath, [join(AGENT, 'agent.mjs'), 'watch', '--command', `node "${join(AGENT, 'test/echo.mjs')}"`], { env, stdio: 'pipe' });
+        await new Promise((r) => watch.stdout.once('data', r));
+
+        await befriend(b, a);
+        await b.page.getByPlaceholder('メッセージ').fill('あした映画いく？');
+        await button(b.page, '送る').click();
+        await befriend(a, b);
+        await waitText(p, 'あした映画いく？');
+        await p.getByPlaceholder('メッセージ').fill('いいね');
+        await button(p, '送る').click();
+        await waitText(b.page, 'いいね');
+
+        const ASK = 'クロードに下書きを頼む';
+        const toAi = async () => (await envelopesFor(aiHex)).length;
+        const composer = () => p.getByPlaceholder('メッセージ');
+        const openPlus = async () => {
+          await button(p, 'その他').click();
+          await p.getByTestId('plus-panel').waitFor();
+        };
+        const plusShut = async () => {
+          if (await p.getByTestId('plus-panel').count()) await button(p, 'その他').click();
+        };
+
+        // Every switch off: no way to ask, and nothing goes to the AI.
+        const before = await toAi();
+        await openPlus();
+        assert((await button(p, ASK).count()) === 0, 'the ask button shows while the switches are off');
+        await plusShut();
+
+        // "All AI" on for reading and drafting, but not yet for this friend: still nothing.
+        await p.goto(ORIGIN + '/settings');
+        await button(p, 'AI の権限').click();
+        const sw = (name) => p.getByRole('switch', { name, exact: true });
+        await sw('トークを読む').click();
+        await sw('返信の下書きを作る').click();
+        await p.goto(ORIGIN + `/chat/${b.hex}`);
+        await openPlus();
+        assert((await button(p, ASK).count()) === 0, 'the ask button shows before the friend is picked');
+        await plusShut();
+        await p.goto(ORIGIN + '/settings');
+        await button(p, 'AI の権限').click();
+        await p.getByText('テストB', { exact: true }).click();
+        await waitText(p, 'テストBのトークで AI ができること');
+        await sw('トークを読む').click();
+        await sw('返信の下書きを作る').click();
+
+        // Allowed: the first ask tells once that the chat leaves Tegami's encryption.
+        await p.goto(ORIGIN + `/chat/${b.hex}`);
+        await waitText(p, 'あした映画いく？');
+        await openPlus();
+        await shot(p, 'ai-draft-plus', '＋を押した時。AI の権限で許した時だけ「クロードに下書きを頼む」が出る');
+        await button(p, ASK).click();
+        await waitText(p, 'AI にトークを読ませますか？');
+        await shot(p, 'ai-draft-notice', '最初の1回だけ出るお知らせ');
+        await button(p, 'キャンセル').click();
+        assert((await toAi()) === before, 'something went to the AI after キャンセル');
+        await openPlus();
+        await button(p, ASK).click();
+        await button(p, '読ませる').click();
+        await p.waitForFunction(() => document.querySelector('textarea[placeholder="メッセージ"]')?.value.startsWith('echo:'), null, { timeout: 15000 });
+        const drafted = await composer().inputValue();
+        assert(drafted === 'echo: テストB: あした映画いく？\nあおい: いいね', `the draft: ${JSON.stringify(drafted)}`);
+        assert((await toAi()) === before + 1, 'not exactly one ask went to the AI');
+        // The composer grows to show every line of the draft, up to a limit, and shrinks back.
+        const inputBox = () => p.evaluate(() => {
+          const el = document.querySelector('textarea[placeholder="メッセージ"]');
+          return { h: el.offsetHeight, hidden: el.scrollHeight > el.clientHeight };
+        });
+        const two = await inputBox();
+        assert(two.h >= 64 && !two.hidden, `a two-line draft: ${JSON.stringify(two)}`);
+        await shot(p, 'ai-draft-filled', 'AI の下書きが入力欄に入った。送るボタンを押すまで送られない');
+
+        // The draft is not sent: it reaches neither the friend nor this chat.
+        await p.waitForTimeout(2500);
+        assert(!(await text(b.page)).includes('echo:'), 'the draft was sent to the friend');
+        const mine = await p.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages') || '[]'));
+        assert(!mine.some((m) => m.text.startsWith('echo:')), 'the draft was added as a message');
+        assert(!(await envelopesFor(b.hex)).some((e) => e.created_at >= Math.floor(Date.now() / 1000) - 5), 'something new went to the friend');
+
+        await composer().fill(Array.from({ length: 12 }, (_, i) => `行${i + 1}`).join('\n'));
+        const many = await inputBox();
+        assert(many.h <= 140 && many.h >= 130, `twelve lines stop growing at the limit: ${JSON.stringify(many)}`);
+        await shot(p, 'composer-many-lines', '12行を入れた時。入力欄は決まった高さで止まり、中を動かして読む');
+        await composer().fill('');
+        const empty = await inputBox();
+        assert(empty.h === 44, `an empty composer goes back to one line: ${JSON.stringify(empty)}`);
+
+        // The second ask asks nothing first.
+        await openPlus();
+        await button(p, ASK).click();
+        assert((await p.getByTestId('dialog').count()) === 0, 'the notice showed twice');
+        await p.waitForFunction(() => document.querySelector('textarea[placeholder="メッセージ"]')?.value.startsWith('echo:'), null, { timeout: 15000 });
+        await composer().fill('');
+
+        // Turned off in another tab: the gate here stops it at once, and the button goes away.
+        const p2 = await a.context.newPage();
+        await p2.goto(ORIGIN + '/');
+        const sent = await toAi();
+        await openPlus();
+        await p2.evaluate((hex) => {
+          const s = JSON.parse(localStorage.getItem('tegami.ai.permissions'));
+          s.friends[hex].read = false;
+          localStorage.setItem('tegami.ai.permissions', JSON.stringify(s));
+        }, b.hex);
+        await button(p, ASK).click();
+        await waitText(p, 'AI の権限で止めました');
+        await p.waitForTimeout(1000);
+        assert((await toAi()) === sent, 'the AI got the chat after the switch was turned off');
+        await openPlus();
+        assert((await button(p, ASK).count()) === 0, 'the ask button still shows after the switch was turned off');
+        await plusShut();
+        await p2.close();
+
+        // The log: what was handed over, and when it was stopped.
+        await p.goto(ORIGIN + '/ai/log');
+        await waitText(p, '渡したメッセージ：2通');
+        await waitText(p, '止めた：友だちの設定でオフ');
+        await shot(p, 'ai-draft-log', 'AI の記録。読ませたメッセージの数と時刻');
+
+        // A stranger's chat: never, even with a friend switch stored for them.
+        await p.evaluate((hex) => {
+          const s = JSON.parse(localStorage.getItem('tegami.ai.permissions'));
+          s.friends[hex] = { read: true, draft: true };
+          localStorage.setItem('tegami.ai.permissions', JSON.stringify(s));
+        }, st.hex);
+        await befriend(st, a);
+        await st.page.getByPlaceholder('メッセージ').fill('おかねかして');
+        await button(st.page, '送る').click();
+        await p.goto(ORIGIN + `/chat/${st.hex}`);
+        await waitText(p, 'おかねかして');
+        await openPlus();
+        assert((await button(p, ASK).count()) === 0, "the ask button shows in a stranger's chat");
+        for (const u of [a, b, st]) await u.context.close();
+      } finally {
+        watch?.kill();
+        rmSync(home, { recursive: true, force: true });
+      }
+    });
+
     await test('Block: a blocked person cannot reach me; their chat and calls disappear; unblocking lets them back', async () => {
       const a = await person(browser, 'えー');
       const b = await person(browser, 'びー');

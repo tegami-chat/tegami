@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, router, useIsFocused, useLocalSearchParams, type Href } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
@@ -10,16 +10,22 @@ import { Dialog } from '@/components/dialog';
 import { FileAttachment, Photo, PhotoViewer, Stamp, Video, VideoViewer, Voice } from '@/components/photo';
 import { ReportSheet } from '@/components/report-sheet';
 import { Palette, usePalette } from '@/constants/theme';
+import { AI_DRAFT_MESSAGES, markReadNoticeSeen, mayDraft, readNoticeSeen } from '@/lib/ai-draft';
+import { useAiPermissions } from '@/lib/ai-permissions';
 import { useCall } from '@/lib/calls';
 import { cautionFor } from '@/lib/caution';
 import { MAX_FILE_BYTES } from '@/lib/files';
 import { INFO_BESIDE_MIN, useWide, type PressState } from '@/lib/layout';
-import { chatName, clock, isGroup, personName, shortId, useTegami, type Message, type Stamp as StampItem } from '@/lib/tegami';
+import { AiConfirmNeededError, AiNotAllowedError, chatName, clock, isGroup, personName, shortId, useTegami, type Message, type Stamp as StampItem } from '@/lib/tegami';
 
 const SEND_ERROR = '送れませんでした。もう一度送ってください';
 const VOICE_MAX_MS = 5 * 60 * 1000;
 const AUDIO_TYPES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
 const SWIPE_REPLY_PX = 60;
+/** How long the chat waits for an AI friend's draft before saying it did not come. */
+const AI_DRAFT_WAIT_MS = 3 * 60 * 1000;
+/** The composer grows with its text up to this height, then scrolls inside. */
+const INPUT_MAX_HEIGHT = 140;
 
 function pickWebFile(accept?: string, capture?: string): Promise<File | null> {
   return new Promise((resolve) => {
@@ -71,7 +77,16 @@ export default function Chat() {
     markRead,
     cancelSend,
     retrySend,
+    askAiDraft,
+    onAiDraft,
   } = useTegami();
+  const aiPermissions = useAiPermissions();
+  // Asking an AI friend for a reply draft (lib/ai-draft.ts): the ask it is waiting for, and
+  // the AI whose first ask waits for the one-time notice about leaving the encryption.
+  const [aiWaiting, setAiWaiting] = useState<{ id: string; ai: string } | null>(null);
+  const [aiNotice, setAiNotice] = useState<string | null>(null);
+  // The gate wants this one ask confirmed by the person (per-ask permission).
+  const [aiConfirm, setAiConfirm] = useState<string | null>(null);
   // A message waiting to be sent that was tapped: it offers to stop sending.
   const [offered, setOffered] = useState<string | null>(null);
   const [plusOpen, setPlusOpen] = useState(false);
@@ -152,6 +167,12 @@ export default function Chat() {
   // 1:1 with a person (an AI friend cannot pick up). Groups later.
   const canCall = supported && !group && !!contact && !contact.model && !isBlocked;
   const thread = useMemo(() => messages.filter((m) => m.peer === peer).reverse(), [messages, peer]);
+  // AI friends allowed to read this chat and draft a reply. Only a 1:1 chat with a person.
+  const draftAis = useMemo(() => {
+    if (!peer || group || !contact || contact.model || isBlocked) return [];
+    const isFriend = (pk: string) => contacts.some((x) => x.pubkey === pk && !x.model) && !blocked.includes(pk);
+    return contacts.filter((x) => x.model && mayDraft(aiPermissions, x, peer, isFriend));
+  }, [peer, group, contact, isBlocked, contacts, blocked, aiPermissions]);
   const byId = useMemo(() => new Map(thread.map((m, i) => [m.id, i])), [thread]);
   const friends = useMemo(() => new Set(contacts.map((x) => x.pubkey)), [contacts]);
   // Shown once per chat above the first money/link message from someone who is not a friend.
@@ -187,6 +208,61 @@ export default function Chat() {
     setError(null);
   }, [peer]);
   useEffect(() => () => clearTimeout(copiedTimer.current), []);
+
+  // Web: a textarea keeps the height of one row. Measure the text after every change and grow
+  // (or shrink) to fit, up to INPUT_MAX_HEIGHT. Native multiline inputs grow by themselves.
+  useLayoutEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const el = input.current as unknown as HTMLTextAreaElement | null;
+    if (!el?.style) return;
+    el.style.height = 'auto';
+    const border = el.offsetHeight - el.clientHeight;
+    const full = el.scrollHeight + border;
+    el.style.height = `${Math.min(full, INPUT_MAX_HEIGHT)}px`;
+    el.style.overflowY = full > INPUT_MAX_HEIGHT ? 'auto' : 'hidden';
+  }, [draft, peer, recordPanel]);
+
+  const askDraft = useCallback(
+    async (ai: string, confirmed = false) => {
+      setPlusOpen(false);
+      if (!peer) return;
+      if (!readNoticeSeen()) {
+        setAiNotice(ai);
+        return;
+      }
+      try {
+        const id = await askAiDraft(ai, peer, confirmed);
+        setAiWaiting({ id, ai });
+      } catch (e) {
+        if (e instanceof AiConfirmNeededError) {
+          setAiConfirm(ai);
+          return;
+        }
+        showToast(e instanceof AiNotAllowedError ? 'AI の権限で止めました' : '頼めませんでした。もう一度お試しください');
+      }
+    },
+    [peer, askAiDraft, showToast],
+  );
+  // A different chat: a draft asked for in the last one does not belong here.
+  useEffect(() => setAiWaiting(null), [peer]);
+  // The draft goes into the composer only. Nothing is sent until the person presses send.
+  useEffect(() => {
+    if (!aiWaiting) return;
+    const off = onAiDraft((d) => {
+      if (d.re !== aiWaiting.id || d.ai !== aiWaiting.ai || !d.text.trim()) return;
+      setDraft((cur) => (cur.trim() ? `${cur}\n${d.text.trim()}` : d.text.trim()));
+      setAiWaiting(null);
+      input.current?.focus();
+    });
+    const t = setTimeout(() => {
+      setAiWaiting(null);
+      showToast('下書きが届きませんでした');
+    }, AI_DRAFT_WAIT_MS);
+    return () => {
+      off();
+      clearTimeout(t);
+    };
+  }, [aiWaiting, onAiDraft, showToast]);
 
   const nameOf = (pubkey: string) => (pubkey === me ? myName || '自分' : personName(pubkey, contacts));
   const firstLine = (m: Message) =>
@@ -1243,6 +1319,19 @@ export default function Chat() {
               </View>
             )}
 
+            {aiWaiting && !recordPanel && (
+              <View style={s.replyBar} testID="ai-waiting">
+                <View style={s.replyBody}>
+                  <Text style={s.quoteName} numberOfLines={1}>
+                    {personName(aiWaiting.ai, contacts)}が下書きを作っています
+                  </Text>
+                </View>
+                <Pressable role="button" aria-label="下書きを待つのをやめる" style={s.replyClose} onPress={() => setAiWaiting(null)}>
+                  <MaterialIcons name="close" size={24} color={c.muted} />
+                </Pressable>
+              </View>
+            )}
+
             {plusOpen && !recordPanel && (
               <View style={s.plusPanel} testID="plus-panel">
                 <Pressable
@@ -1256,6 +1345,22 @@ export default function Chat() {
                   </View>
                   <Text style={s.plusLabel}>ファイル</Text>
                 </Pressable>
+                {draftAis.map((ai) => (
+                  <Pressable
+                    key={ai.pubkey}
+                    role="button"
+                    aria-label={`${ai.name}に下書きを頼む`}
+                    disabled={!!aiWaiting}
+                    style={[s.plusItem, !!aiWaiting && s.disabled]}
+                    onPress={() => void askDraft(ai.pubkey)}>
+                    <View style={s.plusIcon}>
+                      <MaterialIcons name="edit-note" size={24} color={c.text} />
+                    </View>
+                    <Text style={s.plusLabel} numberOfLines={2}>
+                      {ai.name}に下書きを頼む
+                    </Text>
+                  </Pressable>
+                ))}
               </View>
             )}
 
@@ -1480,6 +1585,44 @@ export default function Chat() {
           </>
         )}
       </View>
+
+      {aiNotice && (
+        <Dialog
+          title="AI にトークを読ませますか？"
+          text={`このトークの新しいメッセージを${AI_DRAFT_MESSAGES}通まで、${personName(aiNotice, contacts)}に渡します。渡したメッセージは Tegami の暗号化の外に出て、AI を動かす会社に届くことがあります。`}
+          onClose={() => setAiNotice(null)}
+          buttons={[
+            { label: 'キャンセル', variant: 'outlined', onPress: () => setAiNotice(null) },
+            {
+              label: '読ませる',
+              onPress: () => {
+                const ai = aiNotice;
+                markReadNoticeSeen();
+                setAiNotice(null);
+                void askDraft(ai);
+              },
+            },
+          ]}
+        />
+      )}
+
+      {aiConfirm && (
+        <Dialog
+          title={`${personName(aiConfirm, contacts)}にこのトークを読ませますか？`}
+          onClose={() => setAiConfirm(null)}
+          buttons={[
+            { label: 'キャンセル', variant: 'outlined', onPress: () => setAiConfirm(null) },
+            {
+              label: '今回だけ読ませる',
+              onPress: () => {
+                const ai = aiConfirm;
+                setAiConfirm(null);
+                void askDraft(ai, true);
+              },
+            },
+          ]}
+        />
+      )}
 
       {deletingId && (
         <Dialog
@@ -1993,6 +2136,8 @@ const styles = (c: Palette) =>
       fontSize: 12,
       color: c.text,
       fontWeight: '500',
+      textAlign: 'center',
+      maxWidth: 96,
     },
     composer: {
       flexDirection: 'row',
@@ -2020,7 +2165,7 @@ const styles = (c: Palette) =>
     },
     input: {
       width: '100%',
-      maxHeight: 140,
+      maxHeight: INPUT_MAX_HEIGHT,
       minHeight: 44,
       backgroundColor: c.surface,
       borderRadius: 22,
