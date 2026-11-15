@@ -342,6 +342,21 @@ try {
   await new Promise((r) => setTimeout(r, 1000));
   const afterNo = await mcp.callTool({ name: 'tegami_send', arguments: { to: inGroup?.group ?? '', text: 'もう書けない' } });
   check('when a member takes the yes back, the AI cannot write there', afterNo.content[0].text.startsWith('Unknown contact'));
+  // A 1:1 chat the owner called the AI into: the same, with two people.
+  const pair = [owner.pk, friend.pk].sort();
+  const pairNote = async (from, data) => {
+    const rumor = nip59.createRumor({ kind: 10102, content: JSON.stringify({ ...data, members: pair, ai: agentPk }), tags: [...pair.filter((x) => x !== from.pk), agentPk].map((x) => ['p', x]) }, from.sk);
+    await Promise.any(from.pool.publish([RELAY], nip59.createWrap(nip59.createSeal(rumor, from.sk, agentPk), agentPk), { onauth: async (t) => finalizeEvent(t, from.sk) }));
+  };
+  await pairNote(owner, { t: 'invite', name: 'テストAI' });
+  await new Promise((r) => setTimeout(r, 800));
+  const pairRoom = pair.join(',');
+  const notYet = await mcp.callTool({ name: 'tegami_send', arguments: { to: pairRoom, text: 'まだ' } });
+  check('a 1:1 chat is not open to the AI before the other person says yes', notYet.content[0].text.startsWith('Unknown contact'));
+  await pairNote(friend, { t: 'answer', yes: true });
+  await new Promise((r) => setTimeout(r, 800));
+  const inPair = await mcp.callTool({ name: 'tegami_send', arguments: { to: pairRoom, text: '呼ばれました' } });
+  check('after the other person says yes, the AI may write in the 1:1 chat', inPair.content[0].text.startsWith('Sent') && !!(await friend.waitFor((t) => t === '呼ばれました')));
   for (const u of [otherAi, memberB]) u.pool.destroy();
 
   await mcp.close();

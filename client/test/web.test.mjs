@@ -2719,6 +2719,53 @@ async function main() {
       for (const u of [a, b, c]) await u.context.close();
     });
 
+    await test('AI called into a 1:1 chat: only after the other person says yes, and only until they take it back', async () => {
+      const a = await person(browser, 'あおい');
+      const b = await person(browser, 'テストB');
+      await befriend(b, a);
+      await befriend(a, b);
+      const ai = await fakeAi(a);
+      await setPerms(a.page, { all: { read: true } });
+      const aiGot = async () => (await inboxOf(ai.sk)).filter((r) => r.kind === 14).map((r) => r.content);
+      const say = async (u, t) => {
+        await u.page.getByPlaceholder('メッセージ').fill(t);
+        await button(u.page, '送る').click();
+        await u.page.waitForFunction((t) => JSON.parse(localStorage.getItem('tegami.messages') || '[]').some((m) => m.text === t && !m.pending), t, { timeout: 15000 });
+      };
+      await a.page.goto(ORIGIN + `/chat/${b.hex}`);
+      await b.page.goto(ORIGIN + `/chat/${a.hex}`);
+      await button(a.page, 'その他').click();
+      await button(a.page, 'クロードをトークに呼ぶ').click();
+      await waitText(a.page, 'クロードをこのトークに呼びますか？');
+      await shot(a.page, 'ai-chat-call', '1対1のトークでAIを呼ぶ時の確認');
+      await button(a.page, '呼ぶ').click();
+      await waitText(b.page, 'あおいがクロード（Anthropic Claude）を呼んでいます');
+      await shot(b.page, 'ai-chat-asked', '相手の画面。相手が同意するまでAIには届かない');
+      await say(a, '同意の前');
+      await say(b, 'テストBも同意の前');
+      await b.page.waitForTimeout(1000);
+      assert(!(await aiGot()).some((t) => t.includes('同意の前')), 'the AI got the chat before the other person said yes');
+
+      await button(b.page, '同意する').click();
+      for (const u of [a, b]) await waitText(u.page, 'クロード（Anthropic Claude）が参加しています');
+      await say(b, '同意のあと');
+      await inboxOf(ai.sk, (rs) => rs.some((r) => r.kind === 14 && r.content === '同意のあと'));
+      const rumor = nip59.createRumor({ kind: 14, content: 'AIです', tags: [['p', a.hex], ['p', b.hex], ['ai', ai.hex, 'Anthropic Claude', 'クロード']] }, ai.sk);
+      await Promise.all([a.hex, b.hex].map((x) => relaySend(ai.sk, wrapTo(ai.sk, x, rumor))));
+      await waitText(b.page, 'AIです');
+      assert((await b.page.getByText('クロード', { exact: true }).count()) > 0, 'the AI is not named as the writer');
+      assert(!(await b.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.groups') || '[]'))).length, 'the AI made a new group');
+
+      await button(b.page, '同意をやめる').click();
+      await say(b, 'もう読まないで');
+      await a.page.waitForFunction(() => !document.body.innerText.includes('が参加しています'), null, { timeout: 15000 });
+      await say(a, 'あおいの次の言葉');
+      await a.page.waitForTimeout(1500);
+      const after = await aiGot();
+      assert(!after.includes('もう読まないで') && !after.includes('あおいの次の言葉'), 'the AI still got the chat after the yes was taken back');
+      for (const u of [a, b]) await u.context.close();
+    });
+
     await test('Block: a blocked person cannot reach me; their chat and calls disappear; unblocking lets them back', async () => {
       const a = await person(browser, 'えー');
       const b = await person(browser, 'びー');

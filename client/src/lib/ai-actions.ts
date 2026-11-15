@@ -16,6 +16,9 @@
 // Asks and answers expire on the relay after AI_ASK_TTL seconds, and an ask is handled once
 // (its id is remembered), so opening the app again cannot send the same message twice.
 //
+// The same works in a 1:1 chat with a friend (philosophy #94: calling my AI into a chat needs the
+// other person's yes): the "group" is then the two of us.
+//
 // AI in a group (philosophy #72): an invitation and every member's answer travel to every
 // member (and the AI) as AI_GROUP_KIND rumors. Each member's app sends its group messages to
 // the AI only while, as far as that app knows, every member has said yes; a member who says no
@@ -139,7 +142,7 @@ export function parseAiGroup(content: string): AiGroupRumor | null {
   try {
     const r = JSON.parse(content) as Record<string, unknown>;
     const members = Array.isArray(r.members) ? r.members.filter((m): m is string => typeof m === 'string' && HEX.test(m)) : [];
-    if (members.length < 3 || members.length > 100 || typeof r.ai !== 'string' || !HEX.test(r.ai) || members.includes(r.ai)) return null;
+    if (members.length < 2 || members.length > 100 || typeof r.ai !== 'string' || !HEX.test(r.ai) || members.includes(r.ai)) return null;
     const sorted = [...new Set(members)].sort();
     if (r.t === 'invite' && typeof r.name === 'string')
       return { t: 'invite', members: sorted, ai: r.ai, name: r.name.slice(0, 60), ...(typeof r.model === 'string' && r.model ? { model: r.model.slice(0, 60) } : {}) };
@@ -201,7 +204,7 @@ export function approvedAis(all: AiGroups, room: string, me: string): string[] {
  */
 export function groupOfAiMessage(all: AiGroups, author: string, othersWithoutAuthor: string[], me: string): string | 'drop' | null {
   const room = [...new Set(othersWithoutAuthor)].sort().join(',');
-  if (!room || !room.includes(',')) return null;
+  if (!room) return null;
   const everyone = everyoneIn(room, me);
   const entry = all[everyone]?.[author];
   if (!entry) return null;

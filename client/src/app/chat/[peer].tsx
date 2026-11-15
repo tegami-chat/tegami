@@ -184,9 +184,11 @@ export default function Chat() {
     const isFriend = (pk: string) => contacts.some((x) => x.pubkey === pk && !x.model) && !blocked.includes(pk);
     return contacts.filter((x) => x.model && mayDraft(aiPermissions, x, peer, isFriend));
   }, [peer, group, contact, isBlocked, contacts, blocked, aiPermissions]);
-  // AIs invited into this group (lib/ai-actions.ts), and my AI friends I could invite.
+  // AIs invited into this group, or called into this 1:1 chat (lib/ai-actions.ts), and my AI
+  // friends I could invite. Every member (in a 1:1 chat: the other person) must say yes.
+  const withPerson = group || (!!contact && !contact.model && !isBlocked);
   const groupAis = useMemo(() => {
-    if (!peer || !group || !me) return [];
+    if (!peer || !withPerson || !me) return [];
     const everyone = everyoneIn(peer, me);
     return Object.entries(aiGroups[everyone] ?? {}).map(([ai, e]) => ({
       ai,
@@ -197,13 +199,13 @@ export default function Chat() {
       refused: everyone.split(',').some((m) => e.answers[m]?.yes === false),
       mine: e.answers[me]?.yes,
     }));
-  }, [peer, group, me, aiGroups]);
+  }, [peer, withPerson, me, aiGroups]);
   const invitableAis = useMemo(() => {
-    if (!group) return [];
+    if (!withPerson) return [];
     return contacts.filter(
       (x) => x.model && myAiMayRead(aiPermissions, x) && !groupAis.some((g) => g.ai === x.pubkey && !g.refused),
     );
-  }, [group, contacts, aiPermissions, groupAis]);
+  }, [withPerson, contacts, aiPermissions, groupAis]);
   const byId = useMemo(() => new Map(thread.map((m, i) => [m.id, i])), [thread]);
   const friends = useMemo(() => new Set(contacts.map((x) => x.pubkey)), [contacts]);
   // Shown once per chat above the first money/link message from someone who is not a friend.
@@ -1102,7 +1104,7 @@ export default function Chat() {
                   mine && !!item.pending && s.full,
                   highlight === item.id && s.highlight,
                 ]}>
-                {group && !mine && (
+                {(group || item.from !== peer) && !mine && (
                   <Text style={s.author}>{groupAis.find((g) => g.ai === item.from)?.name ?? personName(item.from, contacts)}</Text>
                 )}
                 {item.replyTo !== undefined &&
@@ -1365,7 +1367,7 @@ export default function Chat() {
                     <Text style={s.quoteName} numberOfLines={2}>
                       {g.approved
                         ? `${g.name}${g.model ? `（${g.model}）` : ''}が参加しています`
-                        : `${g.by === me ? '自分' : personName(g.by, contacts)}が${g.name}${g.model ? `（${g.model}）` : ''}を招待しています`}
+                        : `${g.by === me ? '自分' : personName(g.by, contacts)}が${g.name}${g.model ? `（${g.model}）` : ''}を${group ? '招待しています' : '呼んでいます'}`}
                     </Text>
                     {!g.approved && (
                       <Text style={s.quoteText} numberOfLines={1}>
@@ -1420,7 +1422,7 @@ export default function Chat() {
                   <Pressable
                     key={`invite-${ai.pubkey}`}
                     role="button"
-                    aria-label={`${ai.name}をグループに招待`}
+                    aria-label={group ? `${ai.name}をグループに招待` : `${ai.name}をトークに呼ぶ`}
                     style={s.plusItem}
                     onPress={() => {
                       setPlusOpen(false);
@@ -1430,7 +1432,7 @@ export default function Chat() {
                       <MaterialIcons name="smart-toy" size={24} color={c.text} />
                     </View>
                     <Text style={s.plusLabel} numberOfLines={2}>
-                      {ai.name}をグループに招待
+                      {group ? `${ai.name}をグループに招待` : `${ai.name}をトークに呼ぶ`}
                     </Text>
                   </Pressable>
                 ))}
@@ -1736,13 +1738,13 @@ export default function Chat() {
 
       {aiInviting && (
         <Dialog
-          title={`${personName(aiInviting, contacts)}をこのグループに招待しますか？`}
-          text="全員が同意すると、このグループのメッセージが届くようになります。"
+          title={group ? `${personName(aiInviting, contacts)}をこのグループに招待しますか？` : `${personName(aiInviting, contacts)}をこのトークに呼びますか？`}
+          text={group ? '全員が同意すると、このグループのメッセージが届くようになります。' : '相手が同意すると、このトークのメッセージが届くようになります。'}
           onClose={() => setAiInviting(null)}
           buttons={[
             { label: 'キャンセル', variant: 'outlined', onPress: () => setAiInviting(null) },
             {
-              label: '招待',
+              label: group ? '招待' : '呼ぶ',
               onPress: () => {
                 const ai = aiInviting;
                 setAiInviting(null);

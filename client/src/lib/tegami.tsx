@@ -1204,8 +1204,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       if (isGroup(peer) && subject) tags.push(['subject', subject]);
       tags.push(...extra);
       const rumor = nip59.createRumor({ kind, content, tags, created_at: at }, secret);
-      // AIs every member of this group has said yes to get a copy too (not in the p tags).
-      const ais = isGroup(peer) ? groupAiCopies(peer) : [];
+      // AIs every member of this chat has said yes to get a copy too (not in the p tags).
+      const ais = groupAiCopies(peer);
       const wraps = [...members, ...ais, me].map((to) => nip59.createWrap(nip59.createSeal(rumor, secret, to), to));
       return { rumor, wraps };
     },
@@ -1885,10 +1885,11 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const inviteAiToGroup = useCallback(
     async (room: string, ai: string) => {
       const c = contactsRef.current.find((x) => x.pubkey === ai && x.model);
-      if (!c || !isGroup(room) || !myAiMayRead(getAiPermissions(), c)) throw new AiNotAllowedError('not my AI');
+      // A group, or a 1:1 chat with a friend who is a person (philosophy #94).
+      if (!c || (!isGroup(room) && !isPersonFriend(room)) || !myAiMayRead(getAiPermissions(), c)) throw new AiNotAllowedError('not my AI');
       await sendAiGroup(room, { t: 'invite', ai, name: c.name, ...(c.model ? { model: c.model } : {}) });
     },
-    [sendAiGroup],
+    [sendAiGroup, isPersonFriend],
   );
 
   const answerAiInGroup = useCallback(
