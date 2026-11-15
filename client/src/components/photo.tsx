@@ -132,8 +132,22 @@ export function Stamp({
         src={uri}
         alt="スタンプ"
         data-testid={testID}
+        draggable={false}
         {...webMenu}
-        style={{ width, height, maxWidth: max, maxHeight: max, objectFit: 'contain', display: 'block' }}
+        style={{
+          width,
+          height,
+          maxWidth: max,
+          maxHeight: max,
+          objectFit: 'contain',
+          display: 'block',
+          // iPhone's Safari opens its own image menu (share, save, copy subject) on a long press of
+          // an <img> and the app never sees the press. Turn that menu off so the press reaches the
+          // Pressable around the stamp (or the message bubble around a sent stamp).
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+          userSelect: 'none',
+        }}
       />
     ) : (
       <Image
