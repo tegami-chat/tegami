@@ -1,7 +1,7 @@
 // Tailwind for tegami.chat. The pages are written in src/ and turned into
 // public/ (English) and public/ja/ (Japanese) by build.mjs.
 module.exports = {
-  content: ['./public/**/*.html', './public/site.js'],
+  content: ['./public/**/*.html', './public/site.js', './public/status.js'],
   darkMode: 'class',
   theme: {
     extend: {

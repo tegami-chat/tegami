@@ -92,7 +92,8 @@
   let weeks = [];
   let metric = 'envelopes';
   let all = false;
-  const sample = new URLSearchParams(location.search).get('sample');
+  // Sample numbers are for drafts only, never on the real site.
+  const sample = location.hostname !== 'tegami.chat' && new URLSearchParams(location.search).get('sample');
 
   async function load() {
     if (sample) {
@@ -133,7 +134,7 @@
       <dl class="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1 tabular-nums">${keys.map((k) => `<div><dt class="text-xs text-neutral-600 dark:text-neutral-400">${S.cols[k]}</dt><dd class="font-semibold">${show(w[k])}</dd></div>`).join('')}</dl></li>`).join('');
     $('more').hidden = list.length <= 8;
     $('more').textContent = all ? S.less : S.more;
-    $('metric').innerHTML = Object.entries(S.tabs).map(([m, label]) => `<button type="button" role="tab" data-m="${m}" aria-selected="${m === metric}" class="flex-1 whitespace-nowrap rounded-full px-4 py-2 sm:flex-none ${m === metric ? 'bg-white font-semibold shadow-sm dark:bg-night-card' : 'text-neutral-600 dark:text-neutral-400'}">${label}</button>`).join('');
+    $('metric').innerHTML = Object.entries(S.tabs).map(([m, label]) => `<button type="button" role="tab" data-m="${m}" aria-selected="${m === metric}" class="flex-1 whitespace-nowrap rounded-full px-4 py-2.5 sm:flex-none ${m === metric ? 'bg-white font-semibold shadow-sm dark:bg-night-card' : 'text-neutral-600 dark:text-neutral-400'}">${label}</button>`).join('');
     if (has) draw();
   }
 
@@ -141,7 +142,9 @@
   // (at least 6 px high) even when other weeks are much larger.
   function draw() {
     const svg = $('chart');
-    const W = 600, H = 200, top = 18, bottom = 24;
+    // Drawn at the real width, so the labels keep their size on a phone.
+    const W = Math.max(280, Math.round(svg.getBoundingClientRect().width) || 600), H = 200, top = 18, bottom = 24;
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     const vals = weeks.map((w) => w[metric]);
     const max = Math.max(20, ...vals);
     const plot = H - top - bottom;
@@ -151,14 +154,15 @@
     const fill = dark ? '#7fd7a8' : '#106c4a', faint = dark ? '#2c3430' : '#d4d4d4', label = dark ? '#9aa39e' : '#525252';
     let out = `<line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" stroke="${faint}"/>`;
     out += `<line x1="0" x2="${W}" y1="${y(max)}" y2="${y(max)}" stroke="${faint}" stroke-dasharray="4 4"/><text x="2" y="${y(max) - 4}" font-size="13" fill="${label}">${nf.format(max)}</text>`;
-    const step = Math.ceil(weeks.length / 8);
+    const step = Math.ceil(weeks.length / Math.max(3, Math.floor(W / 70)));
     weeks.forEach((w, i) => {
       const v = w[metric];
       const small = v === 0;
       const h = small ? Math.max(6, (y(0) - y(10)) * 0.5) : Math.max(6, y(0) - y(v));
       const x = i * bw + bw * 0.18;
       out += `<rect x="${x}" y="${y(0) - h}" width="${bw * 0.64}" height="${h}" rx="3" fill="${fill}" opacity="${small ? 0.35 : 1}"><title>${weekRange(w.week)}: ${show(v)}</title></rect>`;
-      if (i % step === 0) out += `<text x="${x + bw * 0.32}" y="${H - 6}" text-anchor="middle" font-size="13" fill="${label}">${short(w.week)}</text>`;
+      // Keep the first and last dates inside the chart.
+      if (i % step === 0) out += `<text x="${Math.min(W - 24, Math.max(24, x + bw * 0.32))}" y="${H - 6}" text-anchor="middle" font-size="13" fill="${label}">${short(w.week)}</text>`;
     });
     svg.innerHTML = out;
     svg.setAttribute('aria-label', S.cols[metric]);
@@ -173,6 +177,12 @@
   $('more').addEventListener('click', () => { all = !all; render(); });
   // Redraw the chart in the new colors when the light/dark switch is used.
   new MutationObserver(() => { if (weeks.length) draw(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  // Redraw when the width changes (turning the phone, resizing the window).
+  let lastWidth = 0;
+  new ResizeObserver(([e]) => {
+    const w = Math.round(e.contentRect.width);
+    if (w && w !== lastWidth && weeks.length) { lastWidth = w; draw(); }
+  }).observe($('chart'));
 
   $('state').textContent = S.checking;
   ping();
