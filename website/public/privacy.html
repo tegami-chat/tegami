@@ -35,10 +35,183 @@
   </div>
 </header>
 
-<main class="mx-auto flex min-h-[60vh] max-w-3xl flex-col items-center justify-center px-4 py-20 text-center">
+<main class="mx-auto max-w-3xl px-4 py-16 leading-relaxed [&_h2]:mt-14 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:tracking-tight [&_p]:mt-4 [&_p]:text-neutral-700 dark:[&_p]:text-neutral-300 [&_ul]:mt-4 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-6 [&_li]:text-neutral-700 dark:[&_li]:text-neutral-300 [&_dd_a]:text-forest-600 [&_dd_a]:text-forest-600 [&_dd_a]:text-forest-600 [&_dd_a]:text-forest-600 [&_a]:text-forest-600 [&_a]:underline dark:[&_a]:text-forest-300">
   <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="pv.h">Privacy policy</h1>
-  <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="pv.wip">We're still writing this page.</p>
-  <p class="mt-2 text-sm text-neutral-500 dark:text-neutral-400" data-i18n="pv.ask">Questions in the meantime: hello@tegami.chat</p>
+
+  <p data-i18n="pv.pre">This privacy policy ("this policy") explains how Yoshihiro Azuma ("the operator", "we") handles user information in the messaging app Tegami ("the service").</p>
+
+  <h2 data-i18n="pv.scope.h">1. Scope</h2>
+
+  <ul>
+    <li data-i18n="pv.scope.1">tegami.chat (website)</li>
+    <li data-i18n="pv.scope.2">app.tegami.chat (web app)</li>
+    <li data-i18n="pv.scope.3">relay.tegami.chat (relay)</li>
+    <li data-i18n="pv.scope.4">The iPhone and Android apps, once released</li>
+  </ul>
+
+  <p data-i18n="pv.scope.p">Relays and apps that other people run with Tegami's open-source code are not covered. Neither is an AI friend you run on your own computer.</p>
+
+  <h2 data-i18n="pv.cant.h">2. What the operator can't see</h2>
+
+  <p data-i18n="pv.cant.p">Messages are encrypted on your device before they are sent. Only the sender's and recipients' devices hold the keys needed to decrypt them. As a result, the operator cannot see the following:</p>
+
+  <ul>
+    <li data-i18n="pv.cant.1">The text of messages</li>
+    <li data-i18n="pv.cant.2">The contents of photos, videos, files and voice messages</li>
+    <li data-i18n="pv.cant.3">Who sent a message</li>
+    <li data-i18n="pv.cant.4">Your list of friends</li>
+    <li data-i18n="pv.cant.5">Your name and icon</li>
+    <li data-i18n="pv.cant.6">Call audio and video</li>
+    <li data-i18n="pv.cant.7">Your secret key (which remains encrypted even when sent outside your device)</li>
+  </ul>
+
+  <p data-i18n="pv.cant.ex">Exceptions: the operator can see the text and the sender of messages attached to a report. The relay also keeps who invited whom for 90 days.</p>
+
+  <h2 data-i18n="pv.keep.h">3. What the relay keeps</h2>
+
+  <p data-i18n="pv.keep.p">The relay is the server that delivers messages. The information it collects and stores is as follows.</p>
+
+  <div class="mt-6 divide-y divide-neutral-200 rounded-xl border border-neutral-200 dark:divide-night-line dark:border-night-line">
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.1.t">Registered accounts</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.1.1">Public key, whether the account was registered with an invite, registration date and time, and whether the account is suspended</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.1.2">To allow only registered accounts to send messages, and to suspend abusive accounts</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.1.3">Until the account is deleted</p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.2.t">Message envelopes</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.2.1">The encrypted message, the recipient's public key, the arrival time, and the data size</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.2.2">To deliver messages later when a device is off or offline</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.2.3">30 days. Envelopes for moving an account to a new device: 10 minutes</p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.3.t">Photos, videos, files and voice messages</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.3.1">Encrypted data. The uploader is not recorded</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.3.2">To deliver them to recipients</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.3.3">30 days</p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.4.t">Invite records</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.4.1">Who invited whom</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.4.2">To suspend accounts that engage in abuse, along with the accounts they invited</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.4.3">90 days</p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.5.t">Reports</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.5.1">The public keys of the reporting and reported accounts, and the reason for the report. If the reporter chooses, up to 20 messages from the reported user, decrypted on the reporter's device. The reported user is not notified</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.5.2">To stop abuse</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.5.3">90 days</p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.6.t">Notification addresses</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.6.1">Your device’s notification address, the keys to encrypt notifications to it, and the public key of the account using it</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.6.2">To tell you about new messages and calls</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.6.3">Until you turn notifications off</p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.7.t">Recovery backups</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.7.1">A backup of your account, encrypted with your recovery code. The relay cannot tell which account it belongs to</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.7.2">To restore your account if you lose your device</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.7.3">Until you delete it</p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.8.t">Usage statistics</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.8.1">Counts of envelopes, files and their total size, logins, and the estimated number of accounts that logged in. Public keys are not stored</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.8.2">To understand how Tegami is used and how many servers we need</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.8.3">400 days. The last 90 days are public at <a href="https://relay.tegami.chat/stats">relay.tegami.chat/stats</a></p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.9.t">Error reports</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.9.1">The error message, where in the code it occurred, the app version, and the device and browser type. Quoted text and long strings are removed on your device before sending. Keys and chat messages are not included. Sent only if you turn this on in settings (off by default)</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.9.2">To fix bugs</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.9.3">Not stored by the relay. Up to 7 days in Cloudflare’s logs</p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.10.t">IP addresses</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.10.1">The address you connect from</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.10.2">To limit the number of connections and the amount of data sent from a single network, and to verify that you are not a bot when you register without an invite</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.10.3">Held in memory only while you’re connected. Never stored</p></div></div>
+  </div>
+
+  <h2 data-i18n="pv.dev.h">4. What stays on your device</h2>
+
+  <p data-i18n="pv.dev.p">The following are saved only on your device.</p>
+
+  <ul>
+    <li data-i18n="pv.dev.1">Messages, photos, videos, files and voice messages</li>
+    <li data-i18n="pv.dev.2">Friends, groups, names and icons</li>
+    <li data-i18n="pv.dev.3">Your secret key, encrypted with your passkey or a key inside your browser</li>
+  </ul>
+
+  <p data-i18n="pv.dev.p2">Clearing your browser's site data deletes Tegami's data on that device. You can export your message history from settings.</p>
+
+  <h2 data-i18n="pv.co.h">5. Companies that handle data</h2>
+
+  <p data-i18n="pv.co.p">Tegami uses the services below. None of them can read your encrypted messages.</p>
+
+  <div class="mt-6 divide-y divide-neutral-200 rounded-xl border border-neutral-200 dark:divide-night-line dark:border-night-line">
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.c.1.t">Cloudflare, Inc.</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l1">Country</span><p data-i18n="pv.c.1.1">United States</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l2">Purpose</span><p data-i18n="pv.c.1.2">Runs the website, the app, the relay and file storage</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l3">What it receives</span><p data-i18n="pv.c.1.3">Your IP address when you connect, and the data handled by the relay. Messages (except those attached to reports), files and recovery backups remain encrypted</p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.c.2.t">Cloudflare, Inc.</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l1">Country</span><p data-i18n="pv.c.2.1">United States</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l2">Purpose</span><p data-i18n="pv.c.2.2">Verifies that you are not a bot when you register without an invite (Turnstile)</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l3">What it receives</span><p data-i18n="pv.c.2.3">Your IP address and information about your browser</p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.c.3.t">Cloudflare, Inc.</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l1">Country</span><p data-i18n="pv.c.3.1">United States</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l2">Purpose</span><p data-i18n="pv.c.3.2">Establishes a connection path between devices during calls (STUN)</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l3">What it receives</span><p data-i18n="pv.c.3.3">Your IP address</p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.c.4.t">Apple, Google, Mozilla, Microsoft</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l1">Country</span><p data-i18n="pv.c.4.1">United States</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l2">Purpose</span><p data-i18n="pv.c.4.2">Deliver notifications to your device</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l3">What it receives</span><p data-i18n="pv.c.4.3">Your notification address and when a notification was sent. The notification content is encrypted so only your device can decrypt it. It contains only whether it is a message or a call, which account it is for, and the number of new messages</p></div></div>
+  </div>
+
+  <p data-i18n="pv.co.us">Cloudflare's servers are located in the United States and other countries. The United States has no comprehensive federal privacy law like Japan's, and some US laws allow the government to order companies to hand over data. Japan's Personal Information Protection Commission publishes <a href="https://www.ppc.go.jp/personalinfo/legal/kaiseihogohou/#gaikoku">an overview of the US legal system</a>.</p>
+
+  <h2 data-i18n="pv.call.h">6. Calls</h2>
+
+  <p data-i18n="pv.call.p">Call audio and video are encrypted and sent directly between devices without passing through the operator's servers. Because of this, your IP address is visible to the other person on the call.</p>
+
+  <h2 data-i18n="pv.ai.h">7. AI friends</h2>
+
+  <p data-i18n="pv.ai.p1">An AI friend is a program you run on your own computer. Messages with it also pass through the relay in encrypted envelopes.</p>
+
+  <p data-i18n="pv.ai.p2">Messages you let the AI read are sent to the AI service you use and handled under that service's terms. Tegami's encryption no longer protects them.</p>
+
+  <h2 data-i18n="pv.never.h">8. What we never do</h2>
+
+  <ul>
+    <li data-i18n="pv.never.1">Sell your personal information</li>
+    <li data-i18n="pv.never.2">Show ads</li>
+    <li data-i18n="pv.never.3">Track you (we do not use analytics in the app or on the website)</li>
+    <li data-i18n="pv.never.4">Use cookies on tegami.chat</li>
+    <li data-i18n="pv.never.5">Share personal information with third parties without your consent, except when required by law</li>
+  </ul>
+
+  <h2 data-i18n="pv.gov.h">9. Requests from police and other authorities</h2>
+
+  <p data-i18n="pv.gov.p1">We only respond to requests that we are legally required to comply with under Japanese law. We can only provide the information listed in section 3. Except for messages attached to reports, we cannot provide the text of messages because we cannot read it.</p>
+
+  <p data-i18n="pv.gov.p2">We will publish the number of requests each year. As of November 15, 2026, there have been none.</p>
+
+  <h2 data-i18n="pv.del.h">10. Requests about your personal data</h2>
+
+  <p data-i18n="pv.del.self">What you can do yourself:</p>
+
+  <ul>
+    <li data-i18n="pv.del.a.1">Turn notifications off: the relay deletes your notification address and keys</li>
+    <li data-i18n="pv.del.a.2">Tap "Delete recovery code" in settings: the relay deletes your recovery backup</li>
+    <li data-i18n="pv.del.a.3">Envelopes and files are deleted automatically after 30 days</li>
+  </ul>
+
+  <p data-i18n="pv.del.ask">To ask for the purpose of use of information linked to your public key (such as registration, invite and report records, or notification addresses), or to request its disclosure, correction, addition, deletion, suspension of use, or cessation of sharing with third parties, email <a href="mailto:hello@tegami.chat">hello@tegami.chat</a> with your account's public key. We disclose information by email.</p>
+
+  <ul>
+    <li data-i18n="pv.del.b.1">To verify your identity, the operator will send a Tegami message to that public key</li>
+    <li data-i18n="pv.del.b.2">If you have lost your device, or if you are making a request as a legal representative (such as a parent or guardian) or an authorized agent, please say so in your email. We will let you know how to verify your identity</li>
+    <li data-i18n="pv.del.b.3">Records needed to prevent abuse, such as a record that an account was suspended, may not be deleted</li>
+    <li data-i18n="pv.del.b.4">Files and recovery backups are not linked to your public key, so we cannot identify them from your public key</li>
+    <li data-i18n="pv.del.b.5">We use your email only to handle your request, and delete it within a year after we finish</li>
+    <li data-i18n="pv.del.b.6">There is no fee for making a request</li>
+  </ul>
+
+  <p data-i18n="pv.del.app">We plan to add an option to delete your account directly within the app.</p>
+
+  <h2 data-i18n="pv.kid.h">11. Children</h2>
+
+  <p data-i18n="pv.kid.p1">Tegami doesn't check anyone's age. Children under 13 should use Tegami with a parent or guardian.</p>
+
+  <p data-i18n="pv.kid.p2">In the European Union, children under 16 need a parent or guardian's consent to turn on notifications or error reports. If their country sets a lower age, that age applies.</p>
+
+  <h2 data-i18n="pv.safe.h">12. How we protect your data</h2>
+
+  <ul>
+    <li data-i18n="pv.safe.1">Messages, photos, videos, files, voice messages and recovery backups are encrypted on your device before they are sent, except messages attached to reports</li>
+    <li data-i18n="pv.safe.2">All connections to the website, the app and the relay are encrypted</li>
+    <li data-i18n="pv.safe.3">The relay only accepts messages in encrypted envelopes</li>
+    <li data-i18n="pv.safe.4">The relay gives each logged-in account only the envelopes addressed to it</li>
+    <li data-i18n="pv.safe.5">Administrative actions, such as suspending an account, can only be carried out when signed with the operator's key</li>
+    <li data-i18n="pv.safe.6">Data stored on the relay is automatically deleted once its storage period expires</li>
+    <li data-i18n="pv.safe.7">All code is public on <a href="https://github.com/tegami-chat/tegami">GitHub</a>. You can check what the relay stores in <a href="https://github.com/tegami-chat/tegami/tree/main/relay/src">relay/src</a>. However, there is not yet a way to verify from the outside that the running relay uses that exact code</li>
+    <li data-i18n="pv.safe.8">Only the operator handles the operator's administrative key and report records</li>
+  </ul>
+
+  <h2 data-i18n="pv.eu.h">13. If you live in the European Union</h2>
+
+  <p data-i18n="pv.eu.p1">The operator complies with the European Union's General Data Protection Regulation (GDPR). The legal bases for processing your data are:</p>
+
+  <ul>
+    <li data-i18n="pv.eu.1">Necessary to provide the service: registering your public key, delivering messages and files, connecting calls, and storing recovery backups</li>
+    <li data-i18n="pv.eu.2">Legitimate interests: preventing abuse, limiting the number of connections and the amount of data sent, and compiling usage statistics</li>
+    <li data-i18n="pv.eu.3">Your consent: notifications and error reports. You can withdraw consent in settings at any time. Withdrawing does not affect the lawfulness of processing before withdrawal</li>
+  </ul>
+
+  <p data-i18n="pv.eu.p2">Using the service requires a public key and your IP address while connected, and registering also requires an invite or bot verification. We do not make automated decisions about you or build profiles. The European Commission recognizes Japan as providing an adequate level of data protection.</p>
+
+  <p data-i18n="pv.eu.p3">You have the right to access, correct, delete and export your data, to restrict or object to how it is processed, and to lodge a complaint with the data protection authority in your country.</p>
+
+  <h2 data-i18n="pv.ca.h">14. If you live in California</h2>
+
+  <p data-i18n="pv.ca.p">Tegami doesn't track you across websites and has no ads or analytics from other companies. A Do Not Track setting in your browser therefore doesn't change anything Tegami does.</p>
+
+  <h2 data-i18n="pv.chg.h">15. Changes to this policy</h2>
+
+  <p data-i18n="pv.chg.p1">When this policy changes, we add the date of the change at the end. The full <a href="https://github.com/tegami-chat/tegami/commits/main/website/src/privacy.html">change history</a> is on GitHub. Important changes are announced in advance on tegami.chat and Tegami's official accounts.</p>
+
+  <p data-i18n="pv.chg.p2">If the Japanese and English versions differ, the Japanese version applies.</p>
+
+  <h2 data-i18n="pv.ask.h">16. Contact</h2>
+
+  <p data-i18n="pv.ask.p">If you have questions, requests or complaints about how we handle personal information, please contact us below. We use your email only to respond to your inquiry.</p>
+
+  <dl class="mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-neutral-700 dark:text-neutral-300">
+    <dt class="font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="pv.op.1.k">Operator</dt><dd data-i18n="pv.op.1.v">Yoshihiro Azuma</dd>
+    <dt class="font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="pv.op.2.k">Address</dt><dd data-i18n="pv.op.2.v">1-16-6 Dogenzaka, Futaba Building 8b, Shibuya-ku, Tokyo 150-0043, Japan</dd>
+    <dt class="font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="pv.op.3.k">Contact</dt><dd data-i18n="pv.op.3.v"><a href="mailto:hello@tegami.chat">hello@tegami.chat</a></dd>
+  </dl>
+
+  <p class="!mt-10 text-sm !text-neutral-500" data-i18n="pv.date">Established: November 15, 2026</p>
 </main>
 
 <footer class="border-t border-neutral-200 text-sm text-neutral-500 dark:border-night-line dark:text-neutral-400">
