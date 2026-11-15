@@ -1,0 +1,50 @@
+{
+  "name": "tegami-desktop",
+  "productName": "Tegami",
+  "version": "0.1.0",
+  "description": "Tegami for Windows and Mac. Your chats belong to you. Bring your own AI.",
+  "license": "AGPL-3.0-only",
+  "author": "Tegami contributors",
+  "homepage": "https://tegami.chat",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node test/desktop.test.mjs",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac"
+  },
+  "devDependencies": {
+    "electron": "45.3.2",
+    "electron-builder": "26.18.0",
+    "playwright-core": "^1.65.0"
+  },
+  "build": {
+    "appId": "chat.tegami.desktop",
+    "productName": "Tegami",
+    "copyright": "Tegami contributors",
+    "files": ["main.js", "build/icon.png", "package.json"],
+    "directories": { "output": "dist", "buildResources": "build" },
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64", "arm64"] }],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "Tegami-Setup-${version}-${arch}.${ext}"
+    },
+    "mac": {
+      "target": [{ "target": "dmg", "arch": ["universal"] }],
+      "icon": "build/icon.png",
+      "category": "public.app-category.social-networking",
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "NSCameraUsageDescription": "Tegami uses the camera for video calls.",
+        "NSMicrophoneUsageDescription": "Tegami uses the microphone for calls and voice messages."
+      }
+    }
+  }
+}
