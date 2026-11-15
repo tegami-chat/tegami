@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react';
 import { useColorScheme } from 'react-native';
 
 // Forest green with a Nostr purple accent (decided 2026-11-13, option A). The tones come from
@@ -41,6 +42,44 @@ export const Colors = {
 
 export type Palette = Record<keyof (typeof Colors)['light'], string>;
 
+// Light or dark, chosen with the switch on the first screen and in the settings (the same
+// switch as tegami.chat). Until the person picks one, the app follows the device. The choice is
+// for this browser, not the account, so it is stored under a device-wide name.
+export type Mode = 'light' | 'dark';
+const MODE_KEY = 'tegami.theme';
+const modeListeners = new Set<() => void>();
+function readMode(): Mode | null {
+  try {
+    const v = globalThis.localStorage?.getItem(MODE_KEY);
+    return v === 'light' || v === 'dark' ? v : null;
+  } catch {
+    return null;
+  }
+}
+let chosen: Mode | null = readMode();
+
+export function setMode(next: Mode) {
+  chosen = next;
+  try {
+    globalThis.localStorage?.setItem(MODE_KEY, next);
+  } catch {}
+  modeListeners.forEach((l) => l());
+}
+
+/** Light or dark: the person's choice, or the device's when they have not chosen. */
+export function useMode(): Mode {
+  const device = useColorScheme();
+  const mode = useSyncExternalStore(
+    (l) => {
+      modeListeners.add(l);
+      return () => modeListeners.delete(l);
+    },
+    () => chosen,
+    () => chosen,
+  );
+  return mode ?? (device === 'dark' ? 'dark' : 'light');
+}
+
 export function usePalette(): Palette {
-  return useColorScheme() === 'dark' ? Colors.dark : Colors.light;
+  return useMode() === 'dark' ? Colors.dark : Colors.light;
 }

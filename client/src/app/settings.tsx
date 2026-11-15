@@ -6,6 +6,7 @@ import { Image, Linking, Pressable, ScrollView, Share, StyleSheet, Switch, Text,
 
 import { AccountList } from '@/components/account-list';
 import { Avatar } from '@/components/avatar';
+import { ThemeSwitch } from '@/components/theme-switch';
 import { Palette, usePalette } from '@/constants/theme';
 import { pushState, type PushState } from '@/lib/push';
 import { personName, useTegami } from '@/lib/tegami';
@@ -292,6 +293,12 @@ export default function Settings() {
         />
       </View>
       <Text style={s.note}>報告には、エラーの内容だけが入ります。名前や会話は入りません。</Text>
+
+      <Text style={s.heading}>見た目</Text>
+      <View style={[s.card, s.row]}>
+        <Text style={s.label}>ライトとダーク</Text>
+        <ThemeSwitch />
+      </View>
 
       <Text style={s.heading}>トーク</Text>
       <View style={[s.card, s.row]}>

@@ -1,9 +1,11 @@
 import { getPublicKey } from 'nostr-tools/pure';
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AccountList, accountName, goToAccount } from '@/components/account-list';
+import { ThemeSwitch } from '@/components/theme-switch';
 import { Palette, usePalette } from '@/constants/theme';
+import { useWide } from '@/lib/layout';
 import { accountWithKey, adding, cancelAdd, readyAccounts } from '@/lib/accounts';
 import { RELAYS, useTegami } from '@/lib/tegami';
 import { restoreFromCode, setRestoredKeys, takeRestoredKeys } from '@/lib/recovery';
@@ -96,8 +98,8 @@ export function Gate({ locked }: { locked: boolean }) {
 
   if (moving && moving.state !== 'ready') {
     return (
-      <View style={s.start}>
-        <Text style={s.brand}>Tegami</Text>
+      <Frame>
+        <Icon />
         {moving.state === 'fetching' ? (
           <Text style={s.notice}>別の端末から受け取っています</Text>
         ) : (
@@ -112,17 +114,19 @@ export function Gate({ locked }: { locked: boolean }) {
             </Pressable>
           </>
         )}
-      </View>
+      </Frame>
     );
   }
 
   return (
-    <View style={s.start}>
-      <Text style={s.brand}>Tegami</Text>
+    <Frame>
+      <Icon />
       {moved ? (
         <Text style={s.promise}>{moved.myName ? `${moved.myName}さんのアカウントを受け取りました` : 'アカウントを受け取りました'}</Text>
+      ) : locked ? (
+        <View style={s.lockedGap} />
       ) : (
-        <Text style={s.promise}>言葉は、自由だ。</Text>
+        <Hero />
       )}
       {twin ? (
         <>
@@ -233,6 +237,58 @@ export function Gate({ locked }: { locked: boolean }) {
           のパスキーは、始めた時に選んだ場所（Windows、iPhone、Google など）に保存されています。
         </Text>
       )}
+    </Frame>
+  );
+}
+
+/** The page around every gate screen: Tegami and the light and dark switch on top, as on tegami.chat. */
+function Frame({ children }: { children: ReactNode }) {
+  const c = usePalette();
+  const s = styles(c);
+  return (
+    <View style={s.page}>
+      <View style={s.top}>
+        <View style={s.logo}>
+          <Image source={ICON} style={s.logoIcon} aria-hidden />
+          <Text style={s.logoText}>Tegami</Text>
+        </View>
+        <ThemeSwitch />
+      </View>
+      <ScrollView contentContainerStyle={s.start}>{children}</ScrollView>
+    </View>
+  );
+}
+
+const ICON = require('../../assets/images/icon.png');
+
+function Icon() {
+  const c = usePalette();
+  const s = styles(c);
+  return <Image source={ICON} style={s.icon} aria-hidden />;
+}
+
+/** The first lines of tegami.chat: what Tegami is, and the two promises. */
+function Hero() {
+  const c = usePalette();
+  const s = styles(c);
+  const wide = useWide();
+  const h1 = [s.h1, wide && s.h1Wide];
+  // On a phone each promise breaks after its first word, as on tegami.chat.
+  const br = wide ? '' : '\n';
+  return (
+    <View style={s.hero}>
+      <Text style={s.beta}>ベータ版</Text>
+      <Text style={s.kicker}>
+        <Text style={s.nostr}>Nostr で動く</Text>、オープンソースのメッセージアプリ
+      </Text>
+      <Text style={h1} role="heading" aria-level={1}>
+        {`トークは${br}`}
+        <Text style={s.green}>あなたのもの。</Text>
+      </Text>
+      <Text style={[h1, s.h1Second]} role="heading" aria-level={1}>
+        {`AI は${br}`}
+        <Text style={s.green}>持ち込み自由。</Text>
+      </Text>
     </View>
   );
 }
@@ -262,10 +318,24 @@ function PasskeyStores() {
 
 const styles = (c: Palette) =>
   StyleSheet.create({
-    start: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: c.background, padding: 24 },
-    brand: { fontSize: 44, fontWeight: '700', color: c.text, letterSpacing: 0.5 },
-    promise: { fontSize: 18, color: c.muted, marginBottom: 32 },
-    primary: { backgroundColor: c.accent, borderRadius: 999, paddingVertical: 14, paddingHorizontal: 48 },
+    page: { flex: 1, backgroundColor: c.background },
+    top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.line },
+    logo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    logoIcon: { width: 28, height: 28, borderRadius: 7 },
+    logoText: { fontSize: 17, fontWeight: '700', color: c.text },
+    start: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 40 },
+    icon: { width: 96, height: 96, borderRadius: 22, marginBottom: 20, borderWidth: StyleSheet.hairlineWidth, borderColor: c.line },
+    hero: { alignItems: 'center', marginBottom: 28 },
+    beta: { fontSize: 12, color: c.accent, backgroundColor: c.selected, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2, overflow: 'hidden' },
+    kicker: { marginTop: 12, fontSize: 14, fontWeight: '500', color: c.muted, textAlign: 'center' },
+    nostr: { color: c.nostr },
+    h1: { marginTop: 20, fontSize: 40, lineHeight: 46, fontWeight: '700', color: c.text, textAlign: 'center', letterSpacing: -0.5 },
+    h1Wide: { fontSize: 56, lineHeight: 64 },
+    h1Second: { marginTop: 12 },
+    green: { color: c.accent },
+    lockedGap: { height: 16 },
+    promise: { fontSize: 18, color: c.muted, marginBottom: 32, textAlign: 'center' },
+    primary: { backgroundColor: c.accent, borderRadius: 999, paddingVertical: 14, paddingHorizontal: 48, minWidth: 220, alignItems: 'center' },
     primaryText: { color: c.onAccent, fontSize: 17, fontWeight: '600' },
     busy: { opacity: 0.5 },
     secondary: { paddingVertical: 12, paddingHorizontal: 24 },

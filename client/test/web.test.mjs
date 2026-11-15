@@ -2945,6 +2945,30 @@ async function main() {
       assert((await b.page.getByTestId('quote').innerText()).replace(/\s+/g, ' ').includes('ばんり 右スワイプする手紙'), 'quote not received');
       for (const u of [a, b]) await u.context.close();
     });
+    await test('First screen as on tegami.chat; light and dark switch there and in settings, kept after reloading', async () => {
+      const { context, page } = await newUser(browser);
+      await waitText(page, 'あなたのもの。');
+      await waitText(page, '持ち込み自由。');
+      // The color of the first heading: dark text on light, light text on dark.
+      const ink = () => page.getByRole('heading').first().evaluate((e) => getComputedStyle(e).color);
+      await button(page, 'ダーク').click();
+      assert((await ink()) === 'rgb(222, 228, 222)', `dark ink: ${await ink()}`);
+      assert((await button(page, 'ダーク').getAttribute('aria-pressed')) === 'true', 'dark is shown as chosen');
+      await page.reload();
+      await waitText(page, 'あなたのもの。');
+      assert((await ink()) === 'rgb(222, 228, 222)', 'dark kept after reloading');
+      await button(page, 'ライト').click();
+      assert((await ink()) === 'rgb(23, 29, 25)', `light ink: ${await ink()}`);
+      // After starting, the same switch is in the settings.
+      await button(page, 'はじめる').click();
+      await openSettings(page);
+      await waitText(page, 'ライトとダーク');
+      await button(page, 'ダーク').click();
+      const bg = await page.evaluate(() => localStorage.getItem('tegami.theme'));
+      assert(bg === 'dark', `stored: ${bg}`);
+      await context.close();
+    });
+
     if (!NARROW) await test('Desktop layout: rail, list and chat side by side; Alt+arrows, Ctrl+K, Esc, hover actions, Shift+Enter, dropping a file', async () => {
       const a = await person(browser, 'あゆみ');
       const b = await person(browser, 'ばんり');
