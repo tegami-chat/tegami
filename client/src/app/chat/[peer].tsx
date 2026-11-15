@@ -92,6 +92,9 @@ export default function Chat() {
   // A message waiting to be sent that was tapped: it offers to stop sending.
   const [offered, setOffered] = useState<string | null>(null);
   const [plusOpen, setPlusOpen] = useState(false);
+  // While the user is writing, the +, camera and photo buttons fold into one ">" so the
+  // text field gets the width (as LINE does). Pressing ">" shows them again until the text changes.
+  const [toolsShown, setToolsShown] = useState(false);
   // The header's call button opens a small menu to choose voice or video (as LINE).
   const [callMenuOpen, setCallMenuOpen] = useState(false);
   const [stampsOpen, setStampsOpen] = useState(false);
@@ -1461,6 +1464,16 @@ export default function Chat() {
               </View>
             ) : (
               <View style={s.composer}>
+                {draft.length > 0 && !toolsShown ? (
+                <Pressable
+                  role="button"
+                  aria-label="ボタンを表示"
+                  style={s.barIconBtn}
+                  onPress={() => setToolsShown(true)}>
+                  <MaterialIcons name="chevron-right" size={28} color={c.muted} />
+                </Pressable>
+                ) : (
+                <>
                 <Pressable
                   role="button"
                   aria-label="その他"
@@ -1489,12 +1502,17 @@ export default function Chat() {
                   onPress={pickPhoto}>
                   <MaterialIcons name="image" size={24} color={c.muted} />
                 </Pressable>
+                </>
+                )}
                 <View style={s.inputWrap}>
                   <TextInput
                     ref={input}
                     style={s.input}
                     value={draft}
-                    onChangeText={setDraft}
+                    onChangeText={(t) => {
+                      setDraft(t);
+                      setToolsShown(false);
+                    }}
                     placeholder="メッセージ"
                     placeholderTextColor={c.muted}
                     multiline

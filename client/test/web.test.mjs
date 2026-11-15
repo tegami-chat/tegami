@@ -2394,7 +2394,7 @@ async function main() {
         // The composer grows to show every line of the draft, up to a limit, and shrinks back.
         const inputBox = () => p.evaluate(() => {
           const el = document.querySelector('textarea[placeholder="メッセージ"]');
-          return { h: el.offsetHeight, hidden: el.scrollHeight > el.clientHeight };
+          return { h: el.offsetHeight, w: el.offsetWidth, hidden: el.scrollHeight > el.clientHeight };
         });
         const two = await inputBox();
         assert(two.h >= 64 && !two.hidden, `a two-line draft: ${JSON.stringify(two)}`);
@@ -2410,8 +2410,16 @@ async function main() {
         await composer().fill(Array.from({ length: 12 }, (_, i) => `行${i + 1}`).join('\n'));
         const many = await inputBox();
         assert(many.h <= 140 && many.h >= 130, `twelve lines stop growing at the limit: ${JSON.stringify(many)}`);
-        await shot(p, 'composer-many-lines', '12行を入れた時。入力欄は決まった高さで止まり、中を動かして読む');
+        // While writing, +, camera and photo fold into one ">" so the text field is wider (as LINE does).
+        assert((await button(p, 'カメラ').count()) === 0, 'the camera button stays while writing');
+        const narrowW = (await inputBox()).w;
+        await shot(p, 'composer-many-lines', '12行を入れた時。左のボタンは「>」1つにたたまれ、入力欄は決まった高さで止まり、中を動かして読む');
+        await button(p, 'ボタンを表示').click();
+        await button(p, 'カメラ').waitFor({ timeout: 5000 });
+        assert((await inputBox()).w < narrowW, 'the field did not get narrower when the buttons came back');
+        await shot(p, 'composer-tools-shown', '「>」を押すと、＋、カメラ、写真のボタンが戻る');
         await composer().fill('');
+        await button(p, 'カメラ').waitFor({ timeout: 5000 });
         const empty = await inputBox();
         assert(empty.h === 44, `an empty composer goes back to one line: ${JSON.stringify(empty)}`);
 
