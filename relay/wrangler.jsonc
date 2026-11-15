@@ -13,6 +13,6 @@
   // Crash reports (sent only when the person allows it) go to Workers Logs, kept a few days.
   // The operator's public key for POST /admin (scripts/admin.mjs). Public, not a secret.
   "vars": { "ADMIN_PUBKEYS": "9e094ad1db4962df9763b7f65e7b94f0b3a04bf79f539a1d468a115db779f127" },
-  "observability": { "enabled": true },
+  "observability": { "enabled": true, "logs": { "invocation_logs": false } },
   "routes": [{ "pattern": "relay.tegami.chat", "custom_domain": true }]
 }
