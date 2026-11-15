@@ -56,8 +56,8 @@ export function takeLinkKey() {
 // stamps: my stamps (added 2026-11-15; older bundles have none). Only what opens each image
 // travels (its address on the file server, key, nonce and hash, about 360 bytes): an image
 // is 10 to 150 KB, and a NIP-44 message holds at most 64 KB, a recovery backup 64 KB.
-// The images stay on the file server, which deletes them 30 days after the upload, so the
-// sending device uploads old ones again first (see refreshStamps in tegami.tsx).
+// The images stay in the relay's stamp storage, which keeps them until I remove them
+// (stamps from before it are moved there first: keepStamps in tegami.tsx).
 export type Bundle = { v: 1; secretHex: string; myName: string; contacts: Contact[]; groups: Group[]; blocked?: string[]; stamps?: Stamp[] };
 
 export const MAX_BUNDLE_STAMPS = 100;
@@ -167,7 +167,7 @@ export function cleanBundle(raw: unknown): Bundle | null {
   };
 }
 
-function cleanStamps(raw: unknown): Stamp[] {
+export function cleanStamps(raw: unknown): Stamp[] {
   if (!Array.isArray(raw)) return [];
   const seen = new Set<string>();
   const out: Stamp[] = [];

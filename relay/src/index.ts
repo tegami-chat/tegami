@@ -55,6 +55,7 @@ type Attachment = { challenge: string; ip: string; pubkey?: string; subs: Record
 type Env = {
   RELAY: DurableObjectNamespace<Relay>;
   FILES: R2Bucket;
+  STAMPS: R2Bucket;
   VAPID_JWK?: string;
   DEV_PUSH?: string;
   DEV_LOCAL?: string;
@@ -81,6 +82,10 @@ const MAX_BACKUP_BYTES = 64 * 1024;
 // code, so a key never needs more than one; this stops one key from filling many ids.
 const MAX_BACKUPS_PER_KEY = 1;
 const BACKUP_PATH = /^\/backup\/([0-9a-f]{64})$/;
+// Stamps: kept until the person removes them (not deleted after 30 days like photos).
+const STAMP_PATH = /^\/stamp\/([0-9a-f]{64})$/;
+const MAX_STAMP_BYTES = 512 * 1024;
+const MAX_STAMPS_PER_KEY = 200;
 // Bytes: an address may upload 100 MB at once, then 100 KB per second; a key 50 MB, then 50 KB/s.
 const FILE_RATE = { ip: { burst: 100e6, perSecond: 100e3 }, key: { burst: 50e6, perSecond: 50e3 } };
 const CORS = {
@@ -161,6 +166,25 @@ export default {
       return env.RELAY.get(env.RELAY.idFromName('main')).fetch(new Request(req, { headers }));
     }
     if (BACKUP_PATH.test(url.pathname) && ['GET', 'PUT', 'DELETE'].includes(req.method)) {
+      const headers = new Headers(req.headers);
+      headers.set('X-Tegami-IP', req.headers.get('CF-Connecting-IP') ?? 'unknown');
+      return env.RELAY.get(env.RELAY.idFromName('main')).fetch(new Request(req, { headers }));
+    }
+    const stampPath = url.pathname.match(STAMP_PATH);
+    if (stampPath && (req.method === 'GET' || req.method === 'HEAD')) {
+      const obj = await env.STAMPS.get(stampPath[1]);
+      if (!obj) return new Response('Not found', { status: 404, headers: CORS });
+      return new Response(req.method === 'HEAD' ? null : obj.body, {
+        headers: {
+          ...CORS,
+          'Content-Type': 'application/octet-stream',
+          'Content-Length': String(obj.size),
+          // A stamp can be removed, so caches keep it a day, not a month.
+          'Cache-Control': 'public, max-age=86400',
+        },
+      });
+    }
+    if ((url.pathname === '/stamp' && req.method === 'PUT') || (stampPath && req.method === 'DELETE')) {
       const headers = new Headers(req.headers);
       headers.set('X-Tegami-IP', req.headers.get('CF-Connecting-IP') ?? 'unknown');
       return env.RELAY.get(env.RELAY.idFromName('main')).fetch(new Request(req, { headers }));
@@ -250,6 +274,10 @@ export class Relay extends DurableObject<Env> {
     // Recovery backups (encrypted on the device). Not touched by the 30-day clean-up.
     this.sql.exec('CREATE TABLE IF NOT EXISTS backups (id TEXT PRIMARY KEY, pubkey TEXT, data TEXT, updated_at INTEGER)');
     this.sql.exec('CREATE INDEX IF NOT EXISTS backups_pubkey ON backups (pubkey)');
+    // Stamps (encrypted on the device): which key keeps which stamp, so a key's stamps can be
+    // counted and the file deleted when nobody keeps it. Not touched by the 30-day clean-up.
+    this.sql.exec('CREATE TABLE IF NOT EXISTS stamps (sha TEXT, pubkey TEXT, size INTEGER, created_at INTEGER, PRIMARY KEY (sha, pubkey))');
+    this.sql.exec('CREATE INDEX IF NOT EXISTS stamps_pubkey ON stamps (pubkey)');
     // Envelopes written by a key registered without an invite (1).
     try {
       this.sql.exec('ALTER TABLE events ADD COLUMN open INTEGER DEFAULT 0');
@@ -268,6 +296,9 @@ export class Relay extends DurableObject<Env> {
     const ip = req.headers.get('X-Tegami-IP') ?? 'unknown';
     const path = new URL(req.url).pathname;
     if (path === '/upload') return this.upload(req, ip);
+    if (path === '/stamp') return this.stampPut(req, ip);
+    const stamp = path.match(STAMP_PATH);
+    if (stamp) return this.stampDelete(req, stamp[1]);
     if (path === '/push') return this.pushRoute(req, ip);
     if (path === '/register') return this.registerRoute(req, ip);
     if (path === '/admin') return this.adminRoute(req);
@@ -483,6 +514,65 @@ export class Relay extends DurableObject<Env> {
       { url: `${base}/${hash}`, sha256: hash, size, type: 'application/octet-stream', uploaded: now() },
       { headers: CORS },
     );
+  }
+
+  /** Checks a Blossom-style authorization (kind 24242) for `t`. Null when it is not valid. */
+  fileAuth(req: Request, t: string): NostrEvent | null {
+    let auth: NostrEvent;
+    try {
+      auth = JSON.parse(atob((req.headers.get('Authorization') ?? '').replace(/^Nostr /, '')));
+    } catch {
+      return null;
+    }
+    const tag = (name: string) => auth?.tags?.find((x) => x[0] === name)?.[1];
+    if (auth?.kind !== 24242 || tag('t') !== t || Number(tag('expiration') ?? 0) < now() || !verifyEvent(auth)) return null;
+    return auth;
+  }
+
+  /**
+   * PUT /stamp: keeps an encrypted stamp until its keeper deletes it. The app encrypts each
+   * stamp with a key made from the image and the account's own secret, so the same stamp from
+   * the same account is the same file on every device, and stamps of different accounts never
+   * match (the relay cannot see who has the same stamp as whom).
+   */
+  async stampPut(req: Request, ip: string): Promise<Response> {
+    const fail = (status: number, reason: string) =>
+      new Response(reason, { status, headers: { ...CORS, 'X-Reason': reason } });
+    if (req.method !== 'PUT') return fail(405, 'method not allowed');
+    const auth = this.fileAuth(req, 'stamp');
+    if (!auth) return fail(401, 'auth-required: invalid stamp authorization');
+    const keeper = this.members.get(auth.pubkey);
+    if (!keeper) return fail(403, 'restricted: register first (POST /register)');
+    if (keeper.banned) return fail(403, 'blocked: this key is stopped');
+    const size = Number(req.headers.get('Content-Length') ?? 0);
+    if (!size || size > MAX_STAMP_BYTES) return fail(413, 'too large: stamps up to 512 KB');
+    if (!this.ipBytes.take(ip, size) || !this.keyBytes.take(auth.pubkey, size)) return fail(429, 'rate-limited: slow down');
+    const body = await req.arrayBuffer();
+    if (body.byteLength !== size) return fail(400, 'invalid: size mismatch');
+    const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', body))].map((b) => b.toString(16).padStart(2, '0')).join('');
+    if (!auth.tags.some((x) => x[0] === 'x' && x[1] === hash)) return fail(401, 'auth-required: hash not authorized');
+    const mine = this.sql.exec('SELECT 1 FROM stamps WHERE sha = ? AND pubkey = ?', hash, auth.pubkey).toArray().length > 0;
+    if (!mine) {
+      const held = Number(this.sql.exec('SELECT COUNT(*) AS n FROM stamps WHERE pubkey = ?', auth.pubkey).one().n);
+      if (held >= MAX_STAMPS_PER_KEY) return fail(429, `rate-limited: up to ${MAX_STAMPS_PER_KEY} stamps per key`);
+    }
+    await this.env.STAMPS.put(hash, body);
+    this.sql.exec('INSERT OR REPLACE INTO stamps (sha, pubkey, size, created_at) VALUES (?, ?, ?, ?)', hash, auth.pubkey, size, now());
+    const base = new URL(req.url).origin;
+    return Response.json({ url: `${base}/stamp/${hash}`, sha256: hash, size, type: 'application/octet-stream', uploaded: now() }, { headers: CORS });
+  }
+
+  /** DELETE /stamp/<sha256>: the key stops keeping it; the file goes when no key keeps it. */
+  async stampDelete(req: Request, sha: string): Promise<Response> {
+    const fail = (status: number, reason: string) =>
+      new Response(reason, { status, headers: { ...CORS, 'X-Reason': reason } });
+    if (req.method !== 'DELETE') return fail(405, 'method not allowed');
+    const auth = this.fileAuth(req, 'delete');
+    if (!auth || !auth.tags.some((x) => x[0] === 'x' && x[1] === sha)) return fail(401, 'auth-required: invalid delete authorization');
+    this.sql.exec('DELETE FROM stamps WHERE sha = ? AND pubkey = ?', sha, auth.pubkey);
+    const left = this.sql.exec('SELECT 1 FROM stamps WHERE sha = ?', sha).toArray().length;
+    if (!left) await this.env.STAMPS.delete(sha);
+    return new Response(null, { status: 204, headers: CORS });
   }
 
   vapid: Vapid | null;

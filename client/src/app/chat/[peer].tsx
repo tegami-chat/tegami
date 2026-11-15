@@ -2,7 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, router, useIsFocused, useLocalSearchParams, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { Dialog } from '@/components/dialog';
@@ -61,6 +61,8 @@ export default function Chat() {
     sendVoice,
     forwardFile,
     stamps,
+    recentStamps,
+    moveStampToFront,
     makeStamp,
     addStamp,
     removeStamp,
@@ -1019,7 +1021,7 @@ export default function Chat() {
                         onPress={() => {
                           const f = item.file!;
                           setStampOffer(null);
-                          void addStamp(f, item.at);
+                          void addStamp(f);
                         }}
                         role="button">
                         <Text style={s.cancelText}>スタンプに追加</Text>
@@ -1315,30 +1317,54 @@ export default function Chat() {
 
             {stampsOpen && !recordPanel && (
               <View style={s.stampPanel}>
-                <View style={s.stampGrid}>
-                  {stamps.map((st) => (
+                {recentStamps.length > 0 && (
+                  <View style={s.stampRecent} accessibilityLabel="最近使ったスタンプ" testID="stamp-recent-row">
+                    <MaterialIcons name="history" size={20} color={c.muted} />
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.stampRecentRow}>
+                      {recentStamps.map((st) => (
+                        <Stamp key={st.sha256} file={st} max={48} testID="stamp-recent" onPress={() => pickStamp(st)} />
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+                <ScrollView style={s.stampScroll} contentContainerStyle={s.stampGrid}>
+                  {stamps.map((st, i) => (
                     <View key={st.sha256} style={s.stampCell}>
                       <Stamp
                         file={st}
                         max={72}
                         testID="stamp-item"
                         onPress={() => pickStamp(st)}
-                        onLongPress={() => setStampDeleting((cur) => (cur === st.sha256 ? null : st.sha256))}
+                        // Opens (never toggles): on a computer a right click can arrive twice.
+                        onLongPress={() => setStampDeleting(st.sha256)}
                       />
                       {stampDeleting === st.sha256 && (
-                        <Pressable
-                          role="button"
-                          style={s.cancel}
-                          onPress={() => {
-                            removeStamp(st.sha256);
-                            setStampDeleting(null);
-                          }}>
-                          <Text style={s.cancelText}>削除</Text>
-                        </Pressable>
+                        <View style={s.stampMenu}>
+                          {i > 0 && (
+                            <Pressable
+                              role="button"
+                              style={s.cancel}
+                              onPress={() => {
+                                moveStampToFront(st.sha256);
+                                setStampDeleting(null);
+                              }}>
+                              <Text style={s.cancelText}>先頭へ</Text>
+                            </Pressable>
+                          )}
+                          <Pressable
+                            role="button"
+                            style={s.cancel}
+                            onPress={() => {
+                              removeStamp(st.sha256);
+                              setStampDeleting(null);
+                            }}>
+                            <Text style={s.cancelText}>削除</Text>
+                          </Pressable>
+                        </View>
                       )}
                     </View>
                   ))}
-                </View>
+                </ScrollView>
                 <View style={s.forwardButtons}>
                   <Pressable role="button" style={[s.forwardCancel, sending && s.disabled]} disabled={sending} onPress={createStamp}>
                     <Text style={s.callText}>スタンプを作る</Text>
@@ -1626,7 +1652,18 @@ const styles = (c: Palette) =>
       backgroundColor: c.surface,
     },
     stampGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignItems: 'center' },
+    stampScroll: { maxHeight: 280 },
     stampCell: { alignItems: 'center', gap: 4 },
+    stampMenu: { flexDirection: 'row', gap: 4 },
+    stampRecent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingBottom: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.line,
+    },
+    stampRecentRow: { gap: 10, alignItems: 'center' },
     cancel: {
       minHeight: 44,
       minWidth: 44,

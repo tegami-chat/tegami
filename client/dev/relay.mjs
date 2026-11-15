@@ -40,6 +40,8 @@ function matches(filter, ev) {
 }
 
 const files = new Map(); // sha256 -> Buffer
+const stamps = new Map(); // sha256 -> Buffer (kept until deleted)
+const stampKeepers = new Map(); // sha256 -> Set of pubkeys
 const pushDevices = []; // { endpoint, pubkey }
 const crashes = [];
 const backups = new Map(); // id -> { pubkey, data }
@@ -105,6 +107,53 @@ const http = createServer((req, res) => {
   if (blob && req.method === 'GET') {
     const f = files.get(blob[1]);
     return f ? send(200, f, 'application/octet-stream') : send(404, 'Not found');
+  }
+  // Stamps, like relay.tegami.chat: kept until deleted. GET /_stamps lists them for tests.
+  if (req.url === '/_stamps' && req.method === 'GET') {
+    return send(200, JSON.stringify([...stampKeepers].map(([sha, keys]) => ({ sha, keepers: [...keys], size: stamps.get(sha)?.length ?? 0 }))), 'application/json');
+  }
+  const stampPath = req.url.match(/^\/stamp\/([0-9a-f]{64})$/);
+  if (stampPath && (req.method === 'GET' || req.method === 'HEAD')) {
+    const f = stamps.get(stampPath[1]);
+    if (!f) return send(404, 'Not found');
+    return req.method === 'HEAD' ? send(200) : send(200, f, 'application/octet-stream');
+  }
+  if ((req.url === '/stamp' && req.method === 'PUT') || (stampPath && req.method === 'DELETE')) {
+    const chunks = [];
+    req.on('data', (c) => chunks.push(c));
+    req.on('end', () => {
+      const body = Buffer.concat(chunks);
+      let auth;
+      try {
+        auth = JSON.parse(Buffer.from((req.headers.authorization ?? '').replace(/^Nostr /, ''), 'base64').toString());
+      } catch {
+        return send(401, 'auth-required');
+      }
+      const tag = (n) => auth?.tags?.find((t) => t[0] === n)?.[1];
+      const want = req.method === 'PUT' ? 'stamp' : 'delete';
+      if (auth?.kind !== 24242 || !verifyEvent(auth) || tag('t') !== want || Number(tag('expiration') ?? 0) < Date.now() / 1000) return send(401, 'auth-required');
+      if (req.method === 'DELETE') {
+        const sha = stampPath[1];
+        if (!auth.tags.some((t) => t[0] === 'x' && t[1] === sha)) return send(401, 'auth-required');
+        stampKeepers.get(sha)?.delete(auth.pubkey);
+        if (!stampKeepers.get(sha)?.size) {
+          stampKeepers.delete(sha);
+          stamps.delete(sha);
+        }
+        return send(204);
+      }
+      const hash = createHash('sha256').update(body).digest('hex');
+      if (!auth.tags.some((t) => t[0] === 'x' && t[1] === hash)) return send(401, 'auth-required');
+      if (!members.has(auth.pubkey) || members.get(auth.pubkey).banned) return send(403, 'restricted: register first');
+      if (!body.length || body.length > 512 * 1024) return send(413, 'too large');
+      const held = [...stampKeepers.values()].filter((k) => k.has(auth.pubkey)).length;
+      if (!stampKeepers.get(hash)?.has(auth.pubkey) && held >= 200) return send(429, 'rate-limited');
+      stamps.set(hash, body);
+      if (!stampKeepers.has(hash)) stampKeepers.set(hash, new Set());
+      stampKeepers.get(hash).add(auth.pubkey);
+      send(200, JSON.stringify({ url: `http://localhost:${PORT}/stamp/${hash}`, sha256: hash, size: body.length }), 'application/json');
+    });
+    return;
   }
   // Crash reports: kept in memory so tests can read them at GET /_crashes.
   if (req.url === '/crash' && req.method === 'POST') {

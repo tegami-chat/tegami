@@ -9,7 +9,12 @@
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Relay"] }],
   // Encrypted photos and files (Blossom). The bucket deletes objects after 30 days.
-  "r2_buckets": [{ "binding": "FILES", "bucket_name": "tegami-files" }],
+  // Encrypted stamps. No lifecycle rule: a stamp stays until its keeper deletes it.
+  // Before the first deploy with this line: npx wrangler@4 r2 bucket create tegami-stamps
+  "r2_buckets": [
+    { "binding": "FILES", "bucket_name": "tegami-files" },
+    { "binding": "STAMPS", "bucket_name": "tegami-stamps" }
+  ],
   // Crash reports (sent only when the person allows it) go to Workers Logs, kept a few days.
   // The operator's public key for POST /admin (scripts/admin.mjs). Public, not a secret.
   "vars": { "ADMIN_PUBKEYS": "9e094ad1db4962df9763b7f65e7b94f0b3a04bf79f539a1d468a115db779f127" },

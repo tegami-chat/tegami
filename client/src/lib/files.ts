@@ -173,6 +173,76 @@ export async function encryptAndUpload(
   };
 }
 
+// ---------- stamps: kept on the relay until removed ----------
+//
+// Photos go to /upload, which the file server deletes after 30 days. Stamps go to /stamp,
+// which keeps them until I remove them. Each stamp is encrypted with a key made from the
+// image and my account's secret (not a random key), so:
+// - the same stamp is the same file on all my devices (my list can be synced, nothing is
+//   uploaded twice);
+// - another account's copy of the same image is a different file, so the relay cannot see
+//   who has the same stamp as whom.
+// The key and nonce are unique to each image, so the fixed nonce is never reused with a
+// different plaintext under the same key.
+
+/** Whether a stamp lives in the stamp storage (kept until removed) rather than the 30-day file server. */
+export function isKeptStamp(f: FileRef): boolean {
+  return /\/stamp\/[0-9a-f]{64}$/.test(f.url);
+}
+
+async function stampKeyAndNonce(bytes: Uint8Array<ArrayBuffer>, secret: Uint8Array) {
+  const enc = new TextEncoder();
+  const base = await crypto.subtle.importKey('raw', secret as Uint8Array<ArrayBuffer>, 'HKDF', false, ['deriveBits']);
+  const mac = await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt: enc.encode('tegami/stamp/v1'), info: enc.encode('stamp mac') }, base, 256);
+  const hmac = await crypto.subtle.importKey('raw', mac, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const seed = new Uint8Array(await crypto.subtle.sign('HMAC', hmac, bytes));
+  const part = async (label: string) => new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array([...enc.encode(label), ...seed])));
+  return { raw: await part('key'), nonce: (await part('nonce')).slice(0, 12) };
+}
+
+function fileAuthHeader(secret: Uint8Array, t: string, hash: string) {
+  const now = Math.floor(Date.now() / 1000);
+  const auth = finalizeEvent(
+    { kind: 24242, created_at: now, content: t, tags: [['t', t], ['x', hash], ['expiration', String(now + 300)]] },
+    secret,
+  );
+  return `Nostr ${btoa(JSON.stringify(auth))}`;
+}
+
+/** Encrypts a stamp for my account and keeps it in the stamp storage (skipped when it is there already). */
+export async function uploadStamp(bytes: Uint8Array<ArrayBuffer>, type: string, secret: Uint8Array, dim?: string): Promise<FileRef> {
+  const { raw, nonce } = await stampKeyAndNonce(bytes, secret);
+  const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']);
+  const cipher = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, key, bytes));
+  const hash = await sha256Hex(cipher);
+  const url = `${FILE_SERVER}/stamp/${hash}`;
+  const there = await fetch(url, { method: 'HEAD' }).then((r) => r.ok).catch(() => false);
+  if (!there) {
+    const res = await fetch(`${FILE_SERVER}/stamp`, {
+      method: 'PUT',
+      body: cipher,
+      headers: { Authorization: fileAuthHeader(secret, 'stamp', hash), 'Content-Type': 'application/octet-stream' },
+    });
+    if (!res.ok) throw new Error(`stamp upload failed: ${res.status} ${res.headers.get('X-Reason') ?? ''}`);
+  }
+  const size = validFileSize(bytes.byteLength);
+  return {
+    url,
+    type,
+    key: bytesToHex(raw),
+    nonce: bytesToHex(nonce),
+    sha256: hash,
+    ...(size !== undefined ? { size } : {}),
+    ...(dim ? { dim } : {}),
+  };
+}
+
+/** Stops keeping a stamp in the stamp storage. Messages already sent keep showing it where it was opened. */
+export async function deleteStampFile(sha256: string, secret: Uint8Array) {
+  const res = await fetch(`${FILE_SERVER}/stamp/${sha256}`, { method: 'DELETE', headers: { Authorization: fileAuthHeader(secret, 'delete', sha256) } });
+  if (!res.ok && res.status !== 404) throw new Error(`stamp delete failed: ${res.status}`);
+}
+
 /** NIP-17 kind 15 tags for a file (with `["t", "stamp"]` when `stamp` is true). */
 export function fileTags(f: FileRef, stamp?: boolean): string[][] {
   const tags = [
