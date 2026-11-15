@@ -73,7 +73,7 @@ tailwind.config = {
 
   <ul>
     <li data-i18n="pv.cant.1">The text of messages</li>
-    <li data-i18n="pv.cant.2">The contents of photos, videos, files and voice messages</li>
+    <li data-i18n="pv.cant.2">The contents of photos, videos, files, voice messages and stamps</li>
     <li data-i18n="pv.cant.3">Who sent a message</li>
     <li data-i18n="pv.cant.4">Your list of friends</li>
     <li data-i18n="pv.cant.5">Your name and icon</li>
@@ -81,7 +81,7 @@ tailwind.config = {
     <li data-i18n="pv.cant.7">Your secret key (which remains encrypted even when sent outside your device)</li>
   </ul>
 
-  <p data-i18n="pv.cant.ex">Exceptions: the operator can see the text and the sender of messages attached to a report. The relay also keeps who invited whom for 90 days.</p>
+  <p data-i18n="pv.cant.ex">Exceptions: the operator can see the text and the sender of messages attached to a report. The relay also keeps who invited whom for 90 days, and which account keeps which stamps (the stamp images stay encrypted).</p>
 
   <h2 data-i18n="pv.keep.h">3. What the relay keeps</h2>
 
@@ -91,6 +91,7 @@ tailwind.config = {
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.1.t">Registered accounts</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.1.1">Public key, whether the account was registered with an invite, registration date and time, and whether the account is suspended</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.1.2">To allow only registered accounts to send messages, and to suspend abusive accounts</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.1.3">Until the account is deleted</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.2.t">Message envelopes</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.2.1">The encrypted message, the recipient's public key, the arrival time, and the data size</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.2.2">To deliver messages later when a device is off or offline</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.2.3">30 days. Envelopes for moving an account to a new device: 10 minutes</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.3.t">Photos, videos, files and voice messages</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.3.1">Encrypted data. The uploader is not recorded</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.3.2">To deliver them to recipients</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.3.3">30 days</p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.st.t">Stamps</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.st.1">The encrypted stamp image, the public key of the account that keeps it, its size, and when it was stored</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.st.2">So you can send the same stamp again and use it on all your devices, and so only the account that keeps a stamp can delete it</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.st.3">Until you delete the stamp. After deletion, copies may remain in caches for up to one day</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.4.t">Invite records</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.4.1">Who invited whom</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.4.2">To suspend accounts that engage in abuse, along with the accounts they invited</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.4.3">90 days</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.5.t">Reports</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.5.1">The public keys of the reporting and reported accounts, and the reason for the report. If the reporter chooses, up to 20 messages from the reported user, decrypted on the reporter's device. The reported user is not notified</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.5.2">To stop abuse</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.5.3">90 days</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.6.t">Notification addresses</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.6.1">Your device’s notification address, the keys to encrypt notifications to it, and the public key of the account using it</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.6.2">To tell you about new messages and calls</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.6.3">Until you turn notifications off</p></div></div>
@@ -105,7 +106,7 @@ tailwind.config = {
   <p data-i18n="pv.dev.p">The following are saved only on your device.</p>
 
   <ul>
-    <li data-i18n="pv.dev.1">Messages, photos, videos, files and voice messages</li>
+    <li data-i18n="pv.dev.1">Messages, photos, videos, files, voice messages and stamps</li>
     <li data-i18n="pv.dev.2">Friends, groups, names and icons</li>
     <li data-i18n="pv.dev.3">Your secret key, encrypted with your passkey or a key inside your browser</li>
   </ul>
@@ -158,16 +159,17 @@ tailwind.config = {
   <ul>
     <li data-i18n="pv.del.a.1">Turn notifications off: the relay deletes your notification address and keys</li>
     <li data-i18n="pv.del.a.2">Tap "Delete recovery code" in settings: the relay deletes your recovery backup</li>
-    <li data-i18n="pv.del.a.3">Envelopes and files are deleted automatically after 30 days</li>
+    <li data-i18n="pv.del.a.3">Envelopes and files other than stamps are deleted automatically after 30 days</li>
+    <li data-i18n="pv.del.a.4">Delete a stamp: the relay deletes the stamp image and the record of who kept it</li>
   </ul>
 
-  <p data-i18n="pv.del.ask">To ask for the purpose of use of information linked to your public key (such as registration, invite and report records, or notification addresses), or to request its disclosure, correction, addition, deletion, suspension of use, or cessation of sharing with third parties, email <a href="mailto:hello@tegami.chat">hello@tegami.chat</a> with your account's public key. We disclose information by email.</p>
+  <p data-i18n="pv.del.ask">To ask for the purpose of use of information linked to your public key (such as registration, invite and report records, notification addresses, or stamps), or to request its disclosure, correction, addition, deletion, suspension of use, or cessation of sharing with third parties, email <a href="mailto:hello@tegami.chat">hello@tegami.chat</a> with your account's public key. We disclose information by email.</p>
 
   <ul>
     <li data-i18n="pv.del.b.1">To verify your identity, the operator will send a Tegami message to that public key</li>
     <li data-i18n="pv.del.b.2">If you have lost your device, or if you are making a request as a legal representative (such as a parent or guardian) or an authorized agent, please say so in your email. We will let you know how to verify your identity</li>
     <li data-i18n="pv.del.b.3">Records needed to prevent abuse, such as a record that an account was suspended, may not be deleted</li>
-    <li data-i18n="pv.del.b.4">Files and recovery backups are not linked to your public key, so we cannot identify them from your public key</li>
+    <li data-i18n="pv.del.b.4">Files other than stamps, and recovery backups, are not linked to your public key, so we cannot identify them from your public key. Stamps are linked to your public key, so requests for disclosure and deletion include them</li>
     <li data-i18n="pv.del.b.5">We use your email only to handle your request, and delete it within a year after we finish</li>
     <li data-i18n="pv.del.b.6">There is no fee for making a request</li>
   </ul>
@@ -183,7 +185,7 @@ tailwind.config = {
   <h2 data-i18n="pv.safe.h">12. How we protect your data</h2>
 
   <ul>
-    <li data-i18n="pv.safe.1">Messages, photos, videos, files, voice messages and recovery backups are encrypted on your device before they are sent, except messages attached to reports</li>
+    <li data-i18n="pv.safe.1">Messages, photos, videos, files, voice messages, stamps and recovery backups are encrypted on your device before they are sent, except messages attached to reports</li>
     <li data-i18n="pv.safe.2">All connections to the website, the app and the relay are encrypted</li>
     <li data-i18n="pv.safe.3">The relay only accepts messages in encrypted envelopes</li>
     <li data-i18n="pv.safe.4">The relay gives each logged-in account only the envelopes addressed to it</li>
@@ -198,7 +200,7 @@ tailwind.config = {
   <p data-i18n="pv.eu.p1">The operator complies with the European Union's General Data Protection Regulation (GDPR). The legal bases for processing your data are:</p>
 
   <ul>
-    <li data-i18n="pv.eu.1">Necessary to provide the service: registering your public key, delivering messages and files, connecting calls, and storing recovery backups</li>
+    <li data-i18n="pv.eu.1">Necessary to provide the service: registering your public key, delivering messages and files, connecting calls, storing stamps, and storing recovery backups</li>
     <li data-i18n="pv.eu.2">Legitimate interests: preventing abuse, limiting the number of connections and the amount of data sent, and compiling usage statistics</li>
     <li data-i18n="pv.eu.3">Your consent: notifications and error reports. You can withdraw consent in settings at any time. Withdrawing does not affect the lawfulness of processing before withdrawal</li>
   </ul>
@@ -285,13 +287,13 @@ const JA = {
   'pv.cant.h': '2. 運営者が閲覧できない情報',
   'pv.cant.p': 'メッセージは利用者の端末で暗号化されてから送信されます。復号に必要な鍵は、送信者と受信者の端末にのみ保存されます。そのため、運営者は次の情報を閲覧できません。',
   'pv.cant.1': 'メッセージの本文',
-  'pv.cant.2': '写真、動画、ファイル、音声メッセージの中身',
+  'pv.cant.2': '写真、動画、ファイル、音声メッセージ、スタンプの中身',
   'pv.cant.3': 'メッセージの送信者',
   'pv.cant.4': '友だちの一覧',
   'pv.cant.5': '利用者の名前とアイコン',
   'pv.cant.6': '通話の声と映像',
   'pv.cant.7': '秘密鍵（端末の外へ送信される際も、必ず暗号化されています）',
-  'pv.cant.ex': 'ただし、通報に添付されたメッセージについては、本文と送信者を運営者が閲覧できます。また、誰が誰を招待したかの記録は、リレーに90日間保存されます。',
+  'pv.cant.ex': 'ただし、通報に添付されたメッセージについては、本文と送信者を運営者が閲覧できます。また、誰が誰を招待したかの記録は、リレーに90日間保存されます。どのアカウントがどのスタンプを保存しているかも、リレーに記録されます（スタンプの画像は暗号化されたままです）。',
   'pv.keep.h': '3. リレーが保存する情報',
   'pv.keep.p': 'リレーは、メッセージを配信するサーバーです。リレーが取得し保存する情報は、次のとおりです。',
   'pv.k.1.t': '登録したアカウント',
@@ -309,6 +311,10 @@ const JA = {
   'pv.k.3.1': '暗号化されたデータ。アップロードした利用者は記録しません',
   'pv.k.3.2': '受信者に配信するため',
   'pv.k.3.3': '30日間',
+  'pv.k.st.t': 'スタンプ',
+  'pv.k.st.1': '暗号化されたスタンプの画像、そのスタンプを保存しているアカウントの公開鍵、データサイズ、保存日時',
+  'pv.k.st.2': '同じスタンプを繰り返し送信し、利用者のすべての端末で使えるようにするため。スタンプを保存したアカウントだけが削除できるようにするため',
+  'pv.k.st.3': '利用者がスタンプを削除するまで。削除後も、配信のための一時的な保存に最大1日残る場合があります',
   'pv.k.4.t': '招待の記録',
   'pv.k.4.1': '誰が誰を招待したか',
   'pv.k.4.2': '不正行為を行った利用者と、その利用者が招待した利用者の利用を停止するため',
@@ -339,7 +345,7 @@ const JA = {
   'pv.k.10.3': '接続中のみメモリ上で扱い、保存しません',
   'pv.dev.h': '4. 端末に保存される情報',
   'pv.dev.p': '次の情報は、利用者の端末内にのみ保存されます。',
-  'pv.dev.1': 'メッセージ、写真、動画、ファイル、音声メッセージ',
+  'pv.dev.1': 'メッセージ、写真、動画、ファイル、音声メッセージ、スタンプ',
   'pv.dev.2': '友だち、グループ、名前とアイコン',
   'pv.dev.3': '秘密鍵（パスキーまたはブラウザ内の鍵で暗号化して保存します）',
   'pv.dev.p2': 'ブラウザのサイトデータを削除すると、その端末の本サービスのデータも削除されます。メッセージの履歴は、設定画面から書き出すことができます。',
@@ -383,12 +389,13 @@ const JA = {
   'pv.del.self': '利用者自身でできる操作',
   'pv.del.a.1': '通知をオフにすると、リレーは通知の宛先と鍵を削除します',
   'pv.del.a.2': '設定の「復旧コードを削除」を押すと、リレーは復旧用バックアップを削除します',
-  'pv.del.a.3': '封筒とファイルは、30日後に自動で削除されます',
-  'pv.del.ask': '公開鍵に結び付いた情報（登録、招待、通報の記録、通知の宛先など）について、利用目的の通知、開示、訂正、追加、削除、利用の停止、第三者への提供の停止を求める場合は、アカウントの公開鍵を記載して <a href="mailto:hello@tegami.chat">hello@tegami.chat</a> までご連絡ください。開示は電子メールで行います。',
+  'pv.del.a.3': '封筒と、スタンプ以外のファイルは、30日後に自動で削除されます',
+  'pv.del.a.4': 'スタンプを削除すると、リレーはスタンプの画像と保存の記録を削除します',
+  'pv.del.ask': '公開鍵に結び付いた情報（登録、招待、通報の記録、通知の宛先、スタンプなど）について、利用目的の通知、開示、訂正、追加、削除、利用の停止、第三者への提供の停止を求める場合は、アカウントの公開鍵を記載して <a href="mailto:hello@tegami.chat">hello@tegami.chat</a> までご連絡ください。開示は電子メールで行います。',
   'pv.del.b.1': '本人確認のため、運営者がその公開鍵宛てに本サービスでメッセージを送信します',
   'pv.del.b.2': '端末を紛失した場合や、法定代理人または代理人が請求する場合は、その旨をメールに記載してください。運営者から確認の方法をご案内します',
   'pv.del.b.3': '不正行為の防止に必要な記録（運営者が利用を停止した記録など）は、削除できない場合があります',
-  'pv.del.b.4': 'ファイルと復旧用バックアップは公開鍵と結び付いていないため、公開鍵から特定することはできません',
+  'pv.del.b.4': 'スタンプ以外のファイルと復旧用バックアップは、公開鍵と結び付いていないため、公開鍵から特定することはできません。スタンプは公開鍵と結び付いているため、開示と削除の請求の対象になります',
   'pv.del.b.5': 'いただいたメールは請求への対応にのみ利用し、対応完了から1年以内に削除します',
   'pv.del.b.6': '手数料は無料です',
   'pv.del.app': 'アプリ内でアカウントを削除する機能は、今後提供する予定です。',
@@ -396,7 +403,7 @@ const JA = {
   'pv.kid.p1': '本サービスは、利用者の年齢を確認していません。13歳未満の方は、保護者の方と一緒にご利用ください。',
   'pv.kid.p2': '欧州連合では、16歳未満の方が通知やエラーの報告を有効にするには、保護者の同意が必要です。居住国がより低い年齢を定めている場合は、その年齢未満の方が対象となります。',
   'pv.safe.h': '12. 安全管理措置',
-  'pv.safe.1': 'メッセージ、写真、動画、ファイル、音声メッセージ、復旧用バックアップは、端末で暗号化してから送信します（通報に添付されたメッセージを除く）',
+  'pv.safe.1': 'メッセージ、写真、動画、ファイル、音声メッセージ、スタンプ、復旧用バックアップは、端末で暗号化してから送信します（通報に添付されたメッセージを除く）',
   'pv.safe.2': 'サイト、アプリ、リレーとの通信は、すべて暗号化しています',
   'pv.safe.3': 'リレーは、暗号化された封筒のみを受け付けます',
   'pv.safe.4': 'リレーは、ログインしたアカウントに対し、そのアカウント宛ての封筒のみを配信します',
@@ -406,7 +413,7 @@ const JA = {
   'pv.safe.8': '運営者の管理用の鍵と通報の記録は、運営者のみが取り扱います',
   'pv.eu.h': '13. 欧州連合にお住まいの方へ',
   'pv.eu.p1': '運営者は、欧州連合の一般データ保護規則に従います。情報を取り扱う法的根拠は、次のとおりです。',
-  'pv.eu.1': 'サービスの提供に必要な取扱い：公開鍵の登録、メッセージとファイルの送受信、通話の接続、復旧用バックアップの保管',
+  'pv.eu.1': 'サービスの提供に必要な取扱い：公開鍵の登録、メッセージとファイルの送受信、通話の接続、スタンプの保管、復旧用バックアップの保管',
   'pv.eu.2': '運営者の正当な利益：不正行為の防止、接続数と送信量の制限、利用状況の統計',
   'pv.eu.3': '利用者の同意：通知とエラーの報告。設定からいつでも同意を撤回できます。撤回前の取扱いの適法性には影響しません',
   'pv.eu.p2': '本サービスの利用には、公開鍵と接続中の IP アドレスが必要です。登録には、招待または自動プログラムでないことの確認も必要です。自動化された意思決定やプロファイリングは行いません。欧州委員会は、日本の個人情報保護の水準が十分であると認めています。',
