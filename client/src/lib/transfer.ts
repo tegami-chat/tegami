@@ -17,7 +17,9 @@ import { finalizeEvent, generateSecretKey, getPublicKey, type EventTemplate, typ
 import { hexToBytes } from 'nostr-tools/utils';
 
 import { cleanAiPermissions, type AiPermissions } from './ai-permissions';
-import { validFileRef } from './files';
+import { validFileRef, type FileRef } from './files';
+import { cleanHistoryRefs } from './history';
+import { cleanEntries, shareable } from './own-sync';
 import type { Contact, Group, Stamp } from './tegami';
 import { fromB64u, toB64u } from './vault';
 
@@ -70,6 +72,12 @@ export type Bundle = {
   blocked?: string[];
   ai?: AiPermissions;
   stamps?: Stamp[];
+  // sync: when each friend, group, block and AI switch last changed (lib/own-sync.ts, added
+  // 2026-11-16), so the new device merges later changes from my other devices correctly.
+  sync?: Record<string, [number] | [number, unknown]>;
+  // history: the files holding every message of the old device (lib/history.ts, added
+  // 2026-11-16). Only in the link to another device, never in a recovery backup.
+  history?: FileRef[];
 };
 
 export const MAX_BUNDLE_STAMPS = 100;
@@ -85,6 +93,11 @@ export function fitBundle(bundle: Bundle, maxBytes: number): Bundle {
   while (stamps.length && size(out) > maxBytes) {
     stamps = stamps.slice(Math.max(1, Math.ceil(stamps.length / 10)));
     out = { ...bundle, stamps };
+  }
+  // Still too big: the times go (the new device then treats what it got as the oldest state).
+  if (size(out) > maxBytes && out.sync) {
+    const { sync: _, ...rest } = out;
+    out = rest;
   }
   return out;
 }
@@ -177,6 +190,8 @@ export function cleanBundle(raw: unknown): Bundle | null {
     blocked: Array.isArray(bundle.blocked) ? bundle.blocked.filter((p) => typeof p === 'string' && /^[0-9a-f]{64}$/.test(p)) : [],
     ai: cleanAiPermissions(bundle.ai),
     stamps: cleanStamps(bundle.stamps),
+    ...(bundle.sync && typeof bundle.sync === 'object' ? { sync: shareable(cleanEntries(bundle.sync)) } : {}),
+    ...(Array.isArray(bundle.history) ? { history: cleanHistoryRefs(bundle.history) } : {}),
   };
 }
 

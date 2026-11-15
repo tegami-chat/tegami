@@ -156,8 +156,7 @@ async function newUser(browser, { prf = true, wrap = {}, authenticator = true } 
   await cdp.send('WebAuthn.enable');
   let authenticatorId = null;
   if (authenticator) ({ authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { ...AUTH, hasPrf: prf } }));
-  page.on('pageerror', (e) => console.log('    page error:', e.message));
-  await page.goto(ORIGIN + '/');
+  page.on('pageerror', (e) => console.log('    page error:', e.message));  await page.goto(ORIGIN + '/');
   return { context, page, cdp, authenticatorId };
 }
 
@@ -824,6 +823,74 @@ async function main() {
       for (const u of [a, a2, b, c]) await u.context.close();
     });
 
+    await test('Own devices: the link brings messages older than 30 days; friends, groups and blocks changed on one device reach the other', async () => {
+      const a = await person(browser, 'えー');
+      const b = await person(browser, 'びー');
+      const c = await person(browser, 'しー');
+      await befriend(a, b);
+      // A message from 60 days ago: the relay keeps only 30 days, so only A has it.
+      const oldAt = Math.floor(Date.now() / 1000) - 60 * 86400;
+      await a.page.evaluate(
+        ({ peer, at }) => {
+          const list = JSON.parse(localStorage.getItem('tegami.messages') || '[]');
+          list.unshift({ id: '9'.repeat(64), from: peer, peer, text: '六十日前の手紙', at, got: at * 1000 });
+          localStorage.setItem('tegami.messages', JSON.stringify(list));
+        },
+        { peer: b.hex, at: oldAt },
+      );
+      await a.page.goto(ORIGIN + '/settings');
+      await waitText(a.page, '別の端末でも使う');
+      await a.page.getByText('別の端末でも使う').click();
+      await waitText(a.page, 'まで使えます');
+      const moveLink = (await text(a.page)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)?.[0];
+      assert(moveLink, 'no moving link');
+      const a2 = await newUser(browser, { prf: false });
+      await a2.page.goto(moveLink);
+      await button(a2.page, 'この端末で使う').click();
+      await button(a2.page, 'パスキーを使わずに始める').click();
+      await waitOpen(a2.page);
+      await a2.page.getByText('びー').first().click();
+      await waitText(a2.page, '六十日前の手紙');
+      // The relay never had it: it came in the history file, once.
+      const files = await a2.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages') || '[]').filter((m) => m.text === '六十日前の手紙').length);
+      assert(files === 1, `the old message is there ${files} times`);
+
+      // A2 adds C as a friend: A, still open, gets C too.
+      await befriend(a2, c);
+      await a.page.goto(ORIGIN + '/');
+      await button(a.page, '友だち').click();
+      await waitText(a.page, 'しー');
+      const contactsOf = (p) => p.evaluate(() => JSON.parse(localStorage.getItem('tegami.contacts') || '[]').map((x) => x.name).sort().join(','));
+      assert((await contactsOf(a.page)) === 'しー,びー', `A's friends: ${await contactsOf(a.page)}`);
+
+      // A2 makes a group with B and C: it shows on A.
+      await a2.page.goto(ORIGIN + '/');
+      await button(a2.page, '友だち').click();
+      await a2.page.getByText('グループを作る').click();
+      await a2.page.getByPlaceholder('グループの名前').fill('いつもの三人');
+      await a2.page.getByRole('checkbox', { name: 'びー' }).click();
+      await a2.page.getByRole('checkbox', { name: 'しー' }).click();
+      await button(a2.page, '作る').click();
+      await a.page.waitForFunction(() => JSON.parse(localStorage.getItem('tegami.groups') || '[]').some((g) => g.name === 'いつもの三人'), null, { timeout: 15000 });
+
+      // A blocks C: A2 has C blocked too. A2 unblocks: A lets C back.
+      await a.page.goto(`${ORIGIN}/chat/${c.hex}`);
+      await button(a.page, 'メニュー').click();
+      await waitText(a.page, 'ビデオ通話');
+      await button(a.page, 'ブロック').click();
+      await waitText(a.page, 'しーをブロックしますか？');
+      await button(a.page, 'ブロック').click();
+      await button(infoArea(a.page), 'ブロック解除').waitFor();
+      const blockedOn = (p, hex) => p.waitForFunction((h) => JSON.parse(localStorage.getItem('tegami.blocked') || '[]').includes(h), hex, { timeout: 15000 });
+      const notBlockedOn = (p, hex) => p.waitForFunction((h) => !JSON.parse(localStorage.getItem('tegami.blocked') || '[]').includes(h), hex, { timeout: 15000 });
+      await blockedOn(a2.page, c.hex);
+      await a2.page.goto(ORIGIN + '/settings');
+      await waitText(a2.page, 'ブロックリスト');
+      await button(a2.page, 'ブロック解除').click();
+      await notBlockedOn(a.page, c.hex);
+      for (const u of [a, a2, b, c]) await u.context.close();
+    });
+
     await test('Connection dropped (phone put the browser away): messages still arrive after reconnecting', async () => {
       const make = async (name) => {
         const u = await newUser(browser, { prf: false });
@@ -1005,7 +1072,8 @@ async function main() {
       await b.page.getByText('あおい').first().click();
       await waitText(b.page, '音声通話 0:');
       // Every envelope sent for the call carries an expiration a minute ahead.
-      const sent = (await a.page.evaluate(() => window.__sent)).slice(before);
+      // (Quiet envelopes are not for the call: my friend list going to my other devices, lib/own-sync.ts.)
+      const sent = (await a.page.evaluate(() => window.__sent)).slice(before).filter((ev) => !ev.tags.some((t) => t[0] === 't' && t[1] === 'quiet'));
       const now = Math.floor(Date.now() / 1000);
       assert(sent.length >= 2, `only ${sent.length} envelopes sent`);
       for (const ev of sent) {
@@ -2717,6 +2785,13 @@ async function main() {
       await waitText(b.page, 'あゆみ');
       await waitText(c.page, 'あゆみ');
       assert(await b.page.getByTestId('avatar-initial').last().isVisible(), 'expected initial placeholder before avatar');
+      // C's own envelopes to itself (its friend list for its other devices, lib/own-sync.ts) are
+      // there already; nothing more may arrive for C.
+      await c.page.waitForFunction(() => {
+        const s = JSON.parse(localStorage.getItem('tegami.syncSent') || 'null');
+        return s && s.hash.includes(JSON.stringify(Object.keys(JSON.parse(localStorage.getItem('tegami.sync'))).find((k) => k.startsWith('c:'))));
+      }, null, { timeout: 15000 });
+      const cOwn = (await envelopesFor(c.hex)).length;
 
       await a.page.goto(ORIGIN + '/settings');
       await waitText(a.page, 'アイコンを変更');
@@ -2762,7 +2837,7 @@ async function main() {
       await c.page.waitForTimeout(1000);
       assert((await c.page.getByTestId('avatar-img').count()) === 0, 'stranger C saw the avatar');
       assert(await c.page.getByTestId('avatar-initial').last().isVisible(), 'stranger C lost the initial placeholder');
-      assert((await envelopesFor(c.hex)).length === 0, 'stranger C received a profile card');
+      assert((await envelopesFor(c.hex)).length === cOwn, 'stranger C received a profile card');
 
       await button(a.page, 'アイコンを削除').click();
       await a.page.getByTestId('avatar-initial').last().waitFor({ timeout: 10000 });
