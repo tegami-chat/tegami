@@ -6,7 +6,8 @@ import { finalizeEvent, generateSecretKey, getPublicKey, type EventTemplate } fr
 import { bytesToHex, hexToBytes } from 'nostr-tools/utils';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-import { describeAccount } from './accounts';
+import { accounts, describeAccount, removeAccountHere } from './accounts';
+import { FEEDBACK_NAME, FEEDBACK_PUBKEY } from './feedback';
 import { AI_DRAFT_ASK_KIND, AI_DRAFT_KIND, draftAsk, parseDraft, wrapExpiring } from './ai-draft';
 import { gateAi } from './ai-permissions';
 import { clearNewMark } from './sw-store';
@@ -14,10 +15,10 @@ import { createDeviceVault, deviceVaultAvailable, openDeviceVault, type DeviceVa
 import { setCrashReports } from './crash';
 import { MAX_FILE_BYTES, deleteStampFile, encryptAndUpload, fileFromRumor, fileTags, forgetFile, isKeptStamp, isStampRumor, keepSent, keptFile, openFile, shrinkAvatar, shrinkImage, shrinkStamp, uploadStamp, validFileName, validFileRef, type FileRef } from './files';
 import { backoff, loadOutbox, publishOne, saveOutbox, type Outgoing } from './outbox';
-import { k, load, remove, save } from './storage';
+import { k, keyFor, load, remove, save } from './storage';
 import { replaceAiPermissions, useAiPermissions } from './ai-permissions';
 import { bundleSecret, cleanStamps, sendTransfer, type Bundle } from './transfer';
-import { disablePush, enablePush, refreshPush, type PushState } from './push';
+import { disablePush, enablePush, refreshPush, replaceSubscription, type PushState } from './push';
 import { SIGNAL_KIND, freshSignal, wrapQuiet, wrapSignal } from './signal';
 import { BackupGoneError, type BackupRef, clearLocal, deleteBackup, deriveKeys, loadLocal, makeCode, putBackup, recoveryOnHere, saveLocal, takeRestoredKeys } from './recovery';
 import { createVault, unlockVault, type Vault } from './vault';
@@ -104,7 +105,7 @@ export type Status = 'loading' | 'new' | 'locked' | 'open';
  * checking: not known yet (or the relay cannot be reached and nothing is remembered).
  * needed: not registered; the web app shows the Turnstile check. blocked: the key was stopped.
  */
-export type RegistrationState = 'checking' | 'needed' | 'ok' | 'blocked';
+export type RegistrationState = 'checking' | 'needed' | 'ok' | 'blocked' | 'deleted';
 
 /** Why someone is reported to the relay's operator (POST /report). */
 export type ReportReason = 'spam' | 'scam' | 'impersonation' | 'harassment' | 'other';
@@ -247,6 +248,16 @@ type TegamiState = {
   inviteCode: string | null;
   /** Registers with a Turnstile token (web) or, with invite, upgrades with a friend's code. Returns whether it worked. */
   registerWith: (body: { turnstile?: string; invite?: string }) => Promise<boolean>;
+  /**
+   * Removes an account (the open one when no id is given) from this device only: it stays on
+   * other devices and on the relay. Removing the open one opens another, or the first screen.
+   */
+  removeFromDevice: (id?: string) => Promise<void>;
+  /**
+   * Deletes the open account everywhere: the recovery backup, everything the relay keeps under
+   * the key (DELETE /account), then this device's copy. Throws when the relay did not confirm.
+   */
+  deleteAccount: () => Promise<void>;
 };
 
 const Ctx = createContext<TegamiState | null>(null);
@@ -312,7 +323,7 @@ export function shortId(pubkey: string) {
 
 /** What to call a person: their contact name, or a short id. */
 export function personName(pubkey: string, contacts: Contact[]) {
-  return contacts.find((c) => c.pubkey === pubkey)?.name ?? shortId(pubkey);
+  return contacts.find((c) => c.pubkey === pubkey)?.name ?? (pubkey === FEEDBACK_PUBKEY ? FEEDBACK_NAME : shortId(pubkey));
 }
 
 /** What to call a chat: the contact, the group's name, or its members' names. */
@@ -324,7 +335,8 @@ export function chatName(room: string, contacts: Contact[], groups: Group[]) {
 
 /** Chats that are neither a contact nor a group I know, newest first. */
 export function strangers(contacts: Contact[], messages: Message[], groups: Group[] = [], blocked: string[] = []) {
-  const known = new Set([...contacts.map((c) => c.pubkey), ...groups.map((g) => g.id), ...blocked]);
+  // The chat with Tegami's official account ("Tegamiへの意見") is never a stranger's.
+  const known = new Set([...contacts.map((c) => c.pubkey), ...groups.map((g) => g.id), ...blocked, FEEDBACK_PUBKEY]);
   const last = new Map<string, Message>();
   for (const m of messages) if (!known.has(m.peer)) last.set(m.peer, m);
   return [...last.entries()].map(([peer, m]) => ({ peer, last: m })).sort((a, b) => b.last.at - a.last.at);
@@ -809,6 +821,10 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const [trusted, setTrusted] = useState(false);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const applyRegistration = useCallback((r: Registration) => {
+    if (r.deleted) {
+      setRegistration('deleted');
+      return;
+    }
     if (r.banned) {
       setRegistration('blocked');
       return;
@@ -829,7 +845,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       try {
         const r = await askRelay(secret, body);
         if (r.member && body.invite && !r.inviteError) forgetInviteCode();
-        if (r.member || r.banned) applyRegistration(r);
+        if (r.member || r.banned || r.deleted) applyRegistration(r);
         return r.member;
       } catch {
         return false;
@@ -1767,7 +1783,36 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   }, [secret, recoveryOn, currentBundle, enqueue, refreshed, recoveryRetry]);
   useEffect(() => () => clearTimeout(retryTimer.current), []);
 
+  // ---------- removing and deleting the account ----------
+  const removeFromDevice = useCallback(
+    async (id?: string) => {
+      const target = id ?? accounts().current;
+      if (target === accounts().current) {
+        // Tell the relay to stop notifying this device for this account (best effort: the
+        // relay also forgets addresses the push service reports as gone).
+        if (secret && load<string | null>(k('push'), null)) await disablePush(secret).catch(() => undefined);
+      } else if (load<string | null>(keyFor(target, 'push'), null)) {
+        // Another account's key is not open here: replace this browser's push address instead.
+        await replaceSubscription(secret).catch(() => undefined);
+      }
+      await removeAccountHere(target);
+    },
+    [secret],
+  );
+
+  const deleteAccount = useCallback(async () => {
+    if (!secret) throw new Error('not open');
+    // The backup is signed with a key from the recovery code, not the account's: delete it first.
+    if (recoveryOnHere()) await turnOffRecovery();
+    const res = await signedFetch('DELETE', '/account', JSON.stringify({ delete: 'account' }), secret);
+    const out = res.ok ? ((await res.json().catch(() => ({}))) as { deleted?: boolean }) : {};
+    if (!out.deleted) throw new Error(`relay said ${res.status}`);
+    await removeFromDevice();
+  }, [secret, turnOffRecovery, removeFromDevice]);
+
   const value: TegamiState = {
+    removeFromDevice,
+    deleteAccount,
     unread,
     showUnread,
     setShowUnread,

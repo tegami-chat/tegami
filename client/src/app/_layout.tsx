@@ -60,7 +60,7 @@ function Shell() {
   // Every screen stays behind the gate until the account is open.
   if (status !== 'open') return <Gate locked={status === 'locked'} />;
   // Not registered with the relay (no invite code): the Turnstile check first.
-  if (registration === 'needed' || registration === 'blocked') return <RegisterGate />;
+  if (registration === 'needed' || registration === 'blocked' || registration === 'deleted') return <RegisterGate />;
   // Desktop: the pages the rail and the list open have no back button (the list stays beside them).
   const top = wide ? { headerLeft: () => null } : {};
   const stack = (

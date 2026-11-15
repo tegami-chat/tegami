@@ -26,6 +26,9 @@ const DIST = join(ROOT, 'dist-test');
 const RELAY_PORT = Number(process.env.RELAY_PORT || 7448);
 const WEB_PORT = Number(process.env.WEB_PORT || 8766);
 const ORIGIN = `http://localhost:${WEB_PORT}`;
+// "Tegamiへの意見" goes to this key in the test build (the official account's key otherwise).
+const FEEDBACK_SK = new Uint8Array(32).fill(7);
+const FEEDBACK_HEX = getPublicKey(FEEDBACK_SK);
 const CHROME =
   process.env.CHROME_PATH ??
   [
@@ -405,6 +408,7 @@ async function main() {
       EXPO_PUBLIC_TEGAMI_FILES: `http://localhost:${RELAY_PORT}`,
       EXPO_PUBLIC_TURNSTILE_SITEKEY: '',
       EXPO_PUBLIC_TEGAMI_TEST_HOOKS: '1',
+      EXPO_PUBLIC_TEGAMI_FEEDBACK: FEEDBACK_HEX,
     });
   }
   await startRelay();
@@ -3740,6 +3744,145 @@ async function main() {
       await button(b.page, '拒否').click();
       await waitText(a.page, '応答がありません');
       for (const u of [a, b]) await u.context.close();
+    });
+
+    await test('Remove from this device: one of two accounts goes with its storage, the other stays; the last one leaves the first screen', async () => {
+      const u = await person(browser, 'いち');
+      const x = generateSecretKey();
+      await befriend(u, `https://app.tegami.chat/i#${nip19.npubEncode(getPublicKey(x))}&n=${encodeURIComponent('えっくす')}`);
+      await relaySend(x, wrapTo(x, u.hex, rumorTo(x, u.hex, 'いちさんへの手紙')));
+      await u.page.goto(ORIGIN + '/');
+      await waitText(u.page, 'いちさんへの手紙');
+      // With one account, the list offers no removing (settings has "この端末から削除").
+      await openSettings(u.page);
+      await waitText(u.page, '使用中');
+      assert((await u.page.getByRole('button', { name: /^この端末から削除（/ }).count()) === 0, 'removing offered in the list with one account');
+      await button(u.page, 'アカウントを追加').click();
+      await button(u.page, 'はじめる').click();
+      await button(u.page, 'パスキーを使わずに始める').click();
+      await waitOpen(u.page);
+      await u.page.goto(ORIGIN + '/add');
+      await waitText(u.page, 'マイQRコード');
+      await u.page.getByPlaceholder('自分の名前').fill('に');
+      await u.page.goto(ORIGIN + '/settings');
+      await waitText(u.page, '使用中');
+      await shot(u.page, 'account-list-remove', '設定のアカウントの一覧（2つある時は、それぞれに「削除」）');
+      const before = await storage(u.page);
+      assert(before['tegami.messages'] && Object.keys(before).some((k) => k.startsWith('tegami@')), 'setup: both accounts keep storage');
+      // Remove the first account (not the open one) from the list.
+      await button(u.page, 'この端末から削除（いち）').click();
+      await waitText(u.page, 'いちをこの端末から削除しますか？');
+      await shot(u.page, 'account-remove-dialog', '一覧の「削除」を押した時の確認');
+      await u.page.getByTestId('dialog').getByRole('button', { name: 'キャンセル', exact: true }).click();
+      assert((await storage(u.page))['tegami.messages'], 'cancel removed the account');
+      await button(u.page, 'この端末から削除（いち）').click();
+      await u.page.getByTestId('dialog').getByRole('button', { name: '削除', exact: true }).click();
+      await u.page.waitForFunction(() => !localStorage.getItem('tegami.messages'), null, { timeout: 5000 }).catch(() => {
+        throw new Error('the removed account kept its messages');
+      });
+      let s = await storage(u.page);
+      const left = Object.keys(s).filter((k) => k.startsWith('tegami.') && !['tegami.accounts', 'tegami.theme', 'tegami.crashReports'].includes(k));
+      assert(left.length === 0, `the first account left storage behind: ${left}`);
+      assert(JSON.parse(s['tegami.accounts']).list.length === 1, `account list: ${s['tegami.accounts']}`);
+      assert(Object.keys(s).some((k) => k.startsWith('tegami@') && k.endsWith('.device')), 'the open account lost its key');
+      await waitText(u.page, '使用中');
+      assert(!(await text(u.page)).includes('いち'), 'the removed account is still listed');
+      // The one left is removed from settings: the first screen, with nothing kept.
+      await button(u.page, 'この端末から削除').click();
+      await waitText(u.page, 'をこの端末から削除しますか？');
+      await shot(u.page, 'remove-here-dialog', '設定の「この端末から削除」を押した時の確認');
+      await u.page.getByTestId('dialog').getByRole('button', { name: '削除', exact: true }).click();
+      await button(u.page, 'はじめる').waitFor({ timeout: 10000 });
+      s = await storage(u.page);
+      assert(!Object.keys(s).some((k) => k.endsWith('.device') || k.endsWith('.messages') || k.endsWith('.contacts')), `storage left: ${Object.keys(s)}`);
+      assert(JSON.parse(s['tegami.accounts']).list.length === 1, 'the new empty account is not alone');
+      // The account itself is still on the relay (only this device forgot it).
+      const members = await (await fetch(`http://localhost:${RELAY_PORT}/_members`)).json();
+      assert(members.some((m) => m.pubkey === u.hex), 'removing from this device deleted the account on the relay');
+      await u.context.close();
+    });
+
+    await test('Delete account: the relay forgets the key, its backup and its mailbox; another device of it is told; messages to it are not kept', async () => {
+      const sk = generateSecretKey();
+      const hex = getPublicKey(sk);
+      const device = async () => {
+        const u = await newUser(browser, { authenticator: false });
+        await u.page.evaluate((h) => localStorage.setItem('tegami.account', JSON.stringify({ secretHex: h })), Buffer.from(sk).toString('hex'));
+        await u.page.reload();
+        await waitOpen(u.page);
+        return u;
+      };
+      const a = await device();
+      const a2 = await device();
+      const b = await person(browser, 'ともだち');
+      await befriend(b, `https://app.tegami.chat/i#${nip19.npubEncode(hex)}&n=${encodeURIComponent('けすひと')}`);
+      await b.page.getByPlaceholder('メッセージ').fill('まだ読んでいない手紙');
+      await b.page.keyboard.press('Enter');
+      for (let i = 0; i < 50 && !(await envelopesFor(hex)).length; i++) await new Promise((r) => setTimeout(r, 100));
+      assert((await envelopesFor(hex)).length > 0, 'setup: no envelope waiting');
+      // A recovery code (its backup is signed with a key from the code, not the account key).
+      await a.page.goto(ORIGIN + '/settings');
+      await button(a.page, '復旧コードを作成').click();
+      await button(a.page, '保管しました').click();
+      const backups = async () => (await (await fetch(`http://localhost:${RELAY_PORT}/_backups`)).json()).length;
+      const backupsBefore = await backups();
+      assert(backupsBefore >= 1, 'setup: no backup');
+      await a.page.getByPlaceholder('相手に表示される名前').fill('けすひと');
+      await button(a.page, 'アカウントを削除').click();
+      await waitText(a.page, 'けすひとのアカウントを削除しますか？');
+      await shot(a.page, 'delete-account-dialog', '設定の「アカウントを削除」を押した時の確認（元に戻せない）');
+      await a.page.getByTestId('dialog').getByRole('button', { name: '削除', exact: true }).click();
+      await button(a.page, 'はじめる').waitFor({ timeout: 15000 });
+      const deleted = await (await fetch(`http://localhost:${RELAY_PORT}/_deleted`)).json();
+      assert(deleted.includes(hex), 'the relay did not delete the account');
+      const members = await (await fetch(`http://localhost:${RELAY_PORT}/_members`)).json();
+      assert(!members.some((m) => m.pubkey === hex), 'still registered');
+      assert((await envelopesFor(hex)).length === 0, 'envelopes for the deleted account are still kept');
+      assert((await backups()) === backupsBefore - 1, 'the recovery backup is still on the relay');
+      const s = await storage(a.page);
+      assert(!Object.keys(s).some((k) => k.endsWith('.device') || k.endsWith('.messages') || k.endsWith('.recovery')), `storage left: ${Object.keys(s)}`);
+      // A message sent now is not kept for it.
+      await b.page.getByPlaceholder('メッセージ').fill('もう届かない手紙');
+      await b.page.keyboard.press('Enter');
+      await new Promise((r) => setTimeout(r, 800));
+      assert((await envelopesFor(hex)).length === 0, 'a message to a deleted account was kept');
+      // The other device learns it when it asks the relay, and can remove it there.
+      await a2.page.reload();
+      await waitText(a2.page, 'このアカウントは削除されました。');
+      await shot(a2.page, 'deleted-elsewhere', 'ほかの端末でアカウントが削除された時');
+      await button(a2.page, 'この端末から削除').click();
+      await button(a2.page, 'はじめる').waitFor({ timeout: 10000 });
+      for (const u of [a, a2, b]) await u.context.close();
+    });
+
+    await test('Feedback: Tegamiへの意見 in settings opens a chat with the official account; listed only once opened; the operator reads it and replies', async () => {
+      const u = await person(browser, 'いけん');
+      await u.page.goto(ORIGIN + '/');
+      await waitOpen(u.page);
+      assert(!(await text(u.page)).includes('Tegamiへの意見'), 'listed before it was opened');
+      await openSettings(u.page);
+      await button(u.page, 'Tegamiへの意見').click();
+      await u.page.getByPlaceholder('メッセージ').waitFor();
+      assert((await u.page.getByTestId('chat-title').last().innerText()) === 'Tegamiへの意見', 'the chat title is not Tegamiへの意見');
+      assert(!(await text(u.page)).includes('友だちに追加'), 'the official account is offered as a friend to add');
+      await u.page.getByPlaceholder('メッセージ').fill('通知の音を選べるようにしてほしいです');
+      await u.page.keyboard.press('Enter');
+      const got = await inboxOf(FEEDBACK_SK, (ms) => ms.some((m) => m.content === '通知の音を選べるようにしてほしいです'));
+      assert(got.some((m) => m.pubkey === u.hex), 'the message did not come from the account');
+      await shot(u.page, 'feedback-chat', '設定の「Tegamiへの意見」から開いたトーク');
+      // The operator answers with the official key: it shows in the same chat, not with strangers.
+      await relaySend(FEEDBACK_SK, wrapTo(FEEDBACK_SK, u.hex, rumorTo(FEEDBACK_SK, u.hex, 'ご意見ありがとうございます')));
+      await waitText(u.page, 'ご意見ありがとうございます');
+      await u.page.goto(ORIGIN + '/');
+      await waitText(u.page, 'Tegamiへの意見');
+      assert(!(await text(u.page)).includes('知らない人から'), 'the official account went to strangers');
+      await shot(u.page, 'feedback-in-list', 'トーク一覧（開いた後に「Tegamiへの意見」が並ぶ）');
+      // Another account that never opened it does not list it.
+      const v = await person(browser, 'ほか');
+      await v.page.goto(ORIGIN + '/');
+      await waitOpen(v.page);
+      assert(!(await text(v.page)).includes('Tegamiへの意見'), 'listed for an account that never opened it');
+      for (const w of [u, v]) await w.context.close();
     });
 
   } finally {

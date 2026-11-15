@@ -1,7 +1,8 @@
 // Shown when this account's key is not registered with the relay yet and no invite code
 // registered it: Cloudflare Turnstile checks that a person (not a script) is starting
 // Tegami, then the relay registers the key without an invite (lib/register.ts).
-// Also shown, with no way forward, when the operator stopped this key.
+// Also shown, with no way forward, when the operator stopped this key, and when the account
+// was deleted (from another device): then only removing it from this device is left.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -34,7 +35,7 @@ function loadTurnstile(): Promise<TurnstileApi> {
 
 export function RegisterGate() {
   const c = usePalette();
-  const { registration, registerWith } = useTegami();
+  const { registration, registerWith, removeFromDevice } = useTegami();
   const box = useRef<View>(null);
   const [failed, setFailed] = useState(false);
   const [round, setRound] = useState(0);
@@ -71,6 +72,16 @@ export function RegisterGate() {
   }, [registration, onToken, round]);
 
   const s = styles(c);
+  if (registration === 'deleted') {
+    return (
+      <View style={s.fill}>
+        <Text style={s.text}>このアカウントは削除されました。</Text>
+        <Pressable role="button" onPress={() => void removeFromDevice()}>
+          <Text style={s.action}>この端末から削除</Text>
+        </Pressable>
+      </View>
+    );
+  }
   if (registration === 'blocked') {
     return (
       <View style={s.fill}>

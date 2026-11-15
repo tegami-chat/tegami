@@ -9,6 +9,7 @@
 // see what invited people see), until POST /_open {on: true} makes it register open keys.
 // Reports: POST /report like relay.tegami.chat (NIP-98, registered keys); GET /_reports lists them for tests.
 // TURN: POST /turn like relay.tegami.chat, off (503) until POST /_turn {on: true}.
+// Deleting an account: DELETE /account like relay.tegami.chat; GET /_deleted lists deleted keys for tests.
 import { createHash, randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
@@ -53,6 +54,7 @@ const openIds = new Set(); // envelopes written by open keys
 const reports = []; // { reporter, reported, reason, messages, at }
 let turnOn = false;
 const turnAsked = []; // keys that got TURN credentials
+const deletedKeys = new Set(); // accounts deleted with DELETE /account
 const REPORT_REASONS = ['spam', 'scam', 'impersonation', 'harassment', 'other'];
 // Like relay/src/reports.ts: null when the body is a valid report, else why not.
 const reportError = (r) => {
@@ -183,6 +185,7 @@ const http = createServer((req, res) => {
       } catch {
         return json(400, { error: 'invalid json' });
       }
+      if (deletedKeys.has(pubkey)) return json(403, { error: 'deleted' });
       let m = members.get(pubkey);
       if (m?.banned) return json(403, { error: 'blocked' });
       let inviteError = '';
@@ -299,6 +302,50 @@ const http = createServer((req, res) => {
     return;
   }
   if (req.url === '/_reports' && req.method === 'GET') return send(200, JSON.stringify(reports), 'application/json');
+  if (req.url === '/_deleted' && req.method === 'GET') return send(200, JSON.stringify([...deletedKeys]), 'application/json');
+  // Like relay/src/index.ts accountRoute: envelopes for the key, its stamps, its notification
+  // addresses and its registration go; the key stays deleted.
+  if (req.url === '/account' && req.method === 'DELETE') {
+    let body = '';
+    req.on('data', (c) => (body += c));
+    req.on('end', () => {
+      const json = (status, obj) => send(status, JSON.stringify(obj), 'application/json');
+      const pubkey = nip98(req, body, '/account');
+      if (!pubkey) return json(401, { error: 'auth-required' });
+      let ask;
+      try {
+        ask = JSON.parse(body);
+      } catch {
+        return json(400, { error: 'invalid json' });
+      }
+      if (ask?.delete !== 'account') return json(400, { error: 'invalid' });
+      const already = deletedKeys.has(pubkey);
+      const mine = (e) => e.tags.some((t) => t[0] === 'p' && t[1] === pubkey);
+      const envelopes = events.filter(mine).length;
+      const keep = events.filter((e) => !mine(e));
+      events.length = 0;
+      events.push(...keep);
+      let stampCount = 0;
+      for (const [sha, keys] of stampKeepers) {
+        if (!keys.delete(pubkey)) continue;
+        stampCount++;
+        if (!keys.size) {
+          stampKeepers.delete(sha);
+          stamps.delete(sha);
+        }
+      }
+      const rest = pushDevices.filter((d) => d.pubkey !== pubkey);
+      const push = pushDevices.length - rest.length;
+      pushDevices.length = 0;
+      pushDevices.push(...rest);
+      const m = members.get(pubkey);
+      if (m?.code) codes.delete(m.code);
+      members.delete(pubkey);
+      deletedKeys.add(pubkey);
+      json(200, { deleted: true, already, envelopes, stamps: stampCount, push });
+    });
+    return;
+  }
   if (req.url === '/_crashes' && req.method === 'GET') return send(200, JSON.stringify(crashes), 'application/json');
   // Web Push, like relay.tegami.chat: a public key, and registrations signed with NIP-98.
   // Registered devices are listed at GET /_push for tests (no push is sent).
@@ -320,6 +367,7 @@ const http = createServer((req, res) => {
         const rest = pushDevices.filter((d) => d.endpoint !== endpoint || d.pubkey !== ev.pubkey); // one row per address and key, like the real relay
         pushDevices.length = 0;
         pushDevices.push(...rest);
+        if (req.method === 'POST' && deletedKeys.has(ev.pubkey)) return send(403, 'deleted');
         if (req.method === 'POST') pushDevices.push({ endpoint, pubkey: ev.pubkey, keys });
         send(204);
       } catch {
@@ -439,6 +487,12 @@ wss.on('connection', (ws) => {
       }
       if (writer.banned) {
         ws.send(JSON.stringify(['OK', ev.id, false, 'blocked: this key is stopped']));
+        return;
+      }
+      // A message for a deleted account: OK, but not kept (like the real relay).
+      const to = ev.tags.find((t) => t[0] === 'p')?.[1];
+      if (deletedKeys.has(to)) {
+        ws.send(JSON.stringify(['OK', ev.id, true, '']));
         return;
       }
       if (!events.some((e) => e.id === ev.id)) {

@@ -12,6 +12,10 @@
 // Invites: each invite or legacy key has one code. At most `per_day` keys (20 unless the
 // operator changes it) can register with one code in 24 hours. Who invited whom is kept for
 // 90 days, so the operator can stop a key and everyone it invited; then it is forgotten.
+//
+// Deleted accounts (DELETE /account): the key's row and invite code go, and only the key and
+// when it was deleted stay in deleted_keys, so the key cannot register again (a stopped key
+// cannot come back by deleting itself) and envelopes for it are not kept.
 
 export type Via = 'invite' | 'open' | 'legacy';
 export type Member = { pubkey: string; via: Via; invited_by: string | null; created_at: number; banned: number; no_invites: number };
@@ -38,6 +42,7 @@ export class Members {
     sql.exec(`CREATE TABLE IF NOT EXISTS invites (
       code TEXT PRIMARY KEY, issuer TEXT UNIQUE, per_day INTEGER, created_at INTEGER)`);
     sql.exec('CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)');
+    sql.exec('CREATE TABLE IF NOT EXISTS deleted_keys (pubkey TEXT PRIMARY KEY, deleted_at INTEGER)');
     // Registration started on 2026-11-13. Keys already in use then keep working: everyone
     // with an envelope waiting (senders keep a copy for their other devices, so senders too)
     // and everyone who turned on notifications.
@@ -52,6 +57,21 @@ export class Members {
 
   get(pubkey: string): Member | null {
     return (this.sql.exec('SELECT * FROM members WHERE pubkey = ?', pubkey).toArray()[0] as Member | undefined) ?? null;
+  }
+
+  /** Whether this key's account was deleted (it cannot register again). */
+  deleted(pubkey: string): boolean {
+    return this.sql.exec('SELECT 1 FROM deleted_keys WHERE pubkey = ?', pubkey).toArray().length > 0;
+  }
+
+  /**
+   * Deletes a key's registration: its row and its invite code. Who it invited stays on their
+   * rows until the 90 days are up (forgetOldInvites), like every invite record.
+   */
+  markDeleted(pubkey: string) {
+    this.sql.exec('DELETE FROM members WHERE pubkey = ?', pubkey);
+    this.sql.exec('DELETE FROM invites WHERE issuer = ?', pubkey);
+    this.sql.exec('INSERT OR IGNORE INTO deleted_keys (pubkey, deleted_at) VALUES (?, ?)', pubkey, now());
   }
 
   /** Invite and legacy keys reach strangers and can invite others. */
@@ -103,7 +123,7 @@ export class Members {
   /** How many keys registered, by how, and how many are stopped. Numbers only. */
   counts() {
     const n = (where: string) => this.sql.exec(`SELECT COUNT(*) AS n FROM members ${where}`).one().n as number;
-    return { total: n(''), invite: n("WHERE via = 'invite'"), open: n("WHERE via = 'open'"), legacy: n("WHERE via = 'legacy'"), banned: n('WHERE banned = 1') };
+    return { total: n(''), invite: n("WHERE via = 'invite'"), open: n("WHERE via = 'open'"), legacy: n("WHERE via = 'legacy'"), banned: n('WHERE banned = 1'), deleted: this.sql.exec('SELECT COUNT(*) AS n FROM deleted_keys').one().n as number };
   }
 
   /** Forgets who invited whom after 90 days. */
