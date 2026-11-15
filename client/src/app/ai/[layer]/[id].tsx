@@ -20,9 +20,9 @@ export default function AiLayerScreen() {
   const name = layer === 'model' ? id : personName(id, contacts);
   // A switch a layer above has turned off is shown off and cannot be turned on here.
   const blocked = (a: AiAction) => {
-    if (p.all[a] !== true) return true;
-    if (layer === 'ai' && contact?.model && p.models[contact.model]?.[a] === false) return true;
-    return false;
+    if (p.all[a] !== true) return '「AI の使用」でオフになっています';
+    if (layer === 'ai' && contact?.model && p.models[contact.model]?.[a] === false) return `「${contact.model}」でオフになっています`;
+    return null;
   };
 
   return (

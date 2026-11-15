@@ -6,7 +6,7 @@ import { useAiLog, type Layer } from '@/lib/ai-permissions';
 import { personName, useTegami } from '@/lib/tegami';
 
 const STOPPED_BY: Record<Layer, string> = {
-  all: 'すべての AI でオフ',
+  all: '「AI の使用」でオフ',
   model: 'モデルの設定でオフ',
   ai: 'この AI の設定でオフ',
   friend: '友だちの設定でオフ',

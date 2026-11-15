@@ -2024,7 +2024,7 @@ async function main() {
       // Settings → AI の権限: every switch starts off.
       await p.goto(ORIGIN + '/settings');
       await button(p, 'AI の権限').click();
-      await waitText(p, 'すべての AI');
+      await waitText(p, 'AI の使用');
       await waitText(p, 'AI ごと');
       await waitText(p, 'モデルごと');
       await waitText(p, '友だちごと');
@@ -2036,10 +2036,11 @@ async function main() {
       await p.getByText('テストB', { exact: true }).click();
       await waitText(p, 'テストBのトークで AI ができること');
       assert(await sw('トークを読む').isDisabled(), 'friend switch can be turned on while all AI is off');
+      await waitText(p, '「AI の使用」でオフになっています');
       await p.goBack();
       await sw('トークを読む').click();
       assert((await perms()).all.read === true, 'all.read was not saved');
-      await shot(p, 'ai-permissions-on', 'AI の権限：すべての AI でトークを読むをオン');
+      await shot(p, 'ai-permissions-on', 'AI の権限：AI の使用でトークを読むをオン');
       await p.getByText('テストB', { exact: true }).click();
       await waitText(p, 'テストBのトークで AI ができること');
       assert(!(await sw('トークを読む').isDisabled()), 'friend switch still locked');
@@ -2060,10 +2061,12 @@ async function main() {
       await p.goBack();
       await p.getByText('クロード', { exact: true }).click();
       assert(await sw('トークを読む').isDisabled(), 'the AI switch is not locked by its model');
+      await waitText(p, '「Anthropic Claude」でオフになっています');
+      await shot(p, 'ai-permissions-locked', 'AI の権限：モデルでオフになった AI');
       await p.goBack();
 
       // "Stop all AI" turns every all-AI switch off.
-      await button(p, 'すべての AI を止める').click();
+      await button(p, 'すべてオフにする').click();
       assert(Object.values((await perms()).all).every((v) => v === false), 'stop all AI left a switch on');
       await p.getByText('AI の記録', { exact: true }).click();
       await waitText(p, 'まだ記録はありません');
