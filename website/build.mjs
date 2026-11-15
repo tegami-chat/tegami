@@ -46,7 +46,7 @@ const META = {
   },
   status: {
     en: { title: 'Tegami status and usage', desc: 'Whether the Tegami relay is responding, and weekly usage statistics.' },
-    ja: { title: 'Tegami の稼働状況と利用統計', desc: 'Tegami のリレーの稼働状況と、週ごとの利用統計。' },
+    ja: { title: 'Tegamiの稼働状況と利用統計', desc: 'Tegamiのリレーの稼働状況と、週ごとの利用統計。' },
   },
 };
 const LANG_ON = 'block px-4 py-2 text-sm font-semibold text-forest-600 dark:text-forest-300';
