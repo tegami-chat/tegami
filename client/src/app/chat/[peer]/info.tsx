@@ -119,6 +119,20 @@ export default function ChatInfo() {
             </View>
           )}
 
+          {peer && !group && contact && (
+            <View style={s.card}>
+              <Pressable
+                role="button"
+                style={s.linkRow}
+                onPress={() =>
+                  router.push({ pathname: '/ai/[layer]/[id]', params: { layer: contact.model ? 'ai' : 'friend', id: peer } } as unknown as Href)
+                }>
+                <Text style={s.linkText}>AI の権限</Text>
+                <MaterialIcons name="chevron-right" size={22} color={c.muted} />
+              </Pressable>
+            </View>
+          )}
+
           {peer && (
             <View style={s.card}>
               <Pressable
@@ -342,6 +356,18 @@ const styles = (c: Palette) =>
       paddingHorizontal: 16,
       paddingVertical: 14,
       justifyContent: 'center',
+    },
+    linkRow: {
+      minHeight: 48,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    linkText: {
+      fontSize: 16,
+      color: c.text,
     },
     dangerText: {
       fontSize: 16,

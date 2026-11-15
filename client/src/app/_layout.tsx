@@ -74,6 +74,9 @@ function Shell() {
         <Stack.Screen name="i" options={{ headerShown: false }} />
         <Stack.Screen name="link" options={{ title: '', headerLeft: () => null }} />
         <Stack.Screen name="strangers" options={{ title: '知らない人から' }} />
+        <Stack.Screen name="ai/index" options={{ title: 'AI の権限' }} />
+        <Stack.Screen name="ai/[layer]/[id]" options={{ title: 'AI の権限' }} />
+        <Stack.Screen name="ai/log" options={{ title: 'AI の記録' }} />
         <Stack.Screen name="chat/[peer]" options={{ headerShown: false }} />
         <Stack.Screen name="chat/[peer]/info" options={{ headerShown: false }} />
       </Stack>

@@ -2010,6 +2010,74 @@ async function main() {
       await a.context.close();
     });
 
+    await test('AI permissions: layered switches, a layer above locks the one below, and they are kept per account', async () => {
+      const a = await person(browser, 'あおい');
+      const b = await person(browser, 'テストB');
+      await befriend(a, b);
+      const aiKey = generateSecretKey();
+      const aiLink = `${ORIGIN}/i#${nip19.npubEncode(getPublicKey(aiKey))}&n=${encodeURIComponent('クロード')}&m=${encodeURIComponent('Anthropic Claude')}`;
+      await befriend(a, aiLink);
+      const p = a.page;
+      const perms = () => p.evaluate(() => JSON.parse(localStorage.getItem('tegami.ai.permissions') || 'null'));
+      const sw = (name) => p.getByRole('switch', { name, exact: true });
+
+      // Settings → AI の権限: every switch starts off.
+      await p.goto(ORIGIN + '/settings');
+      await button(p, 'AI の権限').click();
+      await waitText(p, 'すべての AI');
+      await waitText(p, 'AI ごと');
+      await waitText(p, 'モデルごと');
+      await waitText(p, '友だちごと');
+      for (const name of ['友だちの一覧を見る', 'トークを読む', '確認なしで送る'])
+        assert(!(await sw(name).isChecked()), `${name} starts on`);
+      await shot(p, 'ai-permissions', 'AI の権限：すべて最初はオフ');
+
+      // A friend's switch is locked while "all AI" has it off.
+      await p.getByText('テストB', { exact: true }).click();
+      await waitText(p, 'テストBのトークで AI ができること');
+      assert(await sw('トークを読む').isDisabled(), 'friend switch can be turned on while all AI is off');
+      await p.goBack();
+      await sw('トークを読む').click();
+      assert((await perms()).all.read === true, 'all.read was not saved');
+      await shot(p, 'ai-permissions-on', 'AI の権限：すべての AI でトークを読むをオン');
+      await p.getByText('テストB', { exact: true }).click();
+      await waitText(p, 'テストBのトークで AI ができること');
+      assert(!(await sw('トークを読む').isDisabled()), 'friend switch still locked');
+      assert(!(await sw('トークを読む').isChecked()), 'a friend is picked before the user picks them');
+      await sw('トークを読む').click();
+      assert((await perms()).friends[b.hex].read === true, 'friend read was not saved');
+      await shot(p, 'ai-permissions-friend', 'AI の権限：友だちごとの画面');
+      await p.goBack();
+
+      // An AI follows "all AI" until turned off; turning the model off locks it.
+      await p.getByText('クロード', { exact: true }).click();
+      await waitText(p, 'できること');
+      assert(await sw('トークを読む').isChecked(), 'the AI does not follow all AI');
+      await shot(p, 'ai-permissions-ai', 'AI の権限：AI ごとの画面');
+      await p.goBack();
+      await p.getByText('Anthropic Claude', { exact: true }).last().click();
+      await sw('トークを読む').click();
+      await p.goBack();
+      await p.getByText('クロード', { exact: true }).click();
+      assert(await sw('トークを読む').isDisabled(), 'the AI switch is not locked by its model');
+      await p.goBack();
+
+      // "Stop all AI" turns every all-AI switch off.
+      await button(p, 'すべての AI を止める').click();
+      assert(Object.values((await perms()).all).every((v) => v === false), 'stop all AI left a switch on');
+      await p.getByText('AI の記録', { exact: true }).click();
+      await waitText(p, 'まだ記録はありません');
+      await shot(p, 'ai-log', 'AI の記録（まだ空）');
+
+      // The chat info of a friend and of the AI open their own page.
+      await p.goto(ORIGIN + '/');
+      await p.getByText('テストB').first().click();
+      await p.getByRole('button', { name: 'メニュー' }).click();
+      await p.getByText('AI の権限', { exact: true }).click();
+      await waitText(p, 'テストBのトークで AI ができること');
+      for (const u of [a, b]) await u.context.close();
+    });
+
     await test('Block: a blocked person cannot reach me; their chat and calls disappear; unblocking lets them back', async () => {
       const a = await person(browser, 'えー');
       const b = await person(browser, 'びー');

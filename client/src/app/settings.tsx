@@ -1,5 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import makeQr from 'qrcode-generator';
+import { router, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, Linking, Pressable, ScrollView, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
@@ -306,6 +307,11 @@ export default function Settings() {
       </View>
       <Pressable style={s.card} onPress={exportFile} role="button">
         <Text style={s.action}>{exported ? '書き出しました' : 'トーク履歴を書き出す'}</Text>
+      </Pressable>
+
+      <Text style={s.heading}>AI</Text>
+      <Pressable style={s.card} onPress={() => router.push('/ai' as Href)} role="button">
+        <Text style={s.action}>AI の権限</Text>
       </Pressable>
 
       <Text style={s.heading}>ブロックリスト</Text>
