@@ -64,6 +64,8 @@ export type AiLogEntry = {
   action: AiAction;
   /** The friend whose chat it was, or the other person's AI. */
   friend?: string;
+  /** The other person's AI: the name it gave, to show instead of its key. */
+  peerName?: string;
   allowed: boolean;
   /** Which layer stopped it, or why the user was asked. */
   stoppedBy?: Layer;
@@ -309,6 +311,7 @@ function logRequest(r: AiRequest, allowed: boolean, by?: Layer, answer?: 'allowe
     ai: r.ai,
     action: r.action,
     ...(r.friend ? { friend: r.friend } : r.peer ? { friend: r.peer.pubkey } : {}),
+    ...(!r.friend && r.peer?.name ? { peerName: r.peer.name.slice(0, 60) } : {}),
     allowed,
     ...(by ? { stoppedBy: by } : {}),
     ...(answer ? { answer } : {}),

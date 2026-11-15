@@ -32,7 +32,7 @@ export default function AiPermissionsScreen() {
       <AiSwitches scope={{ layer: 'all' }} />
       {!readOnly && (
         <Pressable style={s.card} onPress={() => setAiSwitches({ layer: 'all' }, READ_ONLY)} role="button">
-          <Text style={s.action}>読むだけにする</Text>
+          <Text style={s.action}>読むと下書きだけにする</Text>
         </Pressable>
       )}
       {anyOn && (
@@ -91,7 +91,7 @@ export default function AiPermissionsScreen() {
                   <Text style={s.label} numberOfLines={1}>
                     {x.name}
                   </Text>
-                  <Text style={s.sub}>{n ? `${n}件 オン` : 'オフ'}</Text>
+                  <Text style={s.sub}>{n ? `${n}件オン` : 'オフ'}</Text>
                   <MaterialIcons name="chevron-right" size={22} color={c.muted} />
                 </Pressable>
               );

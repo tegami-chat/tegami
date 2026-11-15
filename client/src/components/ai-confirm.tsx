@@ -5,10 +5,19 @@
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AI_ACTION_LABEL } from '@/components/ai-switches';
 import { Palette, usePalette } from '@/constants/theme';
-import { askAi, expireAiSwitches, gateAi, useAiAsk, type AiAnswer, type AiContent, type AiRequest } from '@/lib/ai-permissions';
+import { askAi, expireAiSwitches, gateAi, useAiAsk, type AiAction, type AiAnswer, type AiContent, type AiRequest } from '@/lib/ai-permissions';
 import { personName, useTegami } from '@/lib/tegami';
+
+/** The title for each action, as a sentence (a label such as 「トークを読む」 cannot take をしようとしています). */
+const ASKING: Record<AiAction, string> = {
+  contacts: '友だちの一覧を見ようとしています',
+  read: 'トークを読もうとしています',
+  draft: '返信の下書きを作ろうとしています',
+  send: 'メッセージを送ろうとしています',
+  autosend: 'メッセージを送ろうとしています',
+  otherAi: 'ほかの人の AI と話そうとしています',
+};
 
 const KIND_LABEL: Record<AiContent['kind'], string> = {
   text: 'メッセージ',
@@ -50,7 +59,7 @@ export function AiConfirm() {
   let title: string;
   let buttons: { label: string; answer: AiAnswer; main?: boolean }[];
   if (ask.why === 'firstPeer') {
-    title = `${ai}が、ほかの人の AI と話そうとしています`;
+    title = `${ai}がほかの人の AI と話そうとしています`;
     buttons = [
       { label: '30日間許可', answer: 'month', main: true },
       { label: '今日だけ許可', answer: 'day' },
@@ -63,7 +72,7 @@ export function AiConfirm() {
       { label: '送らない', answer: 'no' },
     ];
   } else {
-    title = `${ai}が「${AI_ACTION_LABEL[r.action]}」をしようとしています`;
+    title = `${ai}が${ASKING[r.action]}`;
     buttons = [
       { label: '今回だけ許可', answer: 'once', main: true },
       { label: '許可しない', answer: 'no' },

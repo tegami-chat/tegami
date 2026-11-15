@@ -2035,7 +2035,7 @@ async function main() {
 
       // A friend's switch is locked while "all AI" has it off.
       await p.getByText('テストB', { exact: true }).click();
-      await waitText(p, 'テストBのトークで AI ができること');
+      await waitText(p, 'テストBとのトークで AI ができること');
       assert(await sw('トークを読む').isDisabled(), 'friend switch can be turned on while all AI is off');
       await waitText(p, '「AI の使用」でオフになっています');
       await p.goBack();
@@ -2043,7 +2043,7 @@ async function main() {
       assert((await perms()).all.read === true, 'all.read was not saved');
       await shot(p, 'ai-permissions-on', 'AI の権限：AI の使用でトークを読むをオン');
       await p.getByText('テストB', { exact: true }).click();
-      await waitText(p, 'テストBのトークで AI ができること');
+      await waitText(p, 'テストBとのトークで AI ができること');
       assert(!(await sw('トークを読む').isDisabled()), 'friend switch still locked');
       assert(!(await sw('トークを読む').isChecked()), 'a friend is picked before the user picks them');
       await sw('トークを読む').click();
@@ -2078,7 +2078,7 @@ async function main() {
       await p.getByText('テストB').first().click();
       await p.getByRole('button', { name: 'メニュー' }).click();
       await p.getByText('AI の権限', { exact: true }).click();
-      await waitText(p, 'テストBのトークで AI ができること');
+      await waitText(p, 'テストBとのトークで AI ができること');
       for (const u of [a, b]) await u.context.close();
     });
 
@@ -2105,11 +2105,11 @@ async function main() {
       // Read only in one go.
       await p.goto(ORIGIN + '/ai');
       await waitText(p, 'AI の使用');
-      await button(p, '読むだけにする').click();
+      await button(p, '読むと下書きだけにする').click();
       let now = await perms();
       assert(now.all.contacts === true && now.all.read === true && now.all.draft === true, 'read only did not turn reading on');
       assert(!now.all.send && !now.all.autosend && !now.all.otherAi, 'read only turned sending on');
-      assert(!(await button(p, '読むだけにする').isVisible().catch(() => false)), 'the read-only button stays while already read only');
+      assert(!(await button(p, '読むと下書きだけにする').isVisible().catch(() => false)), 'the read-only button stays while already read only');
 
       // How long: a switch that is on shows its term; one hour sets a time limit.
       await chip('トークを読む：1時間').click();
@@ -2123,7 +2123,7 @@ async function main() {
       // Turning "send without asking" on asks once; cancel leaves it off.
       await sw('確認してから送る').click();
       await sw('確認なしで送る').click();
-      await waitText(p, '確認なしで送るをオンにしますか？');
+      await waitText(p, '「確認なしで送る」をオンにしますか？');
       await shot(p, 'ai-autosend-confirm', '「確認なしで送る」をオンにする時に1回だけ出る確認');
       await button(p, 'キャンセル').click();
       assert(!(await perms()).all.autosend, 'cancel turned it on');
@@ -2133,11 +2133,11 @@ async function main() {
 
       // テストB: read only, then sending (sending without asking asks once there too, with the name).
       await p.getByText('テストB', { exact: true }).click();
-      await waitText(p, 'テストBのトークで AI ができること');
-      await button(p, '読むだけにする').click();
+      await waitText(p, 'テストBとのトークで AI ができること');
+      await button(p, '読むと下書きだけにする').click();
       await sw('確認してから送る').click();
       await sw('確認なしで送る').click();
-      await waitText(p, 'テストBへ、あなたの名前で');
+      await waitText(p, 'あなたの名前でテストBに');
       await button(p, 'オンにする').click();
       now = await perms();
       assert(now.friends[b.hex].read === true && now.friends[b.hex].autosend === true, 'friend switches not saved');
@@ -2164,7 +2164,7 @@ async function main() {
       await sw('ほかの人の AI と話す').click();
       const peer = { pubkey: 'e'.repeat(64), name: 'テストCの AI', model: 'OpenAI GPT' };
       answer = await ask({ action: 'otherAi', peer });
-      await waitText(p, 'クロードが、ほかの人の AI と話そうとしています');
+      await waitText(p, 'クロードがほかの人の AI と話そうとしています');
       await waitText(p, 'OpenAI GPT');
       await shot(p, 'ai-confirm-peer', '自分の AI が初めてほかの人の AI と話す時の確認');
       await button(p, '30日間許可').click();
@@ -2176,7 +2176,7 @@ async function main() {
       // Ask each time.
       await chip('トークを読む：毎回確認').click();
       answer = await ask({ action: 'read', friend: b.hex });
-      await waitText(p, 'クロードが「トークを読む」をしようとしています');
+      await waitText(p, 'クロードがトークを読もうとしています');
       await button(p, '今回だけ許可').click();
       assert((await answer()) === true, 'once was not allowed');
 
@@ -2190,9 +2190,12 @@ async function main() {
       await waitText(p, 'AI の使用');
       await p.waitForFunction(() => JSON.parse(localStorage.getItem('tegami.ai.permissions')).all.contacts === false, null, { timeout: 5000 });
       await p.getByText('AI の記録', { exact: true }).click();
-      await waitText(p, '期間が終わったのでオフに戻した');
-      await waitText(p, '写真やお金の話は確認：許可した');
-      await waitText(p, '初めての相手の AI：許可した');
+      await waitText(p, '期間が終わったため、自動でオフに戻しました');
+      await waitText(p, '写真、動画、ファイル、音声、お金の話は確認：許可しました');
+      await waitText(p, '初めて話すほかの人の AI：許可しました');
+      await waitText(p, 'クロード：ほかの人の AI と話す（テストCの AI）');
+      assert(!(await p.getByText(/npub1/).count()), 'the log shows the other AI by its key');
+      await waitText(p, 'クロード：メッセージを送る（テストB）');
       await shot(p, 'ai-log-levels', 'AI の記録：確認の答えと、期間が終わったスイッチ');
       for (const u of [a, b]) await u.context.close();
     });
@@ -2219,7 +2222,7 @@ async function main() {
       await waitText(p, 'AI の使用');
       await sw('トークを読む').click();
       await p.getByText('テストB', { exact: true }).click();
-      await waitText(p, 'テストBのトークで AI ができること');
+      await waitText(p, 'テストBとのトークで AI ができること');
       await sw('トークを読む').click();
       await p.goBack();
       await p.getByText('Anthropic Claude', { exact: true }).last().click();

@@ -96,7 +96,7 @@ export function AiSwitches({ scope, blocked, name }: { scope: Scope; blocked?: (
               />
             </View>
             {on && (
-              <View style={s.terms} role="radiogroup" aria-label={`${AI_ACTION_LABEL[a]}の期間`}>
+              <View style={s.terms} role="radiogroup" aria-label={`「${AI_ACTION_LABEL[a]}」を許可する期間`}>
                 {terms.map((t) => {
                   const picked = t === term;
                   const label = picked && t === 'hour' && raw && typeof raw === 'object' ? `${hhmm(raw.until)}まで` : TERM_LABEL[t];
@@ -119,8 +119,8 @@ export function AiSwitches({ scope, blocked, name }: { scope: Scope; blocked?: (
       })}
       <Modal transparent visible={confirmAutosend} onRequestClose={() => setConfirmAutosend(false)}>
         <Dialog
-          title="確認なしで送るをオンにしますか？"
-          text={`AI が、確認の画面を出さずに、${name ? `${name}へ、` : ''}あなたの名前でメッセージを送れるようになります。写真、動画、ファイル、音声、お金の話は、オンにしても送る前に確認します。`}
+          title="「確認なしで送る」をオンにしますか？"
+          text={`AI が、確認の画面を出さずに、あなたの名前で${name ? `${name}に` : ''}メッセージを送れるようになります。ただし、写真、動画、ファイル、音声、お金の話は、オンにしても送る前に確認の画面が出ます。`}
           stacked
           onClose={() => setConfirmAutosend(false)}
           buttons={[
