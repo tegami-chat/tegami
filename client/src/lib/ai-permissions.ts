@@ -59,6 +59,40 @@ export function getAiPermissions(): AiPermissions {
   return cache.value;
 }
 
+/**
+ * Checks settings that came from outside (a link to another device or a recovery backup).
+ * Unknown actions and anything that is not true or false are dropped, so an older bundle
+ * without settings, or a broken one, gives every switch its default (all AI off).
+ */
+export function cleanAiPermissions(raw: unknown): AiPermissions {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const switches = (v: unknown): Switches => {
+    const out: Switches = {};
+    if (!v || typeof v !== 'object') return out;
+    for (const a of AI_ACTIONS) {
+      const on = (v as Record<string, unknown>)[a];
+      if (typeof on === 'boolean') out[a] = on;
+    }
+    return out;
+  };
+  const table = (v: unknown): Record<string, Switches> => {
+    const out: Record<string, Switches> = {};
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
+    for (const [id, sw] of Object.entries(v).slice(0, 1000)) {
+      if (id.length > 200) continue;
+      const clean = switches(sw);
+      if (Object.keys(clean).length) out[id] = clean;
+    }
+    return out;
+  };
+  return { all: switches(r.all), models: table(r.models), ais: table(r.ais), friends: table(r.friends) };
+}
+
+/** Replaces every switch at once (an account moved or restored from another device). The log stays. */
+export function replaceAiPermissions(next: unknown) {
+  put(cleanAiPermissions(next));
+}
+
 function put(next: AiPermissions) {
   const key = k('ai.permissions');
   cache = { key, value: next };

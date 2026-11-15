@@ -2078,6 +2078,94 @@ async function main() {
       for (const u of [a, b]) await u.context.close();
     });
 
+    await test('AI permissions move with the account: the link to another device and the recovery code carry them, the log stays', async () => {
+      const a = await person(browser, 'あおい');
+      const b = await person(browser, 'テストB');
+      await befriend(a, b);
+      const aiLink = `${ORIGIN}/i#${nip19.npubEncode(getPublicKey(generateSecretKey()))}&n=${encodeURIComponent('クロード')}&m=${encodeURIComponent('Anthropic Claude')}`;
+      await befriend(a, aiLink);
+      const p = a.page;
+      const perms = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('tegami.ai.permissions') || 'null'));
+      // The same settings, whatever order the switches were turned in.
+      const same = (x, y) => {
+        const sorted = (v) => (v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((key) => [key, sorted(v[key])])) : v);
+        return JSON.stringify(sorted(x)) === JSON.stringify(sorted(y));
+      };
+      const log = (page) => page.evaluate(() => localStorage.getItem('tegami.ai.log'));
+      const sw = (name) => p.getByRole('switch', { name, exact: true });
+
+      // All AI may read; for テストB too; the Anthropic Claude model may not.
+      await p.goto(ORIGIN + '/settings');
+      await button(p, 'AI の権限').click();
+      await waitText(p, 'すべての AI');
+      await sw('トークを読む').click();
+      await p.getByText('テストB', { exact: true }).click();
+      await waitText(p, 'テストBのトークで AI ができること');
+      await sw('トークを読む').click();
+      await p.goBack();
+      await p.getByText('Anthropic Claude', { exact: true }).last().click();
+      await sw('トークを読む').click();
+      await p.goBack();
+      const want = await perms(p);
+      assert(want.all.read === true && want.friends[b.hex].read === true && want.models['Anthropic Claude'].read === false, 'settings were not saved');
+      // A decision log on this device: it must not move.
+      await p.evaluate(() => localStorage.setItem('tegami.ai.log', JSON.stringify([{ at: 1, ai: 'x', action: 'read', allowed: false, stoppedBy: 'all' }])));
+
+      // The 10-minute link brings the settings, not the log.
+      await p.goto(ORIGIN + '/settings');
+      await p.getByText('別の端末でも使う').click();
+      await waitText(p, 'まで使えます');
+      const moveLink = (await text(p)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)?.[0];
+      assert(moveLink, 'no moving link');
+      const a2 = await newUser(browser, { prf: false });
+      await a2.page.goto(moveLink);
+      await button(a2.page, 'この端末で使う').click();
+      await button(a2.page, 'パスキーを使わずに始める').click();
+      await waitOpen(a2.page);
+      assert(same(await perms(a2.page), want), 'the AI settings did not move with the link');
+      assert((await log(a2.page)) === null, 'the AI log moved with the link');
+      await a2.page.goto(ORIGIN + '/ai');
+      await waitText(a2.page, 'すべての AI');
+      assert(await a2.page.getByRole('switch', { name: 'トークを読む', exact: true }).isChecked(), 'the screen on the new device shows it off');
+      await a2.context.close();
+      await p.getByText('閉じる').click().catch(() => {});
+
+      // The recovery backup carries them, and follows a change made after the code was made.
+      await p.goto(ORIGIN + '/settings');
+      await button(p, '復旧コードを作成').click();
+      await waitText(p, 'このコードは今だけ表示されます');
+      const code = (await p.getByTestId('recovery-code').innerText()).trim();
+      await button(p, '保管しました').click();
+      const backupData = async () => (await (await fetch(`http://localhost:${RELAY_PORT}/_backups`)).json())[0]?.data;
+      const before = await backupData();
+      assert(before, 'no backup on the relay');
+      await p.goto(ORIGIN + '/ai');
+      await waitText(p, 'すべての AI');
+      await sw('友だちの一覧を見る').click();
+      for (let i = 0; i < 100 && (await backupData()) === before; i++) await p.waitForTimeout(100);
+      assert((await backupData()) !== before, 'the backup was not refreshed after an AI switch changed');
+      const after = await perms(p);
+      assert(after.all.contacts === true, 'the new switch was not saved');
+
+      const r = await newUser(browser, { prf: false });
+      await button(r.page, '復旧コードを使う').click();
+      await r.page.getByPlaceholder('復旧コード').fill(code);
+      await button(r.page, '復旧').click();
+      await waitText(r.page, '受け取りました');
+      await button(r.page, 'この端末で使う').click();
+      await button(r.page, 'パスキーを使わずに始める').click();
+      await waitOpen(r.page);
+      assert(same(await perms(r.page), after), 'the AI settings did not come back with the recovery code');
+      assert((await log(r.page)) === null, 'the AI log came back with the recovery code');
+      await r.context.close();
+
+      // Turn recovery off again so other tests see an empty relay.
+      await p.goto(ORIGIN + '/settings');
+      await button(p, '復旧コードを削除').click();
+      await waitText(p, '復旧コードを作成');
+      for (const u of [a, b]) await u.context.close();
+    });
+
     await test('Block: a blocked person cannot reach me; their chat and calls disappear; unblocking lets them back', async () => {
       const a = await person(browser, 'えー');
       const b = await person(browser, 'びー');

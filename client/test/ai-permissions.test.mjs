@@ -36,10 +36,13 @@ const isFriend = (k) => friends.has(k);
 const check = (r) => checkAi(getAiPermissions(), { ai: AI, model: MODEL, ...r }, isFriend);
 
 let n = 0;
+let chain = Promise.resolve();
 function test(name, fn) {
-  fn();
-  n++;
-  console.log(`ok ${n} ${name}`);
+  chain = chain.then(async () => {
+    await fn();
+    n++;
+    console.log(`ok ${n} ${name}`);
+  });
 }
 
 test('everything is off at first', () => {
@@ -106,4 +109,37 @@ test('"stop all AI" stops everything at once', () => {
   for (const action of P.AI_ACTIONS) assert.equal(check({ action, friend: TEST_B }), 'all');
 });
 
+test('settings from another device: unknown or broken values are dropped, the log stays', () => {
+  const clean = P.cleanAiPermissions({
+    all: { read: true, fly: true, send: 'yes' },
+    models: { [MODEL]: { read: false }, empty: {} },
+    ais: 'nope',
+    friends: { [TEST_B]: { read: true, draft: 1 } },
+  });
+  assert.deepEqual(clean, { all: { read: true }, models: { [MODEL]: { read: false } }, ais: {}, friends: { [TEST_B]: { read: true } } });
+  const logBefore = store.get('tegami.ai.log');
+  P.replaceAiPermissions(clean);
+  assert.equal(check({ action: 'read', friend: TEST_B }), 'model');
+  assert.equal(store.get('tegami.ai.log'), logBefore);
+});
+
+test('an older bundle without settings turns every AI off', () => {
+  setAiSwitch({ layer: 'all' }, 'read', true);
+  setAiSwitch({ layer: 'friend', id: TEST_B }, 'read', true);
+  for (const old of [undefined, null, 'x', []]) {
+    P.replaceAiPermissions(old);
+    assert.deepEqual(getAiPermissions(), { all: {}, models: {}, ais: {}, friends: {} });
+    for (const action of P.AI_ACTIONS) assert.equal(check({ action, friend: TEST_B }), 'all');
+  }
+});
+
+test('a bundle from the link or the recovery backup carries the settings; an older one has them off', async () => {
+  const T = await import('../src/lib/transfer.ts');
+  const base = { v: 1, secretHex: '1'.repeat(64), myName: 'x', contacts: [], groups: [] };
+  assert.deepEqual(T.cleanBundle(base).ai, { all: {}, models: {}, ais: {}, friends: {} });
+  const ai = { all: { read: true }, models: {}, ais: {}, friends: { [TEST_B]: { read: true } } };
+  assert.deepEqual(T.cleanBundle({ ...base, ai }).ai, ai);
+});
+
+await chain;
 console.log(`\n${n} passed`);

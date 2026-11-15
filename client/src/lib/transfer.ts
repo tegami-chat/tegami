@@ -16,6 +16,7 @@ import { SimplePool } from 'nostr-tools/pool';
 import { finalizeEvent, generateSecretKey, getPublicKey, type EventTemplate, type NostrEvent, type VerifiedEvent } from 'nostr-tools/pure';
 import { hexToBytes } from 'nostr-tools/utils';
 
+import { cleanAiPermissions, type AiPermissions } from './ai-permissions';
 import type { Contact, Group } from './tegami';
 import { fromB64u, toB64u } from './vault';
 
@@ -52,7 +53,17 @@ export function takeLinkKey() {
 }
 
 // blocked: the people this account blocked (added 2026-11-13; older bundles have none).
-export type Bundle = { v: 1; secretHex: string; myName: string; contacts: Contact[]; groups: Group[]; blocked?: string[] };
+// ai: what AI friends may do (added 2026-11-15; older bundles have none, so every AI stays off).
+// The log of the AI gate's decisions is not carried: it records what happened on one device.
+export type Bundle = {
+  v: 1;
+  secretHex: string;
+  myName: string;
+  contacts: Contact[];
+  groups: Group[];
+  blocked?: string[];
+  ai?: AiPermissions;
+};
 
 type Auth = (t: EventTemplate) => Promise<VerifiedEvent>;
 
@@ -139,6 +150,7 @@ export function cleanBundle(raw: unknown): Bundle | null {
     contacts: Array.isArray(bundle.contacts) ? bundle.contacts : [],
     groups: Array.isArray(bundle.groups) ? bundle.groups : [],
     blocked: Array.isArray(bundle.blocked) ? bundle.blocked.filter((p) => typeof p === 'string' && /^[0-9a-f]{64}$/.test(p)) : [],
+    ai: cleanAiPermissions(bundle.ai),
   };
 }
 
