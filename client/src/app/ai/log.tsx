@@ -6,16 +6,16 @@ import { useAiLog, type AiLogEntry, type AiRange, type Layer } from '@/lib/ai-pe
 import { personName, useTegami, type Contact } from '@/lib/tegami';
 
 const STOPPED_BY: Record<Layer, string> = {
-  all: '「AI の使用」でオフ',
+  all: '「AIの使用」でオフ',
   model: 'モデルの設定でオフ',
-  ai: 'この AI の設定でオフ',
+  ai: 'このAIの設定でオフ',
   friend: 'この友だちの設定でオフ',
   stranger: '相手が友だちではないため',
   needs: '「確認してから送る」がオフ',
   expired: '期間が終わったためオフ',
   ask: '毎回確認',
   always: '写真、動画、ファイル、音声、お金の話は確認',
-  firstPeer: '初めて話すほかの人の AI',
+  firstPeer: '初めて話すほかの人のAI',
 };
 
 function result(e: AiLogEntry) {
@@ -33,7 +33,7 @@ function actionText(e: AiLogEntry) {
 /** Whose chat it was, or the other person's AI by the name it gave, never its key. */
 function whom(e: AiLogEntry, contacts: Contact[]) {
   if (!e.friend) return '';
-  if (e.action === 'otherAi' && !contacts.some((x) => x.pubkey === e.friend)) return `（${e.peerName || '名前のない AI'}）`;
+  if (e.action === 'otherAi' && !contacts.some((x) => x.pubkey === e.friend)) return `（${e.peerName || '名前のないAI'}）`;
   return `（${personName(e.friend, contacts)}）`;
 }
 

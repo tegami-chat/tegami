@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tegami のロードマップ案</title>
+<title>Tegamiのロードマップ案</title>
 <script>
 (function () {
   var t; try { t = localStorage.getItem('tegami.theme'); } catch (e) {}
@@ -197,9 +197,9 @@ tailwind.config = {
 </footer>
 
 <script>
-// 言葉の切り替え。HTML に書いた英語が元で、日本語はここに置く。
-// 下書きでは ?lang=ja で日本語にする。ブラウザの言葉で勝手に切り替えない（Google の多言語サイトの指針）。
-// 公開する時は、英語を tegami.chat/、日本語を tegami.chat/ja/ の別のページに書き出し、hreflang で結ぶ。
+// 言葉の切り替え。HTMLに書いた英語が元で、日本語はここに置く。
+// 下書きでは ?lang=jaで日本語にする。ブラウザの言葉で勝手に切り替えない（Googleの多言語サイトの指針）。
+// 公開する時は、英語をtegami.chat/、日本語をtegami.chat/ja/ の別のページに書き出し、hreflangで結ぶ。
 const JA = {
   'ft.privacy': 'プライバシーポリシー',
   'ft.how': '仕組み',
@@ -209,17 +209,17 @@ const JA = {
   'nav.ai': 'AI',
   'nav.faq': 'よくある質問',
   'nav.open': 'はじめる',
-  'ft.tag': 'トークはあなたのもの。<br>AI は持ち込み自由。',
+  'ft.tag': 'トークはあなたのもの。<br>AIは持ち込み自由。',
   'ft.product': 'Tegami',
   'ft.community': 'コミュニティ',
   'ft.contact': 'お問い合わせ',
-  'ft.copy': 'AGPL-3.0 のオープンソースです。',
+  'ft.copy': 'AGPL-3.0のオープンソースです。',
   'cta.browser': 'ブラウザで始める',
   'roadmap': 'ロードマップ',
   'rm.h': 'ロードマップ',
   'rm.t': 'できたこと、これから作ること。',
   'rm.note': '戻せることから順に開いていきます。戻せないことは最後に作ります。',
-  'rm.issue': 'GitHub で機能を提案する',
+  'rm.issue': 'GitHubで機能を提案する',
   'rm.done': 'リリース済み',
   'rm.now': '開発中',
   'rm.plan': '予定',
@@ -233,34 +233,34 @@ const JA = {
   'rm.move.t': '復旧コードでアカウントを復元でき、数タップで別の端末へ引き継げます。',
   'rm.accounts.h': '複数のアカウント',
   'rm.accounts.t': '1つの端末で複数のアカウントを使い分けられます。',
-  'rm.ai.h': '自分の AI を友達に',
-  'rm.ai.t': '小さな道具で、パソコンの AI をトーク一覧に並べられます。MCP にも対応しています。',
+  'rm.ai.h': '自分のAIを友達に',
+  'rm.ai.t': '小さな道具で、パソコンのAIをトーク一覧に並べられます。MCPにも対応しています。',
   'rm.safety.h': 'ブロックと通報',
   'rm.safety.t': '知らない人からのメッセージは別の受信箱に届きます。誰でもブロックと通報ができます。',
   'rm.signup.h': '招待で広がる登録',
   'rm.signup.t': '誰でも登録できます。招待した人からは直接届き、それ以外の人は知らない人の箱から始まります。',
   'rm.address.h': '自分のアドレス',
-  'rm.address.t': 'name@tegami.chat のような、人に伝えやすいアドレスを持てます。',
-  'rm.qr.h': 'QR コードで AI とつなぐ',
-  'rm.qr.t': 'パソコンに小さなアプリを入れて、QR コードを読むだけ。コマンドを打つ必要はありません。',
-  'rm.mobile.h': 'iPhone と Android のアプリ',
+  'rm.address.t': 'name@tegami.chatのような、人に伝えやすいアドレスを持てます。',
+  'rm.qr.h': 'QRコードでAIとつなぐ',
+  'rm.qr.t': 'パソコンに小さなアプリを入れて、QRコードを読むだけ。コマンドを打つ必要はありません。',
+  'rm.mobile.h': 'iPhoneとAndroidのアプリ',
   'rm.mobile.t': '電話のような着信の画面を持つ、スマホのアプリです。',
   'rm.vanish.h': '消えるメッセージ',
   'rm.vanish.t': '時間がたつと消えるメッセージを、選んで送れます。',
   'rm.desktop.h': 'パソコンのアプリ',
-  'rm.desktop.t': 'Windows、Mac、Linux で、一日中開いておけるアプリです。',
-  'rm.api.h': 'Tegami の API',
+  'rm.desktop.t': 'Windows、Mac、Linuxで、一日中開いておけるアプリです。',
+  'rm.api.h': 'TegamiのAPI',
   'rm.api.t': '自分のプログラムから、メッセージを読んだり送ったりできます。',
-  'rm.aigroup.h': 'グループに AI を呼ぶ',
-  'rm.aigroup.t': '全員の同意で AI をグループに呼べます。許可すれば AI 同士でもやり取りできます。',
+  'rm.aigroup.h': 'グループにAIを呼ぶ',
+  'rm.aigroup.t': '全員の同意でAIをグループに呼べます。許可すればAI同士でもやり取りできます。',
   'rm.screens.h': '自分の画面を作る',
-  'rm.screens.t': '秘密の鍵を渡さずに、Tegami の上に好きな画面を作り、人と共有できます。',
+  'rm.screens.t': '秘密の鍵を渡さずに、Tegamiの上に好きな画面を作り、人と共有できます。',
   'rm.relay.h': '自前のサーバーを動かす',
   'rm.relay.t': '会社や学校、コミュニティが自分たちのサーバーを持てます。使うサーバーも選べます。',
-  'rm.nostr.h': 'ほかの Nostr アプリとつながる',
-  'rm.nostr.t': 'ほかの Nostr アプリの人からのメッセージも、選べば受け取れます。',
+  'rm.nostr.h': 'ほかのNostrアプリとつながる',
+  'rm.nostr.t': 'ほかのNostrアプリの人からのメッセージも、選べば受け取れます。',
   'rm.export.h': 'アカウントを持ち出す',
-  'rm.export.t': 'アカウントを書き出して、ほかの Nostr アプリへ移れます。戻せない機能なので最後に作ります。',
+  'rm.export.t': 'アカウントを書き出して、ほかのNostrアプリへ移れます。戻せない機能なので最後に作ります。',
 };
 const EN = {};
 document.querySelectorAll('[data-i18n]').forEach((el) => { EN[el.dataset.i18n] ??= el.innerHTML; });

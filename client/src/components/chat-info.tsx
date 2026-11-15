@@ -132,7 +132,7 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
                 onPress={() =>
                   router.push({ pathname: '/ai/[layer]/[id]', params: { layer: contact.model ? 'ai' : 'friend', id: peer } } as unknown as Href)
                 }>
-                <Text style={s.linkText}>AI の権限</Text>
+                <Text style={s.linkText}>AIの権限</Text>
                 <MaterialIcons name="chevron-right" size={22} color={c.muted} />
               </Pressable>
             </View>

@@ -204,7 +204,7 @@ export default function Settings() {
 
       <Text style={s.heading}>通知</Text>
       {push === 'needs-home-screen' ? (
-        <Text style={s.note}>iPhone では、Safari の共有ボタンから「ホーム画面に追加」を選び、ホーム画面の Tegami から開くと通知を使えます。</Text>
+        <Text style={s.note}>iPhoneでは、Safariの共有ボタンから「ホーム画面に追加」を選び、ホーム画面のTegamiから開くと通知を使えます。</Text>
       ) : push === 'unsupported' ? (
         <Text style={s.note}>このブラウザは通知を使えません。</Text>
       ) : (
@@ -221,7 +221,7 @@ export default function Settings() {
               aria-label="新しいメッセージを知らせる"
             />
           </View>
-          {push === 'denied' && <Text style={s.note}>通知が許可されていません。ブラウザか端末の設定で、Tegami の通知を許可してください。</Text>}
+          {push === 'denied' && <Text style={s.note}>通知が許可されていません。ブラウザか端末の設定で、Tegamiの通知を許可してください。</Text>}
           {pushFailed && <Text style={s.note}>通知を設定できませんでした。通信を確認して、もう一度お試しください。</Text>}
         </>
       )}
@@ -229,7 +229,7 @@ export default function Settings() {
       <Text style={s.heading}>別の端末</Text>
       {transfer ? (
         <View style={[s.card, s.transfer]}>
-          <Image source={{ uri: transfer.qr }} style={s.qr} accessibilityLabel="別の端末で読み取る QR コード" />
+          <Image source={{ uri: transfer.qr }} style={s.qr} accessibilityLabel="別の端末で読み取るQRコード" />
           <Text style={s.linkText} selectable>
             {transfer.link}
           </Text>
@@ -255,7 +255,7 @@ export default function Settings() {
             <Text style={s.action}>{codeCopied ? 'コピーしました' : 'コードをコピー'}</Text>
           </Pressable>
           <Text style={s.warn}>このコードは今だけ表示されます。パスワード管理アプリか紙に保管してください。</Text>
-          <Text style={s.warn}>このコードは誰にも見せないでください。なくすと、Tegami でも復旧できません。</Text>
+          <Text style={s.warn}>このコードは誰にも見せないでください。なくすと、Tegamiでも復旧できません。</Text>
           <Pressable style={s.inlineBtn} onPress={() => setNewCode(null)} role="button">
             <Text style={s.action}>保管しました</Text>
           </Pressable>
@@ -282,14 +282,14 @@ export default function Settings() {
 
       <Text style={s.heading}>アプリが落ちた時</Text>
       <View style={[s.card, s.row]}>
-        <Text style={s.label}>Tegami に報告を送る</Text>
+        <Text style={s.label}>Tegamiに報告を送る</Text>
         <Switch
           trackColor={{ false: c.line, true: c.accent }}
           thumbColor="#ffffff"
           {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}
           value={crashReports}
           onValueChange={setCrashReportsOn}
-          aria-label="Tegami に報告を送る"
+          aria-label="Tegamiに報告を送る"
         />
       </View>
       <Text style={s.note}>報告には、エラーの内容だけが入ります。名前や会話は入りません。</Text>
@@ -318,7 +318,7 @@ export default function Settings() {
 
       <Text style={s.heading}>AI</Text>
       <Pressable style={s.card} onPress={() => router.push('/ai' as Href)} role="button">
-        <Text style={s.action}>AI の権限</Text>
+        <Text style={s.action}>AIの権限</Text>
       </Pressable>
 
       <Text style={s.heading}>ブロックリスト</Text>

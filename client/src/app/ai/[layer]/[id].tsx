@@ -20,7 +20,7 @@ export default function AiLayerScreen() {
   const name = layer === 'model' ? id : personName(id, contacts);
   // A switch a layer above has turned off is shown off and cannot be turned on here.
   const blocked = (a: AiAction) => {
-    if (!switchValue(p, { layer: 'all' }, a)) return '「AI の使用」でオフになっています';
+    if (!switchValue(p, { layer: 'all' }, a)) return '「AIの使用」でオフになっています';
     if (layer === 'ai' && contact?.model && !switchValue(p, { layer: 'model', id: contact.model }, a)) return `「${contact.model}」でオフになっています`;
     return null;
   };
@@ -33,7 +33,7 @@ export default function AiLayerScreen() {
         <Text style={s.name}>{name}</Text>
         {layer === 'ai' && contact?.model ? <Text style={s.sub}>{contact.model}</Text> : null}
       </View>
-      <Text style={s.heading}>{layer === 'friend' ? `${name}とのトークで AI ができること` : 'AI ができること'}</Text>
+      <Text style={s.heading}>{layer === 'friend' ? `${name}とのトークでAIができること` : 'AIができること'}</Text>
       <AiSwitches scope={{ layer, id }} blocked={blocked} name={layer === 'friend' ? name : undefined} />
       {layer === 'friend' && !FRIEND_ACTIONS.every((a) => switchValue(p, { layer, id }, a) === READ_ONLY[a]) && (
         <Pressable style={s.card} onPress={() => setAiSwitches({ layer, id }, READ_ONLY)} role="button">

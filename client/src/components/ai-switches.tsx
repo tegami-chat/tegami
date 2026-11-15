@@ -22,7 +22,7 @@ export const AI_ACTION_LABEL: Record<AiAction, string> = {
   draft: '返信の下書きを作る',
   send: '確認してから送る',
   autosend: '確認なしで送る',
-  otherAi: 'ほかの人の AI と話す',
+  otherAi: 'ほかの人のAIと話す',
 };
 
 type Term = 'always' | 'today' | 'hour' | 'ask';
@@ -37,7 +37,9 @@ function endOfToday() {
 /** Which term a switch that is on has. */
 function termOf(v: SwitchValue | undefined): Term {
   if (v === 'ask') return 'ask';
-  if (v && typeof v === 'object') return v.until >= endOfToday() ? 'today' : 'hour';
+  // "Today" ends exactly at midnight. After 23:00 "one hour" also ends after midnight, so
+  // compare with midnight itself rather than "at or after it".
+  if (v && typeof v === 'object') return v.until === endOfToday() ? 'today' : 'hour';
   return 'always';
 }
 
@@ -120,7 +122,7 @@ export function AiSwitches({ scope, blocked, name }: { scope: Scope; blocked?: (
       <Modal transparent visible={confirmAutosend} onRequestClose={() => setConfirmAutosend(false)}>
         <Dialog
           title="「確認なしで送る」をオンにしますか？"
-          text={`AI が、確認の画面を出さずに、あなたの名前で${name ? `${name}に` : ''}メッセージを送れるようになります。ただし、写真、動画、ファイル、音声、お金の話は、オンにしても送る前に確認の画面が出ます。`}
+          text={`AIが、確認の画面を出さずに、あなたの名前で${name ? `${name}に` : ''}メッセージを送れるようになります。ただし、写真、動画、ファイル、音声、お金の話は、オンにしても送る前に確認の画面が出ます。`}
           stacked
           onClose={() => setConfirmAutosend(false)}
           buttons={[

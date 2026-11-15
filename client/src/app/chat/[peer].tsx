@@ -243,7 +243,7 @@ export default function Chat() {
           setAiConfirm(ai);
           return;
         }
-        showToast(e instanceof AiNotAllowedError ? 'AI の権限で止めました' : '頼めませんでした。もう一度お試しください');
+        showToast(e instanceof AiNotAllowedError ? 'AIの権限で止めました' : '頼めませんでした。もう一度お試しください');
       }
     },
     [peer, askAiDraft, showToast],
@@ -1632,8 +1632,8 @@ export default function Chat() {
 
       {aiNotice && (
         <Dialog
-          title="AI にトークを読ませますか？"
-          text={`このトークの新しいメッセージを${AI_DRAFT_MESSAGES}通まで、${personName(aiNotice, contacts)}に渡します。渡したメッセージは Tegami の暗号化の外に出て、AI を動かす会社に届くことがあります。`}
+          title="AIにトークを読ませますか？"
+          text={`このトークの新しいメッセージを${AI_DRAFT_MESSAGES}通まで、${personName(aiNotice, contacts)}に渡します。渡したメッセージはTegamiの暗号化の外に出て、AIを動かす会社に届くことがあります。`}
           onClose={() => setAiNotice(null)}
           buttons={[
             { label: 'キャンセル', variant: 'outlined', onPress: () => setAiNotice(null) },

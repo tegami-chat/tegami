@@ -142,7 +142,7 @@ export function Gate({ locked }: { locked: boolean }) {
         <>
           <Text style={s.notice}>
             {passkeysAvailable()
-              ? 'このパスキーの保存先では、鍵を守れませんでした。下の「いま使えるパスキーの保存先」から選んでください。iPhone では「設定」→「一般」→「自動入力とパスワード」で「パスワード」を入れると選べるようになります。'
+              ? 'このパスキーの保存先では、鍵を守れませんでした。下の「いま使えるパスキーの保存先」から選んでください。iPhoneでは「設定」→「一般」→「自動入力とパスワード」で「パスワード」を入れると選べるようになります。'
               : 'このブラウザはパスキーを使えません。'}
           </Text>
           {passkeysAvailable() && (
@@ -234,7 +234,7 @@ export function Gate({ locked }: { locked: boolean }) {
       {missed && (
         <Text style={s.notice}>
           パスワード管理アプリの画面が出た時は、その画面で「ブラウザや端末のパスキーを使う」を選んでください。Tegami
-          のパスキーは、始めた時に選んだ場所（Windows、iPhone、Google など）に保存されています。
+          のパスキーは、始めた時に選んだ場所（Windows、iPhone、Googleなど）に保存されています。
         </Text>
       )}
     </Frame>
@@ -279,14 +279,14 @@ function Hero() {
     <View style={s.hero}>
       <Text style={s.beta}>ベータ版</Text>
       <Text style={s.kicker}>
-        <Text style={s.nostr}>Nostr で動く</Text>、オープンソースのメッセージアプリ
+        <Text style={s.nostr}>Nostrで動く</Text>、オープンソースのメッセージアプリ
       </Text>
       <Text style={h1} role="heading" aria-level={1}>
         {`トークは${br}`}
         <Text style={s.green}>あなたのもの。</Text>
       </Text>
       <Text style={[h1, s.h1Second]} role="heading" aria-level={1}>
-        {`AI は${br}`}
+        {`AIは${br}`}
         <Text style={s.green}>持ち込み自由。</Text>
       </Text>
     </View>
@@ -296,7 +296,7 @@ function Hero() {
 // Where a passkey can keep Tegami's key. Only stores tried on real devices are listed.
 // A store must return the WebAuthn PRF value; Bitwarden saves the passkey but does not.
 // Tried: iPhone (Safari, 2026-11-12), Windows Hello (Chrome, 2026-11-11), Bitwarden (Chrome and iPhone, 2026-11-11/12).
-const STORES_OK = ['iPhone（iCloud キーチェーン）', 'Windows（Windows Hello）'];
+const STORES_OK = ['iPhone（iCloudキーチェーン）', 'Windows（Windows Hello）'];
 const STORES_PLANNED = ['Bitwarden'];
 
 function PasskeyStores() {

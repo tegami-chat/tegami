@@ -111,7 +111,7 @@ export default function Add() {
 
   async function share() {
     try {
-      await navigator.share({ title: 'Tegami', text: 'Tegami で話そう', url: myInvite });
+      await navigator.share({ title: 'Tegami', text: 'Tegamiで話そう', url: myInvite });
     } catch {
       // Cancelled by the user.
     }
@@ -143,7 +143,7 @@ export default function Add() {
   function applyScannedQr(raw: string): boolean {
     const link = inviteFromQr(raw);
     if (!link) {
-      setScanError('Tegami の招待リンクではありません');
+      setScanError('Tegamiの招待リンクではありません');
       return false;
     }
     keepInviteCode(inviteCodeOf(link));

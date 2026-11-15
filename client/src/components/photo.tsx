@@ -386,7 +386,7 @@ export function Video({ id, file, onOpen }: { id: string; file: FileRef; onOpen?
 
 function formatBytes(size?: number): string {
   if (!size || !Number.isInteger(size) || size <= 0) return '';
-  if (size < 1024) return '1 KB 未満';
+  if (size < 1024) return '1 KB未満';
   if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }

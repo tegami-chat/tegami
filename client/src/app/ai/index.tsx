@@ -28,7 +28,7 @@ export default function AiPermissionsScreen() {
 
   return (
     <ScrollView style={s.fill} contentContainerStyle={s.body}>
-      <Text style={s.heading}>AI の使用</Text>
+      <Text style={s.heading}>AIの使用</Text>
       <AiSwitches scope={{ layer: 'all' }} />
       {!readOnly && (
         <Pressable style={s.card} onPress={() => setAiSwitches({ layer: 'all' }, READ_ONLY)} role="button">
@@ -43,7 +43,7 @@ export default function AiPermissionsScreen() {
 
       {ais.length > 0 && (
         <>
-          <Text style={s.heading}>AI 友だち</Text>
+          <Text style={s.heading}>AI友だち</Text>
           <View style={s.list}>
             {ais.map((x, i) => (
               <Pressable key={x.pubkey} style={[s.row, i > 0 && s.border]} onPress={() => open('ai', x.pubkey)} role="button">
@@ -65,7 +65,7 @@ export default function AiPermissionsScreen() {
 
       {models.length > 0 && (
         <>
-          <Text style={s.heading}>AI モデル</Text>
+          <Text style={s.heading}>AIモデル</Text>
           <View style={s.list}>
             {models.map((m, i) => (
               <Pressable key={m} style={[s.row, i > 0 && s.border]} onPress={() => open('model', m)} role="button">
@@ -102,7 +102,7 @@ export default function AiPermissionsScreen() {
 
       <Text style={s.heading}>記録</Text>
       <Pressable style={[s.card, s.rowPlain]} onPress={() => router.push('/ai/log' as Href)} role="button">
-        <Text style={s.label}>AI の記録</Text>
+        <Text style={s.label}>AIの記録</Text>
         <MaterialIcons name="chevron-right" size={22} color={c.muted} />
       </Pressable>
       <View style={{ height: 40 }} />

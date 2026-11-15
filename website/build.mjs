@@ -28,19 +28,19 @@ const DRAFT_LINKS = {
 const META = {
   index: {
     en: { title: 'Tegami: your chats belong to you', desc: 'An open-source messaging app built on Nostr. No ads, no tracking, and bring your own AI.' },
-    ja: { title: 'Tegami: トークはあなたのもの', desc: 'Nostr で動く、オープンソースのメッセージアプリ。広告も追跡もなく、いつもの AI を連れてこられます。' },
+    ja: { title: 'Tegami: トークはあなたのもの', desc: 'Nostrで動く、オープンソースのメッセージアプリ。広告も追跡もなく、いつものAIを連れてこられます。' },
   },
   how: {
     en: { title: 'How Tegami keeps your chats private', desc: 'What happens to a message, and what the server can and can\'t see.' },
-    ja: { title: 'Tegami が会話を守る仕組み', desc: 'メッセージがどう届き、サーバーに何が見えて何が見えないのか。' },
+    ja: { title: 'Tegamiが会話を守る仕組み', desc: 'メッセージがどう届き、サーバーに何が見えて何が見えないのか。' },
   },
   roadmap: {
     en: { title: 'Tegami roadmap', desc: 'What we\'ve built, and what\'s next.' },
-    ja: { title: 'Tegami のロードマップ', desc: 'できたこと、これから作ること。' },
+    ja: { title: 'Tegamiのロードマップ', desc: 'できたこと、これから作ること。' },
   },
   privacy: {
     en: { title: 'Tegami privacy policy', desc: 'What Tegami keeps, why, and for how long.' },
-    ja: { title: 'Tegami のプライバシーポリシー', desc: 'Tegami が何を、なぜ、どれだけの期間預かるか。' },
+    ja: { title: 'Tegamiのプライバシーポリシー', desc: 'Tegamiが何を、なぜ、どれだけの期間預かるか。' },
   },
 };
 const LANG_ON = 'block px-4 py-2 text-sm font-semibold text-forest-600 dark:text-forest-300';
