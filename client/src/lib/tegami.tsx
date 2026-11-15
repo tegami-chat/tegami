@@ -23,6 +23,7 @@ import { BackupGoneError, type BackupRef, clearLocal, deleteBackup, deriveKeys, 
 import { createVault, unlockVault, type Vault } from './vault';
 import { TURNSTILE_SITEKEY, askRelay, forgetInviteCode, keptInviteCode, type Registration } from './register';
 import { signedFetch } from './relay-http';
+import { STUN, iceServers } from './turn';
 
 // Tegami relays. In development: the relay in app/relay started with `npm run dev`.
 export const RELAYS = (process.env.EXPO_PUBLIC_TEGAMI_RELAYS ?? 'wss://relay.tegami.chat').split(',');
@@ -205,6 +206,8 @@ type TegamiState = {
   setNotifications: (on: boolean) => Promise<PushState>;
   /** Sends a call signal to one person, and to my other devices when alsoMe. */
   sendSignal: (to: string, data: Record<string, unknown>, alsoMe?: boolean) => Promise<void>;
+  /** Where a call looks for a path (STUN, plus TURN when the relay hands out credentials). Never throws. */
+  callIceServers: () => Promise<RTCIceServer[]>;
   /**
    * Asks an AI friend for a reply draft in a 1:1 chat with a friend. The gate must allow both
    * reading and drafting (each logged); else throws AiNotAllowedError. When the gate wants the
@@ -1606,6 +1609,11 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     [secret, me],
   );
 
+  const callIceServers = useCallback(
+    () => (secret && me ? iceServers(secret, me) : Promise.resolve(STUN)),
+    [secret, me],
+  );
+
   const askAiDraft = useCallback(
     async (ai: string, friend: string, confirmed = false) => {
       if (!secret || !me || !pool.current) throw new Error('not open');
@@ -1776,6 +1784,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     turnOffRecovery,
     setNotifications,
     sendSignal,
+    callIceServers,
     onSignal,
     askAiDraft,
     onAiDraft,

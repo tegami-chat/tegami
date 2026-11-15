@@ -8,6 +8,7 @@
 // Unlike the real relay, 'dev-pass' registers a key as invited (so tests of other features
 // see what invited people see), until POST /_open {on: true} makes it register open keys.
 // Reports: POST /report like relay.tegami.chat (NIP-98, registered keys); GET /_reports lists them for tests.
+// TURN: POST /turn like relay.tegami.chat, off (503) until POST /_turn {on: true}.
 import { createHash, randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
@@ -50,6 +51,8 @@ const members = new Map(); // pubkey -> { via, invitedBy, code, banned }
 const codes = new Map(); // code -> pubkey
 const openIds = new Set(); // envelopes written by open keys
 const reports = []; // { reporter, reported, reason, messages, at }
+let turnOn = false;
+const turnAsked = []; // keys that got TURN credentials
 const REPORT_REASONS = ['spam', 'scam', 'impersonation', 'harassment', 'other'];
 // Like relay/src/reports.ts: null when the body is a valid report, else why not.
 const reportError = (r) => {
@@ -195,6 +198,43 @@ const http = createServer((req, res) => {
       }
       if (!members.has(pubkey) && inviteError) return json(400, { error: inviteError });
       json(200, describe(pubkey, inviteError ? { inviteError } : {}));
+    });
+    return;
+  }
+  // TURN credentials for calls, like relay.tegami.chat: 503 (not set up) until a test turns it
+  // on with POST /_turn {on: true}; then a fake TURN entry (nothing listens there). GET /_turn
+  // tells how many keys asked.
+  if (req.url === '/_turn') {
+    if (req.method === 'GET') return send(200, JSON.stringify({ asked: turnAsked }), 'application/json');
+    let body = '';
+    req.on('data', (c) => (body += c));
+    req.on('end', () => {
+      try {
+        turnOn = JSON.parse(body).on === true;
+        send(204);
+      } catch {
+        send(400, 'invalid');
+      }
+    });
+    return;
+  }
+  if (req.url === '/turn' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (c) => (body += c));
+    req.on('end', () => {
+      const json = (status, obj) => send(status, JSON.stringify(obj), 'application/json');
+      if (!turnOn) return json(503, { error: 'turn-not-configured' });
+      const pubkey = nip98(req, body, '/turn');
+      if (!pubkey) return json(401, { error: 'auth-required' });
+      if (!members.has(pubkey) || members.get(pubkey).banned) return json(403, { error: 'restricted' });
+      turnAsked.push(pubkey);
+      json(200, {
+        ttl: 21600,
+        iceServers: [
+          { urls: ['stun:stun.cloudflare.com:3478'] },
+          { urls: ['turn:127.0.0.1:3479?transport=udp'], username: 'dev-user', credential: 'dev-pass' },
+        ],
+      });
     });
     return;
   }

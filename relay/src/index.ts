@@ -44,6 +44,7 @@ import { Members, turnstileOk, type Member } from './members';
 import { MAX_DEVICES, Vapid, allowedEndpoint, nip98, validKeys, type PushKeys } from './push';
 import { Reports, parseReport } from './reports';
 import { STATS_DESCRIPTION, Stats } from './stats';
+import { TURN_RATE, TURN_TTL_SECONDS as TURN_TTL, makeTurnCredentials, turnConfigured, type TurnEnv } from './turn';
 
 type Filter = { kinds?: number[]; '#p'?: string[]; since?: number; until?: number; limit?: number; ids?: string[] };
 type Attachment = { challenge: string; ip: string; pubkey?: string; subs: Record<string, Filter[]> };
@@ -53,7 +54,9 @@ type Attachment = { challenge: string; ip: string; pubkey?: string; subs: Record
 // TURNSTILE_SECRET: checks the web app's proof of a person when registering without an invite.
 // ADMIN_PUBKEYS: the operator's keys (comma separated, hex), allowed to use POST /admin.
 // COMMIT: the Git commit being deployed (scripts/deploy.mjs sets it), shown in /stats and NIP-11.
-type Env = {
+// TURN_KEY_ID, TURN_KEY_API_TOKEN: the Cloudflare Realtime TURN key (Worker secrets) for POST /turn (turn.ts).
+// TURN_API: tests only (with DEV_LOCAL=1), a local stand-in for the Cloudflare API.
+type Env = TurnEnv & {
   RELAY: DurableObjectNamespace<Relay>;
   FILES: R2Bucket;
   STAMPS: R2Bucket;
@@ -136,6 +139,7 @@ const INFO = {
     push: 'For notifications: a device push address and the key it belongs to, until turned off.',
     backups:
       'Recovery backups: an id derived from the recovery code, the ciphertext, a signing key also derived from the code (not the account key) and when it was last uploaded. Kept until the person deletes it.',
+    turn: 'Nothing. Short-lived call relay (TURN) credentials are made per request and not kept.',
     reports:
       "Reports about a key, for the operator: the reporter's key, the reported key, the reason, and recent messages only if the reporter chose to attach them. Deleted after 90 days.",
   },
@@ -157,7 +161,7 @@ export default {
       if (!env.VAPID_JWK) return new Response('Push is not set up', { status: 503, headers: CORS });
       return Response.json({ key: new Vapid(env.VAPID_JWK).publicKey }, { headers: { ...CORS, 'Cache-Control': 'public, max-age=3600' } });
     }
-    if ((url.pathname === '/register' || url.pathname === '/admin' || url.pathname === '/report') && req.method === 'POST') {
+    if ((url.pathname === '/register' || url.pathname === '/admin' || url.pathname === '/report' || url.pathname === '/turn') && req.method === 'POST') {
       const headers = new Headers(req.headers);
       headers.set('X-Tegami-IP', req.headers.get('CF-Connecting-IP') ?? 'unknown');
       return env.RELAY.get(env.RELAY.idFromName('main')).fetch(new Request(req, { headers }));
@@ -305,6 +309,7 @@ export class Relay extends DurableObject<Env> {
     if (path === '/register') return this.registerRoute(req, ip);
     if (path === '/admin') return this.adminRoute(req);
     if (path === '/report') return this.reportRoute(req, ip);
+    if (path === '/turn') return this.turnRoute(req, ip);
     const backup = path.match(BACKUP_PATH);
     if (backup) return this.backupRoute(req, ip, backup[1]);
     if (path === '/crash') return this.crash(req, ip);
@@ -450,6 +455,33 @@ export class Relay extends DurableObject<Env> {
     if (this.reports.limited(reporter, r.pubkey)) return fail(429, 'rate-limited: too many reports');
     this.reports.add(reporter, r.pubkey, r.reason, r.messages);
     return new Response(null, { status: 204, headers: CORS });
+  }
+
+  // TURN credentials: per key (turn.ts), and per address 60 at once, then one every 5 seconds.
+  turnKeyRate = new Buckets(TURN_RATE.burst, TURN_RATE.perSecond);
+  turnIpRate = new Buckets(60, 0.2);
+
+  /**
+   * POST /turn, signed (NIP-98) by a registered key that is not stopped. Answers
+   * {iceServers, ttl} with short-lived TURN credentials, or 503 when TURN is not set up
+   * (the app then calls with STUN only). Nothing about the request is kept.
+   */
+  async turnRoute(req: Request, ip: string): Promise<Response> {
+    const fail = (status: number, error: string) => Response.json({ error }, { status, headers: CORS });
+    if (!turnConfigured(this.env)) return fail(503, 'turn-not-configured');
+    if (!this.turnIpRate.take(ip)) return fail(429, 'rate-limited');
+    const body = await req.text();
+    if (body.length > 1024) return fail(413, 'too large');
+    const pubkey = await nip98(req, body, this.signedFor('/turn'));
+    if (!pubkey) return fail(401, 'auth-required');
+    const m = this.members.get(pubkey);
+    if (!m) return fail(403, 'restricted: register first (POST /register)');
+    if (m.banned) return fail(403, 'blocked');
+    if (!this.turnKeyRate.take(pubkey)) return fail(429, 'rate-limited');
+    const api = this.devLocal && this.env.TURN_API ? this.env.TURN_API : undefined;
+    const servers = await makeTurnCredentials(this.env, api);
+    if (!servers) return fail(502, 'turn-unavailable');
+    return Response.json({ iceServers: servers, ttl: TURN_TTL }, { headers: { ...CORS, 'Cache-Control': 'no-store' } });
   }
 
   ipBytes = new Buckets(FILE_RATE.ip.burst, FILE_RATE.ip.perSecond);
