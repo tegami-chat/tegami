@@ -13,6 +13,8 @@ export type Registration = {
   via?: 'invite' | 'open' | 'legacy';
   trusted?: boolean;
   banned?: boolean;
+  /** The account was deleted (DELETE /account): this key cannot register again. */
+  deleted?: boolean;
   code?: string | null;
   inviteError?: string;
   error?: string;
@@ -32,6 +34,7 @@ export async function askRelay(secret: Uint8Array, body: { invite?: string; turn
   }
   if (res.ok) return json as Registration;
   if (res.status === 403 && (json as { error?: string }).error === 'blocked') return { member: false, banned: true, error: 'blocked' };
+  if (res.status === 403 && (json as { error?: string }).error === 'deleted') return { member: false, deleted: true, error: 'deleted' };
   if (res.status === 400 || res.status === 403) return { member: false, error: (json as { error?: string }).error ?? 'refused' };
   throw new Error(`register: ${res.status}`);
 }

@@ -71,6 +71,24 @@ export async function refreshPush(secret: Uint8Array) {
   }
 }
 
+/**
+ * An account that is not open was removed from this device while it had notifications on.
+ * Its key is not at hand to tell the relay, so the browser's subscription is replaced: the old
+ * push address stops working (the relay forgets it when the push service says it is gone).
+ * The open account registers the new address now; others with notifications on do so the
+ * next time they are opened (refreshPush).
+ */
+export async function replaceSubscription(secret: Uint8Array | null) {
+  if (!pushSupported()) return;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration('/sw.js');
+    await (await reg?.pushManager.getSubscription())?.unsubscribe();
+  } catch {
+    // No subscription: nothing to replace.
+  }
+  if (secret) await refreshPush(secret);
+}
+
 /** Unregisters this device from the relay for this account, and stops the subscription when no account uses it. */
 export async function disablePush(secret: Uint8Array): Promise<PushState> {
   const endpoint = load<string | null>(k('push'), null);

@@ -14,9 +14,10 @@ import { AI_DRAFT_MESSAGES, markReadNoticeSeen, mayDraft, readNoticeSeen } from 
 import { useAiPermissions } from '@/lib/ai-permissions';
 import { useCall } from '@/lib/calls';
 import { cautionFor } from '@/lib/caution';
+import { isFeedback } from '@/lib/feedback';
 import { MAX_FILE_BYTES } from '@/lib/files';
 import { INFO_BESIDE_MIN, useWide, type PressState } from '@/lib/layout';
-import { AiConfirmNeededError, AiNotAllowedError, chatName, clock, isGroup, personName, shortId, useTegami, type Message, type Stamp as StampItem } from '@/lib/tegami';
+import { AiConfirmNeededError, AiNotAllowedError, chatName, clock, isGroup, personName, useTegami, type Message, type Stamp as StampItem } from '@/lib/tegami';
 
 const SEND_ERROR = '送れませんでした。もう一度送ってください';
 const VOICE_MAX_MS = 5 * 60 * 1000;
@@ -184,7 +185,7 @@ export default function Chat() {
   const firstCautionId = useMemo(
     () =>
       messages.find(
-        (m) => m.peer === peer && m.from !== me && !m.file && !m.call && !friends.has(m.from) && cautionFor(m.text),
+        (m) => m.peer === peer && m.from !== me && !m.file && !m.call && !friends.has(m.from) && !isFeedback(m.from) && cautionFor(m.text),
       )?.id ?? null,
     [messages, peer, me, friends],
   );
@@ -838,7 +839,7 @@ export default function Chat() {
         ? `${contact.name}（${contact.model}）`
         : contact.name
       : peer
-        ? shortId(peer)
+        ? personName(peer, contacts)
         : '';
 
   const modalOpen = !!deletingId || !!blockingPeer || unblocking || !!reportTarget;
@@ -908,7 +909,7 @@ export default function Chat() {
           </>
         )}
 
-        {!group && !contact && peer && (
+        {!group && !contact && peer && !isFeedback(peer) && (
           <View style={s.addBar}>
             <TextInput
               style={s.addInput}

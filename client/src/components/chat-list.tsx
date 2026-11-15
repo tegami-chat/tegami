@@ -11,6 +11,7 @@ import { MenuSheet } from '@/components/menu-sheet';
 import { Palette, usePalette } from '@/constants/theme';
 import { readyAccounts, useAccounts, useNewMarks } from '@/lib/accounts';
 import { useCall } from '@/lib/calls';
+import { FEEDBACK_NAME, FEEDBACK_PUBKEY, closeFeedback, isFeedback, useFeedbackOpened } from '@/lib/feedback';
 import { focusSearch, onFocusSearch, openChat, useListTab, type PressState } from '@/lib/layout';
 import { excerpt, matchesName, searchMessages } from '@/lib/search';
 import { chatName, isGroup, strangers, useTegami, type Contact, type Message } from '@/lib/tegami';
@@ -56,7 +57,12 @@ export function ChatList({ wide = false }: { wide?: boolean }) {
 
   const friends = useMemo(() => contacts.filter((x) => !blocked.includes(x.pubkey)), [contacts, blocked]);
   const lastOf = (room: string) => [...messages].reverse().find((m) => m.peer === room);
+  // "Tegamiへの意見": in the list once opened from the settings, or when it has messages.
+  const feedbackOpen = useFeedbackOpened();
+  const feedback =
+    (feedbackOpen || messages.some((m) => m.peer === FEEDBACK_PUBKEY)) && !blocked.includes(FEEDBACK_PUBKEY) && !contacts.some((x) => x.pubkey === FEEDBACK_PUBKEY);
   const rows = [
+    ...(feedback ? [{ room: FEEDBACK_PUBKEY, name: FEEDBACK_NAME, model: undefined, avatar: undefined, group: false }] : []),
     ...friends.map((x) => ({ room: x.pubkey, name: x.name, model: x.model, avatar: x.avatar, group: false })),
     ...groups.map((g) => ({ room: g.id, name: chatName(g.id, contacts, groups), model: undefined, avatar: undefined, group: true })),
   ]
@@ -435,6 +441,7 @@ export function ChatList({ wide = false }: { wide?: boolean }) {
               label: '削除',
               variant: 'danger',
               onPress: () => {
+                if (isFeedback(confirmChat)) closeFeedback();
                 deleteChat(confirmChat);
                 setConfirmChat(null);
               },

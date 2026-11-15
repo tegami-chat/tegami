@@ -2,14 +2,16 @@ import * as ImagePicker from 'expo-image-picker';
 import makeQr from 'qrcode-generator';
 import { router, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Image, Linking, Pressable, ScrollView, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Image, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { AccountList } from '@/components/account-list';
 import { Avatar } from '@/components/avatar';
+import { Dialog } from '@/components/dialog';
 import { ThemeSwitch } from '@/components/theme-switch';
 import { Palette, usePalette } from '@/constants/theme';
+import { FEEDBACK_PUBKEY, openFeedback } from '@/lib/feedback';
 import { pushState, type PushState } from '@/lib/push';
-import { personName, useTegami } from '@/lib/tegami';
+import { personName, shortId, useTegami } from '@/lib/tegami';
 
 const STATS_URL = 'https://relay.tegami.chat/stats';
 
@@ -36,7 +38,46 @@ export default function Settings() {
     contacts,
     blocked,
     unblock,
+    me,
+    removeFromDevice,
+    deleteAccount,
   } = useTegami();
+  const accountLabel = myName || (me ? shortId(me) : '');
+  const [confirm, setConfirm] = useState<null | 'here' | 'everywhere'>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteFailed, setDeleteFailed] = useState(false);
+
+  function leave() {
+    try {
+      if (router.canDismiss()) router.dismissAll();
+      router.replace('/');
+    } catch {
+      // Nothing to leave.
+    }
+  }
+
+  async function removeHere() {
+    setConfirm(null);
+    leave();
+    await removeFromDevice();
+  }
+
+  async function deleteEverywhere() {
+    setConfirm(null);
+    setDeleting(true);
+    setDeleteFailed(false);
+    try {
+      await deleteAccount();
+    } catch {
+      setDeleteFailed(true);
+      setDeleting(false);
+    }
+  }
+
+  function feedback() {
+    openFeedback();
+    router.push(`/chat/${FEEDBACK_PUBKEY}` as Href);
+  }
   // The recovery code is shown once, right after it is made, and never kept on screen after.
   const [newCode, setNewCode] = useState<string | null>(null);
   const [codeCopied, setCodeCopied] = useState(false);
@@ -341,8 +382,46 @@ export default function Settings() {
       <Pressable style={s.card} onPress={() => Linking.openURL(STATS_URL)} role="link">
         <Text style={s.action}>送受信の数などを日ごとに見る</Text>
       </Pressable>
+
+      <Text style={s.heading}>ヘルプ</Text>
+      <Pressable style={s.card} onPress={feedback} role="button">
+        <Text style={s.action}>Tegamiへの意見</Text>
+      </Pressable>
+
+      <Text style={s.heading}>アカウントの削除</Text>
+      <Pressable style={[s.card, deleting && s.busy]} onPress={() => setConfirm('here')} disabled={deleting} role="button">
+        <Text style={s.dangerAction}>この端末から削除</Text>
+      </Pressable>
+      <Pressable style={[s.card, deleting && s.busy]} onPress={() => setConfirm('everywhere')} disabled={deleting} role="button">
+        <Text style={s.dangerAction}>{deleting ? '削除しています' : 'アカウントを削除'}</Text>
+      </Pressable>
+      {deleteFailed && <Text style={s.note}>アカウントを削除できませんでした。通信を確認して、もう一度お試しください。</Text>}
       <View style={{ height: 40 }} />
       </ScrollView>
+      <Modal transparent visible={!!confirm} onRequestClose={() => setConfirm(null)}>
+        {confirm === 'here' && (
+          <Dialog
+            title={`${accountLabel}をこの端末から削除しますか？`}
+            text="この端末のトーク履歴と設定が消えます。ほかの端末か復旧コードがないと、このアカウントには戻れません。"
+            onClose={() => setConfirm(null)}
+            buttons={[
+              { label: 'キャンセル', variant: 'outlined', onPress: () => setConfirm(null) },
+              { label: '削除', variant: 'danger', onPress: () => void removeHere() },
+            ]}
+          />
+        )}
+        {confirm === 'everywhere' && (
+          <Dialog
+            title={`${accountLabel}のアカウントを削除しますか？`}
+            text="トーク履歴、友だち、スタンプ、復旧コードがすべて削除され、元に戻せません。ほかの端末でも、このアカウントは使えなくなります。"
+            onClose={() => setConfirm(null)}
+            buttons={[
+              { label: 'キャンセル', variant: 'outlined', onPress: () => setConfirm(null) },
+              { label: '削除', variant: 'danger', onPress: () => void deleteEverywhere() },
+            ]}
+          />
+        )}
+      </Modal>
     </View>
   );
 }
