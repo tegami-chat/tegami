@@ -45,7 +45,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "lint": "expo lint",
-    "test:web": "node test/web.test.mjs",
+    "test:web": "node test/web.test.mjs && node test/web.test.mjs --narrow --skip-build",
     "build:web": "node scripts/build-web.mjs"
   },
   "private": true

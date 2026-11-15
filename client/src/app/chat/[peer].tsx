@@ -2,9 +2,10 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, router, useIsFocused, useLocalSearchParams, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
+import { ChatInfo } from '@/components/chat-info';
 import { Dialog } from '@/components/dialog';
 import { FileAttachment, Photo, PhotoViewer, Stamp, Video, VideoViewer, Voice } from '@/components/photo';
 import { ReportSheet } from '@/components/report-sheet';
@@ -12,6 +13,7 @@ import { Palette, usePalette } from '@/constants/theme';
 import { useCall } from '@/lib/calls';
 import { cautionFor } from '@/lib/caution';
 import { MAX_FILE_BYTES } from '@/lib/files';
+import { INFO_BESIDE_MIN, useWide, type PressState } from '@/lib/layout';
 import { chatName, clock, isGroup, personName, shortId, useTegami, type Message, type Stamp as StampItem } from '@/lib/tegami';
 
 const SEND_ERROR = '送れませんでした。もう一度送ってください';
@@ -135,6 +137,14 @@ export default function Chat() {
   } | null>(null);
   const list = useRef<FlatList>(null);
   const { supported, startCall } = useCall();
+  // Desktop: the person's details open beside the chat (over it when the window is not wide
+  // enough), files can be dropped on the chat, and Esc closes what is open.
+  const wide = useWide();
+  const { width: windowWidth } = useWindowDimensions();
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [dropped, setDropped] = useState<File[] | null>(null);
+  const dropArea = useRef<View>(null);
 
   const group = !!peer && isGroup(peer);
   const isBlocked = !!peer && !group && blocked.includes(peer);
@@ -227,7 +237,7 @@ export default function Chat() {
     if ((!pressed && !hovered) || Platform.OS !== 'web') return;
     const onDown = (e: Event) => {
       const el = e.target as HTMLElement | null;
-      if (el?.closest?.('[data-testid="message-panel"]')) return;
+      if (el?.closest?.('[data-testid="message-panel"], [data-testid="hover-tools"]')) return;
       clearTimeout(hoverTimer.current);
       setPressed(null);
       setHovered(null);
@@ -611,6 +621,87 @@ export default function Chat() {
     }
   }
 
+  /** Files dropped on the chat (desktop), after the person said yes: photos and videos as media, the rest as files. */
+  async function sendDropped(files: File[]) {
+    setDropped(null);
+    if (!peer || isBlocked) return;
+    const tooBig = files.filter((f) => f.size > MAX_FILE_BYTES && !f.type.startsWith('image/'));
+    if (tooBig.length) showToast('10MBを超えるファイルは送れません');
+    const ok = files.filter((f) => !tooBig.includes(f));
+    if (!ok.length) return;
+    setSending(true);
+    setError(null);
+    try {
+      for (const f of ok) {
+        if (f.type.startsWith('image/') || f.type.startsWith('video/')) await sendPhoto(peer, f, replying?.id);
+        else await sendFile(peer, f, f.name || 'file', replying?.id);
+      }
+      setReplying(null);
+    } catch {
+      setError(SEND_ERROR);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  // Dropping files on the chat: the drop area is the chat's own element on the web.
+  useEffect(() => {
+    const el = dropArea.current as unknown as HTMLElement | null;
+    if (!wide || !el || typeof el.addEventListener !== 'function') return;
+    let depth = 0;
+    const hasFiles = (e: DragEvent) => !!e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files');
+    const enter = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      depth++;
+      setDragging(true);
+    };
+    const over = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    };
+    const leave = () => {
+      depth = Math.max(0, depth - 1);
+      if (!depth) setDragging(false);
+    };
+    const drop = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      depth = 0;
+      setDragging(false);
+      const files = Array.from(e.dataTransfer?.files ?? []);
+      if (files.length && !isBlocked) setDropped(files);
+    };
+    el.addEventListener('dragenter', enter);
+    el.addEventListener('dragover', over);
+    el.addEventListener('dragleave', leave);
+    el.addEventListener('drop', drop);
+    return () => {
+      el.removeEventListener('dragenter', enter);
+      el.removeEventListener('dragover', over);
+      el.removeEventListener('dragleave', leave);
+      el.removeEventListener('drop', drop);
+    };
+  }, [wide, isBlocked]);
+
+  // Esc closes the innermost thing that is open: the message menu, the reply, then the details.
+  useEffect(() => {
+    // Only the chat on screen (a chat under a settings page stays mounted, out of sight).
+    if (!wide || !focused || typeof document === 'undefined') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented || viewing || viewingVideo) return;
+      if (pressed) setPressed(null);
+      else if (replying) setReplying(null);
+      else if (infoOpen) setInfoOpen(false);
+      else return;
+      e.preventDefault();
+    };
+    // Capture: a text field stops its keys from bubbling up (react-native-web).
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [wide, focused, pressed, replying, infoOpen, viewing, viewingVideo]);
+
   async function createStamp() {
     if (!peer || sending || isBlocked) return;
     const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
@@ -672,18 +763,22 @@ export default function Chat() {
   const modalOpen = !!deletingId || !!blockingPeer || unblocking || !!reportTarget;
 
   return (
+    <View style={s.withInfo}>
     <KeyboardAvoidingView style={s.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={s.fill} aria-hidden={modalOpen}>
-        <View style={s.header}>
-          <Pressable
-            role="button"
-            aria-label="戻る"
-            style={s.headerIconBtn}
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/' as Href))}>
-            <MaterialIcons name="chevron-left" size={24} color={c.text} />
-          </Pressable>
-          <Text style={s.headerTitle} numberOfLines={1} testID="chat-title">
+      <View style={s.fill} aria-hidden={modalOpen} ref={dropArea}>
+        <View style={[s.header, wide && s.headerWide]}>
+          {!wide && (
+            <Pressable
+              role="button"
+              aria-label="戻る"
+              style={s.headerIconBtn}
+              onPress={() => (router.canGoBack() ? router.back() : router.replace('/' as Href))}>
+              <MaterialIcons name="chevron-left" size={24} color={c.text} />
+            </Pressable>
+          )}
+          {wide && peer && <Avatar name={group ? '◎' : (contact?.name ?? title)} file={contact?.avatar} size={36} />}
+          <Text style={[s.headerTitle, wide && s.headerTitleWide]} numberOfLines={1} testID="chat-title">
             {title}
           </Text>
           {peer && (
@@ -696,9 +791,12 @@ export default function Chat() {
               <Pressable
                 role="button"
                 aria-label="メニュー"
-                style={s.headerIconBtn}
-                onPress={() => router.push(`/chat/${encodeURIComponent(peer)}/info` as Href)}>
-                <MaterialIcons name="menu" size={24} color={c.text} />
+                aria-expanded={wide ? infoOpen : undefined}
+                style={({ hovered }: PressState) => [s.headerIconBtn, wide && s.headerIconRound, hovered && s.hoverBg, wide && infoOpen && s.onBg]}
+                onPress={() =>
+                  wide ? setInfoOpen((v) => !v) : router.push(`/chat/${encodeURIComponent(peer)}/info` as Href)
+                }>
+                <MaterialIcons name="menu" size={24} color={wide && infoOpen ? c.accent : c.text} />
               </Pressable>
             </View>
           )}
@@ -859,6 +957,29 @@ export default function Chat() {
               </View>
             );
 
+            // Desktop: the mouse over a message shows its quick actions (as Slack and Discord);
+            // the third opens the same panel as a long press or a right click.
+            const hoverTools = wide && hovered === item.id && !pressed && !unsent && (
+              <View style={[s.hoverTools, mine ? s.hoverToolsMine : s.hoverToolsTheirs]} testID="hover-tools">
+                {([
+                  ['リプライ', 'reply', () => startReply(item)],
+                  ...(!item.file ? [['コピー', 'content-copy', () => void copyMessage(item)] as const] : []),
+                  ['その他', 'more-horiz', () => setPressed(item.id)],
+                ] as const).map(([label, icon, run]) => (
+                  <Pressable
+                    key={label}
+                    role="button"
+                    aria-label={label}
+                    style={({ hovered: h }: PressState) => [s.hoverTool, h && s.hoverBg]}
+                    onHoverIn={() => hoverIn(item.id)}
+                    onHoverOut={() => hoverOut(item.id)}
+                    onPress={run}>
+                    <MaterialIcons name={icon} size={20} color={c.text} />
+                  </Pressable>
+                ))}
+              </View>
+            );
+
             const isStamp = !!item.file && !!item.stamp;
             const isVisualMedia =
               !!item.file &&
@@ -1003,6 +1124,7 @@ export default function Chat() {
                         />
                       )}
                       {bubble}
+                      {hoverTools}
                     </Pressable>
                   </View>
                   {actionPanel}
@@ -1457,13 +1579,85 @@ export default function Chat() {
 
       {viewing && <PhotoViewer uri={viewing} onClose={() => setViewing(null)} />}
       {viewingVideo && <VideoViewer uri={viewingVideo} onClose={() => setViewingVideo(null)} />}
+
+      {dragging && (
+        <View style={s.dropZone} pointerEvents="none" testID="drop-zone">
+          <MaterialIcons name="upload-file" size={40} color={c.accent} />
+          <Text style={s.dropText}>{title}に送る</Text>
+        </View>
+      )}
+      {dropped && (
+        <Dialog
+          title={`${title}に送りますか？`}
+          text={dropped.map((f) => f.name).join('、')}
+          onClose={() => setDropped(null)}
+          buttons={[
+            { label: 'キャンセル', variant: 'outlined', onPress: () => setDropped(null) },
+            { label: '送る', variant: 'outlined', onPress: () => void sendDropped(dropped) },
+          ]}
+        />
+      )}
     </KeyboardAvoidingView>
+    {wide && infoOpen && peer && (
+      <View style={[s.infoPanel, windowWidth < INFO_BESIDE_MIN && s.infoOver]} role="complementary">
+        <ChatInfo peer={peer} panel onClose={() => setInfoOpen(false)} />
+      </View>
+    )}
+    </View>
   );
 }
 
 const styles = (c: Palette) =>
   StyleSheet.create({
     fill: { flex: 1, backgroundColor: c.background },
+    hoverTools: {
+      position: 'absolute',
+      top: 0,
+      zIndex: 40,
+      flexDirection: 'row',
+      backgroundColor: c.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.line,
+      borderRadius: 10,
+      boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+    },
+    // Beside the bubble, never over it: a click on the message still reaches the message.
+    hoverToolsMine: { right: '100%', marginRight: 6 },
+    hoverToolsTheirs: { left: '100%', marginLeft: 6 },
+    hoverTool: { width: 44, height: 44, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+    withInfo: { flex: 1, flexDirection: 'row', backgroundColor: c.background },
+    headerWide: { minHeight: 60, paddingLeft: 16, paddingRight: 8, gap: 8 },
+    headerTitleWide: { fontSize: 16 },
+    headerIconRound: { borderRadius: 10 },
+    hoverBg: { backgroundColor: c.hover },
+    onBg: { backgroundColor: c.selected },
+    infoPanel: { width: 320, borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: c.line, backgroundColor: c.background },
+    infoOver: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 60,
+      boxShadow: '0 0 24px rgba(0,0,0,0.18)',
+    },
+    dropZone: {
+      position: 'absolute',
+      top: 8,
+      left: 8,
+      right: 8,
+      bottom: 8,
+      zIndex: 80,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderStyle: 'dashed',
+      borderColor: c.accent,
+      backgroundColor: c.selected,
+      opacity: 0.94,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+    },
+    dropText: { fontSize: 18, fontWeight: '600', color: c.accent },
     header: {
       flexDirection: 'row',
       alignItems: 'center',

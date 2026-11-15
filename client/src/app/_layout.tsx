@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { CallScreen } from '@/components/call-screen';
+import { DesktopShell } from '@/components/desktop-shell';
 import { Gate } from '@/components/gate';
 import { RegisterGate } from '@/components/register-gate';
 import { usePalette } from '@/constants/theme';
@@ -11,6 +12,7 @@ import { goToAccount } from '@/components/account-list';
 import { accountByKey, accounts, useAccounts } from '@/lib/accounts';
 import { takeOpenRequest } from '@/lib/sw-store';
 import { CallProvider } from '@/lib/calls';
+import { useWide } from '@/lib/layout';
 import { report } from '@/lib/crash';
 import { TegamiProvider, useTegami } from '@/lib/tegami';
 import { registerServiceWorker } from '@/lib/push';
@@ -50,13 +52,15 @@ function BackButton() {
 function Shell() {
   const c = usePalette();
   const { status, registration } = useTegami();
+  const wide = useWide();
   if (status === 'loading') return null;
   // Every screen stays behind the gate until the account is open.
   if (status !== 'open') return <Gate locked={status === 'locked'} />;
   // Not registered with the relay (no invite code): the Turnstile check first.
   if (registration === 'needed' || registration === 'blocked') return <RegisterGate />;
-  return (
-    <CallProvider>
+  // Desktop: the pages the rail and the list open have no back button (the list stays beside them).
+  const top = wide ? { headerLeft: () => null } : {};
+  const stack = (
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: c.background },
@@ -67,19 +71,23 @@ function Shell() {
           contentStyle: { backgroundColor: c.background },
         }}>
         <Stack.Screen name="index" options={{ title: 'Tegami', headerLeft: () => null }} />
-        <Stack.Screen name="add" options={{ title: '友だち追加' }} />
-        <Stack.Screen name="group" options={{ title: 'グループを作る' }} />
-        <Stack.Screen name="settings" options={{ title: '設定' }} />
-        <Stack.Screen name="accounts" options={{ title: 'アカウント' }} />
+        <Stack.Screen name="add" options={{ title: '友だち追加', ...top }} />
+        <Stack.Screen name="group" options={{ title: 'グループを作る', ...top }} />
+        <Stack.Screen name="settings" options={{ title: '設定', ...top }} />
+        <Stack.Screen name="accounts" options={{ title: 'アカウント', ...top }} />
         <Stack.Screen name="i" options={{ headerShown: false }} />
         <Stack.Screen name="link" options={{ title: '', headerLeft: () => null }} />
-        <Stack.Screen name="strangers" options={{ title: '知らない人から' }} />
+        <Stack.Screen name="strangers" options={{ title: '知らない人から', ...top }} />
         <Stack.Screen name="ai/index" options={{ title: 'AI の権限' }} />
         <Stack.Screen name="ai/[layer]/[id]" options={{ title: 'AI の権限' }} />
         <Stack.Screen name="ai/log" options={{ title: 'AI の記録' }} />
         <Stack.Screen name="chat/[peer]" options={{ headerShown: false }} />
         <Stack.Screen name="chat/[peer]/info" options={{ headerShown: false }} />
       </Stack>
+  );
+  return (
+    <CallProvider>
+      {wide ? <DesktopShell>{stack}</DesktopShell> : stack}
       {/* Over every screen: an incoming call shows wherever the person is. */}
       <CallScreen />
     </CallProvider>

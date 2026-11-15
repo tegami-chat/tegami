@@ -16,6 +16,10 @@ export const Colors = {
     mine: '#a1f4c8',
     theirs: '#ffffff',
     nostr: '#7c2eda',
+    // The desktop layout: the rail of icons, a row under the mouse, the open chat in the list.
+    rail: '#e9f0e9',
+    hover: '#e4ebe4',
+    selected: '#d3e8da',
   },
   dark: {
     background: '#111412',
@@ -29,6 +33,9 @@ export const Colors = {
     mine: '#005236',
     theirs: '#1b211d',
     nostr: '#d8b9ff',
+    rail: '#0c0f0d',
+    hover: '#232a25',
+    selected: '#1f3a2c',
   },
 } as const;
 

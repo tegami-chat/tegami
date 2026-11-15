@@ -115,6 +115,9 @@ const RECORDER = `(() => {
 // SHOTS=<folder> saves screenshots of the screens new words appear on (for reviewing the
 // wording before a release), with a shots.json that says what each one shows.
 const SHOTS = process.env.SHOTS;
+// --narrow runs every test in a phone-sized window (the one-column screens); without it the
+// window is 1280 wide (the desktop layout: rail, chat list and the open chat side by side).
+const NARROW = process.argv.includes('--narrow') || !!SHOTS;
 const shotList = [];
 async function shot(page, name, note) {
   if (!SHOTS) return;
@@ -128,11 +131,24 @@ function shotDialog(name, message, note) {
   if (SHOTS) shotList.push({ dialog: message, name, note });
 }
 
+/**
+ * Desktop layout: the chat list stays on screen beside the open chat, so a message or a name can
+ * be both in a list row (its preview) and in the open screen. The list comes first in the page,
+ * so the tests' text lookups take the last match: the one on the open screen.
+ */
+function preferOpenScreen(page) {
+  const find = page.getByText.bind(page);
+  page.getByText = (...args) => find(...args).last();
+}
+
 async function newUser(browser, { prf = true, wrap = {}, authenticator = true } = {}) {
-  const context = await browser.newContext(SHOTS ? { viewport: { width: 390, height: 760 }, deviceScaleFactor: 2 } : {});
+  const context = await browser.newContext(
+    SHOTS ? { viewport: { width: 390, height: 760 }, deviceScaleFactor: 2 } : NARROW ? { viewport: { width: 390, height: 760 } } : { viewport: { width: 1280, height: 800 } },
+  );
   await context.addInitScript(wrapper(wrap));
   await context.addInitScript(RECORDER);
   const page = await context.newPage();
+  if (!NARROW) preferOpenScreen(page);
   const cdp = await context.newCDPSession(page);
   await cdp.send('WebAuthn.enable');
   let authenticatorId = null;
@@ -146,6 +162,12 @@ const text = (page) => page.evaluate(() => document.body.innerText);
 const storage = (page) => page.evaluate(() => Object.fromEntries(Object.entries(localStorage)));
 const calls = (page) => page.evaluate(() => window.__calls);
 const button = (page, name) => page.getByRole('button', { name, exact: true });
+/** Opens settings: the header link on a phone, the gear on the rail on a desktop (both are buttons named 設定). */
+const openSettings = (page) => button(page, '設定').click();
+/** Where the person's details are: a screen of their own on a phone, a column beside the chat on a desktop. */
+const infoArea = (page) => (NARROW ? page : page.getByRole('complementary'));
+/** Leaves the person's details: back on a phone, the close button of the column on a desktop. */
+const closeInfo = (page) => button(page, NARROW ? '戻る' : '閉じる').click();
 
 async function waitOpen(page) {
   await page.waitForFunction(() => {
@@ -376,7 +398,8 @@ function assert(cond, msg) {
 
 async function main() {
   if (!CHROME) throw new Error('Google Chrome not found. Set CHROME_PATH.');
-  if (!process.env.SKIP_BUILD) {
+  console.log(NARROW ? 'window: 390 x 760 (phone layout)' : 'window: 1280 x 800 (desktop layout)');
+  if (!process.env.SKIP_BUILD && !process.argv.includes('--skip-build')) {
     await sh('npx', ['expo', 'export', '--platform', 'web', '--output-dir', 'dist-test', '--clear'], {
       EXPO_PUBLIC_TEGAMI_RELAYS: `ws://localhost:${RELAY_PORT}`,
       EXPO_PUBLIC_TEGAMI_FILES: `http://localhost:${RELAY_PORT}`,
@@ -624,7 +647,7 @@ async function main() {
       const u = await newUser(browser);
       await button(u.page, 'はじめる').click();
       await waitOpen(u.page);
-      await u.page.getByText('設定', { exact: true }).click();
+      await openSettings(u.page);
       await waitText(u.page, 'パスキーで守っています');
       const crashes = async () => (await fetch(`http://localhost:${RELAY_PORT}/_crashes`)).json();
       const throwSoon = (tag) =>
@@ -668,8 +691,8 @@ async function main() {
       const vault = await u.page.evaluate(() => localStorage.getItem('tegami.vault'));
       assert(!readFileSync(file, 'utf8').includes(JSON.parse(vault).ciphertext), 'export contains the vault');
 
-      // Back button returns from settings to the home screen.
-      await button(u.page, '戻る').click();
+      // Back button returns from settings to the home screen (on a desktop: the rail's chats).
+      await button(u.page, NARROW ? '戻る' : 'トーク').click();
       await waitOpen(u.page);
       await u.context.close();
     });
@@ -845,7 +868,7 @@ async function main() {
       await button(u.page, 'パスキーを使わずに始める').click();
       await waitOpen(u.page);
       assert(await u.page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration('/sw.js'))), 'the service worker is not registered');
-      await u.page.getByText('設定', { exact: true }).click();
+      await openSettings(u.page);
       const sw = u.page.getByRole('switch', { name: '新しいメッセージを知らせる' });
       await sw.waitFor();
       assert(!(await sw.isChecked()), 'notifications are on before asking');
@@ -869,7 +892,7 @@ async function main() {
     });
 
     await test('Notifications on iPhone outside the Home Screen: says how to add Tegami to the Home Screen', async () => {
-      const context = await browser.newContext({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1' });
+      const context = await browser.newContext({ viewport: NARROW ? { width: 390, height: 760 } : { width: 1280, height: 800 }, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1' });
       await context.addInitScript(() => {
         delete window.PushManager;
         delete window.PublicKeyCredential; // start without a passkey, quickly
@@ -879,7 +902,7 @@ async function main() {
       await button(page, 'はじめる').click();
       await button(page, 'パスキーを使わずに始める').click();
       await waitOpen(page);
-      await page.getByText('設定', { exact: true }).click();
+      await openSettings(page);
       await waitText(page, 'ホーム画面に追加');
       await context.close();
     });
@@ -1273,7 +1296,7 @@ async function main() {
       await a.page.getByLabel('未読 1件').waitFor({ timeout: 15000 });
 
       // The switch hides the counts (and the tab number), and brings them back.
-      await a.page.getByText('設定', { exact: true }).click();
+      await openSettings(a.page);
       const sw = a.page.getByRole('switch', { name: '未読数を表示' });
       await sw.waitFor();
       assert(await sw.isChecked(), 'unread counts are off by default');
@@ -1360,7 +1383,7 @@ async function main() {
       await b.page.getByText('あさ').first().click();
       await waitText(b.page, 'あとで届く');
       await b.page.waitForTimeout(1500);
-      const bt = await text(b.page);
+      const bt = NARROW ? await text(b.page) : await b.page.getByRole('main').innerText();
       assert(bt.split('あとで届く').length === 2, 'the other person sees it more than once');
       assert(!bt.includes('やめる分'), 'the stopped message was delivered');
       assert((await envelopesFor(b.hex)).length === 1, `envelopes for B: ${(await envelopesFor(b.hex)).length}`);
@@ -1682,7 +1705,7 @@ async function main() {
       assert(!(await text(u.page)).includes('▾'), 'the title switches accounts with only one account');
 
       // Add a second account from settings; going back is offered while adding.
-      await u.page.getByText('設定', { exact: true }).click();
+      await openSettings(u.page);
       await waitText(u.page, '使用中');
       await button(u.page, 'アカウントを追加').click();
       await button(u.page, 'キャンセル').waitFor();
@@ -1715,7 +1738,7 @@ async function main() {
       await waitOpen(u.page);
       await waitText(u.page, 'あい ▾');
       // B still has its message after switching back from settings.
-      await u.page.getByText('設定', { exact: true }).click();
+      await openSettings(u.page);
       await u.page.getByRole('button', { name: 'びい', exact: true }).click();
       await waitOpen(u.page);
       await u.page.getByText('知らない人から').click();
@@ -1741,7 +1764,7 @@ async function main() {
       for (const k of ['tegami.device', 'tegami.messages', 'tegami.myName', 'tegami.setupAt'])
         assert(after[k] === before[k], `${k} changed when the account list was made`);
 
-      await u.page.getByText('設定', { exact: true }).click();
+      await openSettings(u.page);
       await button(u.page, 'アカウントを追加').click();
       await button(u.page, 'キャンセル').click();
       await waitOpen(u.page);
@@ -1798,12 +1821,12 @@ async function main() {
         }
         throw new Error(`expected ${n} registrations, got ${list.length}`);
       };
-      await u.page.getByText('設定', { exact: true }).click();
+      await openSettings(u.page);
       await sw().click();
       const [first] = await until(1);
       await button(u.page, 'アカウントを追加').click();
       await begin();
-      await u.page.getByText('設定', { exact: true }).click();
+      await openSettings(u.page);
       assert(!(await sw().isChecked()), 'the second account shows notifications on before turning them on');
       await sw().click();
       const both = await until(2);
@@ -1813,9 +1836,9 @@ async function main() {
       assert(kept.pubkey === first.pubkey, 'the wrong account was removed');
       assert((await u.page.evaluate(() => window.__unsubscribed)) === 0, 'the shared subscription was stopped while the first account uses it');
       // The first account (no name: shown by its short id) still has notifications on.
-      await u.page.getByRole('button', { name: /^npub1[^（]*$/ }).click();
+      await (NARROW ? u.page : u.page.getByRole('main')).getByRole('button', { name: /^npub1[^（]*$/ }).click();
       await waitOpen(u.page);
-      await u.page.getByText('設定', { exact: true }).click();
+      await openSettings(u.page);
       assert(await sw().isChecked(), 'the first account lost its notifications');
       await sw().click();
       await until(0);
@@ -1888,7 +1911,7 @@ async function main() {
       await u.page.goto(ORIGIN + '/');
       await waitOpen(u.page);
       await u.page.getByRole('button', { name: /びー ▾/ }).getByLabel('未読 4件').waitFor({ timeout: 5000 });
-      await u.page.getByText('設定', { exact: true }).click();
+      await openSettings(u.page);
       // Tapping the notification: the service worker leaves the request in IndexedDB and sends a
       // message. An app that was asleep (iPhone) misses the message and reads the request when it
       // is on screen again; here the request is left and only the screen coming back is signalled.
@@ -1932,10 +1955,10 @@ async function main() {
       await waitOpen(u.page);
       await waitText(u.page, 'えー ▾');
       // Seen: back on B, A is no longer marked.
-      await u.page.getByText('設定', { exact: true }).click();
+      await openSettings(u.page);
       await u.page.getByRole('button', { name: 'びー', exact: true }).click();
       await waitOpen(u.page);
-      await u.page.getByText('設定', { exact: true }).click();
+      await openSettings(u.page);
       await u.page.getByRole('button', { name: 'えー', exact: true }).waitFor();
       // Tapping it while the app is closed opens /?a=<key>: that account, and the address goes back to /.
       await push({ t: 'message', p: aKey });
@@ -2103,13 +2126,13 @@ async function main() {
       assert(await button(a.page, 'ブロックして通報').isVisible(), 'no block-and-report button');
       await shot(a.page, 'block-dialog', '「ブロック」を押した時に出る確認のダイアログ');
       await button(a.page, 'ブロック').click();
-      await button(a.page, 'ブロック解除').waitFor();
+      await button(infoArea(a.page), 'ブロック解除').waitFor();
       // The unblock dialog on the detail screen also works (cancel keeps them blocked).
-      await button(a.page, 'ブロック解除').click();
+      await button(infoArea(a.page), 'ブロック解除').click();
       await waitText(a.page, 'ブロックを解除しますか？');
       await waitText(a.page, 'この相手からのメッセージを受け取るようになります。');
       await button(a.page, 'キャンセル').click();
-      await button(a.page, '戻る').click();
+      await closeInfo(a.page);
       await waitText(a.page, 'ブロック中');
       assert(await button(a.page, 'ブロック解除').isVisible(), 'no unblock button on blocked chat bar');
       assert(!(await a.page.getByPlaceholder('メッセージ').count()), 'input shown while blocked');
@@ -2126,8 +2149,8 @@ async function main() {
       await button(a.page, 'ブロック').click();
       await waitText(a.page, 'びーをブロックしますか？');
       await button(a.page, 'ブロック').click();
-      await button(a.page, 'ブロック解除').waitFor();
-      await button(a.page, '戻る').click();
+      await button(infoArea(a.page), 'ブロック解除').waitFor();
+      await closeInfo(a.page);
       await waitText(a.page, 'ブロック中');
 
       await b.page.getByPlaceholder('メッセージ').fill('ブロック中の手紙');
@@ -2143,7 +2166,7 @@ async function main() {
       await noText(a.page, 'ブロック中の手紙', 1000);
       assert(!(await text(a.page)).includes('びー'), 'blocked chat still in the list');
 
-      await a.page.getByText('設定', { exact: true }).click();
+      await openSettings(a.page);
       await waitText(a.page, 'ブロックリスト');
       await waitText(a.page, 'びー');
       await a.page.getByText('ブロックリスト').scrollIntoViewIfNeeded();
@@ -2251,7 +2274,7 @@ async function main() {
       await c.page.goto(ORIGIN + '/');
       await waitText(b.page, 'あゆみ');
       await waitText(c.page, 'あゆみ');
-      assert(await b.page.getByTestId('avatar-initial').isVisible(), 'expected initial placeholder before avatar');
+      assert(await b.page.getByTestId('avatar-initial').last().isVisible(), 'expected initial placeholder before avatar');
 
       await a.page.goto(ORIGIN + '/settings');
       await waitText(a.page, 'アイコンを変更');
@@ -2271,11 +2294,11 @@ async function main() {
       const chooser = a.page.waitForEvent('filechooser');
       await button(a.page, 'アイコンを変更').click();
       await (await chooser).setFiles({ name: 'avatar.png', mimeType: 'image/png', buffer: png });
-      await a.page.getByTestId('avatar-img').waitFor({ timeout: 15000 });
+      await a.page.getByTestId('avatar-img').last().waitFor({ timeout: 15000 });
       await button(a.page, 'アイコンを削除').waitFor({ timeout: 5000 });
       await shot(a.page, 'settings-avatar-set', '設定の画面のアイコン（設定した後）');
 
-      await b.page.getByTestId('avatar-img').waitFor({ timeout: 15000 });
+      await b.page.getByTestId('avatar-img').first().waitFor({ timeout: 15000 });
       await b.page.waitForFunction(() => {
         const i = document.querySelector('[data-testid="avatar-img"]');
         return i && i.tagName === 'IMG' && i.complete && i.naturalWidth === 256 && i.naturalHeight === 256;
@@ -2296,12 +2319,12 @@ async function main() {
       // Stranger C never receives A's profile card and keeps the initial placeholder.
       await c.page.waitForTimeout(1000);
       assert((await c.page.getByTestId('avatar-img').count()) === 0, 'stranger C saw the avatar');
-      assert(await c.page.getByTestId('avatar-initial').isVisible(), 'stranger C lost the initial placeholder');
+      assert(await c.page.getByTestId('avatar-initial').last().isVisible(), 'stranger C lost the initial placeholder');
       assert((await envelopesFor(c.hex)).length === 0, 'stranger C received a profile card');
 
       await button(a.page, 'アイコンを削除').click();
-      await a.page.getByTestId('avatar-initial').waitFor({ timeout: 10000 });
-      await b.page.getByTestId('avatar-initial').waitFor({ timeout: 15000 });
+      await a.page.getByTestId('avatar-initial').last().waitFor({ timeout: 10000 });
+      await b.page.getByTestId('avatar-initial').last().waitFor({ timeout: 15000 });
       assert((await b.page.getByTestId('avatar-img').count()) === 0, 'avatar still shown after removal');
       for (const u of [a, b, c]) await u.context.close();
     });
@@ -2355,7 +2378,7 @@ async function main() {
       await waitText(u.page, 'QRコードを読み取ると、友だち追加の画面が開きます。');
       assert(await button(u.page, '画像から読み取る').isVisible(), 'no QR image picker button');
       await shot(u.page, 'qr-scan', '友だち追加の画面の「QRコードスキャン」タブ');
-      await button(u.page, '戻る').click();
+      await button(u.page, NARROW ? '戻る' : 'トーク').click();
       await waitOpen(u.page);
       await u.context.close();
     });
@@ -2922,6 +2945,82 @@ async function main() {
       assert((await b.page.getByTestId('quote').innerText()).replace(/\s+/g, ' ').includes('ばんり 右スワイプする手紙'), 'quote not received');
       for (const u of [a, b]) await u.context.close();
     });
+    if (!NARROW) await test('Desktop layout: rail, list and chat side by side; Alt+arrows, Ctrl+K, Esc, hover actions, Shift+Enter, dropping a file', async () => {
+      const a = await person(browser, 'あゆみ');
+      const b = await person(browser, 'ばんり');
+      const c = await person(browser, 'ちあき');
+      await befriend(b, a);
+      await befriend(c, a);
+      await befriend(a, b);
+      await befriend(a, c);
+      await b.page.getByPlaceholder('メッセージ').fill('ばんりからの手紙');
+      await button(b.page, '送る').click();
+      await waitText(a.page, 'ばんりからの手紙');
+
+      // The list stays beside the open chat, with the open chat marked.
+      await a.page.goto(ORIGIN + '/');
+      await waitOpen(a.page);
+      for (const name of ['トーク', '友だち', '友だち追加', '設定']) assert(await button(a.page, name).isVisible(), `no ${name} on the rail`);
+      await a.page.getByText('ばんり', { exact: true }).first().click();
+      await a.page.getByPlaceholder('メッセージ').waitFor();
+      const marked = a.page.locator('[aria-current="page"]', { hasText: 'ばんり' });
+      assert(await marked.count(), 'the open chat is not marked in the list');
+      const listBox = await a.page.getByRole('navigation').boundingBox();
+      const inputBox = await a.page.getByPlaceholder('メッセージ').boundingBox();
+      assert(listBox && inputBox && listBox.x + listBox.width <= inputBox.x, `list and chat overlap: ${JSON.stringify({ listBox, inputBox })}`);
+      assert(!(await button(a.page, '戻る').count()), 'a back button in the desktop chat');
+
+      // Alt+↑ and Alt+↓ move between chats; Ctrl+K goes to the search field.
+      const titleNow = () => a.page.getByTestId('chat-title').innerText();
+      const before = await titleNow();
+      await a.page.keyboard.press('Alt+ArrowDown');
+      await a.page.waitForFunction((t) => document.querySelector('[data-testid="chat-title"]')?.textContent !== t, before);
+      const after = await titleNow();
+      assert(['ばんり', 'ちあき'].includes(after) && after !== before, `Alt+↓ went to ${after}`);
+      await a.page.keyboard.press('Alt+ArrowUp');
+      await a.page.waitForFunction((t) => document.querySelector('[data-testid="chat-title"]')?.textContent === t, before);
+      await a.page.keyboard.press('Control+k');
+      assert(await a.page.getByRole('searchbox').evaluate((el) => el === document.activeElement), 'Ctrl+K did not focus the search field');
+
+      // The details open beside the chat and Esc closes them.
+      await button(a.page, 'メニュー').click();
+      await infoArea(a.page).getByText('トークを削除').waitFor();
+      assert(await a.page.getByPlaceholder('メッセージ').isVisible(), 'the chat is hidden by the details');
+      await a.page.keyboard.press('Escape');
+      await a.page.getByRole('complementary').waitFor({ state: 'detached', timeout: 5000 });
+
+      // The mouse over a message shows its quick actions; リプライ starts a reply, Esc cancels it.
+      await a.page.getByText('ばんりからの手紙', { exact: true }).hover();
+      await a.page.getByTestId('hover-tools').waitFor();
+      await a.page.getByTestId('hover-tools').getByRole('button', { name: 'リプライ' }).click();
+      await a.page.getByTestId('replying').waitFor();
+      await a.page.keyboard.press('Escape');
+      await a.page.getByTestId('replying').waitFor({ state: 'detached', timeout: 5000 });
+
+      // Enter sends, Shift+Enter starts a new line.
+      const box = a.page.getByPlaceholder('メッセージ');
+      await box.click();
+      await a.page.keyboard.type('一行目');
+      await a.page.keyboard.press('Shift+Enter');
+      await a.page.keyboard.type('二行目');
+      assert((await box.inputValue()) === '一行目\n二行目', `Shift+Enter: ${JSON.stringify(await box.inputValue())}`);
+      await a.page.keyboard.press('Enter');
+      await waitText(b.page, '二行目');
+
+      // A file dropped on the chat asks first, then goes out as a file.
+      await box.evaluate((el) => {
+        const dt = new DataTransfer();
+        dt.items.add(new File(['hello'], 'メモ.txt', { type: 'text/plain' }));
+        for (const type of ['dragenter', 'dragover', 'drop']) el.dispatchEvent(new DragEvent(type, { dataTransfer: dt, bubbles: true, cancelable: true }));
+      });
+      await waitText(a.page, 'ばんりに送りますか？');
+      await waitText(a.page, 'メモ.txt');
+      await a.page.getByTestId('dialog').getByRole('button', { name: '送る', exact: true }).click();
+      await waitText(b.page, 'メモ.txt');
+      await shot(a.page, 'desktop', 'PC の広い画面');
+      for (const u of [a, b, c]) await u.context.close();
+    });
+
     await test('Call button: the header offers voice and video, as LINE', async () => {
       const a = await person(browser, 'あん');
       const b = await person(browser, 'べん');

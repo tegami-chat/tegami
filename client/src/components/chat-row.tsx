@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { openChat, type PressState } from '@/lib/layout';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
@@ -22,6 +22,8 @@ export function ChatRow({
   last,
   mark,
   unread = 0,
+  selected = false,
+  inset = false,
   onLongPress,
 }: {
   peer: string;
@@ -31,6 +33,10 @@ export function ChatRow({
   last?: Message;
   mark?: string;
   unread?: number;
+  /** The chat open beside the list (desktop layout). */
+  selected?: boolean;
+  /** Desktop list column: rounded rows set in from the edges, without dividing lines. */
+  inset?: boolean;
   onLongPress?: () => void;
 }) {
   const c = usePalette();
@@ -46,12 +52,13 @@ export function ChatRow({
       : {};
   return (
     <Pressable
-      style={s.row}
-      onPress={() => router.push({ pathname: '/chat/[peer]', params: { peer } })}
+      style={({ hovered }: PressState) => [s.row, inset && s.rowInset, hovered && s.hovered, selected && s.selected]}
+      aria-current={selected ? 'page' : undefined}
+      onPress={() => openChat(peer)}
       onLongPress={onLongPress}
       {...webMenu}>
-      <Avatar name={mark ?? name} file={avatar} size={36} />
-      <View style={s.body}>
+      <Avatar name={mark ?? name} file={avatar} size={inset ? 40 : 36} />
+      <View style={[s.body, inset && s.bodyInset]}>
         <View style={s.top}>
           <Text style={s.name} numberOfLines={1}>
             {name}
@@ -88,6 +95,10 @@ export function Badge({ count }: { count: number }) {
 const styles = (c: Palette) =>
   StyleSheet.create({
     row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
+    rowInset: { marginHorizontal: 8, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, minHeight: 64 },
+    bodyInset: { borderBottomWidth: 0, paddingBottom: 0 },
+    hovered: { backgroundColor: c.hover },
+    selected: { backgroundColor: c.selected },
     body: { flex: 1, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.line, paddingBottom: 12 },
     top: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
     name: { flex: 1, fontSize: 16, fontWeight: '600', color: c.text },
