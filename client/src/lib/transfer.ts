@@ -32,7 +32,7 @@ export const arrival = { moved: false };
 // reload, the history or a shared screen does not keep it.
 let linkKey: Uint8Array | null = null;
 export function captureLinkKey() {
-  if (typeof window === 'undefined' || window.location.pathname !== '/link' || !window.location.hash) return;
+  if (typeof window === 'undefined' || !window.location || window.location.pathname !== '/link' || !window.location.hash) return;
   linkKey = transferKey(window.location.hash.slice(1));
   // The router remembered the address when it loaded and writes it back once it has
   // drawn the first screen, so take the key out again after that.

@@ -1,3 +1,5 @@
+// First: the iPhone and Android apps fill in what the browser has (localStorage, crypto).
+import '@/lib/platform-setup';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Stack, router, type ErrorBoundaryProps, type Href } from 'expo-router';
 import { useEffect } from 'react';

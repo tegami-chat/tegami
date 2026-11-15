@@ -47,7 +47,7 @@ export function report(error: unknown) {
 
 export function setCrashReports(on: boolean) {
   enabled = on;
-  if (installed || typeof window === 'undefined') return;
+  if (installed || typeof window === 'undefined' || typeof window.addEventListener !== 'function') return; // the apps: TODO ErrorUtils
   installed = true;
   window.addEventListener('error', (ev) => report(ev.error ?? ev.message));
   window.addEventListener('unhandledrejection', (ev) => report(ev.reason));

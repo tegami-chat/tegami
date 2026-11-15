@@ -50,7 +50,7 @@ function share() {
  * account. The address is put back to / at once (the key is public, but it need not stay).
  */
 function openFromAddress() {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !window.location) return; // the apps have no address
   const a = new URLSearchParams(window.location.search).get('a');
   if (a === null) return;
   const entry = index.list.find((x) => x.pubkey === a);
