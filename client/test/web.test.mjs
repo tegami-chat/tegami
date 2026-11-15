@@ -1070,6 +1070,73 @@ async function main() {
       for (const u of [b, c]) await u.context.close();
     });
 
+    await test('Call relay (TURN): used when the relay hands out credentials, STUN only when it does not; the voice goes first', async () => {
+      const devTurn = (on) => fetch(`http://localhost:${RELAY_PORT}/_turn`, { method: 'POST', body: JSON.stringify({ on }) });
+      const asked = async () => (await (await fetch(`http://localhost:${RELAY_PORT}/_turn`)).json()).asked;
+      const servers = (page) => page.evaluate(() => window.__pcs.at(-1)?.getConfiguration().iceServers ?? []);
+      const hasTurn = (list) => list.some((s) => [s.urls].flat().some((u) => u.startsWith('turn:')) && s.username === 'dev-user' && s.credential === 'dev-pass');
+      // No TURN on the relay: the call connects with STUN only.
+      await devTurn(false);
+      const a = await person(browser, 'あい');
+      const b = await person(browser, 'ぶん');
+      await befriend(b, a);
+      await befriend(a, b);
+      await button(a.page, '通話').click();
+      await button(a.page, '音声通話').click();
+      await button(b.page, '応答').click();
+      await waitConnected(a.page);
+      await waitConnected(b.page);
+      for (const p of [a.page, b.page]) {
+        const list = await servers(p);
+        assert(list.length && !hasTurn(list) && list.every((s) => [s.urls].flat().every((u) => u.startsWith('stun:'))), `STUN only expected: ${JSON.stringify(list)}`);
+      }
+      // The microphone is asked for with echo cancellation, noise suppression and gain control.
+      const c = await a.page.evaluate(() => window.__pcs.at(-1).getSenders().find((s) => s.track?.kind === 'audio').track.getConstraints());
+      assert(c.echoCancellation === true && c.noiseSuppression === true && c.autoGainControl === true, `audio constraints: ${JSON.stringify(c)}`);
+      // The voice gets high priority on the network.
+      const prio = await a.page.evaluate(async () => {
+        const s = window.__pcs.at(-1).getSenders().find((x) => x.track?.kind === 'audio');
+        for (let i = 0; i < 20 && s.getParameters().encodings?.[0]?.priority !== 'high'; i++) await new Promise((r) => setTimeout(r, 100));
+        return s.getParameters().encodings?.[0]?.priority;
+      });
+      assert(prio === 'high', `audio priority: ${prio}`);
+      await button(a.page, '通話を終了').click();
+      await waitText(b.page, '通話が終了しました');
+      assert((await asked()).length === 0, 'credentials handed out while TURN was off');
+
+      // TURN on: both sides get credentials and put them in the peer connection; the call still connects.
+      await devTurn(true);
+      const c2 = await person(browser, 'ちよ');
+      const d = await person(browser, 'でん');
+      await befriend(d, c2);
+      await befriend(c2, d);
+      await button(c2.page, '通話').click();
+      await button(c2.page, 'ビデオ通話').click();
+      await waitText(d.page, 'ビデオ通話');
+      await button(d.page, '応答').click();
+      await waitConnected(c2.page);
+      await waitConnected(d.page);
+      for (const p of [c2.page, d.page]) assert(hasTurn(await servers(p)), `no TURN in ${JSON.stringify(await servers(p))}`);
+      const list = await asked();
+      assert(list.includes(c2.hex) && list.includes(d.hex), `asked: ${JSON.stringify(list)}`);
+      // The video keeps its frame rate when the network gets tight.
+      const pref = await c2.page.evaluate(() => window.__pcs.at(-1).getSenders().find((s) => s.track?.kind === 'video')?.getParameters().degradationPreference);
+      assert(pref === 'maintain-framerate' || pref === undefined, `degradationPreference: ${pref}`);
+      await button(c2.page, '通話を終了').click();
+      await waitText(d.page, '通話が終了しました');
+      // A second call reuses the credentials (they last hours): the relay is not asked again.
+      const before = (await asked()).length;
+      await button(c2.page, '通話').click();
+      await button(c2.page, '音声通話').click();
+      await button(d.page, '応答').click();
+      await waitConnected(d.page);
+      assert(hasTurn(await servers(c2.page)) && hasTurn(await servers(d.page)), 'second call without TURN');
+      assert((await asked()).length === before, `asked again: ${(await asked()).length - before}`);
+      await button(c2.page, '通話を終了').click();
+      await devTurn(false);
+      for (const u of [a, b, c2, d]) await u.context.close();
+    });
+
     await test('A late signal (written more than a minute ago) does not ring; a fresh one does', async () => {
       const b = await person(browser, 'ぼたん');
       const x = generateSecretKey();

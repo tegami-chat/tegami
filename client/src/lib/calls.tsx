@@ -17,14 +17,14 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { k, load, save } from './storage';
 import { useTegami, type Signal } from './tegami';
+import { STUN, within } from './turn';
 
-// STUN only, for now. There is no TURN server yet, so calls can fail when both sides are
-// behind strict NATs (symmetric NAT, some mobile carriers, some company or hotel networks):
-// the two browsers then cannot reach each other directly and nothing relays the media.
-// When a TURN server is set up, add it here, e.g.
-//   { urls: ['turn:turn.tegami.chat:3478', 'turns:turn.tegami.chat:5349'], username, credential }
-// (TURN credentials should be short-lived and fetched from the relay, not built in.)
-export const ICE_SERVERS: RTCIceServer[] = [{ urls: 'stun:stun.cloudflare.com:3478' }];
+// Where the two browsers look for a path: STUN, plus TURN (Cloudflare Realtime) when the
+// relay hands out credentials (lib/turn.ts). TURN relays the media when both sides sit behind
+// strict NATs (symmetric NAT, some mobile carriers, company or hotel networks); the media
+// stays encrypted end to end, TURN only forwards it.
+/** How long a call waits for TURN credentials before going on with STUN only. */
+const TURN_WAIT_MS = 1500;
 
 /** How long a call rings before it gives up. */
 export const RING_MS = 45_000;
@@ -57,6 +57,8 @@ type Live = {
   video: boolean;
   role: 'caller' | 'callee';
   offer?: string;
+  /** The ICE servers for this call, asked for when it starts or rings. */
+  ice?: Promise<RTCIceServer[]>;
   pc?: RTCPeerConnection;
   stream?: MediaStream;
   pendingIce: RTCIceCandidateInit[];
@@ -100,10 +102,41 @@ function newId() {
   return [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Sound: echo cancellation, noise suppression and automatic gain, asked for by name (browsers
+// mostly turn them on by default, but not every one for every device), in mono: a call is
+// one voice, and a second channel only costs bandwidth. Video: 720p at up to 30 frames a second.
+export const AUDIO: MediaTrackConstraints = { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 };
+const VIDEO: MediaTrackConstraints = { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 30 } };
+
 function media(video: boolean) {
-  return navigator.mediaDevices.getUserMedia(
-    video ? { audio: true, video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } } : { audio: true },
-  );
+  return navigator.mediaDevices.getUserMedia(video ? { audio: AUDIO, video: VIDEO } : { audio: AUDIO });
+}
+
+/**
+ * When the network gets tight, the voice matters more than the picture: the sound sender gets
+ * high priority (WebRTC RTCRtpEncodingParameters.priority / networkPriority), and the video
+ * keeps its frame rate and lowers its resolution first (degradationPreference), so faces and
+ * lips keep moving. Browsers that do not support a setting ignore it.
+ */
+async function tuneSenders(pc: RTCPeerConnection) {
+  for (const sender of pc.getSenders()) {
+    const kind = sender.track?.kind;
+    if (!kind) continue;
+    try {
+      const p = sender.getParameters() as RTCRtpSendParameters & { degradationPreference?: string };
+      if (!p.encodings?.length) p.encodings = [{}];
+      for (const e of p.encodings as (RTCRtpEncodingParameters & { priority?: string; networkPriority?: string })[]) {
+        if (kind === 'audio') {
+          e.priority = 'high';
+          e.networkPriority = 'high';
+        }
+      }
+      if (kind === 'video') p.degradationPreference = 'maintain-framerate';
+      await sender.setParameters(p);
+    } catch {
+      // Not supported here: the browser's own defaults stay.
+    }
+  }
 }
 
 function gathered(pc: RTCPeerConnection, ms: number) {
@@ -143,7 +176,7 @@ function saveDone(id: string) {
 }
 
 export function CallProvider({ children }: { children: React.ReactNode }) {
-  const { me, contacts, blocked, sendSignal, onSignal, recordCall } = useTegami();
+  const { me, contacts, blocked, sendSignal, callIceServers, onSignal, recordCall } = useTegami();
   const [view, setView] = useState<CallView>(IDLE);
   const live = useRef<Live | null>(null);
   const endedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -208,10 +241,11 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   /** A peer connection with my media on it, wired to this call. */
   const makePc = useCallback(
-    (l: Live, stream: MediaStream) => {
-      const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    (l: Live, stream: MediaStream, iceServers: RTCIceServer[]) => {
+      const pc = new RTCPeerConnection({ iceServers });
       l.pc = pc;
       for (const t of stream.getTracks()) pc.addTrack(t, stream);
+      void tuneSenders(pc);
       pc.ontrack = (e) => {
         const remote = e.streams[0] ?? new MediaStream([e.track]);
         if (live.current === l) setView((v) => ({ ...v, remote }));
@@ -287,6 +321,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       // Ask for the microphone first, inside the tap (iPhone allows it only then).
       const asked = media(video);
       const l: Live = { id: newId(), peer, video, role: 'caller', pendingIce: [], outIce: [], descSent: false, timers: [] };
+      // Asked for at the same time as the microphone, so it seldom adds to the wait.
+      l.ice = within(callIceServers(), TURN_WAIT_MS, STUN);
       live.current = l;
       clearTimeout(endedTimer.current);
       setView({ ...IDLE, phase: 'outgoing', peer, video });
@@ -300,7 +336,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         if (live.current !== l) return stream.getTracks().forEach((t) => t.stop());
         l.stream = stream;
         setView((v) => ({ ...v, local: stream }));
-        const pc = makePc(l, stream);
+        const servers = await l.ice!;
+        if (live.current !== l) return;
+        const pc = makePc(l, stream, servers);
         await pc.setLocalDescription(await pc.createOffer());
         await gathered(pc, GATHER_MS);
         if (live.current !== l) return;
@@ -315,7 +353,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         );
       })().catch(() => end(l, 'つながりませんでした', false));
     },
-    [supported, makePc, signal, end, failedMedia],
+    [supported, makePc, signal, end, failedMedia, callIceServers],
   );
 
   const accept = useCallback(() => {
@@ -336,7 +374,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       if (live.current !== l) return stream.getTracks().forEach((t) => t.stop());
       l.stream = stream;
       setView((v) => ({ ...v, local: stream }));
-      const pc = makePc(l, stream);
+      const servers = await within(l.ice ?? callIceServers(), TURN_WAIT_MS, STUN);
+      if (live.current !== l) return;
+      const pc = makePc(l, stream, servers);
       await pc.setRemoteDescription({ type: 'offer', sdp: l.offer });
       addIce(l, l.pendingIce.splice(0));
       await pc.setLocalDescription(await pc.createAnswer());
@@ -350,7 +390,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       signal(l, { t: 'hangup' });
       end(l, 'つながりませんでした');
     });
-  }, [makePc, signal, end, addIce, failedMedia, waitForConnection]);
+  }, [makePc, signal, end, addIce, failedMedia, waitForConnection, callIceServers]);
 
   const decline = useCallback(() => {
     const l = live.current;
@@ -471,13 +511,15 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           timers: [],
         };
         live.current = n;
+        // Ready by the time the call is answered.
+        n.ice = callIceServers();
         clearTimeout(endedTimer.current);
         setView({ ...IDLE, phase: 'incoming', peer: s.from, video: n.video });
         // The ring stops on its own; the caller gives up at the same time.
         n.timers.push(setTimeout(() => end(n, undefined, true), RING_MS));
       }
     });
-  }, [me, onSignal, sendSignal, recordCall, end, signal, addIce, waitForConnection, markDone]);
+  }, [me, onSignal, sendSignal, recordCall, end, signal, addIce, waitForConnection, markDone, callIceServers]);
 
   // Blocking someone while their call is on screen stops it quietly.
   useEffect(() => {
