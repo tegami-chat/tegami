@@ -2049,8 +2049,8 @@ async function main() {
       await p.goto(ORIGIN + '/settings');
       await button(p, 'AI の権限').click();
       await waitText(p, 'AI の使用');
-      await waitText(p, 'AI友だち');
-      await waitText(p, 'AIモデル');
+      await waitText(p, 'AI 友だち');
+      await waitText(p, 'AI モデル');
       await waitText(p, '友だち');
       for (const name of ['友だちの一覧を見る', 'トークを読む', '確認なしで送る'])
         assert(!(await sw(name).isChecked()), `${name} starts on`);
