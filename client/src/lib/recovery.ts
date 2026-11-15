@@ -30,7 +30,7 @@ import { getPublicKey } from 'nostr-tools/pure';
 
 import { k, load, remove, save } from './storage';
 import { relayHttp, signedFetch } from './relay-http';
-import { cleanBundle, type Bundle } from './transfer';
+import { cleanBundle, fitBundle, type Bundle } from './transfer';
 import { fromB64u, toB64u } from './vault';
 
 // 32 symbols: digits and capital letters without 0, 1, I and O, which are easy to mix up.
@@ -104,7 +104,9 @@ async function aes(key: Uint8Array<ArrayBuffer>) {
 
 /** Encrypts the account for the relay. The id is bound in as additional data. */
 export async function sealBackup(keys: RecoveryKeys, bundle: Bundle): Promise<string> {
-  const json = JSON.stringify(bundle);
+  // The body is base64 (4/3) of the padded plaintext, and the relay takes 64 KB: stamps
+  // that do not fit are left out (the oldest first).
+  const json = JSON.stringify(fitBundle(bundle, 46_000));
   const padded = json + ' '.repeat(PAD - (enc.encode(json).length % PAD));
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: enc.encode(keys.id) }, await aes(keys.key), enc.encode(padded));

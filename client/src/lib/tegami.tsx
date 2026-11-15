@@ -12,11 +12,11 @@ import { gateAi } from './ai-permissions';
 import { clearNewMark } from './sw-store';
 import { createDeviceVault, deviceVaultAvailable, openDeviceVault, type DeviceVault } from './device-vault';
 import { setCrashReports } from './crash';
-import { MAX_FILE_BYTES, encryptAndUpload, fileFromRumor, fileTags, forgetFile, isStampRumor, keepSent, keptFile, openFile, shrinkAvatar, shrinkImage, shrinkStamp, validFileName, validFileRef, type FileRef } from './files';
+import { MAX_FILE_BYTES, deleteStampFile, encryptAndUpload, fileFromRumor, fileTags, forgetFile, isKeptStamp, isStampRumor, keepSent, keptFile, openFile, shrinkAvatar, shrinkImage, shrinkStamp, uploadStamp, validFileName, validFileRef, type FileRef } from './files';
 import { backoff, loadOutbox, publishOne, saveOutbox, type Outgoing } from './outbox';
 import { k, load, remove, save } from './storage';
 import { replaceAiPermissions, useAiPermissions } from './ai-permissions';
-import { bundleSecret, sendTransfer, type Bundle } from './transfer';
+import { bundleSecret, cleanStamps, sendTransfer, type Bundle } from './transfer';
 import { disablePush, enablePush, refreshPush, type PushState } from './push';
 import { SIGNAL_KIND, freshSignal, wrapQuiet, wrapSignal } from './signal';
 import { BackupGoneError, type BackupRef, clearLocal, deleteBackup, deriveKeys, loadLocal, makeCode, putBackup, recoveryOnHere, saveLocal, takeRestoredKeys } from './recovery';
@@ -70,7 +70,13 @@ export const PROFILE_KIND = 10100;
 export type Contact = { pubkey: string; name: string; model?: string; avatar?: FileRef };
 
 /** A stamp in my list (`k('stamps')`): an uploaded file and when it was uploaded (unix seconds). */
+// uploadedAt: only stamps from before the stamp storage (2026-11-15) have it; they are moved
+// into the stamp storage when the app opens (see keepStamps).
 export type Stamp = FileRef & { uploadedAt?: number };
+/** My stamp list, sent quietly to my own key so my other devices show the same list (Tegami's own kind). */
+export const STAMPS_KIND = 10101;
+/** How many recently used stamps the stamp panel shows first. */
+export const RECENT_STAMPS = 8;
 
 /** A group chat (NIP-17): a fixed set of people. A different set is a different chat. */
 export type Group = { id: string; name: string; members: string[] };
@@ -181,15 +187,19 @@ type TegamiState = {
   sendVoice: (peer: string, audio: Blob, duration: number, replyTo?: string) => Promise<void>;
   /** Sends an already-uploaded photo or file to another chat without uploading again. */
   forwardFile: (peer: string, file: FileRef, stamp?: boolean) => Promise<void>;
-  /** My stamps, kept per account on this device. */
+  /** My stamps, in my order. Kept per account, and the same on all my devices. */
   stamps: Stamp[];
+  /** My stamps I sent most recently on this device, newest first. */
+  recentStamps: Stamp[];
+  /** Moves a stamp to the front of my stamps. */
+  moveStampToFront: (sha256: string) => void;
   /** Shrinks an image, encrypts and uploads it, and adds it to my stamps. */
   makeStamp: (image: Blob) => Promise<Stamp>;
-  /** Adds someone else's stamp to my stamps, fetching and keeping the image now. */
-  addStamp: (file: FileRef, uploadedAt?: number) => Promise<void>;
-  /** Removes a stamp from my stamps only. */
+  /** Adds someone else's stamp to my stamps: the image is fetched and kept again as my own. */
+  addStamp: (file: FileRef) => Promise<void>;
+  /** Removes a stamp from my stamps (and from the stamp storage). */
   removeStamp: (sha256: string) => void;
-  /** Sends a stamp, uploading it again first if its upload is older than 20 days. */
+  /** Sends a stamp (one from before the stamp storage is moved there first). */
   sendStamp: (peer: string, stamp: Stamp, replyTo?: string) => Promise<void>;
   /** Turns notifications for this device on or off. Returns the new state. */
   setNotifications: (on: boolean) => Promise<PushState>;
@@ -377,6 +387,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const myAvatarRef = useRef<FileRef | null>(null);
   myAvatarRef.current = myAvatar;
   const [stamps, setStamps] = useState<Stamp[]>([]);
+  const stampsRef = useRef<Stamp[]>([]);
+  stampsRef.current = stamps;
+  const [stampsUsed, setStampsUsed] = useState<Record<string, number>>({});
   const profileAt = useRef(new Map<string, number>());
   const lastProfileAt = useRef(0);
   const [crashReports, setCrashReportsState] = useState(false);
@@ -426,6 +439,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       myAvatarRef.current = loadedAvatar;
       setMyAvatarState(loadedAvatar);
       setStamps(load<Stamp[]>(k('stamps'), []));
+      setStampsUsed(load<Record<string, number>>(k('stampsUsed'), {}));
       const loadedBlocked = load<string[]>(k('blocked'), []);
       blockedRef.current = loadedBlocked;
       setBlocked(loadedBlocked);
@@ -662,6 +676,18 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
             if (d) for (const fn of draftListeners.current) fn({ ai: rumor.pubkey, ...d });
             return;
           }
+          if (rumor.kind === STAMPS_KIND) {
+            // My list from my other device. The newest list wins.
+            if (rumor.pubkey !== me) return;
+            if (rumor.created_at <= load<number>(k('stampsAt'), 0)) return;
+            const list = cleanStamps((JSON.parse(rumor.content) as { stamps?: unknown })?.stamps);
+            save(k('stampsAt'), rumor.created_at);
+            save(k('stamps'), list);
+            stampsRef.current = list;
+            setStamps(list);
+            for (const st of list) void openFile(`stamp:${st.sha256}`, st).catch(() => {});
+            return;
+          }
           if (rumor.kind === PROFILE_KIND) {
             if (!contactsRef.current.some((c) => c.pubkey === rumor.pubkey)) return;
             if (rumor.created_at < (profileAt.current.get(rumor.pubkey) ?? 0)) return;
@@ -854,6 +880,16 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     save(k('contacts'), moved.contacts);
     save(k('groups'), moved.groups);
     save(k('blocked'), moved.blocked ?? []);
+    save(k('stamps'), moved.stamps ?? []);
+    // Lists my other devices sent before this move are older than the one it brought.
+    save(k('stampsAt'), Math.floor(Date.now() / 1000));
+    stampsRef.current = moved.stamps ?? [];
+    setStamps(moved.stamps ?? []);
+    // Keep the images on this device now, while the file server still has them. One that is
+    // gone shows as expired in the stamp list and can be removed there.
+    for (const st of moved.stamps ?? []) {
+      void openFile(`stamp:${st.sha256}`, st).catch(() => {});
+    }
     setMyNameState(moved.myName);
     setContacts(moved.contacts);
     setGroups(moved.groups);
@@ -911,7 +947,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
 
   const makeTransferLink = useCallback(async () => {
     if (!secret || !pool.current || !authRef.current) throw new Error('not open');
-    const bundle: Bundle = { v: 1, secretHex: bytesToHex(secret), myName, contacts, groups, blocked, ai: aiPermissions };
+    // Stamps from before the stamp storage are moved there first, so the new device can fetch them.
+    const fresh = await keepStampsRef.current();
+    const bundle: Bundle = { v: 1, secretHex: bytesToHex(secret), myName, contacts, groups, blocked, ai: aiPermissions, stamps: fresh };
     return sendTransfer(pool.current, RELAYS, authRef.current, bundle, globalThis.location?.origin ?? APP_ORIGIN);
   }, [secret, myName, contacts, groups, blocked, aiPermissions]);
 
@@ -1323,79 +1361,139 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     [secret, me, build, saveBox, addMessage, flush],
   );
 
+  /** Sends my stamp list quietly to my own key; my other devices take it if it is newer. */
+  const sendStampsToMe = useCallback(
+    async (list: Stamp[], at: number) => {
+      if (!secret || !me || !pool.current) return;
+      const content = JSON.stringify({ stamps: list.map(({ uploadedAt: _, ...ref }) => ref) });
+      const rumor = nip59.createRumor({ kind: STAMPS_KIND, content, tags: [['p', me]], created_at: at }, secret);
+      await publishOne(pool.current, RELAYS, wrapQuiet(rumor, secret, me), authRef.current ?? undefined);
+      save(k('stampsSent'), { at, time: Math.floor(Date.now() / 1000) });
+    },
+    [secret, me],
+  );
+
+  /** Saves my new stamp list and sends it to my other devices. */
+  const commitStamps = useCallback(
+    (next: Stamp[]) => {
+      stampsRef.current = next;
+      setStamps(next);
+      save(k('stamps'), next);
+      const at = Math.max(Math.floor(Date.now() / 1000), load<number>(k('stampsAt'), 0) + 1);
+      save(k('stampsAt'), at);
+      void sendStampsToMe(next, at).catch(() => {});
+    },
+    [sendStampsToMe],
+  );
+
   const makeStamp = useCallback(
     async (image: Blob): Promise<Stamp> => {
       if (!secret) throw new Error('not open');
       const small = await shrinkStamp(image);
       const dim = `${small.width}x${small.height}`;
-      const ref = await encryptAndUpload(small.bytes, small.type, secret, dim);
-      await keepSent(`stamp:${ref.sha256}`, small.bytes, small.type);
-      const entry: Stamp = { ...ref, uploadedAt: Math.floor(Date.now() / 1000) };
-      setStamps((prev) => {
-        const next = [...prev.filter((s) => s.sha256 !== entry.sha256), entry];
-        save(k('stamps'), next);
-        return next;
-      });
+      const entry: Stamp = await uploadStamp(small.bytes, small.type, secret, dim);
+      await keepSent(`stamp:${entry.sha256}`, small.bytes, small.type);
+      commitStamps([...stampsRef.current.filter((s) => s.sha256 !== entry.sha256), entry]);
       return entry;
     },
-    [secret],
+    [secret, commitStamps],
   );
 
   const addStamp = useCallback(
-    // Someone else uploaded it, maybe weeks ago (files are deleted after 30 days): 0 means
-    // "unknown", so the first time I send it, it is uploaded again as my own copy.
-    async (file: FileRef, uploadedAt = 0) => {
-      const { uploadedAt: _, ...clean } = file as Stamp;
-      const entry: Stamp = { ...clean, uploadedAt };
-      setStamps((prev) => {
-        if (prev.some((s) => s.sha256 === clean.sha256)) return prev;
-        const next = [...prev, entry];
-        save(k('stamps'), next);
-        return next;
-      });
-      const blob = await openFile(`stamp:${clean.sha256}`, clean);
-      await keepSent(`stamp:${clean.sha256}`, new Uint8Array(await blob.arrayBuffer()), clean.type);
+    // Someone else's copy can disappear when they remove it, so it is kept again as my own
+    // (encrypted for my account, in the stamp storage).
+    async (file: FileRef) => {
+      if (!secret) throw new Error('not open');
+      const { uploadedAt: _, ...theirs } = file as Stamp;
+      const blob = await openFile(`stamp:${theirs.sha256}`, theirs);
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      const entry: Stamp = await uploadStamp(bytes, theirs.type, secret, theirs.dim);
+      await keepSent(`stamp:${entry.sha256}`, bytes, entry.type);
+      if (stampsRef.current.some((s) => s.sha256 === entry.sha256)) return;
+      commitStamps([...stampsRef.current, entry]);
     },
-    [],
+    [secret, commitStamps],
   );
 
-  const removeStamp = useCallback((sha256: string) => {
-    setStamps((prev) => {
-      if (!prev.some((s) => s.sha256 === sha256)) return prev;
-      const next = prev.filter((s) => s.sha256 !== sha256);
-      save(k('stamps'), next);
-      return next;
-    });
-  }, []);
+  const removeStamp = useCallback(
+    (sha256: string) => {
+      const gone = stampsRef.current.find((s) => s.sha256 === sha256);
+      if (!gone) return;
+      commitStamps(stampsRef.current.filter((s) => s.sha256 !== sha256));
+      if (secret && isKeptStamp(gone)) void deleteStampFile(sha256, secret).catch(() => {});
+    },
+    [secret, commitStamps],
+  );
+
+  const moveStampToFront = useCallback(
+    (sha256: string) => {
+      const st = stampsRef.current.find((s) => s.sha256 === sha256);
+      if (!st || stampsRef.current[0]?.sha256 === sha256) return;
+      commitStamps([st, ...stampsRef.current.filter((s) => s.sha256 !== sha256)]);
+    },
+    [commitStamps],
+  );
+
+  // A stamp from before the stamp storage lives on the 30-day file server: it is moved into
+  // the stamp storage from this device's copy, and my list points to the new place. A stamp
+  // whose image is gone everywhere stays as it is (the list shows it as expired).
+  const keepStamp = useCallback(
+    async (stamp: Stamp): Promise<Stamp> => {
+      if (!secret) throw new Error('not open');
+      if (isKeptStamp(stamp)) return stamp;
+      const blob = (await keptFile(`stamp:${stamp.sha256}`)) ?? (await openFile(`stamp:${stamp.sha256}`, stamp));
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      const kept: Stamp = await uploadStamp(bytes, stamp.type, secret, stamp.dim);
+      await keepSent(`stamp:${kept.sha256}`, bytes, kept.type);
+      commitStamps(stampsRef.current.map((s) => (s.sha256 === stamp.sha256 ? kept : s)));
+      return kept;
+    },
+    [secret, commitStamps],
+  );
+
+  /** Moves every stamp from before the stamp storage into it. Returns my list. */
+  const keepStamps = useCallback(async (): Promise<Stamp[]> => {
+    const out: Stamp[] = [];
+    for (const st of stampsRef.current) out.push(await keepStamp(st).catch(() => st));
+    return out;
+  }, [keepStamp]);
+  const keepStampsRef = useRef(keepStamps);
+  keepStampsRef.current = keepStamps;
+
+  // When the app opens: move old stamps into the stamp storage, and send my list to my other
+  // devices again if it has not gone out yet, or if it went out 20 days ago or more (the
+  // relay keeps envelopes 30 days, so a device that was away still finds it).
+  useEffect(() => {
+    if (!secret || !me) return;
+    void (async () => {
+      await keepStampsRef.current();
+      const at = load<number>(k('stampsAt'), 0);
+      const sent = load<{ at: number; time: number } | null>(k('stampsSent'), null);
+      const stale = !sent || sent.at !== at || Date.now() / 1000 - sent.time >= 20 * 24 * 60 * 60;
+      if (at && stale) await sendStampsToMe(stampsRef.current, at).catch(() => {});
+    })();
+  }, [secret, me, sendStampsToMe]);
+
+  const recentStamps = useMemo(
+    () =>
+      stamps
+        .filter((s) => stampsUsed[s.sha256])
+        .sort((a, b) => stampsUsed[b.sha256] - stampsUsed[a.sha256])
+        .slice(0, RECENT_STAMPS),
+    [stamps, stampsUsed],
+  );
 
   const sendStamp = useCallback(
     async (peer: string, stamp: Stamp, replyTo?: string) => {
       if (!secret || !me) throw new Error('not open');
       if (!isGroup(peer) && blockedRef.current.includes(peer)) return;
       const now = Math.floor(Date.now() / 1000);
-      const uploadedSec =
-        stamp.uploadedAt === undefined
-          ? 0
-          : stamp.uploadedAt > 1e11
-            ? Math.floor(stamp.uploadedAt / 1000)
-            : stamp.uploadedAt;
-      let file: FileRef;
-      if (now - uploadedSec >= 20 * 24 * 60 * 60) {
-        const blob = (await keptFile(`stamp:${stamp.sha256}`)) ?? (await openFile(`stamp:${stamp.sha256}`, stamp));
-        const bytes = new Uint8Array(await blob.arrayBuffer());
-        const fresh = await encryptAndUpload(bytes, stamp.type, secret, stamp.dim);
-        await keepSent(`stamp:${fresh.sha256}`, bytes, fresh.type);
-        const updated: Stamp = { ...fresh, uploadedAt: now };
-        setStamps((prev) => {
-          const next = prev.map((s) => (s.sha256 === stamp.sha256 ? updated : s));
-          save(k('stamps'), next);
-          return next;
-        });
-        file = fresh;
-      } else {
-        const { uploadedAt: _, ...clean } = stamp;
-        file = clean;
-      }
+      const { uploadedAt: _, ...file }: Stamp = await keepStamp(stamp);
+      setStampsUsed((prev) => {
+        const next = { ...prev, [file.sha256]: Date.now() };
+        save(k('stampsUsed'), next);
+        return next;
+      });
       const reply = replyTo ? replyTag(15, replyTo) : [];
       const { rumor, wraps } = build(peer, 15, file.url, [...fileTags(file, true), ...reply], now);
       const kept = await keptFile(`stamp:${file.sha256}`);
@@ -1414,7 +1512,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       });
       void flush();
     },
-    [secret, me, build, saveBox, addMessage, flush],
+    [secret, me, build, saveBox, addMessage, flush, keepStamp],
   );
 
   const deleteChat = useCallback(
@@ -1585,8 +1683,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
   const currentBundle = useCallback(
-    (sk: Uint8Array): Bundle => ({ v: 1, secretHex: bytesToHex(sk), myName, contacts, groups, blocked, ai: aiPermissions }),
-    [myName, contacts, groups, blocked, aiPermissions],
+    (sk: Uint8Array): Bundle => ({ v: 1, secretHex: bytesToHex(sk), myName, contacts, groups, blocked, ai: aiPermissions, stamps }),
+    [myName, contacts, groups, blocked, aiPermissions, stamps],
   );
 
   const makeRecoveryCode = useCallback(async () => {
@@ -1712,6 +1810,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     sendVoice,
     forwardFile,
     stamps,
+    recentStamps,
+    moveStampToFront,
     makeStamp,
     addStamp,
     removeStamp,

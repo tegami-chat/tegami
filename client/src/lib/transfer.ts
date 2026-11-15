@@ -17,7 +17,8 @@ import { finalizeEvent, generateSecretKey, getPublicKey, type EventTemplate, typ
 import { hexToBytes } from 'nostr-tools/utils';
 
 import { cleanAiPermissions, type AiPermissions } from './ai-permissions';
-import type { Contact, Group } from './tegami';
+import { validFileRef } from './files';
+import type { Contact, Group, Stamp } from './tegami';
 import { fromB64u, toB64u } from './vault';
 
 export const TRANSFER_SECONDS = 10 * 60;
@@ -55,6 +56,11 @@ export function takeLinkKey() {
 // blocked: the people this account blocked (added 2026-11-13; older bundles have none).
 // ai: what AI friends may do (added 2026-11-15; older bundles have none, so every AI stays off).
 // The log of the AI gate's decisions is not carried: it records what happened on one device.
+// stamps: my stamps (added 2026-11-15; older bundles have none). Only what opens each image
+// travels (its address on the file server, key, nonce and hash, about 360 bytes): an image
+// is 10 to 150 KB, and a NIP-44 message holds at most 64 KB, a recovery backup 64 KB.
+// The images stay in the relay's stamp storage, which keeps them until I remove them
+// (stamps from before it are moved there first: keepStamps in tegami.tsx).
 export type Bundle = {
   v: 1;
   secretHex: string;
@@ -63,7 +69,25 @@ export type Bundle = {
   groups: Group[];
   blocked?: string[];
   ai?: AiPermissions;
+  stamps?: Stamp[];
 };
+
+export const MAX_BUNDLE_STAMPS = 100;
+
+/**
+ * Leaves out the oldest stamps until the bundle's JSON is at most `maxBytes`, so a long
+ * stamp list never makes the move or the backup fail. Name, contacts and groups always stay.
+ */
+export function fitBundle(bundle: Bundle, maxBytes: number): Bundle {
+  const size = (b: Bundle) => new TextEncoder().encode(JSON.stringify(b)).length;
+  let stamps = (bundle.stamps ?? []).slice(-MAX_BUNDLE_STAMPS);
+  let out: Bundle = { ...bundle, stamps };
+  while (stamps.length && size(out) > maxBytes) {
+    stamps = stamps.slice(Math.max(1, Math.ceil(stamps.length / 10)));
+    out = { ...bundle, stamps };
+  }
+  return out;
+}
 
 type Auth = (t: EventTemplate) => Promise<VerifiedEvent>;
 
@@ -72,7 +96,8 @@ export function sealTransfer(bundle: Bundle, now = Math.floor(Date.now() / 1000)
   const t = generateSecretKey();
   const tPub = getPublicKey(t);
   const sender = generateSecretKey();
-  const content = nip44.encrypt(JSON.stringify(bundle), nip44.getConversationKey(sender, tPub));
+  // NIP-44 encrypts at most 65535 bytes.
+  const content = nip44.encrypt(JSON.stringify(fitBundle(bundle, 65_000)), nip44.getConversationKey(sender, tPub));
   const envelope = finalizeEvent(
     { kind: 1059, created_at: now, tags: [['p', tPub], ['expiration', String(now + TRANSFER_SECONDS)]], content },
     sender,
@@ -151,7 +176,22 @@ export function cleanBundle(raw: unknown): Bundle | null {
     groups: Array.isArray(bundle.groups) ? bundle.groups : [],
     blocked: Array.isArray(bundle.blocked) ? bundle.blocked.filter((p) => typeof p === 'string' && /^[0-9a-f]{64}$/.test(p)) : [],
     ai: cleanAiPermissions(bundle.ai),
+    stamps: cleanStamps(bundle.stamps),
   };
+}
+
+export function cleanStamps(raw: unknown): Stamp[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const out: Stamp[] = [];
+  for (const item of raw.slice(-MAX_BUNDLE_STAMPS)) {
+    const ref = validFileRef(item);
+    if (!ref || !/^[0-9a-f]{64}$/.test(ref.sha256) || !ref.type.startsWith('image/') || seen.has(ref.sha256)) continue;
+    seen.add(ref.sha256);
+    const at = (item as { uploadedAt?: unknown }).uploadedAt;
+    out.push({ ...ref, uploadedAt: typeof at === 'number' && Number.isFinite(at) && at >= 0 ? Math.floor(at) : 0 });
+  }
+  return out;
 }
 
 export function bundleSecret(bundle: Bundle) {

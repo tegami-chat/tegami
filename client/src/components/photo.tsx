@@ -94,10 +94,27 @@ export function Stamp({
 
   const uri = loaded?.sha === file.sha256 ? loaded.uri : null;
   if (error) {
-    return (
-      <Text style={[styles.note, { color: c.muted }]}>
+    const note = (
+      <Text style={[styles.note, { color: c.muted }]} testID={`${testID}-unavailable`}>
         {error === 'gone' ? 'スタンプの保存期間（30日）が過ぎました' : 'スタンプを開けませんでした'}
       </Text>
+    );
+    if (!onLongPress) return note;
+    // In my stamp list (a stamp moved from another device whose image is gone): long press removes it.
+    return (
+      <Pressable
+        style={{ maxWidth: max }}
+        onLongPress={onLongPress}
+        {...(Platform.OS === 'web'
+          ? {
+              onContextMenu: (e: { preventDefault: () => void }) => {
+                e.preventDefault();
+                onLongPress();
+              },
+            }
+          : {})}>
+        {note}
+      </Pressable>
     );
   }
   const webMenu =
