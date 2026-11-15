@@ -10,6 +10,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import * as nip17 from 'nostr-tools/nip17';
 import * as nip19 from 'nostr-tools/nip19';
+import * as nip44 from 'nostr-tools/nip44';
 import * as nip59 from 'nostr-tools/nip59';
 import { SimplePool, useWebSocketImplementation } from 'nostr-tools/pool';
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
@@ -20,6 +21,44 @@ useWebSocketImplementation(WebSocket);
 
 export const RELAYS = (process.env.TEGAMI_RELAYS ?? 'wss://relay.tegami.chat').split(',');
 export const APP_ORIGIN = 'https://app.tegami.chat';
+
+// Reply drafts (client/src/lib/ai-draft.ts): the owner's app hands over one friend's chat
+// only when its AI permissions allow it; the AI answers with a draft for the owner to send.
+export const DRAFT_ASK_KIND = 25060;
+export const DRAFT_KIND = 25061;
+/** Seconds an ask or a draft lives on the relay; older asks are not answered. */
+export const DRAFT_TTL = 600;
+const DRAFT_TEXT_MAX = 2000;
+
+/** Reads an ask's content, or null when it is not a well-formed ask. */
+export function parseAsk(content) {
+  try {
+    const a = JSON.parse(content);
+    if (a?.v !== 1 || typeof a.friend !== 'string' || typeof a.me !== 'string' || !Array.isArray(a.messages)) return null;
+    const messages = a.messages
+      .filter((m) => m && typeof m.text === 'string' && typeof m.mine === 'boolean')
+      .slice(-50)
+      .map((m) => ({ mine: m.mine, text: m.text.slice(0, DRAFT_TEXT_MAX) }));
+    return { friend: a.friend.slice(0, 60), me: a.me.slice(0, 60), messages };
+  } catch {
+    return null;
+  }
+}
+
+/** Seals a rumor for `to` and wraps it with a NIP-40 expiration, so the relay drops it soon. */
+export function wrapExpiring(rumor, secret, to, ttl = DRAFT_TTL, now = Math.floor(Date.now() / 1000)) {
+  const seal = nip59.createSeal(rumor, secret, to);
+  const key = generateSecretKey();
+  return finalizeEvent(
+    {
+      kind: 1059,
+      created_at: now,
+      tags: [['p', to], ['expiration', String(now + ttl)]],
+      content: nip44.encrypt(JSON.stringify(seal), nip44.getConversationKey(key, to)),
+    },
+    key,
+  );
+}
 
 // ---------- files ----------
 
@@ -83,6 +122,9 @@ export class Agent {
     this.messages = read(this.dir, 'messages.json', []);
     this.state = read(this.dir, 'state.json', { lastRead: 0, replied: [] });
     this.listeners = new Set();
+    // Asks for a reply draft. Kept in memory only: they hold a friend's words, never written to disk.
+    this.askListeners = new Set();
+    this.seenAsks = new Set();
     this.pool = null;
   }
 
@@ -178,6 +220,12 @@ export class Agent {
     } catch {
       return;
     }
+    if (rumor.kind === DRAFT_ASK_KIND) {
+      if (this.seenAsks.has(rumor.id)) return;
+      this.seenAsks.add(rumor.id);
+      for (const l of this.askListeners) l({ id: rumor.id, from: rumor.pubkey, at: rumor.created_at, content: rumor.content });
+      return;
+    }
     if (rumor.kind !== 14) return;
     // The chat is everyone except this agent (author and p tags), sorted and joined
     // with ','. One person means a 1:1 chat; more means a group (same as the app).
@@ -198,6 +246,15 @@ export class Agent {
     const wraps = [peer, this.pubkey].map((to) => nip59.createWrap(nip59.createSeal(rumor, this.secret, to), to));
     await Promise.any(wraps.flatMap((w) => this.pool.publish(RELAYS, w, { onauth: this.onauth })));
     this.receive(wraps[1]);
+    return rumor.id;
+  }
+
+  /** Sends a reply draft to the one who asked (`re` is the ask's id). It expires like the ask. */
+  async sendDraft(to, re, text) {
+    await this.connect();
+    const content = JSON.stringify({ re, text: String(text).slice(0, DRAFT_TEXT_MAX) });
+    const rumor = nip59.createRumor({ kind: DRAFT_KIND, content, tags: [['p', to], ['e', re]], created_at: Math.floor(Date.now() / 1000) }, this.secret);
+    await Promise.any(this.pool.publish(RELAYS, wrapExpiring(rumor, this.secret, to), { onauth: this.onauth }));
     return rumor.id;
   }
 

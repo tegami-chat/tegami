@@ -36,11 +36,16 @@ export type AiPermissions = {
   friends: Record<string, Switches>;
 };
 
+/** What an AI was given to read: how many messages, from when to when (unix seconds). */
+export type AiRange = { count: number; from: number; to: number };
+
 export type AiLogEntry = {
   at: number;
   ai: string;
   action: AiAction;
   friend?: string;
+  /** For reading: which messages were handed to the AI. */
+  range?: AiRange;
   allowed: boolean;
   /** Which layer stopped it, when it was stopped. */
   stoppedBy?: Layer;
@@ -50,19 +55,31 @@ export type Layer = 'all' | 'model' | 'ai' | 'friend' | 'stranger' | 'needs';
 const EMPTY: AiPermissions = { all: {}, models: {}, ais: {}, friends: {} };
 const LOG_MAX = 1000;
 
-let cache: { key: string; value: AiPermissions } | null = null;
+// The stored text is read every time and compared with the cached one: a switch turned off in
+// another tab of this browser stops the gate here at once, not after a reload.
+let cache: { key: string; raw: string | null; value: AiPermissions } | null = null;
 const listeners = new Set<() => void>();
+
+function rawOf(key: string) {
+  try {
+    return globalThis.localStorage?.getItem(key) ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export function getAiPermissions(): AiPermissions {
   const key = k('ai.permissions');
-  if (cache?.key !== key) cache = { key, value: { ...EMPTY, ...load<AiPermissions>(key, EMPTY) } };
+  const raw = rawOf(key);
+  if (cache?.key !== key || cache.raw !== raw) cache = { key, raw, value: { ...EMPTY, ...load<AiPermissions>(key, EMPTY) } };
   return cache.value;
 }
 
 function put(next: AiPermissions) {
   const key = k('ai.permissions');
-  cache = { key, value: next };
   save(key, next);
+  // Without storage (private mode) raw stays null and the switches live in memory.
+  cache = { key, raw: rawOf(key), value: next };
   for (const l of listeners) l();
 }
 
@@ -102,6 +119,8 @@ export type AiRequest = {
   action: AiAction;
   /** Whose chat the action touches (friend actions only). */
   friend?: string;
+  /** For reading: the messages that will be handed over, kept in the log. */
+  range?: AiRange;
 };
 
 /**
@@ -129,6 +148,7 @@ export function gateAi(r: AiRequest, isFriend: (pubkey: string) => boolean): boo
     ai: r.ai,
     action: r.action,
     ...(r.friend ? { friend: r.friend } : {}),
+    ...(r.range && !stoppedBy ? { range: r.range } : {}),
     allowed: !stoppedBy,
     ...(stoppedBy ? { stoppedBy } : {}),
   };

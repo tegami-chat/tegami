@@ -101,6 +101,67 @@ test('the gate writes every decision to the log', () => {
   assert.deepEqual([log[0].allowed, log[1].allowed, log[1].stoppedBy], [true, false, 'stranger']);
 });
 
+test('the log keeps which messages were handed over, only when allowed', () => {
+  const range = { count: 3, from: 100, to: 200 };
+  gateAi({ ai: AI, model: MODEL, action: 'read', friend: TEST_B, range }, isFriend);
+  gateAi({ ai: AI, model: MODEL, action: 'read', friend: STRANGER, range }, isFriend);
+  const log = JSON.parse(store.get('tegami.ai.log'));
+  assert.deepEqual(log.at(-2).range, range);
+  assert.equal(log.at(-1).range, undefined);
+});
+
+test('a switch turned off in another tab stops the gate at once', () => {
+  assert.equal(gateAi({ ai: AI, model: MODEL, action: 'read', friend: TEST_B }, isFriend), true);
+  // Another tab of this browser writes the stored switches; this tab's cache is not told.
+  const stored = JSON.parse(store.get('tegami.ai.permissions'));
+  stored.friends[TEST_B].read = false;
+  store.set('tegami.ai.permissions', JSON.stringify(stored));
+  assert.equal(gateAi({ ai: AI, model: MODEL, action: 'read', friend: TEST_B }, isFriend), false);
+  setAiSwitch({ layer: 'friend', id: TEST_B }, 'read', true);
+});
+
+// ---------- reply drafts (src/lib/ai-draft.ts) ----------
+
+const D = await import('../src/lib/ai-draft.ts');
+
+test('a draft needs both "read" and "draft" allowed, and never for a stranger', () => {
+  const ai = { pubkey: AI, model: MODEL };
+  setAiSwitch({ layer: 'all' }, 'draft', false);
+  assert.equal(D.mayDraft(getAiPermissions(), ai, TEST_B, isFriend), false);
+  setAiSwitch({ layer: 'all' }, 'draft', true);
+  assert.equal(D.mayDraft(getAiPermissions(), ai, TEST_B, isFriend), false); // friend layer still off
+  setAiSwitch({ layer: 'friend', id: TEST_B }, 'draft', true);
+  assert.equal(D.mayDraft(getAiPermissions(), ai, TEST_B, isFriend), true);
+  setAiSwitch({ layer: 'friend', id: STRANGER }, 'draft', true);
+  assert.equal(D.mayDraft(getAiPermissions(), ai, STRANGER, isFriend), false);
+  setAiSwitch({ layer: 'friend', id: TEST_B }, 'read', false);
+  assert.equal(D.mayDraft(getAiPermissions(), ai, TEST_B, isFriend), false);
+  setAiSwitch({ layer: 'friend', id: TEST_B }, 'read', true);
+});
+
+test('the ask holds the latest texts of that one chat only', () => {
+  const ME = 'e'.repeat(64);
+  const all = [
+    ...Array.from({ length: 40 }, (_, i) => ({ peer: TEST_B, from: i % 2 ? ME : TEST_B, text: `t${i}`, at: 1000 + i })),
+    { peer: TEST_B, from: TEST_B, text: '', at: 2000, file: {} },
+    { peer: TEST_B, from: TEST_B, text: '通話', at: 2001, call: {} },
+    { peer: STRANGER, from: STRANGER, text: 'ほかのトーク', at: 2002 },
+  ];
+  const { ask, range } = D.draftAsk(all, TEST_B, ME, { friend: 'テストB', me: 'テストA' });
+  assert.equal(ask.messages.length, D.AI_DRAFT_MESSAGES);
+  assert.equal(ask.messages[0].text, 't10');
+  assert.equal(ask.messages.at(-1).text, 't39');
+  assert.ok(!ask.messages.some((m) => m.text === 'ほかのトーク' || m.text === '通話'));
+  assert.deepEqual(range, { count: 30, from: 1010, to: 1039 });
+  assert.equal(ask.messages[1].mine, true);
+});
+
+test('a malformed draft is refused', () => {
+  assert.equal(D.parseDraft('{"re":"x","text":"a"}'), null);
+  assert.equal(D.parseDraft('not json'), null);
+  assert.deepEqual(D.parseDraft(JSON.stringify({ re: 'f'.repeat(64), text: 'ok' })), { re: 'f'.repeat(64), text: 'ok' });
+});
+
 test('"stop all AI" stops everything at once', () => {
   stopAllAi();
   for (const action of P.AI_ACTIONS) assert.equal(check({ action, friend: TEST_B }), 'all');
