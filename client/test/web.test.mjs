@@ -2485,7 +2485,8 @@ async function main() {
       /** Sends one ask to the owner's app (expires like the app's own asks). Returns its id. */
       const ask = async (kind, data, from = sk) => {
         const now = Math.floor(Date.now() / 1000);
-        const rumor = nip59.createRumor({ kind, content: JSON.stringify({ v: 1, ...data }), tags: [['p', owner.hex]], created_at: now }, from);
+        // Two asks with the same words in the same second would be the same rumor (one id): a nonce keeps them apart.
+        const rumor = nip59.createRumor({ kind, content: JSON.stringify({ v: 1, ...data, n: Math.random() }), tags: [['p', owner.hex]], created_at: now }, from);
         const seal = nip59.createSeal(rumor, from, owner.hex);
         const key = generateSecretKey();
         const wrap = finalizeEvent(
@@ -2634,9 +2635,9 @@ async function main() {
       await waitText(p, '話してよいほかの人のAI');
       await waitText(p, 'テストCのAI');
       await shot(p, 'ai-peer-list', 'AI友だちの画面。話してよいほかの人のAIと、許可をやめる');
-      const before = (await inboxOf(ai.sk)).filter((r) => r.kind === 25067).length;
       await button(p, '許可をやめる').click();
-      await inboxOf(ai.sk, (rs) => rs.filter((r) => r.kind === 25067).length > before && JSON.parse(rs.filter((r) => r.kind === 25067).pop().content).until === 0);
+      // Taking it back is not an answer to an ask: it has no re, and says until 0 for that AI.
+      await inboxOf(ai.sk, (rs) => rs.some((r) => r.kind === 25067 && !JSON.parse(r.content).re && JSON.parse(r.content).peer === other && JSON.parse(r.content).until === 0));
       await noText(p, 'テストCのAI', 500);
       await a.context.close();
     });

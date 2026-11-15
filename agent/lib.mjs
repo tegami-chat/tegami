@@ -373,12 +373,15 @@ export class Agent {
     return rumor.id;
   }
 
-  /** Sends an ask to the owner's app and waits for its answer (null after `ms`). */
+  /**
+   * Sends an ask to the owner's app and waits for its answer (null after `ms`). A random n keeps two
+   * asks with the same words in the same second apart (they would be one rumor, handled once).
+   */
   async askOwner(kind, data, ms = 60_000) {
     const owner = this.owner;
     if (!owner) throw new Error('No owner yet. Run: tegami-agent add "<your invite link>" --trust');
     await this.connect();
-    const rumor = nip59.createRumor({ kind, content: JSON.stringify({ v: 1, ...data }), tags: [['p', owner.pubkey]], created_at: Math.floor(Date.now() / 1000) }, this.secret);
+    const rumor = nip59.createRumor({ kind, content: JSON.stringify({ v: 1, ...data, n: Math.random() }), tags: [['p', owner.pubkey]], created_at: Math.floor(Date.now() / 1000) }, this.secret);
     const answer = new Promise((resolve) => {
       const t = setTimeout(() => {
         this.waiters.delete(rumor.id);
