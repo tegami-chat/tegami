@@ -407,7 +407,7 @@ export class Relay extends DurableObject<Env> {
       return new Response('invalid json', { status: 400, headers: CORS });
     }
     if (a?.action === 'reports' && a.pubkey === undefined) return Response.json(this.reports.latest(), { headers: CORS });
-    if (a?.action === 'stats') return Response.json(this.stats.recent(400), { headers: CORS });
+    if (a?.action === 'stats') return Response.json(this.stats.recent(183), { headers: CORS });
     if (a?.action === 'members') return Response.json(this.members.counts(), { headers: CORS });
     if (typeof a?.action !== 'string' || typeof a.pubkey !== 'string' || !/^[0-9a-f]{64}$/.test(a.pubkey)) {
       return new Response('invalid', { status: 400, headers: CORS });

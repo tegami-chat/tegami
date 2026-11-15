@@ -24,12 +24,14 @@
 
 const P = 10;
 const M = 1 << P; // 1024 registers
-const KEEP_DAYS = 400;
+// Daily rows are kept for six months: enough to build the published weeks, and no more.
+const KEEP_DAYS = 183;
 
 export type DayTotals = { day: string; envelopes: number; files: number; file_bytes: number; logins: number; keys: number };
 export type WeekTotals = { week: string; envelopes: number; files: number; file_mb: number; logins: number; keys: number };
 
-const PUBLISH_WEEKS = 26;
+// The last 24 weeks are published. 24 weeks plus the week in progress is 175 days, inside KEEP_DAYS.
+const PUBLISH_WEEKS = 24;
 
 /** Rounds up to a multiple of 10; 0 to 9 become 0. */
 export function publishable(n: number): number {
@@ -166,7 +168,7 @@ export class Stats {
 
 export const STATS_DESCRIPTION = {
   about:
-    'Weekly totals across everyone, only for weeks that are over (weeks start on Monday, UTC). Every number is rounded up to a multiple of 10, and 0 to 9 are all reported as 0. There are no numbers for any one account.',
+    'Weekly totals across everyone, for the last 24 weeks that are over (weeks start on Monday, UTC). Every number is rounded up to a multiple of 10, and 0 to 9 are all reported as 0. There are no numbers for any one account.',
   counted: {
     envelopes: 'message envelopes accepted (a message to N people is N + 1 envelopes)',
     files: 'files accepted',

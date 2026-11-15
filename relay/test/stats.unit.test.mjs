@@ -78,5 +78,18 @@ check(`two weeks ago: 12 -> 20 everywhere (${JSON.stringify(by[twoWeeksAgo])})`,
 check('every published number is a multiple of 10', weeks.every((w) => ['envelopes', 'files', 'file_mb', 'logins', 'keys'].every((k) => w[k] % 10 === 0)));
 check('the exact daily rows are still there for the operator', stats.recent(400).some((d) => d.envelopes === 50));
 
+// Six months: a daily row older than 183 days is deleted when a new day starts.
+const sql2 = sqlStorage();
+const stats2 = new Stats(sql2);
+const ins2 = (d) => sql2.exec('INSERT INTO stats (day, envelopes, files, file_bytes, logins, hll) VALUES (?, 20, 0, 0, 20, ?)', d, new Uint8Array(1024));
+ins2(day(-190));
+ins2(day(-170));
+for (let w = 1; w <= 30; w++) ins2(day(-7 * w));
+stats2.add('logins'); // makes today's row, which forgets old rows
+const days2 = stats2.recent(1000).map((d) => d.day);
+check('a daily row older than six months is deleted', !days2.includes(day(-190)));
+check('a daily row within six months is kept', days2.includes(day(-170)));
+check(`at most 24 weeks are published (${stats2.weekly().length})`, stats2.weekly().length === 24);
+
 console.log(failures ? `${failures} failed` : 'all passed');
 process.exit(failures ? 1 : 0);
