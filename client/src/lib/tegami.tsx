@@ -104,6 +104,8 @@ export type Group = {
   past?: string[];
   /** I am no longer in it (removed by someone). */
   left?: true;
+  /** The line the chat shows for the state I have (to show it again if it was lost). */
+  note?: string;
 };
 
 /** The chat id for a set of other participants. */
@@ -1327,22 +1329,29 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       const prev = groupsRef.current.find((g) => g.id === room);
       const isFriend = (pk: string) => contactsRef.current.some((c) => c.pubkey === pk);
       const done = applyGroupState(prev, st, rumor.pubkey, rumor.created_at, rumor.id, me, isFriend);
-      if (!done) {
-        const since = earlierJoin(prev, st, rumor.pubkey, rumor.created_at, me);
-        if (prev && since !== null) putGroup({ ...prev, since });
-        return null;
-      }
-      putGroup(done.group);
-      if (done.group.avatar) void openFile(`avatar:${done.group.avatar.sha256}`, done.group.avatar).catch(() => {});
-      addMessage({
+      const notice = (text: string): Message => ({
         id: rumor.id,
         from: rumor.pubkey,
         peer: room,
-        text: changeText(done.change, groupNameOf),
+        text,
         at: rumor.created_at,
         notice: true,
         ...(pending ? { pending: 'sending' as const } : {}),
       });
+      if (!done) {
+        const since = earlierJoin(prev, st, rumor.pubkey, rumor.created_at, me);
+        if (prev && since !== null) putGroup({ ...prev, since });
+        // The group was saved but its line was not (the page closed in between): the relay's
+        // replay brings the same state again, so the line comes back.
+        if (prev?.vid === rumor.id && prev.note && !deletedRef.current.has(rumor.id) && !messagesRef.current.some((m) => m.id === rumor.id)) {
+          addMessage(notice(prev.note));
+        }
+        return null;
+      }
+      const text = changeText(done.change, groupNameOf);
+      putGroup({ ...done.group, note: text });
+      if (done.group.avatar) void openFile(`avatar:${done.group.avatar.sha256}`, done.group.avatar).catch(() => {});
+      addMessage(notice(text));
       return room;
     },
     [me, putGroup, addMessage, groupNameOf],

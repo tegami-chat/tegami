@@ -1016,6 +1016,13 @@ async function main() {
       await d.page.getByPlaceholder('メッセージ').waitFor();
       await d.page.waitForTimeout(1500);
       assert(!(await text(d.page)).includes('前の話'), 'D sees a message from before being added');
+      // The page closed after the group was saved but before its line was: the relay's replay brings the line back.
+      await d.page.evaluate(() => {
+        const list = JSON.parse(localStorage.getItem('tegami.messages')).filter((m) => !m.notice);
+        localStorage.setItem('tegami.messages', JSON.stringify(list));
+      });
+      await d.page.reload();
+      await waitText(d.page, 'あきらがだいをグループに追加しました。');
       // The same chat goes on: what A writes now reaches B and D in the chat they already have.
       await openGroup(a, '家族');
       await sendText(a, 'あとの話');
