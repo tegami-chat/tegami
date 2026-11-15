@@ -2158,6 +2158,13 @@ async function main() {
         const drafted = await composer().inputValue();
         assert(drafted === 'echo: テストB: あした映画いく？\nあおい: いいね', `the draft: ${JSON.stringify(drafted)}`);
         assert((await toAi()) === before + 1, 'not exactly one ask went to the AI');
+        // The composer grows to show every line of the draft, up to a limit, and shrinks back.
+        const inputBox = () => p.evaluate(() => {
+          const el = document.querySelector('textarea[placeholder="メッセージ"]');
+          return { h: el.offsetHeight, hidden: el.scrollHeight > el.clientHeight };
+        });
+        const two = await inputBox();
+        assert(two.h >= 64 && !two.hidden, `a two-line draft: ${JSON.stringify(two)}`);
         await shot(p, 'ai-draft-filled', 'AI の下書きが入力欄に入った。送るボタンを押すまで送られない');
 
         // The draft is not sent: it reaches neither the friend nor this chat.
@@ -2167,8 +2174,15 @@ async function main() {
         assert(!mine.some((m) => m.text.startsWith('echo:')), 'the draft was added as a message');
         assert(!(await envelopesFor(b.hex)).some((e) => e.created_at >= Math.floor(Date.now() / 1000) - 5), 'something new went to the friend');
 
-        // The second ask asks nothing first.
+        await composer().fill(Array.from({ length: 12 }, (_, i) => `行${i + 1}`).join('\n'));
+        const many = await inputBox();
+        assert(many.h <= 140 && many.h >= 130, `twelve lines stop growing at the limit: ${JSON.stringify(many)}`);
+        await shot(p, 'composer-many-lines', '12行を入れた時。入力欄は決まった高さで止まり、中を動かして読む');
         await composer().fill('');
+        const empty = await inputBox();
+        assert(empty.h === 44, `an empty composer goes back to one line: ${JSON.stringify(empty)}`);
+
+        // The second ask asks nothing first.
         await openPlus();
         await button(p, ASK).click();
         assert((await p.getByTestId('dialog').count()) === 0, 'the notice showed twice');

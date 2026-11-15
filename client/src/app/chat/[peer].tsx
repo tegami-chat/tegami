@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, router, useIsFocused, useLocalSearchParams, type Href } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
@@ -22,6 +22,8 @@ const AUDIO_TYPES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
 const SWIPE_REPLY_PX = 60;
 /** How long the chat waits for an AI friend's draft before saying it did not come. */
 const AI_DRAFT_WAIT_MS = 3 * 60 * 1000;
+/** The composer grows with its text up to this height, then scrolls inside. */
+const INPUT_MAX_HEIGHT = 140;
 
 function pickWebFile(accept?: string, capture?: string): Promise<File | null> {
   return new Promise((resolve) => {
@@ -196,6 +198,19 @@ export default function Chat() {
     setError(null);
   }, [peer]);
   useEffect(() => () => clearTimeout(copiedTimer.current), []);
+
+  // Web: a textarea keeps the height of one row. Measure the text after every change and grow
+  // (or shrink) to fit, up to INPUT_MAX_HEIGHT. Native multiline inputs grow by themselves.
+  useLayoutEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const el = input.current as unknown as HTMLTextAreaElement | null;
+    if (!el?.style) return;
+    el.style.height = 'auto';
+    const border = el.offsetHeight - el.clientHeight;
+    const full = el.scrollHeight + border;
+    el.style.height = `${Math.min(full, INPUT_MAX_HEIGHT)}px`;
+    el.style.overflowY = full > INPUT_MAX_HEIGHT ? 'auto' : 'hidden';
+  }, [draft, peer, recordPanel]);
 
   const askDraft = useCallback(
     async (ai: string, confirmed = false) => {
@@ -1956,7 +1971,7 @@ const styles = (c: Palette) =>
     },
     input: {
       width: '100%',
-      maxHeight: 140,
+      maxHeight: INPUT_MAX_HEIGHT,
       minHeight: 44,
       backgroundColor: c.surface,
       borderRadius: 22,
