@@ -16,6 +16,10 @@
 //   it back, but it is never sent.
 // - a friend's picture: it comes from the friend's own profile card, which reaches every
 //   one of my devices anyway.
+// - Tegami groups (chat id `g-<gid>`, groups.ts): their state (members, name, picture, admins)
+//   comes only from signed group changes (GROUP_KIND), which are sealed for my devices too, so
+//   the ledger does not carry them. Otherwise a ledger entry could set a name or members that
+//   no admin signed. The ledger carries only the old NIP-17 groups (id = the members' keys).
 // - the AI log: it records what happened on one device.
 
 import { AI_ACTIONS, cleanAiPermissions, type AiPermissions } from './ai-permissions';
@@ -42,13 +46,15 @@ export type Section = 'c' | 'g' | 'b' | 'a';
 export type AccountLists = { contacts: Contact[]; groups: Group[]; blocked: string[]; ai: AiPermissions };
 
 const HEX = /^[0-9a-f]{64}$/;
+/** A Tegami group (`g-<gid>`, groups.ts), whose state comes from signed group changes, not from the ledger. */
+export const isTegamiGroup = (g: { id: string; gid?: string }) => !!g.gid || g.id.startsWith('g-');
 const validGroupId = (id: string) => id.split(',').length >= 2 && id.split(',').every((p) => HEX.test(p));
 
 /** The current values of one section, as ledger keys and plain values. */
 export function flatten(section: Section, lists: AccountLists): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   if (section === 'c') for (const c of lists.contacts) out[`c:${c.pubkey}`] = c.model ? { n: c.name, m: c.model } : { n: c.name };
-  if (section === 'g') for (const g of lists.groups) out[`g:${g.id}`] = { n: g.name };
+  if (section === 'g') for (const g of lists.groups) if (!isTegamiGroup(g)) out[`g:${g.id}`] = { n: g.name };
   if (section === 'b') for (const p of lists.blocked) out[`b:${p}`] = 1;
   if (section === 'a') {
     const ai = lists.ai;
@@ -141,6 +147,11 @@ export function materialize(ledger: Ledger, current: AccountLists): AccountLists
   const groupValues = new Map(live('g:').map(([key, e]) => [key.slice(2), e.v as { n: string }]));
   const groups: Group[] = [];
   for (const g of current.groups) {
+    // Tegami groups are not in the ledger: kept as they are (see the top of this file).
+    if (isTegamiGroup(g)) {
+      groups.push(g);
+      continue;
+    }
     const v = groupValues.get(g.id);
     if (!v) continue;
     groups.push({ ...g, name: v.n });

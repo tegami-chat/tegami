@@ -1040,6 +1040,164 @@ async function main() {
       for (const u of [a, b, c]) await u.context.close();
     });
 
+    await test('Group members: add, rename, change the picture, remove, leave; the same chat goes on and someone added later does not see earlier messages', async () => {
+      const a = await person(browser, 'あきら');
+      const b = await person(browser, 'ぶんた');
+      const c = await person(browser, 'ちえ');
+      const d = await person(browser, 'だい');
+      for (const o of [b, c, d]) await befriend(a, o);
+      for (const o of [b, c, d]) await befriend(o, a);
+      const openGroup = async (u, name) => {
+        await u.page.goto(ORIGIN + '/');
+        await waitText(u.page, name);
+        await u.page.getByText(name, { exact: true }).first().click();
+        await u.page.getByTestId('chat-title').last().waitFor();
+      };
+      // The group's details: beside the chat on a desktop (閉じる), a screen of its own on a phone.
+      const closeInfo = async (u) => (NARROW ? u.page.goBack() : button(u.page, '閉じる').click());
+      const sendText = async (u, t) => {
+        await u.page.getByPlaceholder('メッセージ').fill(t);
+        await button(u.page, '送る').click();
+      };
+
+      await a.page.goto(ORIGIN + '/group');
+      await a.page.getByPlaceholder('グループの名前').fill('家族');
+      await a.page.getByRole('checkbox', { name: 'ぶんた' }).click();
+      await a.page.getByRole('checkbox', { name: 'ちえ' }).click();
+      await shot(a.page, 'group-new', 'グループを作る画面（管理者だけがメンバーを変更できる）');
+      await button(a.page, '作る').click();
+      await waitText(a.page, 'あきらがグループを作成しました。');
+      await sendText(a, '前の話');
+      await openGroup(b, '家族');
+      await waitText(b.page, '前の話');
+      await waitText(b.page, 'あきらがグループを作成しました。');
+
+      // A adds D.
+      await button(a.page, 'メニュー').click();
+      await button(a.page, 'メンバーを追加').click();
+      await shot(a.page, 'group-add', 'グループの情報の画面：メンバーを追加');
+      await a.page.getByRole('checkbox', { name: 'だい' }).click();
+      await button(a.page, '追加').click();
+      await waitText(a.page, 'メンバー（4）');
+      await shot(a.page, 'group-members', 'グループの情報の画面：メンバーの一覧');
+      // D sees the group under its name, but nothing from before being added, even after reloading.
+      await openGroup(d, '家族');
+      await waitText(d.page, 'あきらがだいをグループに追加しました。');
+      await d.page.reload();
+      await d.page.getByPlaceholder('メッセージ').waitFor();
+      await d.page.waitForTimeout(1500);
+      assert(!(await text(d.page)).includes('前の話'), 'D sees a message from before being added');
+      // The page closed after the group was saved but before its line was: the relay's replay brings the line back.
+      await d.page.evaluate(() => {
+        const list = JSON.parse(localStorage.getItem('tegami.messages')).filter((m) => !m.notice);
+        localStorage.setItem('tegami.messages', JSON.stringify(list));
+      });
+      await d.page.reload();
+      await waitText(d.page, 'あきらがだいをグループに追加しました。');
+      // The same chat goes on: what A writes now reaches B and D in the chat they already have.
+      await openGroup(a, '家族');
+      await sendText(a, 'あとの話');
+      await waitText(d.page, 'あとの話');
+      await waitText(b.page, 'あとの話');
+      assert((await text(b.page)).includes('前の話'), 'B lost the earlier messages: the group became a new chat');
+      await waitText(b.page, 'をグループに追加しました。'); // B does not know D: a short id
+
+      // B (any member of a group without admins) renames it.
+      await button(b.page, 'メニュー').click();
+      await button(b.page, 'グループ名を変更').click();
+      await b.page.getByPlaceholder('グループの名前').fill('親戚');
+      await button(b.page, '保存').click();
+      await closeInfo(b);
+      await waitText(a.page, 'ぶんたがグループ名を「親戚」に変更しました。');
+      assert((await a.page.getByTestId('chat-title').innerText()).includes('親戚'), 'the title did not follow the new name');
+
+      // A changes the picture; B gets it.
+      const png = Buffer.from(
+        await a.page.evaluate(() => {
+          const cv = document.createElement('canvas');
+          cv.width = 300;
+          cv.height = 300;
+          const g = cv.getContext('2d');
+          g.fillStyle = '#106c4a';
+          g.fillRect(0, 0, 300, 300);
+          return cv.toDataURL('image/png').split(',')[1];
+        }),
+        'base64',
+      );
+      await button(a.page, 'メニュー').click();
+      const chooser = a.page.waitForEvent('filechooser');
+      await button(a.page, 'アイコンを変更').click();
+      await (await chooser).setFiles({ name: 'g.png', mimeType: 'image/png', buffer: png });
+      await waitText(b.page, 'あきらがグループのアイコンを変更しました。');
+      // Nobody else here has a picture: an image on B's screen is the group's.
+      await b.page.waitForFunction(() => [...document.querySelectorAll('[data-testid="avatar-img"]')].some((i) => i.complete && i.naturalWidth > 0), null, { timeout: 15000 });
+
+      // A removes C: C keeps the chat but can no longer write, and gets nothing new.
+      await a.page.goto(ORIGIN + '/');
+      await openGroup(a, '親戚');
+      await button(a.page, 'メニュー').click();
+      await button(a.page, 'ちえを削除').click();
+      await shot(a.page, 'group-remove', 'メンバーを削除する確認');
+      await button(a.page, '削除').click();
+      await waitText(a.page, 'メンバー（3）');
+      await openGroup(c, '親戚');
+      await waitText(c.page, 'あきらがちえを退会させました。');
+      await waitText(c.page, 'このグループのメンバーではありません');
+      await shot(c.page, 'group-removed', '削除された人のトーク');
+      assert(!(await c.page.getByPlaceholder('メッセージ').count()), 'C can still write');
+      await openGroup(a, '親戚');
+      await sendText(a, 'ちえぬき');
+      await waitText(d.page, 'ちえぬき');
+      await c.page.waitForTimeout(1500);
+      assert(!(await text(c.page)).includes('ちえぬき'), 'C still gets messages after removal');
+
+      // D leaves: A is told, and the group is gone from D.
+      await button(d.page, 'メニュー').click();
+      await button(d.page, 'グループを退会').click();
+      await shot(d.page, 'group-leave', 'グループを退会する確認');
+      await button(d.page, '退会').click();
+      await waitText(a.page, 'だいが退会しました。');
+      await d.page.goto(ORIGIN + '/');
+      await d.page.waitForTimeout(1000);
+      await d.page.reload();
+      await waitOpen(d.page);
+      await d.page.waitForTimeout(1500);
+      assert(!(await text(d.page)).includes('親戚'), 'the group came back to D after leaving');
+      for (const u of [a, b, c, d]) await u.context.close();
+    });
+
+    await test('Group with admins: only admins change members; an admin can make someone admin', async () => {
+      const a = await person(browser, 'あきら');
+      const b = await person(browser, 'ぶんた');
+      const c = await person(browser, 'ちえ');
+      for (const o of [b, c]) await befriend(a, o);
+      for (const o of [b, c]) await befriend(o, a);
+      await befriend(b, c);
+      await a.page.goto(ORIGIN + '/group');
+      await a.page.getByPlaceholder('グループの名前').fill('部活');
+      await a.page.getByRole('checkbox', { name: 'ぶんた' }).click();
+      await a.page.getByRole('checkbox', { name: 'ちえ' }).click();
+      await a.page.getByRole('switch', { name: '管理者だけがメンバーを変更できる' }).click();
+      await button(a.page, '作る').click();
+      await waitText(a.page, 'あきらがグループを作成しました。');
+      await b.page.goto(ORIGIN + '/');
+      await waitText(b.page, '部活');
+      await b.page.getByText('部活', { exact: true }).first().click();
+      await button(b.page, 'メニュー').click();
+      await waitText(b.page, 'メンバー（3）');
+      await waitText(b.page, '管理者');
+      assert(!(await button(b.page, 'メンバーを追加').count()), 'a member who is not an admin can add people');
+      assert(!(await button(b.page, 'ちえを削除').count()), 'a member who is not an admin can remove people');
+      await (NARROW ? b.page.goBack() : button(b.page, '閉じる').click());
+      await button(a.page, 'メニュー').click();
+      await shot(a.page, 'group-admin', '管理者がいるグループの情報の画面');
+      await button(a.page, 'ぶんたを管理者にする').click();
+      await waitText(b.page, 'あきらがぶんたを管理者にしました。');
+      await button(b.page, 'メニュー').click();
+      await button(b.page, 'メンバーを追加').waitFor({ timeout: 15000 });
+      for (const u of [a, b, c]) await u.context.close();
+    });
+
     await test('Voice call: B answers, both connect, hanging up ends it on both sides; signals expire', async () => {
       const a = await person(browser, 'あおい');
       const b = await person(browser, 'ばく');

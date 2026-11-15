@@ -64,7 +64,7 @@ export function ChatList({ wide = false }: { wide?: boolean }) {
   const rows = [
     ...(feedback ? [{ room: FEEDBACK_PUBKEY, name: FEEDBACK_NAME, model: undefined, avatar: undefined, group: false }] : []),
     ...friends.map((x) => ({ room: x.pubkey, name: x.name, model: x.model, avatar: x.avatar, group: false })),
-    ...groups.map((g) => ({ room: g.id, name: chatName(g.id, contacts, groups), model: undefined, avatar: undefined, group: true })),
+    ...groups.map((g) => ({ room: g.id, name: chatName(g.id, contacts, groups), model: undefined, avatar: g.avatar, group: true })),
   ]
     .map((r) => ({ ...r, last: lastOf(r.room) }))
     .sort((a, b) => (b.last?.at ?? 0) - (a.last?.at ?? 0));
@@ -210,7 +210,7 @@ export function ChatList({ wide = false }: { wide?: boolean }) {
               style={({ hovered }: PressState) => [s.friendRow, hovered && s.hovered, wide && selected === g.id && s.selectedRow]}
               role="button"
               onPress={() => openChat(g.id)}>
-              <Avatar name="◎" size={36} />
+              <Avatar name="◎" file={g.avatar} size={36} />
               <View style={s.friendBody}>
                 <Text style={s.friendName} numberOfLines={1}>
                   {chatName(g.id, contacts, groups)}
