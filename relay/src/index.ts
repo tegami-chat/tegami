@@ -36,6 +36,14 @@
 // another key, with recent messages only if the reporter chose to attach them. Nothing is
 // sent to the reported key and nothing happens automatically; the operator reads them with
 // POST /admin {action: 'reports'}. Deleted after 90 days.
+//
+// Deleting an account: DELETE /account (NIP-98, body {"delete":"account"}) removes everything
+// the relay keeps under that key: envelopes waiting for it, its stamps (and their files when no
+// other key keeps them), its notification addresses and its registration. The key is kept in
+// deleted_keys so it cannot register again; envelopes sent to it afterwards are dropped.
+// Kept as before: reports (90 days) and who it invited (on the invitees' rows, 90 days).
+// Not reachable from the key: recovery backups (signed with a key from the recovery code; the
+// app deletes its own first) and photos (no key is stored with them; gone after 30 days).
 
 import { DurableObject } from 'cloudflare:workers';
 import { verifyEvent, type NostrEvent } from 'nostr-tools/pure';
@@ -136,6 +144,8 @@ const INFO = {
     push: 'For notifications: a device push address and the key it belongs to, until turned off.',
     backups:
       'Recovery backups: an id derived from the recovery code, the ciphertext, a signing key also derived from the code (not the account key) and when it was last uploaded. Kept until the person deletes it.',
+    deleted:
+      'Deleted accounts: the key and when it was deleted, so it cannot register again. Everything else under the key is deleted at once.',
     reports:
       "Reports about a key, for the operator: the reporter's key, the reported key, the reason, and recent messages only if the reporter chose to attach them. Deleted after 90 days.",
   },
@@ -157,7 +167,7 @@ export default {
       if (!env.VAPID_JWK) return new Response('Push is not set up', { status: 503, headers: CORS });
       return Response.json({ key: new Vapid(env.VAPID_JWK).publicKey }, { headers: { ...CORS, 'Cache-Control': 'public, max-age=3600' } });
     }
-    if ((url.pathname === '/register' || url.pathname === '/admin' || url.pathname === '/report') && req.method === 'POST') {
+    if (((url.pathname === '/register' || url.pathname === '/admin' || url.pathname === '/report') && req.method === 'POST') || (url.pathname === '/account' && req.method === 'DELETE')) {
       const headers = new Headers(req.headers);
       headers.set('X-Tegami-IP', req.headers.get('CF-Connecting-IP') ?? 'unknown');
       return env.RELAY.get(env.RELAY.idFromName('main')).fetch(new Request(req, { headers }));
@@ -305,6 +315,7 @@ export class Relay extends DurableObject<Env> {
     if (path === '/register') return this.registerRoute(req, ip);
     if (path === '/admin') return this.adminRoute(req);
     if (path === '/report') return this.reportRoute(req, ip);
+    if (path === '/account') return this.accountRoute(req, ip);
     const backup = path.match(BACKUP_PATH);
     if (backup) return this.backupRoute(req, ip, backup[1]);
     if (path === '/crash') return this.crash(req, ip);
@@ -356,6 +367,7 @@ export class Relay extends DurableObject<Env> {
     } catch {
       return fail(400, 'invalid json');
     }
+    if (this.members.deleted(pubkey)) return fail(403, 'deleted');
     let m = this.members.get(pubkey);
     if (m?.banned) return fail(403, 'blocked');
     let inviteError = '';
@@ -450,6 +462,50 @@ export class Relay extends DurableObject<Env> {
     if (this.reports.limited(reporter, r.pubkey)) return fail(429, 'rate-limited: too many reports');
     this.reports.add(reporter, r.pubkey, r.reason, r.messages);
     return new Response(null, { status: 204, headers: CORS });
+  }
+
+  // Deleting: per address, 10 at once, then one a minute.
+  deleteRate = new Buckets(10, 1 / 60);
+
+  /**
+   * DELETE /account, signed (NIP-98) by the key itself, body {"delete":"account"}. Removes what
+   * the relay keeps under the key and closes its connections. Asking again answers the same.
+   */
+  async accountRoute(req: Request, ip: string): Promise<Response> {
+    const fail = (status: number, error: string) => Response.json({ error }, { status, headers: CORS });
+    if (req.method !== 'DELETE') return fail(405, 'method not allowed');
+    if (!this.deleteRate.take(ip)) return fail(429, 'rate-limited');
+    const body = await req.text();
+    if (body.length > 1024) return fail(413, 'too large');
+    const pubkey = await nip98(req, body, this.signedFor('/account'));
+    if (!pubkey) return fail(401, 'auth-required');
+    let ask: { delete?: unknown };
+    try {
+      ask = JSON.parse(body) ?? {};
+    } catch {
+      return fail(400, 'invalid json');
+    }
+    // The body says what is asked, so a signature made for something else cannot delete.
+    if (ask?.delete !== 'account') return fail(400, 'invalid: body must be {"delete":"account"}');
+    const already = this.members.deleted(pubkey);
+    const envelopes = this.sql.exec('DELETE FROM events WHERE p = ?', pubkey).rowsWritten;
+    const shas = this.sql.exec('SELECT sha FROM stamps WHERE pubkey = ?', pubkey).toArray().map((r) => r.sha as string);
+    this.sql.exec('DELETE FROM stamps WHERE pubkey = ?', pubkey);
+    for (const sha of shas) {
+      if (!this.sql.exec('SELECT 1 FROM stamps WHERE sha = ?', sha).toArray().length) await this.env.STAMPS.delete(sha);
+    }
+    const push = this.sql.exec('DELETE FROM push_devices WHERE pubkey = ?', pubkey).rowsWritten;
+    this.pendingMessages.delete(pubkey);
+    this.members.markDeleted(pubkey);
+    for (const ws of this.ctx.getWebSockets()) {
+      if ((ws.deserializeAttachment() as Attachment)?.pubkey !== pubkey) continue;
+      try {
+        ws.close(4001, 'account deleted');
+      } catch {
+        // Already closed.
+      }
+    }
+    return Response.json({ deleted: true, already, envelopes, stamps: shas.length, push }, { headers: CORS });
   }
 
   ipBytes = new Buckets(FILE_RATE.ip.burst, FILE_RATE.ip.perSecond);
@@ -648,6 +704,7 @@ export class Relay extends DurableObject<Env> {
       this.sql.exec('DELETE FROM push_devices WHERE endpoint = ? AND pubkey = ?', endpoint, pubkey);
       return new Response(null, { status: 204, headers: CORS });
     }
+    if (this.members.deleted(pubkey)) return fail(403, 'deleted: this account was deleted');
     if (keys !== undefined && !validKeys(keys)) return fail(400, 'invalid: push keys');
     this.sql.exec(
       'INSERT OR REPLACE INTO push_devices (endpoint, pubkey, created_at, keys) VALUES (?, ?, ?, ?)',
@@ -792,6 +849,9 @@ export class Relay extends DurableObject<Env> {
     if (expired(ev)) return reply(false, 'invalid: expired');
 
     const p = ps[0][1];
+    // The recipient deleted their account: say OK (the sender learns nothing, and its app does
+    // not try again and again) but keep nothing.
+    if (this.members.deleted(p)) return reply(true, '');
     const held = this.sql.exec('SELECT COUNT(*) AS n FROM events WHERE p = ?', p).one().n as number;
     if (held >= MAX_MAILBOX) return reply(false, 'rate-limited: the recipient has too many waiting messages');
     if (open && p !== att.pubkey) {
