@@ -880,7 +880,7 @@ async function main() {
       const blockedOn = (p, hex) => p.waitForFunction((h) => JSON.parse(localStorage.getItem('tegami.blocked') || '[]').includes(h), hex, { timeout: 15000 });
       const notBlockedOn = (p, hex) => p.waitForFunction((h) => !JSON.parse(localStorage.getItem('tegami.blocked') || '[]').includes(h), hex, { timeout: 15000 });
       await blockedOn(a2.page, c.hex);
-      await openSettings(a2.page);
+      await a2.page.goto(ORIGIN + '/settings');
       await waitText(a2.page, 'ブロックリスト');
       await button(a2.page, 'ブロック解除').click();
       await notBlockedOn(a.page, c.hex);
@@ -1068,7 +1068,8 @@ async function main() {
       await b.page.getByText('あおい').first().click();
       await waitText(b.page, '音声通話 0:');
       // Every envelope sent for the call carries an expiration a minute ahead.
-      const sent = (await a.page.evaluate(() => window.__sent)).slice(before);
+      // (Quiet envelopes are not for the call: my friend list going to my other devices, lib/own-sync.ts.)
+      const sent = (await a.page.evaluate(() => window.__sent)).slice(before).filter((ev) => !ev.tags.some((t) => t[0] === 't' && t[1] === 'quiet'));
       const now = Math.floor(Date.now() / 1000);
       assert(sent.length >= 2, `only ${sent.length} envelopes sent`);
       for (const ev of sent) {
@@ -2713,6 +2714,13 @@ async function main() {
       await waitText(b.page, 'あゆみ');
       await waitText(c.page, 'あゆみ');
       assert(await b.page.getByTestId('avatar-initial').last().isVisible(), 'expected initial placeholder before avatar');
+      // C's own envelopes to itself (its friend list for its other devices, lib/own-sync.ts) are
+      // there already; nothing more may arrive for C.
+      await c.page.waitForFunction(() => {
+        const s = JSON.parse(localStorage.getItem('tegami.syncSent') || 'null');
+        return s && s.hash.includes(JSON.stringify(Object.keys(JSON.parse(localStorage.getItem('tegami.sync'))).find((k) => k.startsWith('c:'))));
+      }, null, { timeout: 15000 });
+      const cOwn = (await envelopesFor(c.hex)).length;
 
       await a.page.goto(ORIGIN + '/settings');
       await waitText(a.page, 'アイコンを変更');
@@ -2758,7 +2766,7 @@ async function main() {
       await c.page.waitForTimeout(1000);
       assert((await c.page.getByTestId('avatar-img').count()) === 0, 'stranger C saw the avatar');
       assert(await c.page.getByTestId('avatar-initial').last().isVisible(), 'stranger C lost the initial placeholder');
-      assert((await envelopesFor(c.hex)).length === 0, 'stranger C received a profile card');
+      assert((await envelopesFor(c.hex)).length === cOwn, 'stranger C received a profile card');
 
       await button(a.page, 'アイコンを削除').click();
       await a.page.getByTestId('avatar-initial').last().waitFor({ timeout: 10000 });
