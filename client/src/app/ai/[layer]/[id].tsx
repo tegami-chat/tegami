@@ -1,10 +1,10 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AiSwitches } from '@/components/ai-switches';
 import { Avatar } from '@/components/avatar';
 import { Palette, usePalette } from '@/constants/theme';
-import { useAiPermissions, type AiAction } from '@/lib/ai-permissions';
+import { FRIEND_ACTIONS, READ_ONLY, setAiSwitches, switchValue, useAiPermissions, type AiAction } from '@/lib/ai-permissions';
 import { personName, useTegami } from '@/lib/tegami';
 
 /** The switches of one AI friend, one model, or one friend. */
@@ -20,8 +20,8 @@ export default function AiLayerScreen() {
   const name = layer === 'model' ? id : personName(id, contacts);
   // A switch a layer above has turned off is shown off and cannot be turned on here.
   const blocked = (a: AiAction) => {
-    if (p.all[a] !== true) return '「AI の使用」でオフになっています';
-    if (layer === 'ai' && contact?.model && p.models[contact.model]?.[a] === false) return `「${contact.model}」でオフになっています`;
+    if (!switchValue(p, { layer: 'all' }, a)) return '「AI の使用」でオフになっています';
+    if (layer === 'ai' && contact?.model && !switchValue(p, { layer: 'model', id: contact.model }, a)) return `「${contact.model}」でオフになっています`;
     return null;
   };
 
@@ -34,7 +34,12 @@ export default function AiLayerScreen() {
         {layer === 'ai' && contact?.model ? <Text style={s.sub}>{contact.model}</Text> : null}
       </View>
       <Text style={s.heading}>{layer === 'friend' ? `${name}のトークで AI ができること` : 'できること'}</Text>
-      <AiSwitches scope={{ layer, id }} blocked={blocked} />
+      <AiSwitches scope={{ layer, id }} blocked={blocked} name={layer === 'friend' ? name : undefined} />
+      {layer === 'friend' && !FRIEND_ACTIONS.every((a) => switchValue(p, { layer, id }, a) === READ_ONLY[a]) && (
+        <Pressable style={s.card} onPress={() => setAiSwitches({ layer, id }, READ_ONLY)} role="button">
+          <Text style={s.action}>読むだけにする</Text>
+        </Pressable>
+      )}
       <View style={{ height: 40 }} />
     </ScrollView>
   );
@@ -48,4 +53,6 @@ const styles = (c: Palette) =>
     name: { fontSize: 20, fontWeight: '700', color: c.text, textAlign: 'center' },
     sub: { fontSize: 13, color: c.muted },
     heading: { fontSize: 14, color: c.muted, marginTop: 14 },
+    card: { backgroundColor: c.surface, borderRadius: 12, borderWidth: 1, borderColor: c.line, paddingHorizontal: 14, paddingVertical: 14 },
+    action: { fontSize: 15, color: c.accent, fontWeight: '600' },
   });

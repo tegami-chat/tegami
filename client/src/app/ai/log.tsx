@@ -2,7 +2,7 @@ import { FlatList, StyleSheet, Text, View } from 'react-native';
 
 import { AI_ACTION_LABEL } from '@/components/ai-switches';
 import { Palette, usePalette } from '@/constants/theme';
-import { useAiLog, type Layer } from '@/lib/ai-permissions';
+import { useAiLog, type AiLogEntry, type Layer } from '@/lib/ai-permissions';
 import { personName, useTegami } from '@/lib/tegami';
 
 const STOPPED_BY: Record<Layer, string> = {
@@ -12,7 +12,17 @@ const STOPPED_BY: Record<Layer, string> = {
   friend: '友だちの設定でオフ',
   stranger: '友だちではない相手',
   needs: '「確認してから送る」がオフ',
+  expired: '期間が終わってオフ',
+  ask: '毎回確認',
+  always: '写真やお金の話は確認',
+  firstPeer: '初めての相手の AI',
 };
+
+function result(e: AiLogEntry) {
+  if (e.expired) return '期間が終わったのでオフに戻した';
+  if (e.answer) return `${STOPPED_BY[e.stoppedBy ?? 'ask']}：${e.answer === 'allowed' ? '許可した' : '許可しなかった'}`;
+  return e.allowed ? '許可' : `止めた：${STOPPED_BY[e.stoppedBy ?? 'all']}`;
+}
 
 /** What each AI asked to do, newest first, and whether the app let it. */
 export default function AiLogScreen() {
@@ -33,10 +43,11 @@ export default function AiLogScreen() {
         <View style={s.row}>
           <Text style={s.time}>{new Date(e.at * 1000).toLocaleString([], { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</Text>
           <Text style={s.text}>
-            {personName(e.ai, contacts)}：{AI_ACTION_LABEL[e.action]}
+            {e.ai ? `${personName(e.ai, contacts)}：` : ''}
+            {AI_ACTION_LABEL[e.action]}
             {e.friend ? `（${personName(e.friend, contacts)}）` : ''}
           </Text>
-          <Text style={e.allowed ? s.allowed : s.stopped}>{e.allowed ? '許可' : `止めた：${STOPPED_BY[e.stoppedBy ?? 'all']}`}</Text>
+          <Text style={e.allowed ? s.allowed : s.stopped}>{result(e)}</Text>
         </View>
       )}
     />

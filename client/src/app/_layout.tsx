@@ -3,6 +3,7 @@ import { Stack, router, type ErrorBoundaryProps, type Href } from 'expo-router';
 import { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { AiConfirm } from '@/components/ai-confirm';
 import { CallScreen } from '@/components/call-screen';
 import { Gate } from '@/components/gate';
 import { RegisterGate } from '@/components/register-gate';
@@ -82,6 +83,8 @@ function Shell() {
       </Stack>
       {/* Over every screen: an incoming call shows wherever the person is. */}
       <CallScreen />
+      {/* Over every screen: an AI waiting for the user's answer. */}
+      <AiConfirm />
     </CallProvider>
   );
 }
