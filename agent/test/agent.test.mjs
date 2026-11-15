@@ -18,7 +18,7 @@ import WebSocket from 'ws';
 
 useWebSocketImplementation(WebSocket);
 const ROOT = resolve(import.meta.dirname, '..');
-const PORT = 7449;
+const PORT = Number(process.env.PORT || 7449);
 const RELAY = process.env.RELAY ?? `ws://localhost:${PORT}`;
 const HOME = mkdtempSync(join(tmpdir(), 'tegami-agent-'));
 const env = { ...process.env, TEGAMI_AGENT_HOME: HOME, TEGAMI_RELAYS: RELAY };
@@ -210,7 +210,7 @@ try {
   const mcp = new Client({ name: 'test', version: '0' });
   await mcp.connect(new StdioClientTransport({ command: process.execPath, args: [join(ROOT, 'agent.mjs'), 'mcp'], env }));
   const tools = (await mcp.listTools()).tools.map((t) => t.name).sort();
-  check(`MCP lists the tools (${tools.join(', ')})`, tools.join() === 'tegami_contacts,tegami_inbox,tegami_send,tegami_wait');
+  check(`MCP lists the tools (${tools.join(', ')})`, tools.join() === 'tegami_contacts,tegami_inbox,tegami_owner_friends,tegami_send,tegami_send_as_owner,tegami_talk_to_ai,tegami_wait');
   const call = async (name, args = {}) => JSON.parse((await mcp.callTool({ name, arguments: args })).content[0].text);
   await new Promise((r) => setTimeout(r, 1500));
   const inbox = await call('tegami_inbox', { all: true });
@@ -229,6 +229,120 @@ try {
   await owner.send(agentPk, '待っていた返事');
   const got = (await waiting).content[0].text;
   check('MCP wait returns the next message from a contact, skipping strangers', got.includes('待っていた返事'));
+
+
+  // ---------- asks to the owner's app (client/src/lib/ai-actions.ts) ----------
+  // The owner here answers as the app would; the app's own decisions are tested in the browser tests.
+  const sealed = (from, to, kind, data, tags = []) => {
+    const rumor = nip59.createRumor({ kind, content: JSON.stringify(data), tags: [['p', to], ...tags] }, from.sk);
+    return { rumor, wrap: nip59.createWrap(nip59.createSeal(rumor, from.sk, to), to) };
+  };
+  const answer = async (from, to, kind, data) => {
+    await Promise.any(from.pool.publish([RELAY], sealed(from, to, kind, data).wrap, { onauth: async (t) => finalizeEvent(t, from.sk) }));
+  };
+  const nextAsk = async (u, kind, ms = 10000) => {
+    const end = Date.now() + ms;
+    while (Date.now() < end) {
+      const hit = u.rumors.find((r) => r.kind === kind && !r.answered);
+      if (hit) {
+        hit.answered = true;
+        return hit;
+      }
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return null;
+  };
+  owner.listen();
+
+  // The friend list: only what the owner's app hands over.
+  const rawCall = async (name, args = {}) => (await mcp.callTool({ name, arguments: args })).content[0].text;
+  let listing = rawCall('tegami_owner_friends');
+  let ask1 = await nextAsk(owner, 25064);
+  check("the friend list is asked of the owner's app, and the ask expires", !!ask1 && ask1.wrapTags.some((t) => t[0] === 'expiration'));
+  await answer(owner, agentPk, 25065, { re: ask1.id, stopped: true });
+  check('a refused friend list gives nothing', (await listing).includes('did not hand over'));
+  listing = rawCall('tegami_owner_friends');
+  ask1 = await nextAsk(owner, 25064);
+  await answer(owner, agentPk, 25065, { re: ask1.id, friends: [{ pubkey: friend.pk, name: 'テストB' }] });
+  const listed = await listing;
+  check('the friend list the app allowed is shown by name', JSON.stringify(JSON.parse(listed)) === JSON.stringify([{ name: 'テストB' }]));
+  // Someone else answering for the owner is ignored.
+  listing = rawCall('tegami_owner_friends');
+  ask1 = await nextAsk(owner, 25064);
+  await answer(stranger, agentPk, 25065, { re: ask1.id, friends: [{ pubkey: stranger.pk, name: 'にせもの' }] });
+  await answer(owner, agentPk, 25065, { re: ask1.id, friends: [{ pubkey: friend.pk, name: 'テストB' }] });
+  check('an answer from someone who is not the owner is ignored', !(await listing).includes('にせもの'));
+
+  // Sending in the owner's name: the AI only asks; the owner's app answers.
+  const sending = mcp.callTool({ name: 'tegami_send_as_owner', arguments: { to: 'テストB', text: '明日10時でどう？' } });
+  const sendAsk = await nextAsk(owner, 25062);
+  const sendBody = sendAsk ? JSON.parse(sendAsk.content) : {};
+  check('the send ask names the friend and the text, nothing else', sendBody.to === friend.pk && sendBody.text === '明日10時でどう？' && sendBody.v === 1);
+  check('the AI sends nothing to the friend itself', !friend.inbox.includes('明日10時でどう？'));
+  await answer(owner, agentPk, 25063, { re: sendAsk.id, status: 'waiting' });
+  check("the owner's answer comes back (waiting for send)", (await sending).content[0].text.startsWith('Waiting'));
+  const unknownFriend = await mcp.callTool({ name: 'tegami_send_as_owner', arguments: { to: 'だれか', text: 'x' } });
+  check('a name not in the friend list is not asked at all', unknownFriend.content[0].text.startsWith('Unknown friend'));
+
+  // Another person's AI: its messages wait until the owner allows, within a daily limit.
+  const otherAi = user();
+  await trustKey(otherAi.sk);
+  const sendAsAi = async (text) => {
+    const rumor = nip59.createRumor({ kind: 14, content: text, tags: [['p', agentPk], ['ai', otherAi.pk, 'Other Model', 'よそのAI']] }, otherAi.sk);
+    await Promise.any(otherAi.pool.publish([RELAY], nip59.createWrap(nip59.createSeal(rumor, otherAi.sk, agentPk), agentPk), { onauth: async (t) => finalizeEvent(t, otherAi.sk) }));
+  };
+  await sendAsAi('はじめまして、AIです');
+  const peerAsk = await nextAsk(owner, 25066);
+  const peerBody = peerAsk ? JSON.parse(peerAsk.content) : {};
+  check("another person's AI writing makes the AI ask its owner first", peerBody.peer?.pubkey === otherAi.pk && peerBody.peer?.model === 'Other Model');
+  let seen = await call('tegami_inbox', { all: true });
+  check("the other AI's message is hidden until the owner allows", !seen.messages.some((m) => m.text === 'はじめまして、AIです'));
+  await answer(owner, agentPk, 25067, { re: peerAsk.id, peer: otherAi.pk, until: Math.floor(Date.now() / 1000) + 3600, limit: 2 });
+  await new Promise((r) => setTimeout(r, 1500));
+  seen = await call('tegami_inbox', { all: true });
+  check("after the owner allows, the waiting message shows", seen.messages.some((m) => m.text === 'はじめまして、AIです' && m.from === 'よそのAI'));
+  const reply = await mcp.callTool({ name: 'tegami_send', arguments: { to: 'よそのAI', text: 'こんにちは、こちらもAIです' } });
+  check('the AI may answer the allowed AI', reply.content[0].text.startsWith('Sent') && !!(await otherAi.waitFor((t) => t === 'こんにちは、こちらもAIです')));
+  const marked = otherAi.rumors.find((r) => r.content === 'こんにちは、こちらもAIです');
+  check("the AI's own messages say an AI wrote them", !!marked?.tags.some((t) => t[0] === 'ai' && t[1] === agentPk));
+  const over = await mcp.callTool({ name: 'tegami_send', arguments: { to: 'よそのAI', text: '3通目' } });
+  check('the daily limit stops the third message', over.content[0].text.includes('limit') && !(await otherAi.waitFor((t) => t === '3通目', 1500)));
+  await answer(owner, agentPk, 25067, { peer: otherAi.pk, until: 0, limit: 0 });
+  await new Promise((r) => setTimeout(r, 1000));
+  const afterRevoke = await mcp.callTool({ name: 'tegami_send', arguments: { to: 'よそのAI', text: 'もう一度' } });
+  check('after the owner takes it back, the AI cannot write to that AI', afterRevoke.content[0].text.startsWith('Unknown contact'));
+
+  // A group: the AI reads it only once every member has said yes.
+  const memberB = user();
+  await trustKey(memberB.sk);
+  const everyone = [owner.pk, friend.pk, memberB.pk].sort();
+  const groupNote = async (from, data) => {
+    const rumor = nip59.createRumor({ kind: 10102, content: JSON.stringify({ ...data, members: everyone, ai: agentPk }), tags: [...everyone.filter((x) => x !== from.pk), agentPk].map((x) => ['p', x]) }, from.sk);
+    await Promise.any(from.pool.publish([RELAY], nip59.createWrap(nip59.createSeal(rumor, from.sk, agentPk), agentPk), { onauth: async (t) => finalizeEvent(t, from.sk) }));
+  };
+  const groupSay = async (from, text) => {
+    const rumor = nip59.createRumor({ kind: 14, content: text, tags: everyone.filter((x) => x !== from.pk).map((x) => ['p', x]) }, from.sk);
+    await Promise.any(from.pool.publish([RELAY], nip59.createWrap(nip59.createSeal(rumor, from.sk, agentPk), agentPk), { onauth: async (t) => finalizeEvent(t, from.sk) }));
+  };
+  await groupNote(owner, { t: 'invite', name: 'テストAI', model: 'Echo' });
+  await groupNote(friend, { t: 'answer', yes: true });
+  await new Promise((r) => setTimeout(r, 1000));
+  await groupSay(owner, 'まだ全員ではない');
+  await new Promise((r) => setTimeout(r, 1000));
+  seen = await call('tegami_inbox', { all: true });
+  check('before every member says yes, the group is not shown to the AI', !seen.messages.some((m) => m.text === 'まだ全員ではない'));
+  await groupNote(memberB, { t: 'answer', yes: true });
+  await new Promise((r) => setTimeout(r, 1000));
+  seen = await call('tegami_inbox', { all: true });
+  const inGroup = seen.messages.find((m) => m.text === 'まだ全員ではない');
+  check('after every member says yes, the group shows', !!inGroup?.group);
+  const groupReply = await mcp.callTool({ name: 'tegami_send', arguments: { to: inGroup?.group ?? '', text: 'グループにAIです' } });
+  check('the AI may write in that group', groupReply.content[0].text.startsWith('Sent') && !!(await memberB.waitFor((t) => t === 'グループにAIです')));
+  await groupNote(memberB, { t: 'answer', yes: false });
+  await new Promise((r) => setTimeout(r, 1000));
+  const afterNo = await mcp.callTool({ name: 'tegami_send', arguments: { to: inGroup?.group ?? '', text: 'もう書けない' } });
+  check('when a member takes the yes back, the AI cannot write there', afterNo.content[0].text.startsWith('Unknown contact'));
+  for (const u of [otherAi, memberB]) u.pool.destroy();
 
   await mcp.close();
   for (const u of [owner, stranger, friend]) u.pool.destroy();

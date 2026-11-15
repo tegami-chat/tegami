@@ -5,7 +5,8 @@ import { AiSwitches } from '@/components/ai-switches';
 import { Avatar } from '@/components/avatar';
 import { Palette, usePalette } from '@/constants/theme';
 import { FRIEND_ACTIONS, READ_ONLY, setAiSwitches, switchValue, useAiPermissions, type AiAction } from '@/lib/ai-permissions';
-import { personName, useTegami } from '@/lib/tegami';
+import { peerAiNames } from '@/lib/ai-actions';
+import { personName, shortId, useTegami } from '@/lib/tegami';
 
 /** The switches of one AI friend, one model, or one friend. */
 export default function AiLayerScreen() {
@@ -13,7 +14,7 @@ export default function AiLayerScreen() {
   const s = styles(c);
   const { layer, id } = useLocalSearchParams<{ layer: string; id: string }>();
   const p = useAiPermissions();
-  const { contacts } = useTegami();
+  const { contacts, revokePeerAi } = useTegami();
   if (!id || (layer !== 'ai' && layer !== 'model' && layer !== 'friend')) return null;
 
   const contact = contacts.find((x) => x.pubkey === id);
@@ -40,8 +41,43 @@ export default function AiLayerScreen() {
           <Text style={s.action}>読むと下書きだけにする</Text>
         </Pressable>
       )}
+      {layer === 'ai' && <PeerAis ai={id} grants={p.peerAis} onRevoke={(peer) => void revokePeerAi(id, peer)} />}
       <View style={{ height: 40 }} />
     </ScrollView>
+  );
+}
+
+/** Other people's AIs this AI may talk to (philosophy #84), each with a way to take it back. */
+function PeerAis({ ai, grants, onRevoke }: { ai: string; grants: Record<string, { until: number }>; onRevoke: (peer: string) => void }) {
+  const c = usePalette();
+  const s = styles(c);
+  const now = Math.floor(Date.now() / 1000);
+  const names = peerAiNames();
+  const peers = Object.entries(grants)
+    .filter(([key, g]) => key.startsWith(`${ai}>`) && g.until > now)
+    .map(([key, g]) => ({ peer: key.slice(ai.length + 1), until: g.until }));
+  if (!peers.length) return null;
+  return (
+    <>
+      <Text style={s.heading}>話してよいほかの人のAI</Text>
+      <View style={s.list}>
+        {peers.map((x, i) => (
+          <View key={x.peer} style={[s.row, i > 0 && s.border]} testID="peer-ai">
+            <View style={{ flex: 1 }}>
+              <Text style={s.label} numberOfLines={1}>
+                {names[x.peer]?.name || shortId(x.peer)}
+              </Text>
+              <Text style={s.sub} numberOfLines={1}>
+                {[names[x.peer]?.model, `${new Date(x.until * 1000).toLocaleDateString()}まで`].filter(Boolean).join('　')}
+              </Text>
+            </View>
+            <Pressable role="button" aria-label="許可をやめる" onPress={() => onRevoke(x.peer)} style={s.revoke}>
+              <Text style={s.danger}>許可をやめる</Text>
+            </Pressable>
+          </View>
+        ))}
+      </View>
+    </>
   );
 }
 
@@ -55,4 +91,10 @@ const styles = (c: Palette) =>
     heading: { fontSize: 14, color: c.muted, marginTop: 14 },
     card: { backgroundColor: c.surface, borderRadius: 12, borderWidth: 1, borderColor: c.line, paddingHorizontal: 14, paddingVertical: 14 },
     action: { fontSize: 15, color: c.accent, fontWeight: '600' },
+    list: { backgroundColor: c.surface, borderRadius: 12, borderWidth: 1, borderColor: c.line, overflow: 'hidden' },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, minHeight: 56 },
+    border: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line },
+    label: { fontSize: 16, color: c.text },
+    danger: { fontSize: 14, color: c.danger, fontWeight: '600' },
+    revoke: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 6 },
   });

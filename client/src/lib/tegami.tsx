@@ -8,7 +8,37 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { describeAccount } from './accounts';
 import { AI_DRAFT_ASK_KIND, AI_DRAFT_KIND, draftAsk, parseDraft, wrapExpiring } from './ai-draft';
-import { gateAi } from './ai-permissions';
+import { askAi, checkAi, decideAi, gateAi, getAiPermissions, removePeerAi } from './ai-permissions';
+import {
+  AI_ACTION_KINDS,
+  AI_CONTACTS_ASK_KIND,
+  AI_CONTACTS_KIND,
+  AI_GROUP_KIND,
+  AI_PEER_ASK_KIND,
+  AI_PEER_RESULT_KIND,
+  AI_SEND_ASK_KIND,
+  AI_SEND_RESULT_KIND,
+  PEER_AI_DAILY_LIMIT,
+  aiOf,
+  aiTag,
+  applyAiGroup,
+  approvedAis,
+  everyoneIn,
+  freshAsk,
+  groupOfAiMessage,
+  handledAsk,
+  loadAiGroups,
+  loadProposals,
+  markHandled,
+  myAiMayRead,
+  parseAiGroup,
+  parsePeerAsk,
+  parseSendAsk,
+  rememberPeerAi,
+  saveProposals,
+  type AiGroups,
+  type AiProposal,
+} from './ai-actions';
 import { clearNewMark } from './sw-store';
 import { createDeviceVault, deviceVaultAvailable, openDeviceVault, type DeviceVault } from './device-vault';
 import { setCrashReports } from './crash';
@@ -47,6 +77,8 @@ export type Message = {
   pending?: 'sending' | 'unsent';
   /** The id of the message this one replies to (NIP-17 `e` tag). It may not be on this device. */
   replyTo?: string;
+  /** Written by an AI in the sender's name (lib/ai-actions.ts): shown as「AIが書いた」. */
+  ai?: { pubkey: string; model?: string; name?: string };
 };
 
 /** done: we talked. missed: they called, I did not answer. unanswered: I called, no answer. */
@@ -214,6 +246,19 @@ type TegamiState = {
   askAiDraft: (ai: string, friend: string, confirmed?: boolean) => Promise<string>;
   /** Listens for drafts coming back from AI friends. Returns the function that stops listening. */
   onAiDraft: (fn: (d: AiDraft) => void) => () => void;
+  /** Messages my AI friends wrote for a friend, waiting for me to press 送る (lib/ai-actions.ts). */
+  aiProposals: AiProposal[];
+  /** Sends a waiting AI message in my name (the gate is asked again). False when the gate stops it. */
+  acceptAiProposal: (id: string) => Promise<boolean>;
+  declineAiProposal: (id: string) => void;
+  /** AIs invited to my groups, and every member's answer (philosophy #72). */
+  aiGroups: AiGroups;
+  /** Invites one of my AI friends into a group chat. Every member must say yes. */
+  inviteAiToGroup: (room: string, ai: string) => Promise<void>;
+  /** Says yes or no (or takes a yes back) to an AI in a group chat. */
+  answerAiInGroup: (room: string, ai: string, yes: boolean) => Promise<void>;
+  /** Takes back my AI's permission to talk to another person's AI, and tells my AI. */
+  revokePeerAi: (ai: string, peer: string) => Promise<void>;
   /** Listens for fresh call signals. Returns the function that stops listening. */
   onSignal: (fn: (s: Signal) => void) => () => void;
   /** Adds a call record to a chat on this device. */
@@ -569,6 +614,31 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // ---------- what AI friends ask this app to do (lib/ai-actions.ts) ----------
+  const [aiGroups, setAiGroups] = useState<AiGroups>(() => loadAiGroups());
+  const aiGroupsRef = useRef<AiGroups>(aiGroups);
+  aiGroupsRef.current = aiGroups;
+  const [aiProposals, setAiProposals] = useState<AiProposal[]>(() => loadProposals());
+  const aiProposalsRef = useRef<AiProposal[]>(aiProposals);
+  aiProposalsRef.current = aiProposals;
+  // Set below, once the functions it needs exist: handles an AI ask or a group answer.
+  const aiRumorRef = useRef<(rumor: ReturnType<typeof nip59.createRumor>) => void>(() => {});
+  /**
+   * The AIs a group message also goes to: every member said yes (as far as this device knows).
+   * One of my own AI friends also needs my switches to let it read at all.
+   */
+  const groupAiCopies = useCallback(
+    (room: string) => {
+      if (!me) return [];
+      const p = getAiPermissions();
+      return approvedAis(aiGroupsRef.current, room, me).filter((ai) => {
+        const mine = contactsRef.current.find((c) => c.pubkey === ai && c.model);
+        return !mine || myAiMayRead(p, mine);
+      });
+    },
+    [me],
+  );
+
   const addMessage = useCallback((m: Message) => {
     setMessages((prev) => {
       if (prev.some((p) => p.id === m.id)) return prev;
@@ -669,6 +739,10 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
             for (const fn of signalListeners.current) fn({ id: rumor.id, from: rumor.pubkey, to, at: rumor.created_at, data });
             return;
           }
+          if (AI_ACTION_KINDS.includes(rumor.kind)) {
+            aiRumorRef.current(rumor);
+            return;
+          }
           if (rumor.kind === AI_DRAFT_KIND) {
             // Only from an AI friend; the chat screen matches it to the ask it made.
             if (!contactsRef.current.some((c) => c.pubkey === rumor.pubkey && c.model)) return;
@@ -721,11 +795,21 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
             (k) => /^[0-9a-f]{64}$/.test(k) && k !== me,
           );
           if (!others.length) return;
-          const peer = roomOf(others);
+          let peer = roomOf(others);
+          // Written by an AI in a group (lib/ai-actions.ts): it belongs to the group of the people
+          // it was written for, and only while every member has said yes.
+          if (rumor.pubkey !== me) {
+            const g = groupOfAiMessage(aiGroupsRef.current, rumor.pubkey, others.filter((x) => x !== rumor.pubkey), me);
+            if (g === 'drop') return;
+            if (g) peer = g;
+          }
           // A deleted chat or message: the relay still holds its envelopes for 30 days and hands
           // them out again on the next start. Messages up to the moment of deleting stay gone.
           if (rumor.created_at <= (clearedRef.current[peer] ?? 0) || deletedRef.current.has(rumor.id)) return;
           const replyTo = replyOf(rumor.tags);
+          // Written by an AI in the sender's name (not an AI writing as itself).
+          const byAi = rumor.kind === 14 ? aiOf(rumor.tags) : undefined;
+          const writtenByAi = byAi && byAi.pubkey !== rumor.pubkey ? byAi : undefined;
           if (isGroup(peer)) {
             const subject = rumor.tags.find((t) => t[0] === 'subject')?.[1]?.slice(0, 60);
             rememberGroup(peer, subject, rumor.pubkey);
@@ -739,6 +823,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
             ...(file ? { file } : {}),
             ...(stamp ? { stamp: true } : {}),
             ...(replyTo ? { replyTo } : {}),
+            ...(writtenByAi ? { ai: writtenByAi } : {}),
           };
           if (rumor.pubkey !== me) m.got = Date.now();
           addMessage(m);
@@ -1119,10 +1204,12 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       if (isGroup(peer) && subject) tags.push(['subject', subject]);
       tags.push(...extra);
       const rumor = nip59.createRumor({ kind, content, tags, created_at: at }, secret);
-      const wraps = [...members, me].map((to) => nip59.createWrap(nip59.createSeal(rumor, secret, to), to));
+      // AIs every member of this group has said yes to get a copy too (not in the p tags).
+      const ais = isGroup(peer) ? groupAiCopies(peer) : [];
+      const wraps = [...members, ...ais, me].map((to) => nip59.createWrap(nip59.createSeal(rumor, secret, to), to));
       return { rumor, wraps };
     },
-    [secret, me],
+    [secret, me, groupAiCopies],
   );
 
   // ---------- outbox ----------
@@ -1640,6 +1727,194 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     [secret, me, myName],
   );
 
+  // ---------- AI friends acting in my name (lib/ai-actions.ts) ----------
+
+  /** A short answer to my AI: for it only, and gone from the relay in 10 minutes. */
+  const tellAi = useCallback(
+    async (ai: string, kind: number, data: Record<string, unknown>) => {
+      if (!secret || !pool.current) return;
+      const rumor = nip59.createRumor({ kind, content: JSON.stringify(data), tags: [['p', ai]], created_at: Math.floor(Date.now() / 1000) }, secret);
+      await publishOne(pool.current, RELAYS, wrapExpiring(rumor, secret, ai), authRef.current ?? undefined).catch(() => false);
+    },
+    [secret],
+  );
+
+  /** Only a friend who is a person (not another AI), not blocked. Never a stranger. */
+  const isPersonFriend = useCallback(
+    (pk: string) => contactsRef.current.some((c) => c.pubkey === pk && !c.model) && !blockedRef.current.includes(pk),
+    [],
+  );
+
+  /** Sends a text in my name with the "written by an AI" tag. Only after the gate said yes. */
+  const sendFromAi = useCallback(
+    (peer: string, text: string, ai: Contact) => {
+      const by = { pubkey: ai.pubkey, ...(ai.model ? { model: ai.model } : {}), ...(ai.name ? { name: ai.name } : {}) };
+      const { rumor, wraps } = build(peer, 14, text, [aiTag(by)]);
+      saveBox([...outbox.current, { id: rumor.id, peer, at: rumor.created_at, wraps, done: [] }]);
+      addMessage({ id: rumor.id, from: me!, peer, text, at: rumor.created_at, pending: 'sending', ai: by });
+      void flush();
+    },
+    [build, saveBox, addMessage, me, flush],
+  );
+
+  const putProposals = useCallback((next: AiProposal[]) => {
+    aiProposalsRef.current = next;
+    saveProposals(next);
+    setAiProposals(next);
+  }, []);
+
+  const acceptAiProposal = useCallback(
+    async (id: string) => {
+      const prop = aiProposalsRef.current.find((x) => x.id === id);
+      if (!prop) return false;
+      putProposals(aiProposalsRef.current.filter((x) => x.id !== id));
+      const ai = contactsRef.current.find((c) => c.pubkey === prop.ai && c.model);
+      // Asked again now: a switch may have been turned off since the AI wrote it.
+      const ok =
+        !!ai &&
+        gateAi({ ai: prop.ai, model: ai.model, action: 'send', friend: prop.to, content: { kind: 'text', text: prop.text } }, isPersonFriend);
+      if (ok && ai) sendFromAi(prop.to, prop.text, ai);
+      void tellAi(prop.ai, AI_SEND_RESULT_KIND, { re: prop.id, status: ok ? 'sent' : 'stopped' });
+      return ok;
+    },
+    [putProposals, isPersonFriend, sendFromAi, tellAi],
+  );
+
+  const declineAiProposal = useCallback(
+    (id: string) => {
+      const prop = aiProposalsRef.current.find((x) => x.id === id);
+      if (!prop) return;
+      putProposals(aiProposalsRef.current.filter((x) => x.id !== id));
+      void tellAi(prop.ai, AI_SEND_RESULT_KIND, { re: prop.id, status: 'declined' });
+    },
+    [putProposals, tellAi],
+  );
+
+  /** My AI asks to send a message for me. The gate decides; nothing is sent around it. */
+  const handleSendAsk = useCallback(
+    async (rumor: ReturnType<typeof nip59.createRumor>, ai: Contact) => {
+      const ask = parseSendAsk(rumor.content);
+      if (!ask) return void tellAi(ai.pubkey, AI_SEND_RESULT_KIND, { re: rumor.id, status: 'invalid' });
+      const r = { ai: ai.pubkey, model: ai.model, friend: ask.to, content: { kind: 'text' as const, text: ask.text } };
+      // Without asking: the gate may let it go, or show the confirm window (photos, money, "ask each time").
+      const auto = decideAi(getAiPermissions(), { ...r, action: 'autosend' }, isPersonFriend);
+      if (auto.verdict !== 'deny') {
+        if (await askAi({ ...r, action: 'autosend' }, isPersonFriend)) {
+          sendFromAi(ask.to, ask.text, ai);
+          return void tellAi(ai.pubkey, AI_SEND_RESULT_KIND, { re: rumor.id, status: 'sent' });
+        }
+        if (auto.verdict === 'ask') return void tellAi(ai.pubkey, AI_SEND_RESULT_KIND, { re: rumor.id, status: 'declined' });
+      }
+      // After checking: it waits on this device until I press 送る (asked again then, and logged).
+      if (checkAi(getAiPermissions(), { ...r, action: 'send' }, isPersonFriend) !== null) {
+        gateAi({ ...r, action: 'send' }, isPersonFriend); // logs why it stopped
+        return void tellAi(ai.pubkey, AI_SEND_RESULT_KIND, { re: rumor.id, status: 'stopped' });
+      }
+      putProposals([...aiProposalsRef.current, { id: rumor.id, ai: ai.pubkey, to: ask.to, text: ask.text, at: Math.floor(Date.now() / 1000) }]);
+      void tellAi(ai.pubkey, AI_SEND_RESULT_KIND, { re: rumor.id, status: 'waiting' });
+    },
+    [isPersonFriend, sendFromAi, tellAi, putProposals],
+  );
+
+  /** My AI asks for my friend list (people only). */
+  const handleContactsAsk = useCallback(
+    async (rumor: ReturnType<typeof nip59.createRumor>, ai: Contact) => {
+      const ok = await askAi({ ai: ai.pubkey, model: ai.model, action: 'contacts' }, isPersonFriend);
+      const friends = ok
+        ? contactsRef.current.filter((c) => !c.model && !blockedRef.current.includes(c.pubkey)).map((c) => ({ pubkey: c.pubkey, name: c.name }))
+        : undefined;
+      void tellAi(ai.pubkey, AI_CONTACTS_KIND, friends ? { re: rumor.id, friends } : { re: rumor.id, stopped: true });
+    },
+    [isPersonFriend, tellAi],
+  );
+
+  /** My AI asks to talk to another person's AI: asked in the confirm window the first time. */
+  const handlePeerAsk = useCallback(
+    async (rumor: ReturnType<typeof nip59.createRumor>, ai: Contact) => {
+      const peer = parsePeerAsk(rumor.content);
+      if (!peer) return;
+      rememberPeerAi(peer.pubkey, { name: peer.name, model: peer.model });
+      const ok = await askAi({ ai: ai.pubkey, model: ai.model, action: 'otherAi', peer }, isPersonFriend);
+      // 今回だけ keeps nothing: the AI may talk for the next 10 minutes only.
+      const until = ok ? (getAiPermissions().peerAis[`${ai.pubkey}>${peer.pubkey}`]?.until ?? Math.floor(Date.now() / 1000) + 600) : 0;
+      void tellAi(ai.pubkey, AI_PEER_RESULT_KIND, { re: rumor.id, peer: peer.pubkey, until, limit: PEER_AI_DAILY_LIMIT });
+    },
+    [isPersonFriend, tellAi],
+  );
+
+  const revokePeerAi = useCallback(
+    async (ai: string, peer: string) => {
+      removePeerAi(ai, peer);
+      await tellAi(ai, AI_PEER_RESULT_KIND, { peer, until: 0, limit: 0 });
+    },
+    [tellAi],
+  );
+
+  const putAiGroups = useCallback((update: (prev: AiGroups) => AiGroups) => {
+    setAiGroups((prev) => {
+      const next = update(prev);
+      if (next === prev) return prev;
+      aiGroupsRef.current = next;
+      save(k('ai.groups'), next);
+      return next;
+    });
+  }, []);
+
+  /** An invitation or an answer: to every member, to the AI (so it knows when it is in), and to my other devices. */
+  const sendAiGroup = useCallback(
+    async (room: string, data: Record<string, unknown>) => {
+      if (!secret || !me || !pool.current) throw new Error('not open');
+      const everyone = everyoneIn(room, me).split(',');
+      const ai = String(data.ai);
+      const content = JSON.stringify({ ...data, members: everyone });
+      const at = Math.floor(Date.now() / 1000);
+      const rumor = nip59.createRumor({ kind: AI_GROUP_KIND, content, tags: [...room.split(','), ai].map((x) => ['p', x]), created_at: at }, secret);
+      const parsed = parseAiGroup(content);
+      if (parsed) {
+        // Applied here at once (a "no" stops my copies to the AI before anything is sent).
+        const next = applyAiGroup(aiGroupsRef.current, parsed, me, at);
+        aiGroupsRef.current = next;
+        putAiGroups(() => next);
+      }
+      const wraps = [...room.split(','), ai, me].map((to) => wrapQuiet(rumor, secret, to));
+      await Promise.any(wraps.map((w) => publishOne(pool.current!, RELAYS, w, authRef.current ?? undefined)));
+    },
+    [secret, me, putAiGroups],
+  );
+
+  const inviteAiToGroup = useCallback(
+    async (room: string, ai: string) => {
+      const c = contactsRef.current.find((x) => x.pubkey === ai && x.model);
+      if (!c || !isGroup(room) || !myAiMayRead(getAiPermissions(), c)) throw new AiNotAllowedError('not my AI');
+      await sendAiGroup(room, { t: 'invite', ai, name: c.name, ...(c.model ? { model: c.model } : {}) });
+    },
+    [sendAiGroup],
+  );
+
+  const answerAiInGroup = useCallback(
+    (room: string, ai: string, yes: boolean) => sendAiGroup(room, { t: 'answer', ai, yes }),
+    [sendAiGroup],
+  );
+
+  // What arrives from AIs and from group members about AIs. An ask is handled once and only
+  // while fresh, so the relay handing it out again cannot send a message twice.
+  aiRumorRef.current = (rumor) => {
+    if (!me) return;
+    if (rumor.kind === AI_GROUP_KIND) {
+      const r = parseAiGroup(rumor.content);
+      if (!r || !r.members.includes(me)) return;
+      putAiGroups((prev) => applyAiGroup(prev, r, rumor.pubkey, rumor.created_at));
+      return;
+    }
+    const ai = contactsRef.current.find((c) => c.pubkey === rumor.pubkey && c.model);
+    if (!ai || !freshAsk(rumor.created_at) || handledAsk(rumor.id)) return;
+    if (rumor.kind !== AI_SEND_ASK_KIND && rumor.kind !== AI_CONTACTS_ASK_KIND && rumor.kind !== AI_PEER_ASK_KIND) return;
+    markHandled(rumor.id);
+    if (rumor.kind === AI_SEND_ASK_KIND) void handleSendAsk(rumor, ai);
+    else if (rumor.kind === AI_CONTACTS_ASK_KIND) void handleContactsAsk(rumor, ai);
+    else void handlePeerAsk(rumor, ai);
+  };
+
   const recordCall = useCallback(
     (peer: string, from: string, record: CallRecord, id: string) => {
       addMessage({ id: `call:${id}`, from, peer, text: callText(record), at: Math.floor(Date.now() / 1000), call: record });
@@ -1779,6 +2054,13 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     onSignal,
     askAiDraft,
     onAiDraft,
+    aiProposals,
+    acceptAiProposal,
+    declineAiProposal,
+    aiGroups,
+    inviteAiToGroup,
+    answerAiInGroup,
+    revokePeerAi,
     recordCall,
     status,
     me,

@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { AiConfirm } from '@/components/ai-confirm';
+import { AiProposals } from '@/components/ai-proposals';
 import { CallScreen } from '@/components/call-screen';
 import { DesktopShell } from '@/components/desktop-shell';
 import { Gate } from '@/components/gate';
@@ -93,6 +94,8 @@ function Shell() {
       <CallScreen />
       {/* Over every screen: an AI waiting for the user's answer. */}
       <AiConfirm />
+      {/* Over every screen: a message my AI wrote for a friend, waiting for 送る. */}
+      <AiProposals />
     </CallProvider>
   );
 }

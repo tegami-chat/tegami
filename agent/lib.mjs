@@ -30,6 +30,24 @@ export const DRAFT_KIND = 25061;
 export const DRAFT_TTL = 600;
 const DRAFT_TEXT_MAX = 2000;
 
+// Asks to the owner's app (client/src/lib/ai-actions.ts). The app decides with its AI permissions;
+// the AI never holds the owner's key. Each ask and answer expires on the relay like a draft.
+export const SEND_ASK_KIND = 25062;
+export const SEND_RESULT_KIND = 25063;
+export const CONTACTS_ASK_KIND = 25064;
+export const CONTACTS_KIND = 25065;
+export const PEER_ASK_KIND = 25066;
+export const PEER_RESULT_KIND = 25067;
+export const AI_GROUP_KIND = 10102;
+/** Messages a day with one other person's AI, both ways, unless the owner's app gave another limit. */
+export const PEER_DAILY_LIMIT = 20;
+const HEX = /^[0-9a-f]{64}$/;
+
+/** The "written by an AI" tag: on the AI's own messages it names itself (other AIs see it is an AI). */
+export function aiTag(pubkey, profile) {
+  return ['ai', pubkey, String(profile.model ?? '').slice(0, 60), String(profile.name ?? '').slice(0, 60)];
+}
+
 /** Reads an ask's content, or null when it is not a well-formed ask. */
 export function parseAsk(content) {
   try {
@@ -125,7 +143,53 @@ export class Agent {
     // Asks for a reply draft. Kept in memory only: they hold a friend's words, never written to disk.
     this.askListeners = new Set();
     this.seenAsks = new Set();
+    // Answers from the owner's app, by the id of the ask they answer.
+    this.waiters = new Map();
+    // The owner's friends, as the owner's app last handed them over (memory only).
+    this.ownerFriends = [];
+    this.state.peerAis ??= {};
+    this.state.peerCount ??= {};
+    this.state.groups ??= {};
+    // Other people's AIs already asked about (so one AI writing many times asks the owner once an hour).
+    this.peerAsked = new Map();
+    // Their messages wait here (memory only) until the owner's app answers.
+    this.peerWaiting = new Map();
     this.pool = null;
+  }
+
+  /** The owner: the first trusted contact (the person whose app holds the AI permissions). */
+  get owner() {
+    return this.contacts.find((c) => c.trusted) ?? null;
+  }
+
+  /** Other people's AIs the owner's app lets this AI talk to now. */
+  peerGrant(pubkey, now = Math.floor(Date.now() / 1000)) {
+    const g = this.state.peerAis[pubkey];
+    return g && g.until > now ? g : null;
+  }
+
+  /** Counts one message with another person's AI; false when today's limit is used up. */
+  countPeer(pubkey) {
+    const g = this.peerGrant(pubkey);
+    if (!g) return false;
+    const day = new Date().toISOString().slice(0, 10);
+    const c = this.state.peerCount[pubkey]?.day === day ? this.state.peerCount[pubkey] : { day, n: 0 };
+    if (c.n >= (g.limit ?? PEER_DAILY_LIMIT)) return false;
+    this.state.peerCount[pubkey] = { day, n: c.n + 1 };
+    this.saveState();
+    return true;
+  }
+
+  /** A group every member has said yes to (the members' apps send its messages here only then). */
+  groupApproved(room) {
+    const g = this.state.groups[room];
+    return !!g && room.split(',').every((m) => g.answers[m]?.yes === true);
+  }
+
+  /** A chat this AI may read and write: contacts only, a granted AI, or an approved group. */
+  known(room) {
+    if (room.includes(',')) return this.groupApproved(room);
+    return this.contacts.some((c) => c.pubkey === room) || !!this.peerGrant(room);
   }
 
   get ready() {
@@ -226,7 +290,51 @@ export class Agent {
       for (const l of this.askListeners) l({ id: rumor.id, from: rumor.pubkey, at: rumor.created_at, content: rumor.content });
       return;
     }
+    if ([SEND_RESULT_KIND, CONTACTS_KIND, PEER_RESULT_KIND].includes(rumor.kind)) {
+      if (!this.isTrusted(rumor.pubkey)) return;
+      let data;
+      try {
+        data = JSON.parse(rumor.content);
+      } catch {
+        return;
+      }
+      if (rumor.kind === CONTACTS_KIND && Array.isArray(data.friends))
+        this.ownerFriends = data.friends.filter((f) => f && HEX.test(f.pubkey ?? '')).map((f) => ({ pubkey: f.pubkey, name: String(f.name ?? '').slice(0, 60) }));
+      if (rumor.kind === PEER_RESULT_KIND && HEX.test(data.peer ?? '')) {
+        // A grant, or (until 0) the owner took it back.
+        if (Number(data.until) > Math.floor(Date.now() / 1000)) {
+          const known = this.state.peerAis[data.peer] ?? {};
+          this.state.peerAis[data.peer] = { ...known, until: Number(data.until), limit: Number(data.limit) || PEER_DAILY_LIMIT };
+        } else delete this.state.peerAis[data.peer];
+        this.saveState();
+        const waiting = this.peerWaiting.get(data.peer) ?? [];
+        this.peerWaiting.delete(data.peer);
+        if (this.peerGrant(data.peer)) for (const w of waiting) this.receive(w);
+      }
+      const w = this.waiters.get(data.re);
+      if (w) {
+        this.waiters.delete(data.re);
+        w(data);
+      }
+      return;
+    }
+    if (rumor.kind === AI_GROUP_KIND) {
+      this.applyGroup(rumor);
+      return;
+    }
     if (rumor.kind !== 14) return;
+    // Another person's AI writing as itself: only with the owner's permission, and within the limit.
+    const selfTag = rumor.tags.find((t) => t[0] === 'ai' && t[1] === rumor.pubkey);
+    const isPeerAi = !!selfTag && rumor.pubkey !== this.pubkey && !this.contacts.some((c) => c.pubkey === rumor.pubkey);
+    if (isPeerAi && !rumor.tags.some((t) => t[0] === 'p' && t[1] !== this.pubkey)) {
+      if (!this.peerGrant(rumor.pubkey)) {
+        const waiting = this.peerWaiting.get(rumor.pubkey) ?? [];
+        if (waiting.length < 20) this.peerWaiting.set(rumor.pubkey, [...waiting, wrap]);
+        this.askAboutPeer({ pubkey: rumor.pubkey, model: selfTag[2] || undefined, name: selfTag[3] || undefined });
+        return;
+      }
+      if (this.messages.some((m) => m.id === rumor.id) || !this.countPeer(rumor.pubkey)) return;
+    }
     // The chat is everyone except this agent (author and p tags), sorted and joined
     // with ','. One person means a 1:1 chat; more means a group (same as the app).
     const others = [...new Set([rumor.pubkey, ...rumor.tags.filter((t) => t[0] === 'p').map((t) => t[1])])]
@@ -240,10 +348,17 @@ export class Agent {
     for (const l of this.listeners) l(m);
   }
 
+  /**
+   * Sends a message as this AI: to a contact, to another person's AI the owner allowed (within
+   * the daily limit), or to a group every member said yes to (`peer` is the members, joined by ',').
+   */
   async send(peer, text) {
     await this.connect();
-    const rumor = nip59.createRumor({ kind: 14, content: text, tags: [['p', peer]], created_at: Math.floor(Date.now() / 1000) }, this.secret);
-    const wraps = [peer, this.pubkey].map((to) => nip59.createWrap(nip59.createSeal(rumor, this.secret, to), to));
+    if (this.peerGrant(peer) && !this.contacts.some((c) => c.pubkey === peer) && !this.countPeer(peer)) throw new Error("Today's limit with this AI is used up.");
+    const members = peer.split(',');
+    const tags = [...members.map((m) => ['p', m]), aiTag(this.pubkey, this.profile)];
+    const rumor = nip59.createRumor({ kind: 14, content: text, tags, created_at: Math.floor(Date.now() / 1000) }, this.secret);
+    const wraps = [...members, this.pubkey].map((to) => nip59.createWrap(nip59.createSeal(rumor, this.secret, to), to));
     await Promise.any(wraps.flatMap((w) => this.pool.publish(RELAYS, w, { onauth: this.onauth })));
     this.receive(wraps[1]);
     return rumor.id;
@@ -256,6 +371,80 @@ export class Agent {
     const rumor = nip59.createRumor({ kind: DRAFT_KIND, content, tags: [['p', to], ['e', re]], created_at: Math.floor(Date.now() / 1000) }, this.secret);
     await Promise.any(this.pool.publish(RELAYS, wrapExpiring(rumor, this.secret, to), { onauth: this.onauth }));
     return rumor.id;
+  }
+
+  /** Sends an ask to the owner's app and waits for its answer (null after `ms`). */
+  async askOwner(kind, data, ms = 60_000) {
+    const owner = this.owner;
+    if (!owner) throw new Error('No owner yet. Run: tegami-agent add "<your invite link>" --trust');
+    await this.connect();
+    const rumor = nip59.createRumor({ kind, content: JSON.stringify({ v: 1, ...data }), tags: [['p', owner.pubkey]], created_at: Math.floor(Date.now() / 1000) }, this.secret);
+    const answer = new Promise((resolve) => {
+      const t = setTimeout(() => {
+        this.waiters.delete(rumor.id);
+        resolve(null);
+      }, ms);
+      this.waiters.set(rumor.id, (d) => {
+        clearTimeout(t);
+        resolve(d);
+      });
+    });
+    await Promise.any(this.pool.publish(RELAYS, wrapExpiring(rumor, this.secret, owner.pubkey), { onauth: this.onauth }));
+    return answer;
+  }
+
+  /** The owner's friends (people), if the owner's app allows "友だちの一覧を見る". */
+  async ownerContacts(ms) {
+    const r = await this.askOwner(CONTACTS_ASK_KIND, {}, ms);
+    return r?.friends ? this.ownerFriends : null;
+  }
+
+  /**
+   * Asks the owner's app to send `text` to one of the owner's friends, in the owner's name.
+   * Answers sent, waiting (for the owner to press 送る), declined, stopped, or null (no answer).
+   */
+  async sendAsOwner(to, text, ms) {
+    const r = await this.askOwner(SEND_ASK_KIND, { to, text: String(text).slice(0, DRAFT_TEXT_MAX) }, ms);
+    return r?.status ?? null;
+  }
+
+  /** Asks the owner's app whether this AI may talk to another person's AI. */
+  async askPeer(peer, ms) {
+    this.state.peerAis[peer.pubkey] = { ...(this.state.peerAis[peer.pubkey] ?? { until: 0 }), name: peer.name, model: peer.model };
+    const r = await this.askOwner(PEER_ASK_KIND, { peer }, ms);
+    return !!r && Number(r.until) > Math.floor(Date.now() / 1000);
+  }
+
+  /** Someone else's AI wrote: ask the owner once an hour at most (the message waits until allowed). */
+  askAboutPeer(peer) {
+    const last = this.peerAsked.get(peer.pubkey) ?? 0;
+    if (Date.now() - last < 3_600_000 || !this.owner) return;
+    this.peerAsked.set(peer.pubkey, Date.now());
+    this.askPeer(peer).catch(() => {});
+  }
+
+  /** An invitation into a group, or a member's answer (client/src/lib/ai-actions.ts). */
+  applyGroup(rumor) {
+    let r;
+    try {
+      r = JSON.parse(rumor.content);
+    } catch {
+      return;
+    }
+    if (r?.ai !== this.pubkey || !Array.isArray(r.members)) return;
+    const members = [...new Set(r.members.filter((m) => HEX.test(m)))].sort();
+    if (!members.includes(rumor.pubkey) || members.includes(this.pubkey)) return;
+    const room = members.join(',');
+    const cur = this.state.groups[room];
+    const at = rumor.created_at;
+    if (r.t === 'invite') {
+      if (cur && cur.at >= at) return;
+      this.state.groups[room] = { at, answers: { [rumor.pubkey]: { yes: true, at } } };
+    } else if (r.t === 'answer' && typeof r.yes === 'boolean') {
+      if (!cur || at < cur.at || (cur.answers[rumor.pubkey]?.at ?? -1) > at) return;
+      cur.answers[rumor.pubkey] = { yes: r.yes, at };
+    } else return;
+    this.saveState();
   }
 
   /**

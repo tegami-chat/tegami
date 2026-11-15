@@ -474,6 +474,18 @@ export function useAiLog(): AiLogEntry[] {
   );
 }
 
+/**
+ * Takes back my AI's permission to talk to another person's AI (lib/ai-actions.ts tells the AI).
+ * The next time it asks, the confirm window asks again.
+ */
+export function removePeerAi(ai: string, peer: string) {
+  const p = getAiPermissions();
+  const key = `${ai}>${peer}`;
+  if (!p.peerAis[key]) return;
+  const { [key]: _, ...rest } = p.peerAis;
+  put({ ...p, peerAis: rest });
+}
+
 /** Turns every "all AI" switch off at once, which stops every AI whatever the lower layers say. */
 export function stopAllAi() {
   const p = getAiPermissions();
