@@ -17,6 +17,7 @@ const PAGES = {
   how: { src: 'src/how.html', path: { en: '/how', ja: '/ja/how' }, out: { en: 'public/how.html', ja: 'public/ja/how.html' } },
   roadmap: { src: 'src/roadmap.html', path: { en: '/roadmap', ja: '/ja/roadmap' }, out: { en: 'public/roadmap.html', ja: 'public/ja/roadmap.html' } },
   privacy: { src: 'src/privacy.html', path: { en: '/privacy', ja: '/ja/privacy' }, out: { en: 'public/privacy.html', ja: 'public/ja/privacy.html' } },
+  status: { src: 'src/status.html', path: { en: '/status', ja: '/ja/status' }, out: { en: 'public/status.html', ja: 'public/ja/status.html' } },
 };
 // The draft file names the sources link to, and which page each one is.
 const DRAFT_LINKS = {
@@ -24,6 +25,7 @@ const DRAFT_LINKS = {
   'Tegamiの仕組み案_2026-11-14.html': 'how',
   'Tegamiのロードマップ案_2026-11-14.html': 'roadmap',
   'Tegamiのプライバシーポリシー案_2026-11-14.html': 'privacy',
+  'Tegamiの稼働状況と利用統計案_2026-11-15.html': 'status',
 };
 const META = {
   index: {
@@ -41,6 +43,10 @@ const META = {
   privacy: {
     en: { title: 'Tegami privacy policy', desc: 'What Tegami keeps, why, and for how long.' },
     ja: { title: 'Tegamiのプライバシーポリシー', desc: 'Tegamiが何を、なぜ、どれだけの期間預かるか。' },
+  },
+  status: {
+    en: { title: 'Tegami status and usage', desc: 'Whether the Tegami relay is responding, and weekly usage statistics.' },
+    ja: { title: 'Tegami の稼働状況と利用統計', desc: 'Tegami のリレーの稼働状況と、週ごとの利用統計。' },
   },
 };
 const LANG_ON = 'block px-4 py-2 text-sm font-semibold text-forest-600 dark:text-forest-300';
@@ -113,6 +119,8 @@ function build(name, lang) {
   // language menu: link to this page in each language, mark the current one
   html = html.replace(/<a href="\?lang=(en|ja)"([^>]*?) data-lang="(en|ja)" class="[^"]*">/g,
     (_, l, attrs, l2) => `<a href="${page.path[l]}"${attrs} data-lang="${l2}" class="${l === lang ? LANG_ON : LANG_OFF}"${l === lang ? ' aria-current="true"' : ''}>`);
+  // the status page's own script
+  html = html.replace('<script src="status.js"></script>', '<script src="/status.js"></script>');
   // anchors on the home page from other pages already point to /#x; on the home page keep #x
   writeFileSync(page.out[lang], html);
 }
@@ -120,5 +128,6 @@ function build(name, lang) {
 mkdirSync('public/ja', { recursive: true });
 for (const name of Object.keys(PAGES)) for (const lang of ['en', 'ja']) build(name, lang);
 copyFileSync('src/icon.svg', 'public/icon.svg');
+copyFileSync('src/status.js', 'public/status.js');
 execSync('npx --yes tailwindcss@3.4.16 -c tailwind.config.cjs -i src/input.css -o public/tegami.css --minify', { stdio: 'inherit' });
 console.log('built');
