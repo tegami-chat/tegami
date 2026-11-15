@@ -8,6 +8,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { describeAccount } from './accounts';
 import { AI_DRAFT_ASK_KIND, AI_DRAFT_KIND, draftAsk, parseDraft, wrapExpiring } from './ai-draft';
+import { pairWrap } from './ai-pair';
 import { gateAi } from './ai-permissions';
 import { clearNewMark } from './sw-store';
 import { createDeviceVault, deviceVaultAvailable, openDeviceVault, type DeviceVault } from './device-vault';
@@ -212,6 +213,8 @@ type TegamiState = {
    * Returns the ask's id.
    */
   askAiDraft: (ai: string, friend: string, confirmed?: boolean) => Promise<string>;
+  /** Answers the one-time code in an AI's invite link (lib/ai-pair.ts): the AI then replies to me. */
+  pairAi: (ai: string, code: string, myInvite: string) => Promise<void>;
   /** Listens for drafts coming back from AI friends. Returns the function that stops listening. */
   onAiDraft: (fn: (d: AiDraft) => void) => () => void;
   /** Listens for fresh call signals. Returns the function that stops listening. */
@@ -1640,6 +1643,14 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     [secret, me, myName],
   );
 
+  const pairAi = useCallback(
+    async (ai: string, code: string, myInvite: string) => {
+      if (!secret || !pool.current) throw new Error('not open');
+      if (!(await publishOne(pool.current, RELAYS, pairWrap(secret, ai, code, myInvite), authRef.current ?? undefined))) throw new Error('not sent');
+    },
+    [secret],
+  );
+
   const recordCall = useCallback(
     (peer: string, from: string, record: CallRecord, id: string) => {
       addMessage({ id: `call:${id}`, from, peer, text: callText(record), at: Math.floor(Date.now() / 1000), call: record });
@@ -1778,6 +1789,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     sendSignal,
     onSignal,
     askAiDraft,
+    pairAi,
     onAiDraft,
     recordCall,
     status,

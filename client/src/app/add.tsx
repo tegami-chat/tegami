@@ -7,6 +7,7 @@ import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, Vi
 
 import { Avatar } from '@/components/avatar';
 import { Palette, usePalette } from '@/constants/theme';
+import { pairCodeOf } from '@/lib/ai-pair';
 import { keepInviteCode } from '@/lib/register';
 import {
   inviteCodeOf,
@@ -86,7 +87,7 @@ function pickImageFile(): Promise<File | null> {
 export default function Add() {
   const c = usePalette();
   const s = styles(c);
-  const { npub, me, contacts, addContact, myName, setMyName, myAvatar, inviteCode, trusted, registration, registerWith } = useTegami();
+  const { npub, me, contacts, addContact, myName, setMyName, myAvatar, inviteCode, trusted, registration, registerWith, pairAi } = useTegami();
   const [opened] = useState(takePendingInvite);
   const [tab, setTab] = useState<'qr' | 'scan'>('qr');
   const [invite, setInvite] = useState(opened);
@@ -137,6 +138,9 @@ export default function Add() {
     // Registered without an invite: a friend's code makes my messages reach strangers too.
     const code = inviteCodeOf(invite);
     if (code && registration === 'ok' && !trusted) void registerWith({ invite: code });
+    // An AI on my computer showed a one-time code: tell it I am its owner (lib/ai-pair.ts).
+    const pair = pairCodeOf(invite);
+    if (pair) void pairAi(peer, pair, myInvite).catch(() => {});
     router.replace({ pathname: '/chat/[peer]', params: { peer } });
   }
 

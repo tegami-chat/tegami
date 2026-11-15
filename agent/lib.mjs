@@ -4,8 +4,8 @@
 // ~/.tegami/agents/<name>). key.json holds the AI's secret key in plain text, like
 // an SSH key: the agent has to run unattended, so there is no passkey to unlock it.
 
-import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync, existsSync, chmodSync } from 'node:fs';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync, existsSync, chmodSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import * as nip17 from 'nostr-tools/nip17';
@@ -29,6 +29,34 @@ export const DRAFT_KIND = 25061;
 /** Seconds an ask or a draft lives on the relay; older asks are not answered. */
 export const DRAFT_TTL = 600;
 const DRAFT_TEXT_MAX = 2000;
+
+// Pairing by QR code (client/src/lib/tegami.tsx pairAi): `tegami-agent pair` shows the AI's
+// invite link with a one-time code (&p=). The app that adds the AI from it sends back, sealed
+// for the AI, that code and its own invite link; the AI then trusts that person and registers
+// with the code in their link. The code works once, and only until it expires.
+export const PAIR_KIND = 25062;
+/** Seconds a pairing code works by default. */
+export const PAIR_TTL = 600;
+const BASE32 = 'abcdefghijklmnopqrstuvwxyz234567';
+
+/** A new one-time pairing code: 16 letters, 80 random bits. */
+export function newPairCode() {
+  const bytes = randomBytes(10);
+  let bits = 0;
+  let value = 0;
+  let out = '';
+  for (const b of bytes) {
+    value = (value << 8) | b;
+    bits += 8;
+    while (bits >= 5) {
+      out += BASE32[(value >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+  return out;
+}
+
+const hashCode = (code) => createHash('sha256').update(String(code)).digest();
 
 /** Reads an ask's content, or null when it is not a well-formed ask. */
 export function parseAsk(content) {
@@ -106,7 +134,10 @@ export function parseInvite(input) {
     }
   };
   const code = param('c');
-  return pubkey ? { pubkey, name: param('n'), model: param('m'), code: /^[a-z2-9]{6,32}$/.test(code) ? code : '' } : null;
+  const pair = param('p');
+  return pubkey
+    ? { pubkey, name: param('n'), model: param('m'), code: /^[a-z2-9]{6,32}$/.test(code) ? code : '', pair: /^[a-z2-7]{16}$/.test(pair) ? pair : '' }
+    : null;
 }
 
 // ---------- the agent ----------
@@ -125,6 +156,8 @@ export class Agent {
     // Asks for a reply draft. Kept in memory only: they hold a friend's words, never written to disk.
     this.askListeners = new Set();
     this.seenAsks = new Set();
+    // Pairing answers (a person's app sent the one-time code back). Handled by acceptPair.
+    this.pairListeners = new Set();
     this.pool = null;
   }
 
@@ -167,6 +200,61 @@ export class Agent {
     if (parsed) return this.contacts.find((c) => c.pubkey === parsed.pubkey) ?? { pubkey: parsed.pubkey, name: shortId(parsed.pubkey), trusted: false };
     const n = String(nameOrKey).trim();
     return this.contacts.find((c) => c.name === n) ?? null;
+  }
+
+  /** Reads the contacts again (another command, like `pair`, may have changed them). */
+  reloadContacts() {
+    this.contacts = read(this.dir, 'contacts.json', this.contacts);
+  }
+
+  /** Starts pairing: saves a new one-time code (only its hash) and returns the link to show as a QR code. */
+  startPairing(ttl = PAIR_TTL, now = Math.floor(Date.now() / 1000)) {
+    const code = newPairCode();
+    write(this.dir, 'pair.json', { hash: hashCode(code).toString('hex'), expires: now + ttl });
+    return { code, link: `${this.invite}&p=${code}`, expires: now + ttl };
+  }
+
+  /** Ends pairing without anyone (it expired, or the command was stopped). */
+  stopPairing() {
+    rmSync(join(this.dir, 'pair.json'), { force: true });
+  }
+
+  /**
+   * Answers a pairing message. ok: the sender is now a trusted contact (the code is used up).
+   * The code must match and not be expired, and the invite link inside must be the sender's own.
+   * Returns { ok, reason, contact, invite }.
+   */
+  acceptPair(rumor, now = Math.floor(Date.now() / 1000)) {
+    const file = join(this.dir, 'pair.json');
+    const pending = read(this.dir, 'pair.json', null);
+    if (!pending) return { ok: false, reason: 'not pairing' };
+    if (now > pending.expires) {
+      rmSync(file, { force: true });
+      return { ok: false, reason: 'the code has expired' };
+    }
+    let body;
+    try {
+      body = JSON.parse(rumor.content);
+    } catch {
+      return { ok: false, reason: 'not a pairing message' };
+    }
+    if (body?.v !== 1 || typeof body.code !== 'string' || typeof body.invite !== 'string') return { ok: false, reason: 'not a pairing message' };
+    const want = Buffer.from(pending.hash, 'hex');
+    const got = hashCode(body.code);
+    if (want.length !== got.length || !timingSafeEqual(want, got)) return { ok: false, reason: 'wrong code' };
+    const inv = parseInvite(body.invite);
+    if (!inv || inv.pubkey !== rumor.pubkey) return { ok: false, reason: "the invite link is not the sender's" };
+    // Use the code up first. Renaming is atomic: if a watcher and `pair` both got the
+    // message, only one of them gets the file.
+    const taken = `${file}.${process.pid}`;
+    try {
+      renameSync(file, taken);
+    } catch {
+      return { ok: false, reason: 'already used' };
+    }
+    rmSync(taken, { force: true });
+    const contact = this.addContact({ pubkey: rumor.pubkey, name: inv.name, trusted: true });
+    return { ok: true, contact, invite: inv };
   }
 
   isTrusted(pubkey) {
@@ -224,6 +312,10 @@ export class Agent {
       if (this.seenAsks.has(rumor.id)) return;
       this.seenAsks.add(rumor.id);
       for (const l of this.askListeners) l({ id: rumor.id, from: rumor.pubkey, at: rumor.created_at, content: rumor.content });
+      return;
+    }
+    if (rumor.kind === PAIR_KIND) {
+      for (const l of this.pairListeners) l({ id: rumor.id, pubkey: rumor.pubkey, at: rumor.created_at, content: rumor.content });
       return;
     }
     if (rumor.kind !== 14) return;

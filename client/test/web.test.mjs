@@ -1478,6 +1478,46 @@ async function main() {
       }
     });
 
+    await test('AI pairing: adding the AI from the QR code of `tegami-agent pair` makes it reply to me', async () => {
+      const AGENT = join(ROOT, '../agent');
+      const home = mkdtempSync(join(tmpdir(), 'tegami-agent-'));
+      const env = { ...process.env, TEGAMI_AGENT_HOME: home, TEGAMI_RELAYS: `ws://localhost:${RELAY_PORT}` };
+      let pair;
+      let watch;
+      try {
+        pair = spawn(process.execPath, [join(AGENT, 'agent.mjs'), 'pair', '--name', 'クロード', '--minutes', '2'], { env, stdio: ['ignore', 'pipe', 'pipe'] });
+        let out = '';
+        pair.stdout.on('data', (d) => (out += d));
+        const exited = new Promise((r) => pair.on('exit', r));
+        const waitOut = async (s) => {
+          for (let i = 0; i < 150 && !out.includes(s); i++) await new Promise((r) => setTimeout(r, 100));
+          assert(out.includes(s), `agent did not print "${s}": ${out.slice(-300)}`);
+        };
+        await waitOut('&p=');
+        const aiLink = out.match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
+        const u = await person(browser, 'わたし');
+        // The QR code scan accepts the link with the pairing code.
+        assert((await u.page.evaluate((l) => window.inviteFromQr(l), aiLink)) === aiLink, 'the QR code scan refused the pairing link');
+        // My link carries my invite code once the relay has answered: the AI registers with it.
+        await u.page.waitForFunction(() => /&c=[a-z2-9]+/.test(document.body.innerText), null, { timeout: 10000 });
+        await befriend(u, aiLink);
+        await waitOut('Paired with わたし');
+        await waitOut('Registered with the Tegami relay');
+        assert((await exited) === 0, 'pair did not finish');
+        watch = spawn(process.execPath, [join(AGENT, 'agent.mjs'), 'watch', '--command', `node "${join(AGENT, 'test/echo.mjs')}"`], { env, stdio: 'pipe' });
+        await new Promise((r) => watch.stdout.once('data', r));
+        await u.page.getByPlaceholder('メッセージ').fill('はじめまして');
+        await button(u.page, '送る').click();
+        await waitText(u.page, 'echo: わたし: はじめまして');
+        await shot(u.page, 'ai-pair-chat', 'AI paired by QR code answers');
+        await u.context.close();
+      } finally {
+        pair?.kill();
+        watch?.kill();
+        rmSync(home, { recursive: true, force: true });
+      }
+    });
+
     // ---------- reply and search ----------
 
     await test('Reply: B sees the quote above the reply, tapping it scrolls to and marks the original; cancel works', async () => {

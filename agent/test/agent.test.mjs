@@ -18,7 +18,7 @@ import WebSocket from 'ws';
 
 useWebSocketImplementation(WebSocket);
 const ROOT = resolve(import.meta.dirname, '..');
-const PORT = 7449;
+const PORT = Number(process.env.RELAY_PORT ?? 7449);
 const RELAY = process.env.RELAY ?? `ws://localhost:${PORT}`;
 const HOME = mkdtempSync(join(tmpdir(), 'tegami-agent-'));
 const env = { ...process.env, TEGAMI_AGENT_HOME: HOME, TEGAMI_RELAYS: RELAY };
