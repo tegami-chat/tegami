@@ -214,4 +214,37 @@ test('history: broken messages are dropped', () => {
   assert.deepEqual(h.messages[0].call, { video: true, result: 'done', seconds: 3 });
 });
 
+test('a Tegami group (g-<gid>) is not in the ledger: its state comes only from signed group changes', () => {
+  const g = { id: `g-${'1'.repeat(32)}`, gid: '1'.repeat(32), name: '家族', members: [X, Y], mode: 'admin', admins: [X], v: 5, vid: 'f'.repeat(64) };
+  const a = S.stamp(all(null, lists(), 1), 'g', lists({ groups: [g] }), 1000).ledger;
+  assert(!Object.keys(a).some((key) => key.startsWith('g:g-')), 'a Tegami group went into the ledger');
+  // A device that has the group keeps it as it is, whatever the other device's ledger says.
+  const old = [X, Z].sort().join(',');
+  let other = S.stamp(all(null, lists(), 1), 'g', lists({ groups: [{ id: old, name: '古い', members: old.split(',') }] }), 1500).ledger;
+  const atB = deliver(other, null, lists({ groups: [g] }), 2000);
+  assert.deepEqual(atB.lists.groups.find((x) => x.id === g.id), g);
+  assert(atB.lists.groups.some((x) => x.id === old));
+  // An entry for a g- group from outside is dropped.
+  assert.deepEqual(S.cleanEntries({ [`g:${g.id}`]: [9, { n: 'にせもの' }] }), {});
+});
+
+test('history: messages of a Tegami group, group lines and AI-written messages make the move', () => {
+  const room = `g-${'2'.repeat(32)}`;
+  const part = JSON.stringify({
+    v: 1,
+    messages: [
+      { id: 'e'.repeat(64), from: X, peer: room, text: 'グループで', at: 1 },
+      { id: 'd'.repeat(64), from: X, peer: room, text: 'えーがグループを作成しました。', at: 2, notice: true },
+      { id: 'c'.repeat(64), from: X, peer: Y, text: 'AIが書いた', at: 3, ai: { pubkey: Z, model: 'Anthropic Claude', name: 'クロード' } },
+      { id: 'b'.repeat(64), from: X, peer: 'g-xyz', text: 'bad room', at: 4 },
+    ],
+    cleared: { [room]: 1 },
+  });
+  const h = H.readHistoryPart(part);
+  assert.equal(h.messages.length, 3);
+  assert.equal(h.messages[1].notice, true);
+  assert.deepEqual(h.messages[2].ai, { pubkey: Z, model: 'Anthropic Claude', name: 'クロード' });
+  assert.equal(h.cleared[room], 1);
+});
+
 console.log(`${n} passed`);

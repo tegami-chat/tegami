@@ -120,7 +120,8 @@ export function readHistoryPart(text: string): History {
   return out;
 }
 
-const validRoom = (room: string) => room.split(',').every((p) => HEX.test(p));
+// A 1:1 chat or an old NIP-17 group (the members' keys), or a Tegami group (`g-<gid>`, groups.ts).
+const validRoom = (room: string) => /^g-[0-9a-f]{32}$/.test(room) || room.split(',').every((p) => HEX.test(p));
 
 function cleanMessage(raw: unknown): Message | null {
   const m = raw as Record<string, unknown>;
@@ -141,5 +142,15 @@ function cleanMessage(raw: unknown): Message | null {
   }
   if (typeof m.got === 'number' && Number.isFinite(m.got)) out.got = m.got;
   if (typeof m.replyTo === 'string' && HEX.test(m.replyTo)) out.replyTo = m.replyTo;
+  // A line about a change to a group (groups.ts), and a message an AI wrote in my name (ai-actions.ts).
+  if (m.notice === true) out.notice = true;
+  const ai = m.ai as { pubkey?: unknown; model?: unknown; name?: unknown } | undefined;
+  if (ai && typeof ai === 'object' && typeof ai.pubkey === 'string' && HEX.test(ai.pubkey)) {
+    out.ai = {
+      pubkey: ai.pubkey,
+      ...(typeof ai.model === 'string' && ai.model ? { model: ai.model.slice(0, 60) } : {}),
+      ...(typeof ai.name === 'string' && ai.name ? { name: ai.name.slice(0, 60) } : {}),
+    };
+  }
   return out;
 }
