@@ -1051,7 +1051,8 @@ async function main() {
       await button(a.page, 'アイコンを変更').click();
       await (await chooser).setFiles({ name: 'g.png', mimeType: 'image/png', buffer: png });
       await waitText(b.page, 'あきらがグループのアイコンを変更しました。');
-      await b.page.getByTestId('avatar-img').first().waitFor({ timeout: 15000 });
+      // Nobody else here has a picture: an image on B's screen is the group's.
+      await b.page.waitForFunction(() => [...document.querySelectorAll('[data-testid="avatar-img"]')].some((i) => i.complete && i.naturalWidth > 0), null, { timeout: 15000 });
 
       // A removes C: C keeps the chat but can no longer write, and gets nothing new.
       await a.page.goto(ORIGIN + '/');
