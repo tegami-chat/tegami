@@ -18,8 +18,9 @@
 // - every number rounded up to a multiple of 10, and 0 to 9 all reported as 0, so a quiet
 //   week and an empty week look the same;
 // - file sizes in MB, rounded the same way;
-// - the key estimate merges the week's daily counters, so a key active on several days of
-//   the week counts once.
+// - keys: the average per day over the 7 days of the week. Each day's counters use that
+//   day's own salt, so the days cannot be merged into "different keys in the week": the same
+//   key looks different on each day. An average per day is what the numbers can honestly say.
 // The exact daily rows are for the operator only (POST /admin {action: 'stats'}).
 
 const P = 10;
@@ -124,17 +125,16 @@ export class Stats {
     const rows = this.sql
       .exec('SELECT day, envelopes, files, file_bytes, logins, hll FROM stats ORDER BY day DESC LIMIT ?', (weeks + 1) * 7)
       .toArray();
-    const byWeek = new Map<string, { envelopes: number; files: number; bytes: number; logins: number; hll: Uint8Array }>();
+    const byWeek = new Map<string, { envelopes: number; files: number; bytes: number; logins: number; keyDays: number }>();
     for (const r of rows) {
       const w = weekOf(r.day as string);
       if (w >= current) continue;
-      const cur = byWeek.get(w) ?? { envelopes: 0, files: 0, bytes: 0, logins: 0, hll: new Uint8Array(M) };
+      const cur = byWeek.get(w) ?? { envelopes: 0, files: 0, bytes: 0, logins: 0, keyDays: 0 };
       cur.envelopes += r.envelopes as number;
       cur.files += r.files as number;
       cur.bytes += r.file_bytes as number;
       cur.logins += r.logins as number;
-      const reg = new Uint8Array(r.hll as ArrayBuffer);
-      for (let i = 0; i < M; i++) if (reg[i] > cur.hll[i]) cur.hll[i] = reg[i];
+      cur.keyDays += estimate(new Uint8Array(r.hll as ArrayBuffer));
       byWeek.set(w, cur);
     }
     return [...byWeek.entries()]
@@ -146,7 +146,7 @@ export class Stats {
         files: publishable(c.files),
         file_mb: publishable(Math.ceil(c.bytes / 1048576)),
         logins: publishable(c.logins),
-        keys: publishable(estimate(c.hll)),
+        keys: publishable(Math.round(c.keyDays / 7)),
       }));
   }
 
@@ -174,6 +174,6 @@ export const STATS_DESCRIPTION = {
     files: 'files accepted',
     file_mb: 'total size of accepted files, in MB',
     logins: 'successful logins',
-    keys: 'about how many different keys logged in during the week (HyperLogLog; each day uses a salt deleted at the end of that day)',
+    keys: 'about how many different keys logged in per day, averaged over the 7 days of the week (HyperLogLog; each day uses a salt deleted at the end of that day)',
   },
 };

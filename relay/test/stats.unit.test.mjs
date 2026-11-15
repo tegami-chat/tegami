@@ -55,12 +55,13 @@ const thisWeek = weekOf(day(0));
 const lastWeek = weekOf(day(-7));
 const twoWeeksAgo = weekOf(day(-14));
 // Last week: two days. Envelopes 50 + 36 = 86, files 1 + 2 = 3, 5 MB + 10 MB, logins 4 + 5 = 9.
-// The same 12 keys on both days (identical counters): the week has about 12 keys, not 24.
-const three = reg(Array.from({ length: 12 }, (_, i) => [i * 5 + 1, 1]));
+// About 62 keys on each of the two days: the week reports the average per day over 7 days,
+// (62 + 62) / 7 = 18, rounded up to 20. Merging the days into one count would be wrong (each day has its own salt).
+const three = reg(Array.from({ length: 60 }, (_, i) => [i * 13 + 1, 1]));
 insert(lastWeek, 50, 1, 5 * 1048576, 4, three);
 insert(day(-7 - ((new Date(day(-7) + 'T00:00:00Z').getUTCDay() + 6) % 7) + 1), 36, 2, 10 * 1048576, 5, three);
-// Two weeks ago: 12 of everything, and 12 different keys.
-insert(twoWeeksAgo, 12, 12, 12 * 1048576, 12, reg(Array.from({ length: 12 }, (_, i) => [i * 7, 1])));
+// Two weeks ago: 12 of everything, and about 84 keys on one day (84 / 7 = 12 per day).
+insert(twoWeeksAgo, 12, 12, 12 * 1048576, 12, reg(Array.from({ length: 84 }, (_, i) => [i * 11, 1])));
 // This week (not over): must not be published.
 insert(day(0), 999, 999, 999 * 1048576, 999, reg([[5, 1]]));
 
@@ -72,7 +73,7 @@ check(`last week: envelopes 86 -> 90 (${by[lastWeek]?.envelopes})`, by[lastWeek]
 check(`last week: 3 files -> 0 (${by[lastWeek]?.files})`, by[lastWeek]?.files === 0);
 check(`last week: 15 MB -> 20 (${by[lastWeek]?.file_mb})`, by[lastWeek]?.file_mb === 20);
 check(`last week: 9 logins -> 0 (${by[lastWeek]?.logins})`, by[lastWeek]?.logins === 0);
-check(`last week: the same 12 keys on two days count once -> 20, not 30 (${by[lastWeek]?.keys})`, by[lastWeek]?.keys === 20);
+check(`last week: keys are the average per day over 7 days, about 20 (${by[lastWeek]?.keys})`, by[lastWeek]?.keys === 20);
 check(`two weeks ago: 12 -> 20 everywhere (${JSON.stringify(by[twoWeeksAgo])})`,
   by[twoWeeksAgo]?.envelopes === 20 && by[twoWeeksAgo]?.files === 20 && by[twoWeeksAgo]?.file_mb === 20 && by[twoWeeksAgo]?.logins === 20 && by[twoWeeksAgo]?.keys === 20);
 check('every published number is a multiple of 10', weeks.every((w) => ['envelopes', 'files', 'file_mb', 'logins', 'keys'].every((k) => w[k] % 10 === 0)));
