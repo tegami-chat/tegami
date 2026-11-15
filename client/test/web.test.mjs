@@ -404,6 +404,7 @@ async function main() {
       EXPO_PUBLIC_TEGAMI_RELAYS: `ws://localhost:${RELAY_PORT}`,
       EXPO_PUBLIC_TEGAMI_FILES: `http://localhost:${RELAY_PORT}`,
       EXPO_PUBLIC_TURNSTILE_SITEKEY: '',
+      EXPO_PUBLIC_TEGAMI_TEST_HOOKS: '1',
     });
   }
   await startRelay();
@@ -2057,7 +2058,7 @@ async function main() {
 
       // A friend's switch is locked while "all AI" has it off.
       await p.getByText('テストB', { exact: true }).click();
-      await waitText(p, 'テストBのトークで AI ができること');
+      await waitText(p, 'テストBとのトークで AI ができること');
       assert(await sw('トークを読む').isDisabled(), 'friend switch can be turned on while all AI is off');
       await waitText(p, '「AI の使用」でオフになっています');
       await p.goBack();
@@ -2065,7 +2066,7 @@ async function main() {
       assert((await perms()).all.read === true, 'all.read was not saved');
       await shot(p, 'ai-permissions-on', 'AI の権限：AI の使用でトークを読むをオン');
       await p.getByText('テストB', { exact: true }).click();
-      await waitText(p, 'テストBのトークで AI ができること');
+      await waitText(p, 'テストBとのトークで AI ができること');
       assert(!(await sw('トークを読む').isDisabled()), 'friend switch still locked');
       assert(!(await sw('トークを読む').isChecked()), 'a friend is picked before the user picks them');
       await sw('トークを読む').click();
@@ -2100,7 +2101,213 @@ async function main() {
       await p.getByText('テストB').first().click();
       await p.getByRole('button', { name: 'メニュー' }).click();
       await p.getByText('AI の権限', { exact: true }).click();
-      await waitText(p, 'テストBのトークで AI ができること');
+      await waitText(p, 'テストBとのトークで AI ができること');
+      for (const u of [a, b]) await u.context.close();
+    });
+
+    await test('AI permission levels: how long a switch stays on, read only in one go, asking once before sending without asking, and the confirm window', async () => {
+      const a = await person(browser, 'あおい');
+      const b = await person(browser, 'テストB');
+      await befriend(a, b);
+      const aiKey = generateSecretKey();
+      const aiHex = getPublicKey(aiKey);
+      await befriend(a, `${ORIGIN}/i#${nip19.npubEncode(aiHex)}&n=${encodeURIComponent('クロード')}&m=${encodeURIComponent('Anthropic Claude')}`);
+      const p = a.page;
+      const perms = () => p.evaluate(() => JSON.parse(localStorage.getItem('tegami.ai.permissions') || 'null'));
+      const sw = (name) => p.getByRole('switch', { name, exact: true });
+      const chip = (name) => p.getByRole('radio', { name, exact: true });
+      const confirmShown = () => p.getByTestId('ai-confirm').isVisible().catch(() => false);
+      /** Starts an AI request through the gate; returns a function that waits for its answer. */
+      const ask = async (r) => {
+        await p.evaluate((r) => {
+          window.__answer = window.__tegamiAskAi(r);
+        }, { ai: aiHex, model: 'Anthropic Claude', ...r });
+        return () => p.evaluate(() => window.__answer);
+      };
+
+      // Read only in one go.
+      await p.goto(ORIGIN + '/ai');
+      await waitText(p, 'AI の使用');
+      await button(p, '読むと下書きだけにする').click();
+      let now = await perms();
+      assert(now.all.contacts === true && now.all.read === true && now.all.draft === true, 'read only did not turn reading on');
+      assert(!now.all.send && !now.all.autosend && !now.all.otherAi, 'read only turned sending on');
+      assert(!(await button(p, '読むと下書きだけにする').isVisible().catch(() => false)), 'the read-only button stays while already read only');
+
+      // How long: a switch that is on shows its term; one hour sets a time limit.
+      await chip('トークを読む：1時間').click();
+      now = await perms();
+      assert(typeof now.all.read?.until === 'number' && now.all.read.until > Date.now() / 1000 + 3500, 'one hour was not saved');
+      await waitText(p, 'まで');
+      await shot(p, 'ai-terms', 'AI の使用：オンのスイッチの下に「ずっと」「今日だけ」「1時間」「毎回確認」。1時間を選ぶと終わる時刻が出る');
+      await chip('トークを読む：ずっと').click();
+      assert((await perms()).all.read === true, 'back to always');
+
+      // Turning "send without asking" on asks once; cancel leaves it off.
+      await sw('確認してから送る').click();
+      await sw('確認なしで送る').click();
+      await waitText(p, '「確認なしで送る」をオンにしますか？');
+      await shot(p, 'ai-autosend-confirm', '「確認なしで送る」をオンにする時に1回だけ出る確認');
+      await button(p, 'キャンセル').click();
+      assert(!(await perms()).all.autosend, 'cancel turned it on');
+      await sw('確認なしで送る').click();
+      await button(p, 'オンにする').click();
+      assert((await perms()).all.autosend === true, 'autosend was not turned on');
+
+      // テストB: read only, then sending (sending without asking asks once there too, with the name).
+      await p.getByText('テストB', { exact: true }).click();
+      await waitText(p, 'テストBとのトークで AI ができること');
+      await button(p, '読むと下書きだけにする').click();
+      await sw('確認してから送る').click();
+      await sw('確認なしで送る').click();
+      await waitText(p, 'あなたの名前でテストBに');
+      await button(p, 'オンにする').click();
+      now = await perms();
+      assert(now.friends[b.hex].read === true && now.friends[b.hex].autosend === true, 'friend switches not saved');
+
+      // Plain text goes without a window; a photo and money always ask, with to whom and what.
+      await p.goto(ORIGIN + '/ai');
+      await waitText(p, 'AI の使用');
+      let answer = await ask({ action: 'autosend', friend: b.hex, content: { kind: 'text', text: '明日の10時でどう？' } });
+      assert((await answer()) === true && !(await confirmShown()), 'plain text was asked');
+      answer = await ask({ action: 'autosend', friend: b.hex, content: { kind: 'photo' } });
+      await p.getByTestId('ai-confirm').waitFor();
+      await waitText(p, 'クロードが送ろうとしています');
+      await waitText(p, '宛先');
+      await shot(p, 'ai-confirm-photo', 'AI が写真を確認なしで送ろうとした時の確認（宛先と中身を大きく出す）');
+      await button(p, '送る').click();
+      assert((await answer()) === true, 'sending the photo was not allowed');
+      answer = await ask({ action: 'autosend', friend: b.hex, content: { kind: 'text', text: '3000円を振り込んでください' } });
+      await waitText(p, '3000円を振り込んでください');
+      await shot(p, 'ai-confirm-money', 'AI がお金の話を確認なしで送ろうとした時の確認');
+      await button(p, '送らない').click();
+      assert((await answer()) === false, 'refusing still sent');
+
+      // Another person's AI: asked the first time with its name and model, then kept.
+      await sw('ほかの人の AI と話す').click();
+      const peer = { pubkey: 'e'.repeat(64), name: 'テストCの AI', model: 'OpenAI GPT' };
+      answer = await ask({ action: 'otherAi', peer });
+      await waitText(p, 'クロードがほかの人の AI と話そうとしています');
+      await waitText(p, 'OpenAI GPT');
+      await shot(p, 'ai-confirm-peer', '自分の AI が初めてほかの人の AI と話す時の確認');
+      await button(p, '30日間許可').click();
+      assert((await answer()) === true, 'the other AI was not allowed');
+      assert((await perms()).peerAis[`${aiHex}>${'e'.repeat(64)}`]?.until > Date.now() / 1000 + 29 * 86400, '30 days were not kept');
+      answer = await ask({ action: 'otherAi', peer });
+      assert((await answer()) === true && !(await confirmShown()), 'asked again for the same AI');
+
+      // Ask each time.
+      await chip('トークを読む：毎回確認').click();
+      answer = await ask({ action: 'read', friend: b.hex });
+      await waitText(p, 'クロードがトークを読もうとしています');
+      await button(p, '今回だけ許可').click();
+      assert((await answer()) === true, 'once was not allowed');
+
+      // A time limit that has passed: the switch is turned off and the log says so.
+      await p.evaluate(() => {
+        const v = JSON.parse(localStorage.getItem('tegami.ai.permissions'));
+        v.all.contacts = { until: Math.floor(Date.now() / 1000) - 5 };
+        localStorage.setItem('tegami.ai.permissions', JSON.stringify(v));
+      });
+      await p.reload();
+      await waitText(p, 'AI の使用');
+      await p.waitForFunction(() => JSON.parse(localStorage.getItem('tegami.ai.permissions')).all.contacts === false, null, { timeout: 5000 });
+      await p.getByText('AI の記録', { exact: true }).click();
+      await waitText(p, '期間が終わったため、自動でオフに戻しました');
+      await waitText(p, '写真、動画、ファイル、音声、お金の話は確認：許可しました');
+      await waitText(p, '初めて話すほかの人の AI：許可しました');
+      await waitText(p, 'クロード：ほかの人の AI と話す（テストCの AI）');
+      assert(!(await p.getByText(/npub1/).count()), 'the log shows the other AI by its key');
+      await waitText(p, 'クロード：メッセージを送る（テストB）');
+      await shot(p, 'ai-log-levels', 'AI の記録：確認の答えと、期間が終わったスイッチ');
+      for (const u of [a, b]) await u.context.close();
+    });
+
+    await test('AI permissions move with the account: the link to another device and the recovery code carry them, the log stays', async () => {
+      const a = await person(browser, 'あおい');
+      const b = await person(browser, 'テストB');
+      await befriend(a, b);
+      const aiLink = `${ORIGIN}/i#${nip19.npubEncode(getPublicKey(generateSecretKey()))}&n=${encodeURIComponent('クロード')}&m=${encodeURIComponent('Anthropic Claude')}`;
+      await befriend(a, aiLink);
+      const p = a.page;
+      const perms = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('tegami.ai.permissions') || 'null'));
+      // The same settings, whatever order the switches were turned in.
+      const same = (x, y) => {
+        const sorted = (v) => (v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((key) => [key, sorted(v[key])])) : v);
+        return JSON.stringify(sorted(x)) === JSON.stringify(sorted(y));
+      };
+      const log = (page) => page.evaluate(() => localStorage.getItem('tegami.ai.log'));
+      const sw = (name) => p.getByRole('switch', { name, exact: true });
+
+      // All AI may read; for テストB too; the Anthropic Claude model may not.
+      await p.goto(ORIGIN + '/settings');
+      await button(p, 'AI の権限').click();
+      await waitText(p, 'AI の使用');
+      await sw('トークを読む').click();
+      await p.getByText('テストB', { exact: true }).click();
+      await waitText(p, 'テストBとのトークで AI ができること');
+      await sw('トークを読む').click();
+      await p.goBack();
+      await p.getByText('Anthropic Claude', { exact: true }).last().click();
+      await sw('トークを読む').click();
+      await p.goBack();
+      const want = await perms(p);
+      assert(want.all.read === true && want.friends[b.hex].read === true && want.models['Anthropic Claude'].read === false, 'settings were not saved');
+      // A decision log on this device: it must not move.
+      await p.evaluate(() => localStorage.setItem('tegami.ai.log', JSON.stringify([{ at: 1, ai: 'x', action: 'read', allowed: false, stoppedBy: 'all' }])));
+
+      // The 10-minute link brings the settings, not the log.
+      await p.goto(ORIGIN + '/settings');
+      await p.getByText('別の端末でも使う').click();
+      await waitText(p, 'まで使えます');
+      const moveLink = (await text(p)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)?.[0];
+      assert(moveLink, 'no moving link');
+      const a2 = await newUser(browser, { prf: false });
+      await a2.page.goto(moveLink);
+      await button(a2.page, 'この端末で使う').click();
+      await button(a2.page, 'パスキーを使わずに始める').click();
+      await waitOpen(a2.page);
+      assert(same(await perms(a2.page), want), 'the AI settings did not move with the link');
+      assert((await log(a2.page)) === null, 'the AI log moved with the link');
+      await a2.page.goto(ORIGIN + '/ai');
+      await waitText(a2.page, 'AI の使用');
+      assert(await a2.page.getByRole('switch', { name: 'トークを読む', exact: true }).isChecked(), 'the screen on the new device shows it off');
+      await a2.context.close();
+      await p.getByText('閉じる').click().catch(() => {});
+
+      // The recovery backup carries them, and follows a change made after the code was made.
+      await p.goto(ORIGIN + '/settings');
+      await button(p, '復旧コードを作成').click();
+      await waitText(p, 'このコードは今だけ表示されます');
+      const code = (await p.getByTestId('recovery-code').innerText()).trim();
+      await button(p, '保管しました').click();
+      const backupData = async () => (await (await fetch(`http://localhost:${RELAY_PORT}/_backups`)).json())[0]?.data;
+      const before = await backupData();
+      assert(before, 'no backup on the relay');
+      await p.goto(ORIGIN + '/ai');
+      await waitText(p, 'AI の使用');
+      await sw('友だちの一覧を見る').click();
+      for (let i = 0; i < 100 && (await backupData()) === before; i++) await p.waitForTimeout(100);
+      assert((await backupData()) !== before, 'the backup was not refreshed after an AI switch changed');
+      const after = await perms(p);
+      assert(after.all.contacts === true, 'the new switch was not saved');
+
+      const r = await newUser(browser, { prf: false });
+      await button(r.page, '復旧コードを使う').click();
+      await r.page.getByPlaceholder('復旧コード').fill(code);
+      await button(r.page, '復旧').click();
+      await waitText(r.page, '受け取りました');
+      await button(r.page, 'この端末で使う').click();
+      await button(r.page, 'パスキーを使わずに始める').click();
+      await waitOpen(r.page);
+      assert(same(await perms(r.page), after), 'the AI settings did not come back with the recovery code');
+      assert((await log(r.page)) === null, 'the AI log came back with the recovery code');
+      await r.context.close();
+
+      // Turn recovery off again so other tests see an empty relay.
+      await p.goto(ORIGIN + '/settings');
+      await button(p, '復旧コードを削除').click();
+      await waitText(p, '復旧コードを作成');
       for (const u of [a, b]) await u.context.close();
     });
 

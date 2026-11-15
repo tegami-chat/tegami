@@ -3,6 +3,7 @@ import { Stack, router, type ErrorBoundaryProps, type Href } from 'expo-router';
 import { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { AiConfirm } from '@/components/ai-confirm';
 import { CallScreen } from '@/components/call-screen';
 import { DesktopShell } from '@/components/desktop-shell';
 import { Gate } from '@/components/gate';
@@ -90,6 +91,8 @@ function Shell() {
       {wide ? <DesktopShell>{stack}</DesktopShell> : stack}
       {/* Over every screen: an incoming call shows wherever the person is. */}
       <CallScreen />
+      {/* Over every screen: an AI waiting for the user's answer. */}
+      <AiConfirm />
     </CallProvider>
   );
 }

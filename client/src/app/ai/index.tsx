@@ -5,11 +5,11 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AiSwitches } from '@/components/ai-switches';
 import { Avatar } from '@/components/avatar';
 import { Palette, usePalette } from '@/constants/theme';
-import { AI_ACTIONS, FRIEND_ACTIONS, stopAllAi, useAiPermissions, type AiPermissions } from '@/lib/ai-permissions';
+import { AI_ACTIONS, FRIEND_ACTIONS, READ_ONLY, setAiSwitches, stopAllAi, switchValue, useAiPermissions, type AiPermissions } from '@/lib/ai-permissions';
 import { useTegami } from '@/lib/tegami';
 
-function onCount(p: AiPermissions, field: 'friends', id: string) {
-  return FRIEND_ACTIONS.filter((a) => p[field][id]?.[a] === true).length;
+function onCount(p: AiPermissions, id: string) {
+  return FRIEND_ACTIONS.filter((a) => switchValue(p, { layer: 'friend', id }, a)).length;
 }
 
 export default function AiPermissionsScreen() {
@@ -20,7 +20,8 @@ export default function AiPermissionsScreen() {
   const ais = contacts.filter((x) => x.model);
   const friends = contacts.filter((x) => !x.model);
   const models = [...new Set(ais.map((x) => x.model as string))].sort();
-  const anyOn = AI_ACTIONS.some((a) => p.all[a] === true);
+  const anyOn = AI_ACTIONS.some((a) => switchValue(p, { layer: 'all' }, a));
+  const readOnly = AI_ACTIONS.every((a) => switchValue(p, { layer: 'all' }, a) === READ_ONLY[a]);
 
   const open = (layer: 'ai' | 'model' | 'friend', id: string) =>
     router.push({ pathname: '/ai/[layer]/[id]', params: { layer, id } } as unknown as Href);
@@ -29,6 +30,11 @@ export default function AiPermissionsScreen() {
     <ScrollView style={s.fill} contentContainerStyle={s.body}>
       <Text style={s.heading}>AI の使用</Text>
       <AiSwitches scope={{ layer: 'all' }} />
+      {!readOnly && (
+        <Pressable style={s.card} onPress={() => setAiSwitches({ layer: 'all' }, READ_ONLY)} role="button">
+          <Text style={s.action}>読むと下書きだけにする</Text>
+        </Pressable>
+      )}
       {anyOn && (
         <Pressable style={s.card} onPress={stopAllAi} role="button">
           <Text style={s.danger}>すべてオフにする</Text>
@@ -78,14 +84,14 @@ export default function AiPermissionsScreen() {
           <Text style={s.heading}>友だちごと</Text>
           <View style={s.list}>
             {friends.map((x, i) => {
-              const n = onCount(p, 'friends', x.pubkey);
+              const n = onCount(p, x.pubkey);
               return (
                 <Pressable key={x.pubkey} style={[s.row, i > 0 && s.border]} onPress={() => open('friend', x.pubkey)} role="button">
                   <Avatar name={x.name} file={x.avatar} size={36} />
                   <Text style={s.label} numberOfLines={1}>
                     {x.name}
                   </Text>
-                  <Text style={s.sub}>{n ? `${n}件 オン` : 'オフ'}</Text>
+                  <Text style={s.sub}>{n ? `${n}件オン` : 'オフ'}</Text>
                   <MaterialIcons name="chevron-right" size={22} color={c.muted} />
                 </Pressable>
               );
@@ -118,4 +124,5 @@ const styles = (c: Palette) =>
     label: { fontSize: 16, color: c.text, flex: 1 },
     sub: { fontSize: 13, color: c.muted },
     danger: { fontSize: 15, color: c.danger, fontWeight: '600' },
+    action: { fontSize: 15, color: c.accent, fontWeight: '600' },
   });

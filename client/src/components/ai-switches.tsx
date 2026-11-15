@@ -1,13 +1,19 @@
-import { StyleSheet, Switch, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Modal, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
+import { Dialog } from '@/components/dialog';
 import { Palette, usePalette } from '@/constants/theme';
 import {
   AI_ACTIONS,
   FRIEND_ACTIONS,
+  rawValue,
   setAiSwitch,
   switchValue,
+  untilFor,
   useAiPermissions,
   type AiAction,
+  type Scope,
+  type SwitchValue,
 } from '@/lib/ai-permissions';
 
 export const AI_ACTION_LABEL: Record<AiAction, string> = {
@@ -19,37 +25,117 @@ export const AI_ACTION_LABEL: Record<AiAction, string> = {
   otherAi: 'ほかの人の AI と話す',
 };
 
-type Scope = { layer: 'all' } | { layer: 'model' | 'ai' | 'friend'; id: string };
+type Term = 'always' | 'today' | 'hour' | 'ask';
+const TERM_LABEL: Record<Term, string> = { always: 'ずっと', today: '今日だけ', hour: '1時間', ask: '毎回確認' };
 
-/** One card of switches for one layer. `blocked` returns why a layer above has turned an action off. */
-export function AiSwitches({ scope, blocked }: { scope: Scope; blocked?: (a: AiAction) => string | null }) {
+function endOfToday() {
+  const d = new Date();
+  d.setHours(24, 0, 0, 0);
+  return Math.floor(d.getTime() / 1000);
+}
+
+/** Which term a switch that is on has. */
+function termOf(v: SwitchValue | undefined): Term {
+  if (v === 'ask') return 'ask';
+  if (v && typeof v === 'object') return v.until >= endOfToday() ? 'today' : 'hour';
+  return 'always';
+}
+
+function valueOf(t: Term): SwitchValue {
+  if (t === 'ask') return 'ask';
+  if (t === 'always') return true;
+  return untilFor(t);
+}
+
+const hhmm = (s: number) => new Date(s * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+/**
+ * One card of switches for one layer. `blocked` returns why a layer above has turned an
+ * action off. A switch that is on shows how long it stays on: always, today, one hour, or
+ * asking each time. `name` is the friend's name on the friend layer.
+ */
+export function AiSwitches({ scope, blocked, name }: { scope: Scope; blocked?: (a: AiAction) => string | null; name?: string }) {
   const c = usePalette();
   const s = styles(c);
   const p = useAiPermissions();
+  const [confirmAutosend, setConfirmAutosend] = useState(false);
   const actions = scope.layer === 'friend' ? FRIEND_ACTIONS : AI_ACTIONS;
+
+  const turn = (a: AiAction, on: boolean) => {
+    // Sending in the user's name without a look first: asked once, here, when it is turned on.
+    if (on && a === 'autosend' && (scope.layer === 'all' || scope.layer === 'friend')) return setConfirmAutosend(true);
+    setAiSwitch(scope, a, on);
+  };
+
   return (
     <View style={s.card}>
       {actions.map((a, i) => {
         const why = blocked?.(a) ?? null;
         const off = why !== null;
+        const on = !off && switchValue(p, scope, a);
+        const raw = rawValue(p, scope, a);
+        const term = termOf(raw);
+        // Sending: "確認してから送る" already shows the draft before it goes, and asking each
+        // time for "確認なしで送る" would be the same thing under a contradicting name.
+        const terms: Term[] = a === 'send' || a === 'autosend' ? ['always', 'today', 'hour'] : ['always', 'today', 'hour', 'ask'];
         return (
-          <View key={a} style={[s.row, i > 0 && s.border]}>
-            <View style={s.text}>
-              <Text style={[s.label, off && s.off]}>{AI_ACTION_LABEL[a]}</Text>
-              {why ? <Text style={s.why}>{why}</Text> : null}
+          <View key={a} style={[s.item, i > 0 && s.border]}>
+            <View style={s.row}>
+              <View style={s.text}>
+                <Text style={[s.label, off && s.off]}>{AI_ACTION_LABEL[a]}</Text>
+                {why ? <Text style={s.why}>{why}</Text> : null}
+              </View>
+              <Switch
+                trackColor={{ false: c.line, true: c.accent }}
+                thumbColor="#ffffff"
+                {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}
+                value={on}
+                disabled={off}
+                onValueChange={(v) => turn(a, v)}
+                aria-label={AI_ACTION_LABEL[a]}
+              />
             </View>
-            <Switch
-              trackColor={{ false: c.line, true: c.accent }}
-              thumbColor="#ffffff"
-              {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}
-              value={!off && switchValue(p, scope, a)}
-              disabled={off}
-              onValueChange={(on) => setAiSwitch(scope, a, on)}
-              aria-label={AI_ACTION_LABEL[a]}
-            />
+            {on && (
+              <View style={s.terms} role="radiogroup" aria-label={`「${AI_ACTION_LABEL[a]}」を許可する期間`}>
+                {terms.map((t) => {
+                  const picked = t === term;
+                  const label = picked && t === 'hour' && raw && typeof raw === 'object' ? `${hhmm(raw.until)}まで` : TERM_LABEL[t];
+                  return (
+                    <Pressable
+                      key={t}
+                      role="radio"
+                      aria-checked={picked}
+                      aria-label={`${AI_ACTION_LABEL[a]}：${TERM_LABEL[t]}`}
+                      onPress={() => setAiSwitch(scope, a, valueOf(t))}
+                      style={[s.term, picked && s.termPicked]}>
+                      <Text style={[s.termText, picked && s.termTextPicked]}>{label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
           </View>
         );
       })}
+      <Modal transparent visible={confirmAutosend} onRequestClose={() => setConfirmAutosend(false)}>
+        <Dialog
+          title="「確認なしで送る」をオンにしますか？"
+          text={`AI が、確認の画面を出さずに、あなたの名前で${name ? `${name}に` : ''}メッセージを送れるようになります。ただし、写真、動画、ファイル、音声、お金の話は、オンにしても送る前に確認の画面が出ます。`}
+          stacked
+          onClose={() => setConfirmAutosend(false)}
+          buttons={[
+            {
+              label: 'オンにする',
+              variant: 'danger',
+              onPress: () => {
+                setConfirmAutosend(false);
+                setAiSwitch(scope, 'autosend', true);
+              },
+            },
+            { label: 'キャンセル', onPress: () => setConfirmAutosend(false) },
+          ]}
+        />
+      </Modal>
     </View>
   );
 }
@@ -57,10 +143,16 @@ export function AiSwitches({ scope, blocked }: { scope: Scope; blocked?: (a: AiA
 const styles = (c: Palette) =>
   StyleSheet.create({
     card: { backgroundColor: c.surface, borderRadius: 12, borderWidth: 1, borderColor: c.line, overflow: 'hidden' },
-    row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingHorizontal: 14, minHeight: 52 },
+    item: { paddingHorizontal: 14 },
+    row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 52 },
     border: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line },
     text: { flex: 1, paddingVertical: 8 },
     label: { fontSize: 16, color: c.text },
     why: { fontSize: 12, color: c.muted, marginTop: 2 },
     off: { color: c.muted },
+    terms: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingBottom: 12 },
+    term: { minHeight: 40, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1, borderColor: c.line, alignItems: 'center', justifyContent: 'center' },
+    termPicked: { backgroundColor: c.accent, borderColor: c.accent },
+    termText: { fontSize: 13, color: c.text },
+    termTextPicked: { color: '#ffffff', fontWeight: '600' },
   });

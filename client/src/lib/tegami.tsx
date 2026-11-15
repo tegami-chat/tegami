@@ -13,6 +13,7 @@ import { setCrashReports } from './crash';
 import { MAX_FILE_BYTES, encryptAndUpload, fileFromRumor, fileTags, forgetFile, isStampRumor, keepSent, keptFile, openFile, shrinkAvatar, shrinkImage, shrinkStamp, validFileName, validFileRef, type FileRef } from './files';
 import { backoff, loadOutbox, publishOne, saveOutbox, type Outgoing } from './outbox';
 import { k, load, remove, save } from './storage';
+import { replaceAiPermissions, useAiPermissions } from './ai-permissions';
 import { bundleSecret, sendTransfer, type Bundle } from './transfer';
 import { disablePush, enablePush, refreshPush, type PushState } from './push';
 import { SIGNAL_KIND, freshSignal, wrapQuiet, wrapSignal } from './signal';
@@ -349,6 +350,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [blocked, setBlocked] = useState<string[]>([]);
+  // What AI friends may do: moves with the account, and a change rewrites the recovery backup.
+  const aiPermissions = useAiPermissions();
   const [messages, setMessages] = useState<Message[]>([]);
   const [myName, setMyNameState] = useState('');
   const [myAvatar, setMyAvatarState] = useState<FileRef | null>(null);
@@ -821,6 +824,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     setGroups(moved.groups);
     blockedRef.current = moved.blocked ?? [];
     setBlocked(moved.blocked ?? []);
+    replaceAiPermissions(moved.ai);
     const keys = takeRestoredKeys();
     if (keys) {
       await saveLocal(sk, { keys, stale: [] });
@@ -872,9 +876,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
 
   const makeTransferLink = useCallback(async () => {
     if (!secret || !pool.current || !authRef.current) throw new Error('not open');
-    const bundle: Bundle = { v: 1, secretHex: bytesToHex(secret), myName, contacts, groups, blocked };
+    const bundle: Bundle = { v: 1, secretHex: bytesToHex(secret), myName, contacts, groups, blocked, ai: aiPermissions };
     return sendTransfer(pool.current, RELAYS, authRef.current, bundle, globalThis.location?.origin ?? APP_ORIGIN);
-  }, [secret, myName, contacts, groups, blocked]);
+  }, [secret, myName, contacts, groups, blocked, aiPermissions]);
 
   const unlock = useCallback(async () => {
     if (!vault) return;
@@ -1512,8 +1516,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
   const currentBundle = useCallback(
-    (sk: Uint8Array): Bundle => ({ v: 1, secretHex: bytesToHex(sk), myName, contacts, groups, blocked }),
-    [myName, contacts, groups, blocked],
+    (sk: Uint8Array): Bundle => ({ v: 1, secretHex: bytesToHex(sk), myName, contacts, groups, blocked, ai: aiPermissions }),
+    [myName, contacts, groups, blocked, aiPermissions],
   );
 
   const makeRecoveryCode = useCallback(async () => {
@@ -1549,7 +1553,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     });
   }, [secret, enqueue, refreshed]);
 
-  // Keep the backup up to date when my name, contacts or groups change (after a pause).
+  // Keep the backup up to date when my name, contacts, groups, blocks or AI settings change (after a pause).
   useEffect(() => {
     if (!secret || !recoveryOn) return;
     const bundle = currentBundle(secret);
