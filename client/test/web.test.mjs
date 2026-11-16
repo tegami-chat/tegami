@@ -3133,7 +3133,7 @@ async function main() {
       assert(JSON.stringify(list) === JSON.stringify([{ pubkey: b.hex, name: 'テストB' }]), `the friend list after marking: ${JSON.stringify(list)}`);
       await p.goto(ORIGIN + '/ai');
       await waitText(p, 'AI友だち');
-      await noText(p, 'ほかの人のAI', 500);
+      assert((await p.getByText('ほかの人のAI', { exact: true }).count()) === 0, 'my AI is still listed with the other AIs');
       for (const u of [a, b]) await u.context.close();
     });
 
