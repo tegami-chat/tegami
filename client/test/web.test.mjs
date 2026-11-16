@@ -2945,6 +2945,117 @@ async function main() {
       }, update);
     const storedTexts = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages') || '[]').map((m) => m.text));
 
+    await test('AI opt-out: a marked message and a friend who says no stay out of drafts; the choice reaches my other device', async () => {
+      const AGENT = join(ROOT, '../agent');
+      const home = mkdtempSync(join(tmpdir(), 'tegami-agent-'));
+      const env = { ...process.env, TEGAMI_AGENT_HOME: home, TEGAMI_RELAYS: `ws://localhost:${RELAY_PORT}` };
+      const cli = (...args) => execFileSync(process.execPath, [join(AGENT, 'agent.mjs'), ...args], { env, encoding: 'utf8' });
+      let watch;
+      try {
+        const a = await person(browser, 'あおい');
+        const b = await person(browser, 'テストB');
+        const p = a.page;
+        const aiLink = cli('init', '--name', 'クロード', '--model', 'Anthropic Claude').match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
+        const aiHex = nip19.decode(aiLink.match(/npub1[0-9a-z]+/)[0]).data;
+        await befriend(a, aiLink.replace('https://app.tegami.chat', ORIGIN));
+        await p.goto(ORIGIN + '/add');
+        await p.waitForFunction(() => /&c=[a-z2-9]+/.test(document.body.innerText), null, { timeout: 10000 });
+        cli('add', (await text(p)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0], '--name', 'あおい', '--trust');
+        watch = spawn(process.execPath, [join(AGENT, 'agent.mjs'), 'watch', '--command', `node "${join(AGENT, 'test/echo.mjs')}"`], { env, stdio: 'pipe' });
+        await new Promise((r) => watch.stdout.once('data', r));
+        await setPerms(p, { all: { read: true, draft: true }, friends: { [b.hex]: { read: true, draft: true } } });
+
+        // テストB writes one plain message, then one with this chat's「AIに読ませない」on.
+        await befriend(b, a);
+        const bp = b.page;
+        await bp.getByPlaceholder('メッセージ').fill('ふつうの文');
+        await button(bp, '送る').click();
+        await button(bp, 'その他').click();
+        await bp.getByTestId('plus-panel').waitFor();
+        await shot(bp, 'noai-plus', '＋を押した時。「AIに読ませない」の切り替え');
+        await bp.getByRole('switch', { name: 'AIに読ませない', exact: true }).click();
+        await bp.getByTestId('noai-here').waitFor();
+        await bp.getByPlaceholder('メッセージ').fill('ひみつの文');
+        await shot(bp, 'noai-here', 'このトークで「AIに読ませない」をオンにした時。入力欄の上に出る');
+        await button(bp, '送る').click();
+        await bp.getByTestId('noai-mark').waitFor();
+        await button(bp, 'AIに読ませないをやめる').click();
+        await bp.getByPlaceholder('メッセージ').fill('またふつう');
+        await button(bp, '送る').click();
+        await waitText(bp, 'またふつう');
+        assert((await bp.getByTestId('noai-mark').count()) === 1, 'the mark is on more than the one marked message');
+
+        // あおい sees the mark on that one message only, and it never goes to the AI.
+        await befriend(a, b);
+        await waitText(p, 'またふつう');
+        await p.getByTestId('noai-mark').waitFor();
+        assert((await p.getByTestId('noai-mark').count()) === 1, 'the receiver shows the mark on more than one message');
+        await shot(p, 'noai-mark', '受け取った側。「AIに読ませない」の印が付いた吹き出し');
+        const toAi = async () => (await envelopesFor(aiHex)).length;
+        const before = await toAi();
+        await button(p, 'その他').click();
+        await button(p, 'クロードに下書きを頼む').click();
+        await waitText(p, 'AIにトークを読ませますか？');
+        await waitText(p, '「AIに読ませない」の印が付いた文は渡しません。');
+        await shot(p, 'noai-notice', '最初のお知らせ。印の付いた文は渡さないと書く');
+        await button(p, '読ませる').click();
+        await p.waitForFunction(() => document.querySelector('textarea[placeholder="メッセージ"]')?.value.startsWith('echo:'), null, { timeout: 15000 });
+        const drafted = await p.getByPlaceholder('メッセージ').inputValue();
+        assert(drafted === 'echo: テストB: ふつうの文\nテストB: またふつう', `the draft: ${JSON.stringify(drafted)}`);
+        assert((await toAi()) === before + 1, 'not exactly one ask went to the AI');
+        await p.getByPlaceholder('メッセージ').fill('');
+
+        // テストB has a second device; turning the setting on reaches it and every friend.
+        await bp.goto(ORIGIN + '/settings');
+        await bp.getByText('別の端末でも使う').click();
+        await waitText(bp, 'まで使えます');
+        const moveLink = (await text(bp)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)?.[0];
+        assert(moveLink, 'no moving link');
+        const b2 = await newUser(browser, { prf: false });
+        await b2.page.goto(moveLink);
+        await button(b2.page, 'この端末で使う').click();
+        await button(b2.page, 'パスキーを使わずに始める').click();
+        await waitOpen(b2.page);
+        await bp.goto(ORIGIN + '/settings');
+        const mySwitch = (page) => page.getByRole('switch', { name: '自分の文を相手のAIに読ませない', exact: true });
+        await mySwitch(bp).click();
+        await shot(bp, 'noai-setting', '設定の「AI」。自分の文を相手のAIに読ませない');
+        await b2.page.waitForFunction(() => localStorage.getItem('tegami.noai') === 'true', null, { timeout: 15000 });
+        await b2.page.goto(ORIGIN + '/settings');
+        await mySwitch(b2.page).waitFor();
+        assert((await mySwitch(b2.page).isChecked()) === true, 'the setting did not reach my other device');
+        await p.waitForFunction(
+          (hex) => JSON.parse(localStorage.getItem('tegami.contacts') || '[]').some((c) => c.pubkey === hex && c.noai === true),
+          b.hex,
+          { timeout: 15000 },
+        );
+
+        // Now nothing of テストB may be read: no ask goes out, and the chat says why.
+        const later = await toAi();
+        await p.goto(ORIGIN + `/chat/${b.hex}`);
+        await waitText(p, 'またふつう');
+        await button(p, 'その他').click();
+        await button(p, 'クロードに下書きを頼む').click();
+        await waitText(p, '下書きを頼めません');
+        await waitText(p, 'テストBさんは、自分の文を相手のAIに読ませない設定にしています。');
+        await shot(p, 'noai-refused', '相手が断っている時に下書きを頼んだ時');
+        await p.waitForTimeout(1000);
+        assert((await toAi()) === later, 'something went to the AI from a friend who said no');
+
+        // Turned off on the second device: it reaches the first, and drafts work again.
+        await mySwitch(b2.page).click();
+        await bp.waitForFunction(() => localStorage.getItem('tegami.noai') === 'false', null, { timeout: 15000 });
+        await p.waitForFunction(
+          (hex) => JSON.parse(localStorage.getItem('tegami.contacts') || '[]').some((c) => c.pubkey === hex && !c.noai),
+          b.hex,
+          { timeout: 15000 },
+        );
+        for (const u of [a, b, b2]) await u.context.close();
+      } finally {
+        watch?.kill();
+      }
+    });
+
     await test('AI sends in my name: only through the gate, after I press 送る or without asking when allowed; the friend sees AIが書いた', async () => {
       const a = await person(browser, 'あおい');
       const b = await person(browser, 'テストB');

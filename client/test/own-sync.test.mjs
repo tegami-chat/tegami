@@ -247,4 +247,25 @@ test('history: messages of a Tegami group, group lines and AI-written messages m
   assert.equal(h.cleared[room], 1);
 });
 
+test('my「AIに読ませない」goes to my other device, and turning it off goes too', () => {
+  const a = all(null, lists(), 1000);
+  const on = S.stamp(a, 'p', lists({ noai: true }), 2000).ledger;
+  const b = deliver(on, null, lists(), 2500);
+  assert.equal(b.lists.noai, true);
+  assert(b.changed.has('p'));
+  const off = S.stamp(on, 'p', lists({ noai: false }), 3000).ledger;
+  const b2 = deliver(off, b.ledger, lists({ noai: true }), 3500);
+  assert.equal(b2.lists.noai, false);
+  // It also rides in the bundle (the link to another device, the recovery backup).
+  assert.equal(S.cleanEntries(S.ledgerForBundle(on))['p:noai'].v, 1);
+});
+
+test("a friend's「AIに読ませない」(from their profile card) stays when the ledger is applied", () => {
+  const here = lists({ contacts: [{ pubkey: X, name: 'えっくす', noai: true }] });
+  const l = all(null, here, 1000);
+  const renamed = S.stamp(l, 'c', lists({ contacts: [{ pubkey: X, name: 'X さん' }] }), 2000).ledger;
+  const b = deliver(renamed, l, here, 2500);
+  assert.deepEqual(b.lists.contacts, [{ pubkey: X, name: 'X さん', noai: true }]);
+});
+
 console.log(`${n} passed`);

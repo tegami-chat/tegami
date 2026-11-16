@@ -21,6 +21,10 @@
 //   the ledger does not carry them. Otherwise a ledger entry could set a name or members that
 //   no admin signed. The ledger carries only the old NIP-17 groups (id = the members' keys).
 // - the AI log: it records what happened on one device.
+// - a friend's「AIに読ませない」: like the picture, it comes from the friend's profile card.
+//
+// My own「自分の文を相手のAIに読ませない」is one entry, "p:noai" (value 1 while on), so all my
+// devices tell my friends the same (lib/ai-optout.ts).
 
 import { AI_ACTIONS, cleanAiPermissions, type AiPermissions } from './ai-permissions';
 import type { Contact, Group } from './tegami';
@@ -42,8 +46,9 @@ export const BASELINE_AT = 1;
 
 export type Entry = { at: number; v?: unknown; local?: true };
 export type Ledger = Record<string, Entry>;
-export type Section = 'c' | 'g' | 'b' | 'a';
-export type AccountLists = { contacts: Contact[]; groups: Group[]; blocked: string[]; ai: AiPermissions };
+export type Section = 'c' | 'g' | 'b' | 'a' | 'p';
+/** noai: my「自分の文を相手のAIに読ませない」(lib/ai-optout.ts). */
+export type AccountLists = { contacts: Contact[]; groups: Group[]; blocked: string[]; ai: AiPermissions; noai?: boolean };
 
 const HEX = /^[0-9a-f]{64}$/;
 /** A Tegami group (`g-<gid>`, groups.ts), whose state comes from signed group changes, not from the ledger. */
@@ -56,6 +61,7 @@ export function flatten(section: Section, lists: AccountLists): Record<string, u
   if (section === 'c') for (const c of lists.contacts) out[`c:${c.pubkey}`] = c.model ? { n: c.name, m: c.model } : { n: c.name };
   if (section === 'g') for (const g of lists.groups) if (!isTegamiGroup(g)) out[`g:${g.id}`] = { n: g.name };
   if (section === 'b') for (const p of lists.blocked) out[`b:${p}`] = 1;
+  if (section === 'p' && lists.noai) out['p:noai'] = 1;
   if (section === 'a') {
     const ai = lists.ai;
     for (const [a, v] of Object.entries(ai.all)) out[`a:${JSON.stringify(['all', a])}`] = v;
@@ -99,7 +105,7 @@ export function stamp(ledger: Ledger | null, section: Section, lists: AccountLis
 /** Writes every section (before entries from another device are merged into this one). */
 export function stampAll(ledger: Ledger | null, lists: AccountLists, at: number): Ledger {
   let next = ledger;
-  for (const s of ['c', 'g', 'b', 'a'] as const) next = stamp(next, s, lists, at).ledger;
+  for (const s of ['c', 'g', 'b', 'a', 'p'] as const) next = stamp(next, s, lists, at).ledger;
   return next ?? {};
 }
 
@@ -130,16 +136,17 @@ export function materialize(ledger: Ledger, current: AccountLists): AccountLists
       .sort((x, y) => x[1].at - y[1].at);
   const contactValues = new Map(live('c:').map(([key, e]) => [key.slice(2), e.v as { n: string; m?: string }]));
   const contacts: Contact[] = [];
-  const contactOf = (pubkey: string, v: { n: string; m?: string }, avatar?: Contact['avatar']): Contact => ({
+  const contactOf = (pubkey: string, v: { n: string; m?: string }, avatar?: Contact['avatar'], noai?: true): Contact => ({
     pubkey,
     name: v.n,
     ...(v.m ? { model: v.m } : {}),
     ...(avatar ? { avatar } : {}),
+    ...(noai ? { noai } : {}),
   });
   for (const c of current.contacts) {
     const v = contactValues.get(c.pubkey);
     if (!v) continue;
-    contacts.push(contactOf(c.pubkey, v, c.avatar));
+    contacts.push(contactOf(c.pubkey, v, c.avatar, c.noai));
     contactValues.delete(c.pubkey);
   }
   for (const [pubkey, v] of contactValues) contacts.push(contactOf(pubkey, v));
@@ -185,7 +192,7 @@ export function materialize(ledger: Ledger, current: AccountLists): AccountLists
       (table[path[1]] ??= {})[path[2]] = e.v;
     }
   }
-  return { contacts, groups, blocked, ai: cleanAiPermissions(raw) };
+  return { contacts, groups, blocked, ai: cleanAiPermissions(raw), noai: ledger['p:noai']?.v === 1 };
 }
 
 /** Checks entries that came from another device (or a bundle). Unknown or broken entries are dropped. */
@@ -196,7 +203,7 @@ export function cleanEntries(raw: unknown): Ledger {
     if (!Array.isArray(val) || typeof val[0] !== 'number' || !Number.isFinite(val[0]) || val[0] < 0) continue;
     const at = Math.floor(val[0]);
     if (val.length < 2) {
-      if (/^[cba]:/.test(key) && key.length <= 400) out[key] = { at };
+      if (/^[cbap]:/.test(key) && key.length <= 400) out[key] = { at };
       continue;
     }
     const v = cleanValue(key, val[1]);
@@ -219,6 +226,7 @@ function cleanValue(key: string, v: unknown): unknown {
     return { n: g.n.slice(0, 60) };
   }
   if (key.startsWith('b:')) return HEX.test(id) && v === 1 ? 1 : undefined;
+  if (key === 'p:noai') return v === 1 ? 1 : undefined;
   if (key.startsWith('a:') && key.length <= 400) {
     let path: unknown;
     try {

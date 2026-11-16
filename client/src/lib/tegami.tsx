@@ -10,6 +10,7 @@ import { accounts, describeAccount, removeAccountHere } from './accounts';
 import { FEEDBACK_NAME, FEEDBACK_PUBKEY } from './feedback';
 import { AI_DRAFT_ASK_KIND, AI_DRAFT_KIND, draftAsk, parseDraft, wrapExpiring } from './ai-draft';
 import { pairWrap } from './ai-pair';
+import { aiReadable, chatNoAi, keptFromAi, myNoAi, nothingToRead, profileNoAi, saveMyNoAi, withNoAi, type NothingToRead } from './ai-optout';
 import { askAi, checkAi, decideAi, gateAi, getAiPermissions, removePeerAi } from './ai-permissions';
 import {
   AI_ACTION_KINDS,
@@ -101,6 +102,8 @@ export type Message = {
   notice?: true;
   /** Written by an AI in the sender's name (lib/ai-actions.ts): shown as「AIが書いた」. */
   ai?: { pubkey: string; model?: string; name?: string };
+  /** Never given to an AI: marked「AIに読ませない」or meant not to stay (lib/ai-optout.ts). */
+  noai?: true;
 };
 
 /** done: we talked. missed: they called, I did not answer. unanswered: I called, no answer. */
@@ -113,6 +116,12 @@ export type AiDraft = { ai: string; re: string; text: string };
 export class AiNotAllowedError extends Error {}
 /** Thrown when the AI gate wants the person to confirm this one ask first (askAiDraft with confirmed). */
 export class AiConfirmNeededError extends Error {}
+/** Thrown when nothing in the chat may be given to the AI (lib/ai-optout.ts): reason says why. */
+export class AiNothingToReadError extends Error {
+  constructor(public reason: NothingToRead) {
+    super(reason);
+  }
+}
 
 /** A call signal from someone (or from my other device: from === me). See lib/signal.ts. */
 export type Signal = { id: string; from: string; to: string; at: number; data: Record<string, unknown> };
@@ -121,7 +130,8 @@ export type Signal = { id: string; from: string; to: string; at: number; data: R
 export const PROFILE_KIND = 10100;
 
 /** model: for an AI friend, which company's which model (always shown, philosophy #93). */
-export type Contact = { pubkey: string; name: string; model?: string; avatar?: FileRef };
+/** noai: this friend keeps their words away from my AI (from their profile card, lib/ai-optout.ts). */
+export type Contact = { pubkey: string; name: string; model?: string; avatar?: FileRef; noai?: true };
 
 /** A stamp in my list (`k('stamps')`): an uploaded file and when it was uploaded (unix seconds). */
 // uploadedAt: only stamps from before the stamp storage (2026-11-15) have it; they are moved
@@ -247,6 +257,9 @@ type TegamiState = {
   /** My own name, shared through my invite link. Stays on this device otherwise. */
   myName: string;
   setMyName: (name: string) => void;
+  /** My「自分の文を相手のAIに読ませない」(lib/ai-optout.ts). Told to friends, synced to my devices. */
+  myNoAi: boolean;
+  setMyNoAi: (on: boolean) => Promise<void>;
   /** My own profile picture, shared privately with contacts only. */
   myAvatar: FileRef | null;
   setMyAvatar: (photo: Blob | null) => Promise<void>;
@@ -512,6 +525,10 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const [myAvatar, setMyAvatarState] = useState<FileRef | null>(null);
   const myAvatarRef = useRef<FileRef | null>(null);
   myAvatarRef.current = myAvatar;
+  // My「自分の文を相手のAIに読ませない」(lib/ai-optout.ts): in my profile card and my ledger.
+  const [myNoAiState, setMyNoAiState] = useState(false);
+  const myNoAiRef = useRef(false);
+  myNoAiRef.current = myNoAiState;
   const [stamps, setStamps] = useState<Stamp[]>([]);
   const stampsRef = useRef<Stamp[]>([]);
   stampsRef.current = stamps;
@@ -532,6 +549,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const ledgerRef = useRef<Ledger | null>(null);
   // A ledger from my other device: applied by the code below the receiving effect.
   const applySyncRef = useRef<(remote: Ledger) => void>(() => {});
+  // My「AIに読ませない」as my other device changed it (set by the code after setMyNoAi).
+  const takeMyNoAiRef = useRef<(on: boolean) => void>(() => {});
 
   useEffect(() => {
     let alive = true;
@@ -594,6 +613,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       );
       setReadAt(load<Record<string, number>>(k('readAt'), {}));
       ledgerRef.current = load<Ledger | null>(k('sync'), null);
+      myNoAiRef.current = myNoAi();
+      setMyNoAiState(myNoAiRef.current);
       clearedRef.current = load<Record<string, number>>(k('cleared'), {});
       setShowUnreadState(load<boolean>(k('showUnread'), true));
       // Accounts made before unread counts existed: what is already here counts as read.
@@ -744,7 +765,10 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     [me, aiMembersOf],
   );
 
-  const addMessage = useCallback((m: Message) => {
+  // Ids of my messages built with the noai tag, so the chat shows the mark at once.
+  const noAiSent = useRef(new Set<string>());
+  const addMessage = useCallback((m0: Message) => {
+    const m: Message = !m0.noai && noAiSent.current.has(m0.id) ? { ...m0, noai: true } : m0;
     setMessages((prev) => {
       if (prev.some((p) => p.id === m.id)) return prev;
       const next = [...prev, m].sort((a, b) => a.at - b.at);
@@ -879,10 +903,12 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
           if (rumor.kind === PROFILE_KIND) {
             if (!contactsRef.current.some((c) => c.pubkey === rumor.pubkey)) return;
             if (rumor.created_at < (profileAt.current.get(rumor.pubkey) ?? 0)) return;
-            const data = JSON.parse(rumor.content) as { avatar?: unknown };
+            const data = JSON.parse(rumor.content) as { avatar?: unknown; noai?: unknown };
             if (!data || typeof data !== 'object') return;
             const avatar = data.avatar === null ? null : validFileRef(data.avatar);
             if (data.avatar !== null && !avatar) return;
+            // A card from before「AIに読ませない」says nothing: the friend's choice stays as it was.
+            const noai = profileNoAi(data);
             profileAt.current.set(rumor.pubkey, rumor.created_at);
             // Fetch it now: the file server deletes files after 30 days.
             if (avatar) void openFile(`avatar:${avatar.sha256}`, avatar).catch(() => {});
@@ -890,9 +916,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
               if (!prev.some((c) => c.pubkey === rumor.pubkey)) return prev;
               const next = prev.map((c) => {
                 if (c.pubkey !== rumor.pubkey) return c;
-                if (avatar) return { ...c, avatar };
-                const { avatar: _, ...rest } = c;
-                return rest;
+                const { avatar: _, noai: was, ...rest } = c;
+                const off = noai ?? was === true;
+                return { ...rest, ...(avatar ? { avatar } : {}), ...(off ? { noai: true as const } : {}) };
               });
               contactsRef.current = next;
               save(k('contacts'), next);
@@ -966,6 +992,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
             ...(stamp ? { stamp: true } : {}),
             ...(replyTo ? { replyTo } : {}),
             ...(writtenByAi ? { ai: writtenByAi } : {}),
+            ...(keptFromAi(rumor.tags) ? { noai: true as const } : {}),
           };
           if (rumor.pubkey !== me) m.got = Date.now();
           addMessage(m);
@@ -1135,6 +1162,11 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     // When each item last changed, so later changes on my other devices merge in correctly.
     // Without it (an older version), what came along counts as the oldest state.
     ledgerRef.current = moved.sync ? cleanEntries(moved.sync) : null;
+    // My「自分の文を相手のAIに読ませない」comes along in the ledger (lib/ai-optout.ts).
+    const movedNoAi = ledgerRef.current?.['p:noai']?.v === 1;
+    saveMyNoAi(movedNoAi);
+    myNoAiRef.current = movedNoAi;
+    setMyNoAiState(movedNoAi);
     if (ledgerRef.current) save(k('sync'), ledgerRef.current);
     else remove(k('sync'));
     remove(k('syncSent'));
@@ -1239,7 +1271,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       if (!targets.length) return;
       const at = Math.max(Math.floor(Date.now() / 1000), lastProfileAt.current + 1);
       lastProfileAt.current = at;
-      const content = JSON.stringify({ avatar });
+      // noai: my「自分の文を相手のAIに読ませない」(lib/ai-optout.ts), always said, on or off.
+      const content = JSON.stringify({ avatar, noai: myNoAiRef.current });
       await Promise.all(
         targets.map((to) => {
           const rumor = nip59.createRumor({ kind: PROFILE_KIND, content, tags: [['p', to]], created_at: at }, secret);
@@ -1283,6 +1316,28 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     [secret, sendProfileTo],
   );
 
+  /**
+   * My「自分の文を相手のAIに読ませない」(lib/ai-optout.ts): kept here, written into my ledger for
+   * my other devices (the effect below stampSection), and told to every friend in my profile card.
+   */
+  const setMyNoAi = useCallback(
+    async (on: boolean) => {
+      saveMyNoAi(on);
+      myNoAiRef.current = on;
+      setMyNoAiState(on);
+      await sendProfileTo(
+        contactsRef.current.filter((c) => !c.model).map((c) => c.pubkey),
+        myAvatarRef.current,
+      );
+    },
+    [sendProfileTo],
+  );
+  takeMyNoAiRef.current = (on: boolean) => {
+    saveMyNoAi(on);
+    myNoAiRef.current = on;
+    setMyNoAiState(on);
+  };
+
   // The file server deletes files after 30 days. Upload my picture again when it is 20 days
   // old, so a friend added later (or one who was away) still gets a picture that loads.
   useEffect(() => {
@@ -1308,7 +1363,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
         save(k('contacts'), next);
         return next;
       });
-      if (myAvatarRef.current) void sendProfileTo([pubkey], myAvatarRef.current);
+      if (myAvatarRef.current || myNoAiRef.current) void sendProfileTo([pubkey], myAvatarRef.current);
     },
     [sendProfileTo],
   );
@@ -1381,10 +1436,16 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       const subject = group?.name;
       if (isGroup(peer) && subject) tags.push(['subject', subject]);
       if (group?.gid) tags.push([GROUP_TAG, group.gid]);
-      tags.push(...extra);
+      // 「AIに読ませない」(lib/ai-optout.ts): my setting, this chat's switch, or the caller's mark.
+      // Never in a chat with only my AI friends: those messages are written for the AI.
+      const toAiOnly = members.every((m) => contactsRef.current.some((c) => c.pubkey === m && c.model));
+      const noai = !toAiOnly && (myNoAiRef.current || chatNoAi(peer) || extra.some((t) => t[0] === 'noai'));
+      tags.push(...(noai ? withNoAi(extra) : extra.filter((t) => t[0] !== 'noai')));
       const rumor = nip59.createRumor({ kind, content, tags, created_at: at }, secret);
-      // AIs every member of this chat has said yes to get a copy too (not in the p tags).
-      const ais = groupAiCopies(peer);
+      if (noai) noAiSent.current.add(rumor.id);
+      // AIs every member of this chat has said yes to get a copy too (not in the p tags),
+      // unless the message is kept away from AIs.
+      const ais = noai ? [] : groupAiCopies(peer);
       const wraps = [...members, ...ais, me].map((to) => nip59.createWrap(nip59.createSeal(rumor, secret, to), to));
       return { rumor, wraps };
     },
@@ -1421,7 +1482,13 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
           return false;
         }
         if (!outbox.current.some((o) => o.id === item.id)) return false; // given up meanwhile
-        const { rumor, wraps } = build(cur.peer, 15, file.url, [...fileTags(file), ...(cur.photo.replyTo ? replyTag(15, cur.photo.replyTo) : [])], cur.at);
+        const { rumor, wraps } = build(
+          cur.peer,
+          15,
+          file.url,
+          [...fileTags(file), ...(cur.photo.replyTo ? replyTag(15, cur.photo.replyTo) : []), ...(cur.photo.noai ? [['noai']] : [])],
+          cur.at,
+        );
         await keepSent(rumor.id, bytes, cur.photo.type);
         const localId = cur.id;
         cur = { id: rumor.id, peer: cur.peer, at: cur.at, wraps, done: [] };
@@ -1666,6 +1733,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       if (!secret || !me) throw new Error('not open');
       if (!isGroup(peer) && blockedRef.current.includes(peer)) return;
       const { dim, name, duration, replyTo } = opts;
+      // Decided now, while the chat's switch is as the person sees it (lib/ai-optout.ts).
+      const noaiNow = chatNoAi(peer);
       const reply = replyTo ? replyTag(15, replyTo) : [];
       const at = Math.floor(Date.now() / 1000);
       let file: FileRef | null = null;
@@ -1675,7 +1744,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
         // Offline or the file server refused: keep the file here and upload it later.
       }
       if (file) {
-        const { rumor, wraps } = build(peer, 15, file.url, [...fileTags(file), ...reply], at);
+        const { rumor, wraps } = build(peer, 15, file.url, [...fileTags(file), ...reply, ...(noaiNow ? [['noai']] : [])], at);
         await keepSent(rumor.id, bytes, type);
         saveBox([...outbox.current, { id: rumor.id, peer, at, wraps, done: [] }]);
         addMessage({ id: rumor.id, from: me, peer, text: '', at, file, pending: 'sending', ...(replyTo ? { replyTo } : {}) });
@@ -1691,6 +1760,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
           ...(name ? { name } : {}),
           ...(duration !== undefined ? { duration } : {}),
           ...(replyTo ? { replyTo } : {}),
+          ...(noaiNow ? { noai: true as const } : {}),
         };
         saveBox([...outbox.current, { id, peer, at, wraps: [], done: [], photo: info }]);
         // Shown from this device until it is uploaded; the file fields are filled in then.
@@ -1713,6 +1783,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
           },
           pending: 'unsent',
           ...(replyTo ? { replyTo } : {}),
+          ...(noaiNow || (myNoAiRef.current && !contactsRef.current.some((c) => c.pubkey === peer && c.model)) ? { noai: true as const } : {}),
         });
       }
       void flush();
@@ -2043,7 +2114,11 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       // Only a friend (a person, not another AI) in a 1:1 chat, not blocked. Never a stranger.
       const isFriend = (pk: string) => people.some((c) => c.pubkey === pk && !c.model) && !blockedRef.current.includes(pk);
       if (!aiContact || !friendContact || isGroup(friend)) throw new AiNotAllowedError('not an AI friend and a friend');
-      const { ask, range } = draftAsk(messagesRef.current, friend, me, { friend: friendContact.name, me: myName || '自分' });
+      // Only what may be read (lib/ai-optout.ts): not marked, not from a friend who said no.
+      const chat = messagesRef.current.filter((m) => m.peer === friend);
+      const why = nothingToRead(chat, friendContact, me);
+      if (why) throw new AiNothingToReadError(why);
+      const { ask, range } = draftAsk(aiReadable(chat, people, me), friend, me, { friend: friendContact.name, me: myName || '自分' });
       const r = { ai, model: aiContact.model, friend };
       // The gate answers allow, refuse, or (with per-ask permissions) "ask the person first".
       const pass = (answer: unknown, what: string) => {
@@ -2293,7 +2368,13 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const aiPermissionsRef = useRef(aiPermissions);
   aiPermissionsRef.current = aiPermissions;
   const listsNow = useCallback(
-    (): AccountLists => ({ contacts: contactsRef.current, groups: groupsRef.current, blocked: blockedRef.current, ai: aiPermissionsRef.current }),
+    (): AccountLists => ({
+      contacts: contactsRef.current,
+      groups: groupsRef.current,
+      blocked: blockedRef.current,
+      ai: aiPermissionsRef.current,
+      noai: myNoAiRef.current,
+    }),
     [],
   );
   const syncTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -2340,6 +2421,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => stampSection('g', { ...listsNow(), groups }), [groups, stampSection, listsNow]);
   useEffect(() => stampSection('b', { ...listsNow(), blocked }), [blocked, stampSection, listsNow]);
   useEffect(() => stampSection('a', { ...listsNow(), ai: aiPermissions }), [aiPermissions, stampSection, listsNow]);
+  useEffect(() => stampSection('p', { ...listsNow(), noai: myNoAiState }), [myNoAiState, stampSection, listsNow]);
 
   applySyncRef.current = (remote: Ledger) => {
     if (!loaded || !secret) return;
@@ -2368,6 +2450,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
         setBlocked(next.blocked);
       }
       if (changed.has('a')) replaceAiPermissions(next.ai);
+      if (changed.has('p')) takeMyNoAiRef.current(next.noai === true);
     }
     scheduleSync();
   };
@@ -2597,6 +2680,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     deleteChat,
     myName,
     setMyName,
+    myNoAi: myNoAiState,
+    setMyNoAi,
     myAvatar,
     setMyAvatar,
     send,
