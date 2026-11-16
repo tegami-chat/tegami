@@ -1863,7 +1863,7 @@ async function main() {
         const u = await newUser(browser);
         await u.page.goto(aiLink.replace('https://app.tegami.chat', ORIGIN));
         await button(u.page, 'はじめる').click();
-        await waitText(u.page, '名乗っているモデル：Anthropic Claude');
+        await waitText(u.page, 'Anthropic Claude');
         // My link carries my invite code once the relay has answered: the AI registers with it.
         await u.page.waitForFunction(() => /&c=[a-z2-9]+/.test(document.body.innerText), null, { timeout: 10000 });
         const myLink = (await text(u.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
@@ -1907,15 +1907,15 @@ async function main() {
         assert((await u.page.evaluate((l) => window.inviteFromQr(l), aiLink)) === aiLink, 'the QR code scan refused the pairing link');
         // My link carries my invite code once the relay has answered: the AI registers with it.
         await u.page.waitForFunction(() => /&c=[a-z2-9]+/.test(document.body.innerText), null, { timeout: 10000 });
-        // A pasted pairing link starts with 自分のAIとしてつなぐ off: the person turns it on.
+        // A pasted pairing link starts with 自分のAIとして追加 off: the person turns it on.
         await u.page.goto(ORIGIN + '/add');
         await waitText(u.page, 'マイQRコード');
         await u.page.getByPlaceholder('https://app.tegami.chat/i#npub…').fill(aiLink);
-        const asMine = u.page.getByRole('switch', { name: '自分のAIとしてつなぐ', exact: true });
+        const asMine = u.page.getByRole('switch', { name: '自分のAIとして追加', exact: true });
         await asMine.waitFor();
         assert(!(await asMine.isChecked()), 'a pasted pairing link starts as my AI');
         await asMine.click();
-        await shot(u.page, 'ai-pair-add', 'QRコードでつなぐ時。自分のAIとしてつなぐ');
+        await shot(u.page, 'ai-pair-add', 'QRコードでつなぐ時。自分のAIとして追加');
         await button(u.page, '追加').click();
         await u.page.getByPlaceholder('メッセージ').waitFor();
         const aiHex = nip19.decode(aiLink.match(/npub1[0-9a-z]+/)[0]).data;
@@ -3123,30 +3123,35 @@ async function main() {
         const info = async () => {
           await bp.goto(`${ORIGIN}/chat/${aiHex}`);
           await button(bp, 'メニュー').click();
-          await waitText(bp, '名乗っているモデル：Anthropic Claude');
+          await waitText(bp, 'Anthropic Claude');
         };
         cli('send', 'テストB', '印の前');
         await waitText(bp, '印の前');
         await info();
-        await waitText(bp, '持ち主：不明');
+        await waitText(bp, '持ち主：未確認');
         await bp.getByTestId('owner-unknown').waitFor();
         await shot(bp, 'ai-owner-unknown', 'AIの友だちの画面。持ち主の署名が無い時');
 
         // あおい marks it as their own AI: the app signs a card and hands it to the AI.
         await markMyAi(a, aiHex);
         await waitCard((c) => c?.pubkey === a.hex);
+        writeFileSync(join(home, 'model.json'), JSON.stringify({ model: 'claude-opus-5-5', at: Math.floor(Date.now() / 1000) }));
         cli('send', 'テストB', '印の後');
         await bp.goto(`${ORIGIN}/chat/${aiHex}`);
         await waitText(bp, '印の後');
         await info();
         await waitText(bp, '持ち主：あおい');
         await bp.getByTestId('owner-signed').waitFor();
+        // What the AI says of itself: its own name and the model that wrote its last reply.
+        const self = await bp.getByTestId('ai-self').innerText();
+        assert(/AIの名前\s*クロード/.test(self) && /使っているサービス\s*Anthropic Claude/.test(self) && /動いているモデル\s*claude-opus-5-5/.test(self), `the AI's own info: ${self}`);
+        await noText(bp, 'ビデオ通話', 0);
         await shot(bp, 'ai-owner-signed', 'AIの友だちの画面。持ち主の署名を確かめた時');
-        await noText(bp, '持ち主：不明', 500);
+        await noText(bp, '持ち主：未確認', 500);
         // On あおい's own screen the AI is theirs: no owner line.
         await a.page.goto(`${ORIGIN}/chat/${aiHex}`);
         await button(a.page, 'メニュー').click();
-        await waitText(a.page, '名乗っているモデル：Anthropic Claude');
+        await waitText(a.page, 'Anthropic Claude');
         await noText(a.page, '持ち主：', 500);
 
         // あおい takes the mark away: the card is taken back, and the next message says no owner.
@@ -3156,7 +3161,7 @@ async function main() {
         await bp.goto(`${ORIGIN}/chat/${aiHex}`);
         await waitText(bp, '取り消しの後');
         await info();
-        await waitText(bp, '持ち主：不明');
+        await waitText(bp, '持ち主：未確認');
         await bp.getByTestId('owner-unknown').waitFor();
         for (const u of [a, b]) await u.context.close();
       } finally {
@@ -3307,7 +3312,7 @@ async function main() {
 
       await p.goto(ORIGIN + '/ai');
       await waitText(p, 'ほかの人のAI');
-      await waitText(p, '名乗っているモデル：Anthropic Claude');
+      await waitText(p, 'Anthropic Claude');
       assert(!(await text(p)).includes('AI友だち'), 'a friend with only a model name is listed as my AI');
       await p.getByText('ほかの人のAI', { exact: true }).scrollIntoViewIfNeeded();
       await shot(p, 'ai-other-ais', 'AIの権限：自分のAIではないAIは「ほかの人のAI」に分ける');

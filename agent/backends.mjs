@@ -196,6 +196,7 @@ export function makeResponder({ dir, config, system, draftSystem, state, saveSta
     } catch (e) {
       throw new Error(redact(e.message, keys));
     }
+    noteModel(dir, config.model);
     if (keep) {
       const all = readJson(dir, 'history.json', {});
       // Older than keepDays: gone, for everyone in the file (not only this person).
@@ -208,6 +209,16 @@ export function makeResponder({ dir, config, system, draftSystem, state, saveSta
     }
     return text;
   };
+}
+
+/**
+ * The model that wrote the last reply (model.json), as the AI's service names it: claude-opus-5-5,
+ * llama3.2. The AI puts it on its messages (lib.mjs aiTag) so friends see what is running now.
+ */
+export function noteModel(dir, model) {
+  const m = String(model ?? '').trim().slice(0, 80);
+  if (!m || readJson(dir, 'model.json', null)?.model === m) return;
+  writePrivate(dir, 'model.json', { model: m, at: Math.floor(Date.now() / 1000) });
 }
 
 const TIMEOUT = 300_000;
@@ -355,5 +366,8 @@ async function runClaude({ dir, prompt, system, draftSystem, state, saveState, d
     saveState();
   }
   if (out.is_error) throw new Error(String(out.result ?? 'Claude returned an error'));
+  // The model Claude Code really ran (its JSON names it under modelUsage), shown to friends.
+  const used = Object.entries(out.modelUsage ?? {}).sort((x, y) => (y[1]?.outputTokens ?? 0) - (x[1]?.outputTokens ?? 0))[0]?.[0];
+  if (used) noteModel(dir, used);
   return String(out.result ?? '');
 }

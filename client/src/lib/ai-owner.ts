@@ -71,6 +71,19 @@ export function ownerOfMessage(tags: string[][], ai: string, now?: number): Owne
   return checkOwnerCard(t[4], ai, now) ?? undefined;
 }
 
+/**
+ * What an AI says of itself on its own message: the name its maker gave it, and the model that
+ * wrote its last reply (agent/lib.mjs aiTag). Its own word; nothing checks it.
+ */
+export type AiSelf = { name?: string; running?: string; at: number };
+export function aiSelfOf(tags: string[][], ai: string, at: number): AiSelf | undefined {
+  const t = tags.find((x) => x[0] === 'ai' && x[1] === ai);
+  if (!t) return undefined;
+  const name = (t[3] ?? '').trim().slice(0, 60);
+  const running = (t[5] ?? '').trim().slice(0, 80);
+  return { ...(name ? { name } : {}), ...(running ? { running } : {}), at };
+}
+
 /** The owner mark still good now. */
 export function liveOwner(o: OwnerMark | undefined, now = Math.floor(Date.now() / 1000)) {
   return o && o.pubkey && o.until > now ? o : undefined;

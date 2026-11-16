@@ -4,7 +4,7 @@ import { router, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
-import { modelLine, OwnerRow } from '@/components/ai-switches';
+import { ModelTag, OwnerRow } from '@/components/ai-switches';
 import { Avatar } from '@/components/avatar';
 import { Dialog } from '@/components/dialog';
 import { ReportSheet } from '@/components/report-sheet';
@@ -127,23 +127,26 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
           <View style={s.profile}>
             <Avatar name={group ? '◎' : displayName} file={group ? groupInfo?.avatar : contact?.avatar} size={76} />
             <Text style={s.name}>{displayName}</Text>
-            {contact?.model ? <Text style={s.model}>{modelLine(contact.model)}</Text> : null}
+            {contact?.model ? <ModelTag model={contact.model} style={s.model} center /> : null}
             <OwnerRow contact={contact} contacts={contacts} me={me} style={s.model} />
           </View>
 
           {!group && peer && (
             <View style={s.actionRow}>
-              <Pressable
-                role="button"
-                aria-label="ビデオ通話"
-                disabled={!canCall}
-                onPress={startVideoCall}
-                style={[s.actionItem, !canCall && s.disabled]}>
-                <View style={s.roundIcon}>
-                  <MaterialIcons name="videocam" size={28} color={c.text} />
-                </View>
-                <Text style={s.actionLabel}>ビデオ通話</Text>
-              </Pressable>
+              {/* An AI does not take calls: no call button on its screen. */}
+              {!(contact?.model || (contact && isMyAi(contact))) && (
+                <Pressable
+                  role="button"
+                  aria-label="ビデオ通話"
+                  disabled={!canCall}
+                  onPress={startVideoCall}
+                  style={[s.actionItem, !canCall && s.disabled]}>
+                  <View style={s.roundIcon}>
+                    <MaterialIcons name="videocam" size={28} color={c.text} />
+                  </View>
+                  <Text style={s.actionLabel}>ビデオ通話</Text>
+                </Pressable>
+              )}
 
               <Pressable
                 role="button"
@@ -286,6 +289,24 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
               <Pressable role="button" aria-label="グループを退会" style={s.dangerRow} onPress={() => setDialog('leave')}>
                 <Text style={s.dangerText}>グループを退会</Text>
               </Pressable>
+            </View>
+          )}
+
+          {peer && !group && contact && (contact.model || isMyAi(contact)) && (
+            <View testID="ai-self" style={s.card}>
+              <Text style={s.sectionHeading}>AIが自分で伝えている情報</Text>
+              {[
+                ['AIの名前', contact.self?.name],
+                ['使っているサービス', contact.model],
+                ['動いているモデル', contact.self?.running],
+              ].map(([label, value], i) => (
+                <View key={label} style={[s.infoRow, i > 0 && s.rowBorder]}>
+                  <Text style={s.infoLabel}>{label}</Text>
+                  <Text style={[s.infoValue, !value && { color: c.muted }]} numberOfLines={1}>
+                    {value || 'まだ届いていません'}
+                  </Text>
+                </View>
+              ))}
             </View>
           )}
 
@@ -615,6 +636,9 @@ const styles = (c: Palette) =>
       fontSize: 16,
       color: c.text,
     },
+    infoRow: { minHeight: 44, paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
+    infoLabel: { fontSize: 15, color: c.muted },
+    infoValue: { flex: 1, fontSize: 15, color: c.text, textAlign: 'right' },
     editRow: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 8 },
     input: { flex: 1, fontSize: 16, color: c.text, paddingHorizontal: 8, minHeight: 44 },
     smallButton: { backgroundColor: c.accent, borderRadius: 999, paddingHorizontal: 18, minHeight: 44, justifyContent: 'center' },

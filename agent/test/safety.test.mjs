@@ -81,6 +81,7 @@ try {
   resetCalls();
   await responder({})('こんにちは', { peer: 'a' });
   check('everyday replies call Claude Code with no tools, no MCP and a turn limit', closed(calls()[0].argv));
+  check('the model Claude Code ran is written down for friends to see', JSON.parse(readFileSync(join(D1, 'model.json'), 'utf8')).model === 'claude-fake-1');
   check('the first reply starts a conversation that is kept', !calls()[0].argv.includes('--no-session-persistence') && state.claudeSession === 'session-1');
   await responder({})('2回目', { peer: 'a' });
   check('the next reply continues it', calls()[1].argv.join(' ').includes('--resume session-1'));

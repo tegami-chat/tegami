@@ -5,7 +5,7 @@ import makeQr from 'qrcode-generator';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
-import { modelLine } from '@/components/ai-switches';
+import { ModelTag } from '@/components/ai-switches';
 import { Avatar } from '@/components/avatar';
 import { Palette, usePalette } from '@/constants/theme';
 import { pairCodeOf } from '@/lib/ai-pair';
@@ -372,12 +372,12 @@ export default function Add() {
             placeholderTextColor={c.muted}
             onSubmitEditing={add}
           />
-          {peer && model ? <Text style={s.model}>{modelLine(model)}</Text> : null}
+          {peer && model ? <ModelTag model={model} style={s.model} /> : null}
           {peer && pairCodeOf(invite) ? (
             <View style={s.mineRow}>
               <View style={{ flex: 1 }}>
-                <Text style={s.mineLabel}>自分のAIとしてつなぐ</Text>
-                <Text style={s.model}>自分のPCに出たQRコードの時だけオンにしてください</Text>
+                <Text style={s.mineLabel}>自分のAIとして追加</Text>
+                <Text style={s.model}>自分のパソコンに出たQRコードのときだけオン</Text>
               </View>
               <Switch
                 trackColor={{ false: c.line, true: c.accent }}
@@ -385,7 +385,7 @@ export default function Add() {
                 {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}
                 value={asMine}
                 onValueChange={setAsMine}
-                aria-label="自分のAIとしてつなぐ"
+                aria-label="自分のAIとして追加"
               />
             </View>
           ) : null}

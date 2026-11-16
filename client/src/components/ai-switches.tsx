@@ -29,13 +29,31 @@ export const AI_ACTION_LABEL: Record<AiAction, string> = {
   otherAi: 'ほかの人のAIと話す',
 };
 
-/** The model an AI gives for itself in its invite link: shown as its own word, not as a fact (philosophy #93). */
-export const modelLine = (model: string) => `名乗っているモデル：${model}`;
+/**
+ * The service an AI gives for itself in its invite link (philosophy #93): the value, and a grey
+ * tag 自己申告 so it reads as the AI's own word next to the owner's checked signature.
+ */
+export function ModelTag({ model, style, center }: { model: string; style?: object; center?: boolean }) {
+  const c = usePalette();
+  return (
+    <View
+      accessible
+      aria-label={`${model}。自己申告です`}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1, ...(center ? { justifyContent: 'center' } : {}) }}>
+      <Text style={[style, { flexShrink: 1 }]} numberOfLines={1}>
+        {model}
+      </Text>
+      <View style={{ borderRadius: 4, borderWidth: 1, borderColor: c.line, paddingHorizontal: 5, paddingVertical: 1 }}>
+        <Text style={{ fontSize: 11, color: c.muted }}>自己申告</Text>
+      </View>
+    </View>
+  );
+}
 
 /**
  * Whose AI this friend is, by its owner's signature on its key (lib/ai-owner.ts, concern 4).
- * A name is shown only when the signature checked out, with a shield; with no good card, 不明
- * with a question mark. Nothing for my own AI or for a person.
+ * A name is shown only when the signature checked out, after a green shield; with no good card,
+ * 未確認 after a grey crossed-out shield. Nothing for my own AI or for a person.
  */
 export function OwnerRow({ contact, contacts, me, style }: { contact: Contact | undefined; contacts: Contact[]; me: string | null; style?: object }) {
   const c = usePalette();
@@ -47,10 +65,10 @@ export function OwnerRow({ contact, contacts, me, style }: { contact: Contact | 
     <View
       testID={o ? 'owner-signed' : 'owner-unknown'}
       accessible
-      aria-label={o ? `持ち主：${name}。持ち主の署名を確かめました` : '持ち主：不明。持ち主の署名がありません'}
+      aria-label={o ? `持ち主は${name}。署名を確かめました` : '持ち主は未確認。署名がありません'}
       style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-      <Text style={style}>{o ? `持ち主：${name}` : '持ち主：不明'}</Text>
-      <MaterialIcons name={o ? 'verified-user' : 'help-outline'} size={18} color={o ? c.accent : c.muted} />
+      <MaterialIcons name={o ? 'verified-user' : 'remove-moderator'} size={16} color={o ? c.accent : c.muted} />
+      <Text style={[style, o ? { color: c.text } : null]}>{o ? `持ち主：${name}` : '持ち主：未確認'}</Text>
     </View>
   );
 }

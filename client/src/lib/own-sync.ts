@@ -139,7 +139,7 @@ export function materialize(ledger: Ledger, current: AccountLists): AccountLists
       .sort((x, y) => x[1].at - y[1].at);
   const contactValues = new Map(live('c:').map(([key, e]) => [key.slice(2), e.v as { n: string; m?: string; y?: 1 }]));
   const contacts: Contact[] = [];
-  const contactOf = (pubkey: string, v: { n: string; m?: string; y?: 1 }, avatar?: Contact['avatar'], noai?: true, owner?: Contact['owner']): Contact => ({
+  const contactOf = (pubkey: string, v: { n: string; m?: string; y?: 1 }, avatar?: Contact['avatar'], noai?: true, owner?: Contact['owner'], self?: Contact['self']): Contact => ({
     pubkey,
     name: v.n,
     ...(v.m ? { model: v.m } : {}),
@@ -147,11 +147,12 @@ export function materialize(ledger: Ledger, current: AccountLists): AccountLists
     ...(avatar ? { avatar } : {}),
     ...(noai ? { noai } : {}),
     ...(owner ? { owner } : {}),
+    ...(self ? { self } : {}),
   });
   for (const c of current.contacts) {
     const v = contactValues.get(c.pubkey);
     if (!v) continue;
-    contacts.push(contactOf(c.pubkey, v, c.avatar, c.noai, c.owner));
+    contacts.push(contactOf(c.pubkey, v, c.avatar, c.noai, c.owner, c.self));
     contactValues.delete(c.pubkey);
   }
   for (const [pubkey, v] of contactValues) contacts.push(contactOf(pubkey, v));

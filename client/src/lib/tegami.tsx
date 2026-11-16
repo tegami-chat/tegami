@@ -10,7 +10,7 @@ import { accounts, describeAccount, removeAccountHere } from './accounts';
 import { FEEDBACK_NAME, FEEDBACK_PUBKEY } from './feedback';
 import { AI_DRAFT_ASK_KIND, AI_DRAFT_KIND, draftAsk, parseDraft, wrapExpiring } from './ai-draft';
 import { pairWrap } from './ai-pair';
-import { OWNER_CARD_KIND, OWNER_CARD_RENEW, ownerCardTemplate, ownerOfMessage, type OwnerMark } from './ai-owner';
+import { OWNER_CARD_KIND, OWNER_CARD_RENEW, aiSelfOf, ownerCardTemplate, ownerOfMessage, type AiSelf, type OwnerMark } from './ai-owner';
 import { aiReadable, chatNoAi, keptFromAi, myNoAi, nothingToRead, profileNoAi, saveMyNoAi, withNoAi, type NothingToRead } from './ai-optout';
 import {
   aiStageAllows,
@@ -156,8 +156,11 @@ export const PROFILE_KIND = 10100;
  * owner: for an AI friend, who signed this AI's key as theirs (lib/ai-owner.ts), from the card on
  * the AI's own newest message. Checked with the owner's key; kept on this device only. An empty
  * pubkey means the AI's newest message said "no owner" (at is that message's time).
+ *
+ * self: for an AI friend, what its newest own message says of it: the name its maker gave it and
+ * the model that wrote its last reply. Its own word. Kept on this device only.
  */
-export type Contact = { pubkey: string; name: string; model?: string; avatar?: FileRef; mine?: true; noai?: true; owner?: OwnerMark };
+export type Contact = { pubkey: string; name: string; model?: string; avatar?: FileRef; mine?: true; noai?: true; owner?: OwnerMark; self?: AiSelf };
 
 /** My own AI (the mark I set), not someone who only says they are an AI. */
 export const isMyAi = (c: Contact) => c.mine === true;
@@ -1411,7 +1414,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
         const rest = prev.filter((c) => c.pubkey !== pubkey);
         const m = model ?? old?.model;
         const avatar = old?.avatar;
-        const next = [...rest, { pubkey, name, ...(m ? { model: m } : {}), ...(avatar ? { avatar } : {}), ...(old?.mine ? { mine: true as const } : {}), ...(old?.owner ? { owner: old.owner } : {}) }];
+        const next = [...rest, { pubkey, name, ...(m ? { model: m } : {}), ...(avatar ? { avatar } : {}), ...(old?.mine ? { mine: true as const } : {}), ...(old?.owner ? { owner: old.owner } : {}), ...(old?.self ? { self: old.self } : {}) }];
         contactsRef.current = next;
         save(k('contacts'), next);
         return next;
@@ -1442,13 +1445,21 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   takeOwnerRef.current = (ai, tags, at) => {
     const c = contactsRef.current.find((x) => x.pubkey === ai);
     if (!c) return;
+    const self = aiSelfOf(tags, ai, at);
+    if (self && at > (c.self?.at ?? 0) && (self.name !== c.self?.name || self.running !== c.self?.running)) {
+      const next = contactsRef.current.map((x) => (x.pubkey === ai ? { ...x, self } : x));
+      contactsRef.current = next;
+      save(k('contacts'), next);
+      setContacts(next);
+    }
+    const cur = contactsRef.current.find((x) => x.pubkey === ai)!;
     const said = ownerOfMessage(tags, ai);
     if (said === undefined) return;
-    if (said === 'none' ? at <= (c.owner?.at ?? 0) : said.at <= (c.owner?.at ?? 0)) return;
+    if (said === 'none' ? at <= (cur.owner?.at ?? 0) : said.at <= (cur.owner?.at ?? 0)) return;
     // "No owner" is kept as a mark with no owner and the message's time: the relay hands out the
     // older message with the card again on the next start, and that card must not come back.
-    if (said === 'none' && (!c.owner || !c.owner.pubkey)) return;
-    if (said !== 'none' && c.owner?.pubkey === said.pubkey && c.owner.until === said.until) return;
+    if (said === 'none' && (!cur.owner || !cur.owner.pubkey)) return;
+    if (said !== 'none' && cur.owner?.pubkey === said.pubkey && cur.owner.until === said.until) return;
     const owner: OwnerMark = said === 'none' ? { pubkey: '', at, until: 0 } : said;
     const next = contactsRef.current.map((x) => (x.pubkey === ai ? { ...x, owner } : x));
     contactsRef.current = next;

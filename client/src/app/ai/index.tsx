@@ -3,7 +3,7 @@ import { router, type Href } from 'expo-router';
 import { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { AiSwitches, modelLine } from '@/components/ai-switches';
+import { AiSwitches, ModelTag } from '@/components/ai-switches';
 import { Avatar } from '@/components/avatar';
 import { Palette, usePalette } from '@/constants/theme';
 import {
@@ -80,11 +80,7 @@ export default function AiPermissionsScreen() {
                   <Text style={s.label} numberOfLines={1}>
                     {x.name}
                   </Text>
-                  {x.model ? (
-                    <Text style={s.sub} numberOfLines={1}>
-                      {modelLine(x.model)}
-                    </Text>
-                  ) : null}
+                  {x.model ? <ModelTag model={x.model} style={s.sub} /> : null}
                 </View>
                 <MaterialIcons name="chevron-right" size={22} color={c.muted} />
               </Pressable>
@@ -134,9 +130,7 @@ export default function AiPermissionsScreen() {
                   <Text style={s.label} numberOfLines={1}>
                     {x.name}
                   </Text>
-                  <Text style={s.sub} numberOfLines={1}>
-                    {modelLine(x.model as string)}
-                  </Text>
+                  <ModelTag model={x.model as string} style={s.sub} />
                 </View>
                 <MaterialIcons name="chevron-right" size={22} color={c.muted} />
               </Pressable>

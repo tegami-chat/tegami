@@ -108,10 +108,11 @@ export function saveSettings(dir, patch) {
 
 /**
  * The "written by an AI" tag: on the AI's own messages it names itself (other AIs see it is an AI).
- * The fifth element is the owner's signed card (below), or '' when no owner signed this AI now.
+ * ['ai', key, service (the invite link's m=), the AI's own name, the owner's signed card or '',
+ *  the model that wrote the last reply or ''].
  */
-export function aiTag(pubkey, profile, ownerCard = null) {
-  return ['ai', pubkey, String(profile.model ?? '').slice(0, 60), String(profile.name ?? '').slice(0, 60), ownerCard ? JSON.stringify(ownerCard) : ''];
+export function aiTag(pubkey, profile, ownerCard = null, running = '') {
+  return ['ai', pubkey, String(profile.model ?? '').slice(0, 60), String(profile.name ?? '').slice(0, 60), ownerCard ? JSON.stringify(ownerCard) : '', String(running ?? '').slice(0, 80)];
 }
 
 // The owner's signature on this AI's key (client/src/lib/ai-owner.ts, concern 4): a Nostr event
@@ -794,7 +795,7 @@ export class Agent {
     }
     if (toAi) this.aiTalkCheck(peer);
     const members = peer.split(',');
-    const tags = [...members.map((m) => ['p', m]), aiTag(this.pubkey, this.profile, this.ownerCard)];
+    const tags = [...members.map((m) => ['p', m]), aiTag(this.pubkey, this.profile, this.ownerCard, read(this.dir, 'model.json', null)?.model ?? '')];
     const rumor = nip59.createRumor({ kind: 14, content: text, tags, created_at: Math.floor(Date.now() / 1000) }, this.secret);
     const wraps = [...members, this.pubkey].map((to) => nip59.createWrap(nip59.createSeal(rumor, this.secret, to), to));
     await Promise.any(wraps.flatMap((w) => this.pool.publish(RELAYS, w, { onauth: this.onauth })));
