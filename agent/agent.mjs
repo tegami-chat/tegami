@@ -32,11 +32,18 @@
 //       (macOS) or a systemd user unit (Linux).
 //   tegami-agent keep [--log <file>]
 //       Runs `watch` and starts it again 10 seconds after it stops.
-//   tegami-agent mcp
+//   tegami-agent mcp [--include-contacts] [--include-ai] [--include-groups]
 //       MCP server over stdio, so Claude Code (or any MCP client) can read and send
-//       Tegami messages during a conversation.
+//       Tegami messages during a conversation. It shows what trusted people wrote; the
+//       flags also show other contacts, other people's AIs and groups, marked as others' words.
+//   tegami-agent setting [<name> <value>]
+//       Shows or changes this AI friend's settings (settings.json): tools, remember, keepDays,
+//       dailyReplies, mcpContacts, mcpPeerAis, mcpGroups.
+//   tegami-agent stop | resume
+//       Stops the AI (no replies, nothing sent) until resume. The owner's app can do the same.
 //
 // Options: --agent <folder name> (default "claude") picks which AI friend to use.
+// --allow-tools (Claude Code may use its tools) and --no-memory (keep nothing) on watch, for one run.
 
 import { spawn, execFileSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -45,7 +52,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { autostartCommands, autostartFile, carriedEnv, keepArgs, launchdPlist, systemdUnit } from './autostart.mjs';
 import { BACKENDS, backendLabel, loadBackend, loadKeys, makeResponder, ownEnv, saveBackend, saveKey } from './backends.mjs';
-import { Agent, DRAFT_TTL, PAIR_TTL, needsInit, parseAsk, parseInvite, shortId } from './lib.mjs';
+import { Agent, DRAFT_TTL, PAIR_TTL, loadSettings, needsInit, parseAsk, parseInvite, saveSettings, shortId } from './lib.mjs';
 import { qrHtml, qrTerminal } from './qr.mjs';
 
 export { ownEnv };
@@ -64,7 +71,45 @@ const flag = (name) => {
 };
 const agentName = flag('agent') ?? 'claude';
 const agent = new Agent(agentName);
+// Flags that open something for this run only (settings.json keeps what is chosen for good).
+const runFlags = {
+  tools: flag('allow-tools') ? true : undefined,
+  remember: flag('no-memory') ? false : undefined,
+  mcpContacts: flag('include-contacts') ? true : undefined,
+  mcpPeerAis: flag('include-ai') ? true : undefined,
+  mcpGroups: flag('include-groups') ? true : undefined,
+};
+for (const [k, v] of Object.entries(runFlags)) if (v !== undefined) agent.settings[k] = v;
 const cmd = argv.shift();
+
+const TOOLS_OPEN = 'Tools are open: Claude Code can use its tools and MCP servers while it replies (道具を使える状態で動いています).';
+// What the AI's owner gets, once a day per chat, when the daily limit stops the replies.
+const limitNotice = (name, n) =>
+  `今日は${name}への返事が上限の${n}通に達したので、明日まで返事を止めます。上限は tegami-agent setting dailyReplies <数> で変えられます。`;
+// Shown once, when a second person gets automatic replies (the plan's terms).
+const TERMS_NOTE = [
+  'Note: the AI now answers more than one person.',
+  'With Claude Code signed in with your own plan, the plan is for your own, individual use:',
+  'other people writing to it may be outside what the terms allow, and the account could be stopped.',
+  'A model on this computer (backend ollama / local) or your own API key avoids that. See README.md.',
+].join('\n');
+// The ways to connect an AI, side by side (README.md says more). None is pushed on anyone.
+const WAYS = [
+  'Which AI writes the replies (tegami-agent backend <name>):',
+  '  claude-code  Claude Code signed in with your own plan (the default). Only on your own computer, your own',
+  '               sign-in, the official claude unchanged, talking with you. The plan is for individual use, so',
+  "               the terms could stop the account if others' messages are answered this way.",
+  '  ollama/local A model on this computer. Messages never leave it, and no AI company terms apply.',
+  '  anthropic, openai, gemini, openrouter',
+  '               Your own API key. Paid by use: set a monthly limit in the company\'s console.',
+].join('\n');
+
+function noteSecondTrusted(say) {
+  if (agent.contacts.filter((c) => c.trusted).length < 2 || agent.state.termsNoted) return;
+  if (loadBackend(agent.dir).type === 'claude-code') say(TERMS_NOTE);
+  agent.state.termsNoted = true;
+  agent.saveState();
+}
 
 const SYSTEM = [
   'あなたは Tegami というメッセージアプリの中で、持ち主の友達として返事をする AI です。',
@@ -89,6 +134,7 @@ const commands = {
     console.log(`Folder:    ${agent.dir}`);
     console.log(`\nOpen this link in Tegami to add the AI as a friend:\n${agent.invite}`);
     console.log(`\nThen give the AI your own invite link:\n  tegami-agent add "<your invite link>" --trust`);
+    console.log(`\n${WAYS}`);
   },
   invite() {
     needsInit(agent);
@@ -102,6 +148,7 @@ const commands = {
     if (!p) throw new Error('Give an invite link or an npub.');
     const c = agent.addContact({ pubkey: p.pubkey, name: typeof name === 'string' ? name : p.name, trusted });
     console.log(`Added ${c.name}${c.trusted ? ' (the AI replies to this person)' : ''}`);
+    noteSecondTrusted(console.log);
     // The relay only takes messages from registered keys. An invite link carries its
     // owner's invite code (&c=); the AI registers with it, as invited by that person.
     if (p.code) {
@@ -154,11 +201,20 @@ const commands = {
       if (m.from === agent.pubkey || m.at < started || !agent.isTrusted(m.from)) return;
       // Groups: an AI joins a group only when every member agrees (not built yet), so no replies there.
       if (m.peer.includes(',')) return;
+      // Kept from AIs by its writer, or a stranger's: never handed to the AI.
+      if (m.noai || m.stranger || typeof m.text !== 'string') return;
       if (agent.state.replied.includes(m.id) || seen.has(m.id)) return;
       seen.add(m.id);
+      // Stopped by the owner: not answered now, and not later either (no flood after resume).
+      if (agent.stopped) return markReplied([m]);
       queue.push(m);
       void drain();
     };
+    const markReplied = (batch) => {
+      agent.state.replied = [...agent.state.replied, ...batch.map((m) => m.id)].slice(-1000);
+      agent.saveState();
+    };
+    agent.stopListeners.add((stop) => log(stop ? 'stopped by the owner: no replies and nothing sent until resumed' : 'resumed by the owner'));
     // Not registered: replies would be refused by the relay. Say so (the log) and keep going.
     agent
       .register()
@@ -175,6 +231,10 @@ const commands = {
         return;
       }
       if (a.at < Math.floor(Date.now() / 1000) - DRAFT_TTL) return;
+      if (agent.stopped) {
+        log('ignored a draft request: stopped by the owner');
+        return;
+      }
       const ask = parseAsk(a.content);
       if (!ask || !ask.messages.length) return;
       const name = agent.contacts.find((c) => c.pubkey === a.from)?.name ?? shortId(a.from);
@@ -207,17 +267,35 @@ const commands = {
         const name = agent.contacts.find((c) => c.pubkey === peer)?.name ?? shortId(peer);
         const prompt = batch.map((m) => `${name}: ${m.text}`).join('\n');
         try {
+          if (agent.stopped) throw new Error('stopped by the owner');
+          // The daily limit is reached: do not even ask the AI (an API key costs money).
+          if (!agent.canSendToday(peer)) throw Object.assign(new Error('daily limit'), { code: 'DAILY_LIMIT' });
           const text = await reply(prompt, { peer });
+          // Stopped while the AI was writing: the reply is dropped (send checks again too).
           if (text.trim()) await agent.send(peer, text.trim());
           log(`replied to ${name}`);
         } catch (e) {
-          log(`could not reply to ${name}: ${e.message}`);
+          if (e.code === 'DAILY_LIMIT') await tellOwnerLimit(peer, name);
+          else log(`could not reply to ${name}: ${e.message}`);
         }
-        agent.state.replied = [...agent.state.replied, ...batch.map((m) => m.id)].slice(-1000);
-        agent.saveState();
+        markReplied(batch);
       }
       busy = false;
     }
+    /** Once a day per chat: tells the owner that the daily limit stopped the replies. */
+    async function tellOwnerLimit(peer, name) {
+      log(`daily limit (${agent.settings.dailyReplies}) reached for ${name}: no more replies today`);
+      const day = new Date().toISOString().slice(0, 10);
+      agent.state.limitTold ??= {};
+      if (agent.state.limitTold[peer] === day || !agent.owner) return;
+      agent.state.limitTold = { ...Object.fromEntries(Object.entries(agent.state.limitTold).filter(([, d]) => d === day)), [peer]: day };
+      agent.saveState();
+      await agent.send(agent.owner.pubkey, limitNotice(name, agent.settings.dailyReplies), { notice: true }).catch((e) => log(`could not tell the owner: ${e.message}`));
+    }
+    const backendType = loadBackend(agent.dir).type;
+    if (agent.settings.tools && backendType === 'claude-code' && typeof command !== 'string') log(TOOLS_OPEN);
+    log(agent.recordsLine(backendType));
+    if (agent.stopped) log('stopped by the owner: no replies until resumed (tegami-agent resume, or the app)');
     log(`${agent.profile.name} is listening. Trusted: ${agent.contacts.filter((c) => c.trusted).map((c) => c.name).join(', ') || 'nobody yet'}`);
   },
   async pair() {
@@ -299,7 +377,31 @@ const commands = {
     const value = (await readSecret(`API key for ${type} (hidden): `)).trim();
     if (!value) throw new Error('No key was given.');
     saveKey(agent.dir, type, value);
-    console.log(`Saved the API key for ${type} in ${join(agent.dir, 'keys.json')}.`);
+    const sealed = typeof JSON.parse(readFileSync(join(agent.dir, 'keys.json'), 'utf8')).store === 'string';
+    console.log(`Saved the API key for ${type} in ${join(agent.dir, 'keys.json')}${sealed ? ', encrypted by this computer' : ' (not encrypted)'}.`);
+    console.log("Set a monthly spending limit for this key in the company's console: replies are paid by use.");
+  },
+  setting() {
+    // Shows the settings, or sets one: tegami-agent setting <name> <value>.
+    const [name, value] = argv;
+    if (name) {
+      if (value === undefined) throw new Error('Use: tegami-agent setting <name> <value>');
+      const s = saveSettings(agent.dir, { [name]: value });
+      console.log(`${name}: ${s[name]}`);
+      if (name === 'tools' && s.tools) console.log(TOOLS_OPEN);
+      console.log('A watcher that is running uses it after it starts again.');
+      return;
+    }
+    for (const [k, v] of Object.entries(loadSettings(agent.dir))) console.log(`${k}: ${v}`);
+  },
+  stop() {
+    // The same as the app's stop: no replies, nothing sent, until resume.
+    agent.setStopped(true, Math.floor(Date.now() / 1000), 'this computer');
+    console.log(`${agent.profile.name} is stopped: no replies and nothing sent until: tegami-agent resume`);
+  },
+  resume() {
+    agent.setStopped(false, Math.floor(Date.now() / 1000), 'this computer');
+    console.log(`${agent.profile.name} may reply and send again.`);
   },
   async try() {
     // Asks the AI one question with the current backend, to check that it answers.
@@ -496,7 +598,7 @@ function taskXml(logPath) {
 
 /** The function that writes replies, with the backend set for this AI friend (or --command). */
 function responder(command) {
-  return makeResponder({ dir: agent.dir, config: loadBackend(agent.dir), system: SYSTEM, draftSystem: DRAFT_SYSTEM, state: agent.state, saveState: () => agent.saveState(), command });
+  return makeResponder({ dir: agent.dir, config: loadBackend(agent.dir), system: SYSTEM, draftSystem: DRAFT_SYSTEM, state: agent.state, saveState: () => agent.saveState(), command, settings: agent.settings });
 }
 
 /** Handles a pairing message: trusts the sender when the code is right, then registers. Returns whether it paired. */
@@ -507,6 +609,7 @@ async function onPair(r, say) {
     return false;
   }
   say(`Paired with ${res.contact.name}. The AI replies to this person.`);
+  noteSecondTrusted(say);
   if (res.invite.code) {
     const reg = await agent.register({ invite: res.invite.code }).catch((e) => ({ member: false, error: e.message }));
     if (reg.member) say('Registered with the Tegami relay (invited by this person).');
@@ -620,7 +723,7 @@ function autostartUnix(platform, action, logPath) {
 
 const fn = commands[cmd];
 if (!fn) {
-  console.log('Commands: pair, init, invite, add, contacts, send, backend, key, try, watch, keep, autostart, mcp');
+  console.log('Commands: pair, init, invite, add, contacts, send, backend, key, try, setting, stop, resume, watch, keep, autostart, mcp');
   process.exit(cmd ? 1 : 0);
 }
 Promise.resolve(fn()).catch((e) => {
