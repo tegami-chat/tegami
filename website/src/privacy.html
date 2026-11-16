@@ -81,7 +81,7 @@ tailwind.config = {
     <li data-i18n="pv.cant.7">Your secret key (which remains encrypted even when sent outside your device)</li>
   </ul>
 
-  <p data-i18n="pv.cant.ex">Exceptions: the operator can see the text and the sender of messages attached to a report. The relay also keeps who invited whom for 90 days, and which account keeps which stamps (the stamp images stay encrypted).</p>
+  <p data-i18n="pv.cant.ex">Exceptions: the operator can see the text and the sender of messages attached to a report. The relay also keeps who invited whom for 90 days, and which account keeps which stamps (the stamp images stay encrypted). Messages you send to the operator with "Send feedback to Tegami" are read by the operator as their recipient.</p>
 
   <h2 data-i18n="pv.keep.h">3. What the relay keeps</h2>
 
@@ -90,9 +90,10 @@ tailwind.config = {
   <div class="mt-6 divide-y divide-neutral-200 rounded-xl border border-neutral-200 dark:divide-night-line dark:border-night-line">
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.1.t">Registered accounts</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.1.1">Public key, whether the account was registered with an invite, registration date and time, and whether the account is suspended</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.1.2">To allow only registered accounts to send messages, and to suspend abusive accounts</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.1.3">Until the account is deleted</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.2.t">Message envelopes</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.2.1">The encrypted message (an "envelope": each message makes one for every recipient and one copy for the sender), the recipient's public key, the arrival time, and the data size</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.2.2">To deliver messages later when a device is off or offline</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.2.3">30 days. Envelopes for moving an account to a new device: 10 minutes</p></div></div>
-    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.3.t">Photos, videos, files and voice messages</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.3.1">Encrypted data. The uploader is not recorded</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.3.2">To deliver them to recipients</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.3.3">30 days</p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.3.t">Photos, videos, files, voice messages, and chat history moved to a new device</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.3.1">Encrypted data. The uploader is not recorded</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.3.2">To deliver them to recipients</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.3.3">30 days</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.st.t">Stamps</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.st.1">The encrypted stamp image, the public key of the account that keeps it, its size, and when it was stored</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.st.2">So you can send the same stamp again and use it on all your devices, and so only the account that keeps a stamp can delete it</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.st.3">Until you delete the stamp. After deletion, copies may remain in caches for up to one day</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.4.t">Invite records</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.4.1">Who invited whom</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.4.2">To suspend accounts that engage in abuse, along with the accounts they invited</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.4.3">90 days</p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.dl.t">Deleted accounts</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.dl.1">The public key of the deleted account and when it was deleted</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.dl.2">So the same public key cannot register again (an account stopped for abuse cannot come back by deleting itself), and so envelopes sent to it are not kept</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.dl.3">Indefinitely</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.5.t">Reports</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.5.1">The public keys of the reporting and reported accounts, and the reason for the report. If the reporter chooses, up to 20 messages from the reported user, decrypted on the reporter's device. The reported user is not notified</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.5.2">To stop abuse</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.5.3">90 days</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.6.t">Notification addresses</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.6.1">Your device’s notification address, the keys to encrypt notifications to it, and the public key of the account using it</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.6.2">To tell you about new messages and calls</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.6.3">Until you turn notifications off</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.7.t">Recovery backups</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.7.1">A backup of your account, encrypted with your recovery code. The relay cannot tell which account it belongs to</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.7.2">To restore your account if you lose your device</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.7.3">Until you delete it</p></div></div>
@@ -120,7 +121,7 @@ tailwind.config = {
   <div class="mt-6 divide-y divide-neutral-200 rounded-xl border border-neutral-200 dark:divide-night-line dark:border-night-line">
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.c.1.t">Cloudflare, Inc.</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l1">Country</span><p data-i18n="pv.c.1.1">United States</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l2">Purpose</span><p data-i18n="pv.c.1.2">Runs the website, the app, the relay and file storage</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l3">What it receives</span><p data-i18n="pv.c.1.3">Your IP address when you connect, and the data handled by the relay. Messages (except those attached to reports), files and recovery backups remain encrypted</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.c.2.t">Cloudflare, Inc.</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l1">Country</span><p data-i18n="pv.c.2.1">United States</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l2">Purpose</span><p data-i18n="pv.c.2.2">Verifies that you are not a bot when you register without an invite (Turnstile)</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l3">What it receives</span><p data-i18n="pv.c.2.3">Your IP address and information about your browser</p></div></div>
-    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.c.3.t">Cloudflare, Inc.</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l1">Country</span><p data-i18n="pv.c.3.1">United States</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l2">Purpose</span><p data-i18n="pv.c.3.2">Establishes a connection path between devices during calls (STUN)</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l3">What it receives</span><p data-i18n="pv.c.3.3">Your IP address</p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.c.3.t">Cloudflare, Inc.</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l1">Country</span><p data-i18n="pv.c.3.1">United States</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l2">Purpose</span><p data-i18n="pv.c.3.2">Finds a connection path between devices during calls (STUN), and relays the audio and video when the devices cannot connect directly (TURN)</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l3">What it receives</span><p data-i18n="pv.c.3.3">Your IP address. When relaying: the IP addresses of both devices, when the call took place, and the amount of data. The audio and video stay encrypted between the devices. None of this is sent when you set your own relay server</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.c.4.t">Apple, Google, Mozilla, Microsoft</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l1">Country</span><p data-i18n="pv.c.4.1">United States</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l2">Purpose</span><p data-i18n="pv.c.4.2">Deliver notifications to your device</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l3">What it receives</span><p data-i18n="pv.c.4.3">Your notification address and when a notification was sent. The notification content is encrypted so only your device can decrypt it. It contains only whether it is a message or a call, which account it is for, and the number of new messages</p></div></div>
   </div>
 
@@ -128,7 +129,11 @@ tailwind.config = {
 
   <h2 data-i18n="pv.call.h">6. Calls</h2>
 
-  <p data-i18n="pv.call.p">Call audio and video are encrypted and sent directly between devices without passing through the operator's servers. Because of this, your IP address is visible to the other person on the call.</p>
+  <p data-i18n="pv.call.p1">Call audio and video are encrypted between the two devices (DTLS-SRTP).</p>
+  <p data-i18n="pv.call.p2">Calls usually go directly between the devices. When the devices cannot connect directly, the call may go through Cloudflare's relay server (TURN). The relay server only forwards the encrypted audio and video and cannot see or hear them.</p>
+  <p data-i18n="pv.call.p3">The relay server receives the IP addresses of both devices, when the call took place, and the amount of data. The relay hands your app short-lived credentials for the relay server and does not record whom it gave them to. The operator receives from Cloudflare only the total amount of data relayed, not a record of each call or any IP addresses. How long Cloudflare keeps this information follows <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare's privacy policy</a>.</p>
+  <p data-i18n="pv.call.p4">In a call that connects directly, the other person can see your IP address. If you turn on "Always relay calls" in settings, the other person cannot see your IP address. If no relay server is available, the call does not connect.</p>
+  <p data-i18n="pv.call.p5">If you set your own relay server under "Your own server" in settings, calls do not use Cloudflare or the operator's servers to connect. The server's address, user name and password are stored only on that device.</p>
 
   <h2 data-i18n="pv.ai.h">7. AI friends</h2>
 
@@ -161,6 +166,8 @@ tailwind.config = {
     <li data-i18n="pv.del.a.2">Tap "Delete recovery code" in settings: the relay deletes your recovery backup</li>
     <li data-i18n="pv.del.a.3">Envelopes and files other than stamps are deleted automatically after 30 days</li>
     <li data-i18n="pv.del.a.4">Delete a stamp: the relay deletes the stamp image and the record of who kept it</li>
+    <li data-i18n="pv.del.a.5">Tap "Delete account" in settings: the relay deletes the envelopes waiting for the account, its stamps, its notification addresses, its registration and its invite code. If the account has a recovery backup, the backup is deleted first. The public key and when it was deleted are kept so the same key cannot register again. Envelopes already sent to others, reports, and the records of whom the account invited remain until their own periods end</li>
+    <li data-i18n="pv.del.a.6">"Remove from this device" in settings deletes only the data on that device. It does not delete anything on the relay</li>
   </ul>
 
   <p data-i18n="pv.del.ask">To ask for the purpose of use of information linked to your public key (such as registration, invite and report records, notification addresses, or stamps), or to request its disclosure, correction, addition, deletion, suspension of use, or cessation of sharing with third parties, email <a href="mailto:hello@tegami.chat">hello@tegami.chat</a> with your account's public key. We disclose information by email.</p>
@@ -174,7 +181,6 @@ tailwind.config = {
     <li data-i18n="pv.del.b.6">There is no fee for making a request</li>
   </ul>
 
-  <p data-i18n="pv.del.app">We plan to add an option to delete your account directly within the app.</p>
 
   <h2 data-i18n="pv.kid.h">11. Children</h2>
 
@@ -201,7 +207,7 @@ tailwind.config = {
 
   <ul>
     <li data-i18n="pv.eu.1">Necessary to provide the service: registering your public key, delivering messages and files, connecting calls, storing stamps, and storing recovery backups</li>
-    <li data-i18n="pv.eu.2">Legitimate interests: preventing abuse, limiting the number of connections and the amount of data sent, and compiling usage statistics</li>
+    <li data-i18n="pv.eu.2">Legitimate interests: preventing abuse (including keeping deleted accounts from registering again), limiting the number of connections and the amount of data sent, and compiling usage statistics</li>
     <li data-i18n="pv.eu.3">Your consent: notifications and error reports. You can withdraw consent in settings at any time. Withdrawing does not affect the lawfulness of processing before withdrawal</li>
   </ul>
 
@@ -229,7 +235,7 @@ tailwind.config = {
     <dt class="font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="pv.op.3.k">Contact</dt><dd data-i18n="pv.op.3.v"><a href="mailto:hello@tegami.chat">hello@tegami.chat</a></dd>
   </dl>
 
-  <p class="!mt-10 text-sm !text-neutral-500" data-i18n="pv.date">Established: November 15, 2026<br>Revised: November 15, 2026 (changed how usage statistics are published and how long they are kept; explained what an envelope is; added how stamps are kept)</p>
+  <p class="!mt-10 text-sm !text-neutral-500" data-i18n="pv.date">Established: November 15, 2026<br>Revised: November 15, 2026 (changed how usage statistics are published and how long they are kept; explained what an envelope is; added how stamps are kept)<br>Revised: November ○, 2026 (added account deletion, call relaying through TURN, "Always relay calls" and your own relay server, and chat history moved to a new device)</p>
 </main>
 
 <footer class="border-t border-neutral-200 text-sm text-neutral-500 dark:border-night-line dark:text-neutral-400">
@@ -293,7 +299,7 @@ const JA = {
   'pv.cant.5': '利用者の名前とアイコン',
   'pv.cant.6': '通話の声と映像',
   'pv.cant.7': '秘密鍵（端末の外へ送信される際も、必ず暗号化されています）',
-  'pv.cant.ex': 'ただし、通報に添付されたメッセージについては、本文と送信者を運営者が閲覧できます。また、誰が誰を招待したかの記録は、リレーに90日間保存されます。どのアカウントがどのスタンプを保存しているかも、リレーに記録されます（スタンプの画像は暗号化されたままです）。',
+  'pv.cant.ex': 'ただし、通報に添付されたメッセージについては、本文と送信者を運営者が閲覧できます。また、誰が誰を招待したかの記録は、リレーに90日間保存されます。どのアカウントがどのスタンプを保存しているかも、リレーに記録されます（スタンプの画像は暗号化されたままです）。「Tegamiへの意見」から運営者に送ったメッセージは、運営者が受信者として読みます。',
   'pv.keep.h': '3. リレーが保存する情報',
   'pv.keep.p': 'リレーは、メッセージを配信するサーバーです。リレーが取得し保存する情報は、次のとおりです。',
   'pv.k.1.t': '登録したアカウント',
@@ -307,7 +313,7 @@ const JA = {
   'pv.k.2.1': '暗号化されたメッセージ（以下「封筒」といいます。メッセージ1通につき、受信者ごとに1つと、送信者の控えに1つ作られます）、宛先の公開鍵、受信日時、データサイズ',
   'pv.k.2.2': '端末の電源が切れている時やオフラインの時に、後からメッセージを配信するため',
   'pv.k.2.3': '30日間。新しい端末へアカウントを移すための封筒は10分間',
-  'pv.k.3.t': '写真、動画、ファイル、音声メッセージ',
+  'pv.k.3.t': '写真、動画、ファイル、音声メッセージ、新しい端末へ移す会話の履歴',
   'pv.k.3.1': '暗号化されたデータ。アップロードした利用者は記録しません',
   'pv.k.3.2': '受信者に配信するため',
   'pv.k.3.3': '30日間',
@@ -319,6 +325,10 @@ const JA = {
   'pv.k.4.1': '誰が誰を招待したか',
   'pv.k.4.2': '不正行為を行った利用者と、その利用者が招待した利用者の利用を停止するため',
   'pv.k.4.3': '90日間',
+  'pv.k.dl.t': '削除したアカウント',
+  'pv.k.dl.1': '削除したアカウントの公開鍵と、削除した日時',
+  'pv.k.dl.2': '同じ公開鍵で再び登録できないようにするため（利用を停止されたアカウントが、削除して登録し直すことを防ぐため）。削除したアカウント宛ての封筒を保存しないため',
+  'pv.k.dl.3': '無期限',
   'pv.k.5.t': '通報',
   'pv.k.5.1': '通報した利用者と通報された利用者の公開鍵、通報の理由。通報者が選択した場合は、通報された利用者のメッセージ20件まで（通報者の端末で復号したもの）。通報されたことは、通報された利用者に通知しません',
   'pv.k.5.2': '不正行為を防止するため',
@@ -364,15 +374,19 @@ const JA = {
   'pv.c.2.3': 'IPアドレスとブラウザの情報',
   'pv.c.3.t': 'Cloudflare, Inc.',
   'pv.c.3.1': 'アメリカ',
-  'pv.c.3.2': '通話時に、端末間の接続経路を確立（STUN）',
-  'pv.c.3.3': 'IPアドレス',
+  'pv.c.3.2': '通話時に、端末間の接続経路を確立（STUN）。端末間で直接つながらない場合に、音声と映像を中継（TURN）',
+  'pv.c.3.3': 'IPアドレス。中継する場合は、両方の端末のIPアドレス、通話の日時、データ量。音声と映像は端末間で暗号化されたまま中継されます。自分の中継サーバーを設定した場合は送信されません',
   'pv.c.4.t': 'Apple、Google、Mozilla、Microsoft',
   'pv.c.4.1': 'アメリカ',
   'pv.c.4.2': '端末への通知の配信',
   'pv.c.4.3': '通知の宛先と送信日時。通知の内容は暗号化され、利用者の端末でのみ開けます。内容は、メッセージか着信かの区別、宛先のアカウント、新着件数のみです',
   'pv.co.us': 'Cloudflareのサーバーは、アメリカとほかの国にあります。アメリカには日本の個人情報保護法のような包括的な連邦法がなく、政府が会社に情報の提出を命じられる法律があります。アメリカの制度は、<a href="https://www.ppc.go.jp/personalinfo/legal/kaiseihogohou/#gaikoku">個人情報保護委員会がまとめています</a>。',
   'pv.call.h': '6. 通話',
-  'pv.call.p': '通話の音声と映像は暗号化され、端末間で直接送受信されます。運営者のサーバーは経由しません。そのため、通話の相手には利用者のIPアドレスが伝わります。',
+  'pv.call.p1': '通話の音声と映像は、端末間で暗号化されます（DTLS-SRTP）。',
+  'pv.call.p2': '通話は、通常は端末間で直接送受信されます。端末間で直接つながらない場合は、Cloudflareの中継サーバー（TURN）を経由することがあります。中継サーバーは、暗号化された音声と映像を転送するだけで、内容を閲覧できません。',
+  'pv.call.p3': '中継サーバーには、両方の端末のIPアドレス、通話の日時、データ量が伝わります。リレーは、中継サーバーを利用するための一時的な認証情報をアプリに渡すだけで、誰に渡したかを記録しません。運営者がCloudflareから受け取るのは、中継したデータ量の合計だけで、通話ごとの記録やIPアドレスは受け取りません。Cloudflareでの保存期間は、<a href="https://www.cloudflare.com/privacypolicy/">Cloudflareのプライバシーポリシー</a>に従います。',
+  'pv.call.p4': '直接つながる通話では、通話の相手に利用者のIPアドレスが伝わります。設定の「通話を常に中継する」を有効にすると、相手にIPアドレスが伝わりません。中継サーバーを利用できない場合、通話はつながりません。',
+  'pv.call.p5': '設定の「自分のサーバー」で利用者自身の中継サーバーを指定した場合、通話の接続にCloudflareと運営者のサーバーを使いません。指定したサーバーのアドレス、ユーザー名、パスワードは、その端末にのみ保存されます。',
   'pv.ai.h': '7. AIの友だち',
   'pv.ai.p1': 'AIの友だちは、利用者が自分のパソコンで動かすプログラムです。AIの友だちとのメッセージも、暗号化された封筒としてリレーを経由します。',
   'pv.ai.p2': 'AIに読み取らせたメッセージは、利用者が利用するAIサービスに送信され、そのサービスの規約に従って取り扱われます。送信後のメッセージは、本サービスの暗号化による保護の対象外となります。',
@@ -391,6 +405,8 @@ const JA = {
   'pv.del.a.2': '設定の「復旧コードを削除」を押すと、リレーは復旧用バックアップを削除します',
   'pv.del.a.3': '封筒と、スタンプ以外のファイルは、30日後に自動で削除されます',
   'pv.del.a.4': 'スタンプを削除すると、リレーはスタンプの画像と保存の記録を削除します',
+  'pv.del.a.5': '設定の「アカウントを削除」を押すと、リレーはそのアカウント宛ての封筒、スタンプ、通知の宛先、登録、招待コードを削除します。復旧用バックアップがある場合は、先に削除します。同じ公開鍵で再び登録できないように、公開鍵と削除した日時は保存します。ほかの利用者に送った封筒、通報の記録、そのアカウントが招待した記録は、それぞれの保存期間が過ぎるまで残ります',
+  'pv.del.a.6': '設定の「この端末から削除」は、その端末のデータだけを削除します。リレーの情報は削除しません',
   'pv.del.ask': '公開鍵に結び付いた情報（登録、招待、通報の記録、通知の宛先、スタンプなど）について、利用目的の通知、開示、訂正、追加、削除、利用の停止、第三者への提供の停止を求める場合は、アカウントの公開鍵を記載して <a href="mailto:hello@tegami.chat">hello@tegami.chat</a> までご連絡ください。開示は電子メールで行います。',
   'pv.del.b.1': '本人確認のため、運営者がその公開鍵宛てに本サービスでメッセージを送信します',
   'pv.del.b.2': '端末を紛失した場合や、法定代理人または代理人が請求する場合は、その旨をメールに記載してください。運営者から確認の方法をご案内します',
@@ -398,7 +414,6 @@ const JA = {
   'pv.del.b.4': 'スタンプ以外のファイルと復旧用バックアップは、公開鍵と結び付いていないため、公開鍵から特定することはできません。スタンプは公開鍵と結び付いているため、開示と削除の請求の対象になります',
   'pv.del.b.5': 'いただいたメールは請求への対応にのみ利用し、対応完了から1年以内に削除します',
   'pv.del.b.6': '手数料は無料です',
-  'pv.del.app': 'アプリ内でアカウントを削除する機能は、今後提供する予定です。',
   'pv.kid.h': '11. 子どもの利用',
   'pv.kid.p1': '本サービスは、利用者の年齢を確認していません。13歳未満の方は、保護者の方と一緒にご利用ください。',
   'pv.kid.p2': '欧州連合では、16歳未満の方が通知やエラーの報告を有効にするには、保護者の同意が必要です。居住国がより低い年齢を定めている場合は、その年齢未満の方が対象となります。',
@@ -414,7 +429,7 @@ const JA = {
   'pv.eu.h': '13. 欧州連合にお住まいの方へ',
   'pv.eu.p1': '運営者は、欧州連合の一般データ保護規則に従います。情報を取り扱う法的根拠は、次のとおりです。',
   'pv.eu.1': 'サービスの提供に必要な取扱い：公開鍵の登録、メッセージとファイルの送受信、通話の接続、スタンプの保管、復旧用バックアップの保管',
-  'pv.eu.2': '運営者の正当な利益：不正行為の防止、接続数と送信量の制限、利用状況の統計',
+  'pv.eu.2': '運営者の正当な利益：不正行為の防止（削除したアカウントの再登録の防止を含む）、接続数と送信量の制限、利用状況の統計',
   'pv.eu.3': '利用者の同意：通知とエラーの報告。設定からいつでも同意を撤回できます。撤回前の取扱いの適法性には影響しません',
   'pv.eu.p2': '本サービスの利用には、公開鍵と接続中のIPアドレスが必要です。登録には、招待または自動プログラムでないことの確認も必要です。自動化された意思決定やプロファイリングは行いません。欧州委員会は、日本の個人情報保護の水準が十分であると認めています。',
   'pv.eu.p3': '欧州連合にお住まいの方は、情報の開示、訂正、削除、取扱いの制限、データポータビリティ、取扱いへの異議を求める権利を有します。また、居住国のデータ保護監督機関に苦情を申し立てることができます。',
@@ -431,7 +446,7 @@ const JA = {
   'pv.op.2.v': '〒150-0043東京都渋谷区道玄坂1-16-6二葉ビル8b',
   'pv.op.3.k': '連絡先',
   'pv.op.3.v': '<a href="mailto:hello@tegami.chat">hello@tegami.chat</a>',
-  'pv.date': '制定日：2026年11月15日<br>改定日：2026年11月15日（「利用状況の統計」の公開方法と保存期間を変更、「メッセージの封筒」の説明を追加、スタンプの保管を追加）',
+  'pv.date': '制定日：2026年11月15日<br>改定日：2026年11月15日（「利用状況の統計」の公開方法と保存期間を変更、「メッセージの封筒」の説明を追加、スタンプの保管を追加）<br>改定日：2026年11月○日（アカウントの削除、通話の中継（TURN）、「通話を常に中継する」と自分の中継サーバーの設定、新しい端末へ移す会話の履歴を追加）',
   'ft.privacy': 'プライバシーポリシー',
   'ft.how': '仕組み',
   'ft.status': '稼働状況',
