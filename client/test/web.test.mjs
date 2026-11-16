@@ -3128,7 +3128,9 @@ async function main() {
         cli('send', 'テストB', '印の前');
         await waitText(bp, '印の前');
         await info();
-        await waitText(bp, '持ち主：確かめられていません');
+        await waitText(bp, '持ち主：不明');
+        await bp.getByTestId('owner-unknown').waitFor();
+        await shot(bp, 'ai-owner-unknown', 'AIの友だちの画面。持ち主の署名が無い時');
 
         // あおい marks it as their own AI: the app signs a card and hands it to the AI.
         await markMyAi(a, aiHex);
@@ -3137,9 +3139,10 @@ async function main() {
         await bp.goto(`${ORIGIN}/chat/${aiHex}`);
         await waitText(bp, '印の後');
         await info();
-        await waitText(bp, '持ち主：あおい（署名を確かめました）');
+        await waitText(bp, '持ち主：あおい');
+        await bp.getByTestId('owner-signed').waitFor();
         await shot(bp, 'ai-owner-signed', 'AIの友だちの画面。持ち主の署名を確かめた時');
-        await noText(bp, '持ち主：確かめられていません', 500);
+        await noText(bp, '持ち主：不明', 500);
         // On あおい's own screen the AI is theirs: no owner line.
         await a.page.goto(`${ORIGIN}/chat/${aiHex}`);
         await button(a.page, 'メニュー').click();
@@ -3153,7 +3156,8 @@ async function main() {
         await bp.goto(`${ORIGIN}/chat/${aiHex}`);
         await waitText(bp, '取り消しの後');
         await info();
-        await waitText(bp, '持ち主：確かめられていません');
+        await waitText(bp, '持ち主：不明');
+        await bp.getByTestId('owner-unknown').waitFor();
         for (const u of [a, b]) await u.context.close();
       } finally {
         watch?.kill();

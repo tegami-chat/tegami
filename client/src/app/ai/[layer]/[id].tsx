@@ -1,7 +1,7 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { AiSwitches, modelLine, ownerLine } from '@/components/ai-switches';
+import { AiSwitches, modelLine, OwnerRow } from '@/components/ai-switches';
 import { Avatar } from '@/components/avatar';
 import { Palette, usePalette } from '@/constants/theme';
 import { FRIEND_ACTIONS, READ_ONLY, setAiSwitches, switchValue, useAiPermissions, type AiAction } from '@/lib/ai-permissions';
@@ -33,7 +33,7 @@ export default function AiLayerScreen() {
         {layer !== 'model' && <Avatar name={name} file={contact?.avatar} size={64} />}
         <Text style={s.name}>{name}</Text>
         {layer === 'ai' && contact?.model ? <Text style={s.sub}>{modelLine(contact.model)}</Text> : null}
-        {layer === 'ai' && ownerLine(contact, contacts, me) ? <Text style={s.sub}>{ownerLine(contact, contacts, me)}</Text> : null}
+        {layer === 'ai' && <OwnerRow contact={contact} contacts={contacts} me={me} style={s.sub} />}
       </View>
       <Text style={s.heading}>{layer === 'friend' ? `${name}とのトークでAIができること` : 'AIができること'}</Text>
       <AiSwitches scope={{ layer, id }} blocked={blocked} name={layer === 'friend' ? name : undefined} />

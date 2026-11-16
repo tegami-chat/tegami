@@ -1,3 +1,4 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
@@ -33,13 +34,25 @@ export const modelLine = (model: string) => `名乗っているモデル：${mod
 
 /**
  * Whose AI this friend is, by its owner's signature on its key (lib/ai-owner.ts, concern 4).
- * Nothing for my own AI or for a person; for an AI with no good card, that it is not known.
+ * A name is shown only when the signature checked out, with a shield; with no good card, 不明
+ * with a question mark. Nothing for my own AI or for a person.
  */
-export function ownerLine(c: Contact | undefined, contacts: Contact[], me: string | null): string | null {
-  if (!c || c.mine) return null;
-  const o = liveOwner(c.owner);
-  if (o) return `持ち主：${o.pubkey === me ? '自分' : personName(o.pubkey, contacts)}（署名を確かめました）`;
-  return c.model ? '持ち主：確かめられていません' : null;
+export function OwnerRow({ contact, contacts, me, style }: { contact: Contact | undefined; contacts: Contact[]; me: string | null; style?: object }) {
+  const c = usePalette();
+  if (!contact || contact.mine) return null;
+  const o = liveOwner(contact.owner);
+  if (!o && !contact.model) return null;
+  const name = o ? (o.pubkey === me ? '自分' : personName(o.pubkey, contacts)) : '';
+  return (
+    <View
+      testID={o ? 'owner-signed' : 'owner-unknown'}
+      accessible
+      aria-label={o ? `持ち主：${name}。持ち主の署名を確かめました` : '持ち主：不明。持ち主の署名がありません'}
+      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+      <Text style={style}>{o ? `持ち主：${name}` : '持ち主：不明'}</Text>
+      <MaterialIcons name={o ? 'verified-user' : 'help-outline'} size={18} color={o ? c.accent : c.muted} />
+    </View>
+  );
 }
 
 type Term = 'always' | 'today' | 'hour' | 'ask';
