@@ -7,7 +7,7 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { backendLabel, callApi, loadBackend, makeResponder, saveBackend, saveKey } from '../backends.mjs';
+import { backendLabel, callApi, loadBackend, loadKeys, makeResponder, saveBackend, saveKey } from '../backends.mjs';
 
 const ROOT = resolve(import.meta.dirname, '..');
 let failures = 0;
@@ -134,7 +134,8 @@ try {
   check('backend: says the key is still needed', set.includes('tegami-agent key openai'));
   check('backend: the invite link now shows the model', decodeURIComponent(cli(['invite'])).includes('m=OpenAI gpt-test'));
   cli(['key', 'openai'], `${KEY}\n`);
-  check('key: read from stdin and saved', JSON.parse(readFileSync(join(HOME, 'keys.json'), 'utf8')).openai === KEY);
+  check('key: read from stdin and saved', loadKeys(HOME).openai === KEY);
+  check('key: not readable in the file where the system has a store', process.env.TEGAMI_SECRET_STORE === 'plain' || process.platform !== 'win32' || !readFileSync(join(HOME, 'keys.json'), 'utf8').includes(KEY));
   check('backend: shows that a key is saved, not the key', (() => {
     const out = cli(['backend']);
     return out.includes('API key: saved') && !out.includes(KEY);

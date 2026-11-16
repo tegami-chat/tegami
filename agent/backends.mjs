@@ -1,14 +1,16 @@
 // Which AI writes the replies: Claude Code, a model running on this computer, or an API
 // with the owner's own key. The choice lives in backend.json, the keys in keys.json (both
-// in the AI friend's folder, never sent anywhere but to the AI they belong to).
+// in the AI friend's folder, never sent anywhere but to the AI they belong to). keys.json is
+// encrypted by the operating system's store where there is one (secrets.mjs).
 //
 // Not supported on purpose: Antigravity (`agy -p`). Its terms forbid reaching it through
 // third-party software. And nothing here ever holds the owner's sign-in to an AI service:
 // Claude Code signs in by itself, every other backend takes an API key or no key at all.
 
 import { spawn } from 'node:child_process';
-import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { accountFor, forget, protect, storeKind, unprotect, warnPlain } from './secrets.mjs';
 
 /**
  * kind: how the request is shaped. key: an API key is needed ('optional' for servers that
@@ -28,6 +30,14 @@ export const BACKENDS = {
 
 /** Conversation turns kept per person for API backends (Claude Code keeps its own session). */
 const HISTORY_TURNS = 20;
+
+/**
+ * How many steps Claude Code may take for one reply. With no tools, one answer is one step;
+ * the second is slack. With tools (the owner opened them), a few more.
+ */
+export const MAX_TURNS = 2;
+export const MAX_TURNS_WITH_TOOLS = 8;
+const DAY = 86400;
 
 export function readJson(dir, file, fallback) {
   try {
@@ -102,15 +112,48 @@ function keyMayGo(url) {
 
 // ---------- keys ----------
 
+// Opened keys, by folder, while keys.json stays the same (opening takes a moment on Windows).
+const opened = new Map();
+
+/** The API keys saved for this AI friend: { backend: key }. A plain keys.json is moved into the store. */
 export function loadKeys(dir) {
-  return readJson(dir, 'keys.json', {});
+  const path = join(dir, 'keys.json');
+  let stamp;
+  try {
+    stamp = statSync(path).mtimeMs;
+  } catch {
+    return {};
+  }
+  const hit = opened.get(dir);
+  if (hit?.stamp === stamp) return { ...hit.keys };
+  const file = readJson(dir, 'keys.json', {});
+  let keys;
+  if (typeof file.store === 'string') keys = JSON.parse(unprotect(file));
+  else {
+    // From before the secret store: plain keys. Move them in now (the plain file is replaced).
+    keys = file;
+    if (Object.keys(keys).length && storeKind() !== 'plain') writeKeys(dir, keys);
+  }
+  opened.set(dir, { stamp: statSync(path).mtimeMs, keys });
+  return { ...keys };
+}
+
+function writeKeys(dir, keys) {
+  const old = readJson(dir, 'keys.json', {});
+  const kind = storeKind();
+  const any = Object.keys(keys).length > 0;
+  const sealed = kind === 'plain' || !any ? null : protect(JSON.stringify(keys), accountFor(dir, 'keys'), kind);
+  if (!sealed && any) warnPlain('the API keys');
+  writePrivate(dir, 'keys.json', sealed ?? keys);
+  if (!sealed && typeof old.store === 'string') forget(old);
+  opened.delete(dir);
 }
 
 export function saveKey(dir, type, key) {
   const keys = loadKeys(dir);
   if (key) keys[type] = key;
   else delete keys[type];
-  writePrivate(dir, 'keys.json', keys);
+  writeKeys(dir, keys);
 }
 
 /** Removes every key from a text (error bodies, logs), so a key never ends up in a log. */
@@ -127,28 +170,40 @@ export function redact(text, keys) {
  *   reply(prompt, { draft, peer }) -> Promise<string>
  * draft: a one-off reply draft for a friend's chat: no conversation, no tools, nothing kept.
  * peer: whose conversation this continues (API backends keep the last turns per person).
+ * settings (lib.mjs loadSettings): tools (Claude Code may use its tools), remember (keep the
+ * conversation), keepDays (how long a conversation is kept).
  */
-export function makeResponder({ dir, config, system, draftSystem, state, saveState, command }) {
+export function makeResponder({ dir, config, system, draftSystem, state, saveState, command, settings = {} }) {
+  const { tools = false, remember = true, keepDays = 30 } = settings;
   if (command) return (prompt) => runCommand(command, prompt, dir);
   const b = BACKENDS[config.type] ?? BACKENDS['claude-code'];
-  if (b.kind === 'claude-code') return (prompt, opts = {}) => runClaude({ dir, prompt, system, draftSystem, state, saveState, draft: !!opts.draft });
+  if (b.kind === 'claude-code')
+    return (prompt, opts = {}) => runClaude({ dir, prompt, system, draftSystem, state, saveState, draft: !!opts.draft, tools, remember, keepDays });
   if (b.kind === 'command') throw new Error('The command backend needs --command "<program>" on watch.');
   return async (prompt, { draft = false, peer = '' } = {}) => {
     const keys = loadKeys(dir);
     const key = keys[config.type] ?? '';
     if (b.key === true && !key) throw new Error(`No API key for ${config.type}. Run: tegami-agent key ${config.type}`);
     if (key && !keyMayGo(config.url)) throw new Error('The API key is only sent over https or to this computer.');
-    const history = draft ? [] : readJson(dir, 'history.json', {})[peer] ?? [];
-    const turns = [...history, { role: 'user', text: prompt }];
+    const now = Math.floor(Date.now() / 1000);
+    const since = now - keepDays * DAY;
+    const keep = !draft && remember && !!peer;
+    const history = keep ? (readJson(dir, 'history.json', {})[peer] ?? []).filter((t) => (t.at ?? now) >= since) : [];
+    const turns = [...history.map(({ role, text }) => ({ role, text })), { role: 'user', text: prompt }];
     let text;
     try {
       text = await callApi(b.kind, { url: config.url, model: config.model, key, system: draft ? draftSystem : system, turns });
     } catch (e) {
       throw new Error(redact(e.message, keys));
     }
-    if (!draft && peer) {
+    if (keep) {
       const all = readJson(dir, 'history.json', {});
-      all[peer] = [...turns, { role: 'assistant', text }].slice(-HISTORY_TURNS * 2);
+      // Older than keepDays: gone, for everyone in the file (not only this person).
+      for (const [k, list] of Object.entries(all)) {
+        all[k] = list.filter((t) => (t.at ?? now) >= since);
+        if (!all[k].length) delete all[k];
+      }
+      all[peer] = [...history, { role: 'user', text: prompt, at: now }, { role: 'assistant', text, at: now }].slice(-HISTORY_TURNS * 2);
       writePrivate(dir, 'history.json', all);
     }
     return text;
@@ -253,18 +308,40 @@ export function ownEnv(env = process.env) {
 }
 
 /**
- * Claude Code, headless. One conversation continues across messages (the AI remembers).
+ * The command line for Claude Code, headless.
+ * By default it has no tools at all: no built-in tools (--tools ""), none of the MCP servers the
+ * owner added to Claude Code (--strict-mcp-config, and --disallowedTools "mcp__*" as a second
+ * lock), and a small --max-turns. The words it reads come from other people's messages, so they
+ * must not be able to make it read files or use the owner's mail. tools: the owner opened them.
+ * A draft never has tools. remember false, or a draft: nothing is kept (--no-session-persistence).
+ * system must not contain double quotes (it goes inside "..." on the command line).
+ */
+export function claudeLine({ system, tools = false, remember = true, draft = false, session = '' }) {
+  const parts = ['claude', '-p', '--output-format', 'json'];
+  if (draft || !tools) parts.push('--tools', '""', '--strict-mcp-config', '--disallowedTools', '"mcp__*"', '--max-turns', String(MAX_TURNS));
+  else parts.push('--max-turns', String(MAX_TURNS_WITH_TOOLS));
+  if (draft || !remember) parts.push('--no-session-persistence');
+  else if (session) parts.push('--resume', session);
+  parts.push('--append-system-prompt', `"${system}"`);
+  return parts.join(' ');
+}
+
+/**
+ * Claude Code, headless. One conversation continues across messages (the AI remembers), for
+ * keepDays at most: then a new one starts. With remember off, every reply starts afresh.
  * draft: a reply draft for a friend's chat instead. It runs once on its own: no tools (the
  * friend's words must not make it act), no saved session, and not added to the conversation.
- * system and draftSystem must not contain double quotes (they go inside "..." on the command line).
  */
-async function runClaude({ dir, prompt, system, draftSystem, state, saveState, draft }) {
+async function runClaude({ dir, prompt, system, draftSystem, state, saveState, draft, tools, remember, keepDays }) {
   const work = join(dir, draft ? 'draft' : 'work');
   mkdirSync(work, { recursive: true });
-  let line = draft
-    ? `claude -p --output-format json --no-session-persistence --tools "" --append-system-prompt "${draftSystem}"`
-    : `claude -p --output-format json --append-system-prompt "${system}"`;
-  if (!draft && state.claudeSession) line += ` --resume ${state.claudeSession}`;
+  const now = Math.floor(Date.now() / 1000);
+  if (!draft && state.claudeSession && (!remember || (state.claudeSessionAt ?? 0) < now - keepDays * DAY)) {
+    delete state.claudeSession;
+    delete state.claudeSessionAt;
+    saveState();
+  }
+  const line = claudeLine({ system: draft ? draftSystem : system, tools, remember, draft, session: state.claudeSession });
   const r = await run(line, prompt, work, ownEnv());
   let out;
   try {
@@ -272,7 +349,8 @@ async function runClaude({ dir, prompt, system, draftSystem, state, saveState, d
   } catch {
     throw new Error(r.err.trim() || r.out.trim() || `claude exited ${r.code}`);
   }
-  if (out.session_id && !draft) {
+  if (out.session_id && !draft && remember) {
+    if (out.session_id !== state.claudeSession) state.claudeSessionAt = now;
     state.claudeSession = out.session_id;
     saveState();
   }
