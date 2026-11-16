@@ -18,6 +18,7 @@ const PAGES = {
   roadmap: { src: 'src/roadmap.html', path: { en: '/roadmap', ja: '/ja/roadmap' }, out: { en: 'public/roadmap.html', ja: 'public/ja/roadmap.html' } },
   privacy: { src: 'src/privacy.html', path: { en: '/privacy', ja: '/ja/privacy' }, out: { en: 'public/privacy.html', ja: 'public/ja/privacy.html' } },
   status: { src: 'src/status.html', path: { en: '/status', ja: '/ja/status' }, out: { en: 'public/status.html', ja: 'public/ja/status.html' } },
+  developers: { src: 'src/developers.html', path: { en: '/developers', ja: '/ja/developers' }, out: { en: 'public/developers.html', ja: 'public/ja/developers.html' } },
 };
 // The draft file names the sources link to, and which page each one is.
 const DRAFT_LINKS = {
@@ -26,6 +27,7 @@ const DRAFT_LINKS = {
   'Tegamiのロードマップ案_2026-11-14.html': 'roadmap',
   'Tegamiのプライバシーポリシー案_2026-11-14.html': 'privacy',
   'Tegamiの稼働状況と利用統計案_2026-11-15.html': 'status',
+  'Tegamiの開発者向け_2026-11-16.html': 'developers',
 };
 const META = {
   index: {
@@ -44,6 +46,10 @@ const META = {
     en: { title: 'Tegami privacy policy', desc: 'What Tegami keeps, why, and for how long.' },
     ja: { title: 'Tegamiのプライバシーポリシー', desc: 'Tegamiが何を、なぜ、どれだけの期間預かるか。' },
   },
+  developers: {
+    en: { title: 'Tegami for developers', desc: 'How Tegami uses Nostr, what the relay can see, keys, AI, and the full technical spec.' },
+    ja: { title: '開発者向けのTegamiの説明', desc: 'TegamiがNostrのどこを使うか、リレーに見えるもの、鍵、AI、技術仕様。' },
+  },
   status: {
     en: { title: 'Tegami status and usage', desc: 'Whether the Tegami relay is responding, and weekly usage statistics.' },
     ja: { title: 'Tegamiの稼働状況と利用統計', desc: 'Tegamiのリレーの稼働状況と、週ごとの利用統計。' },
@@ -51,6 +57,14 @@ const META = {
 };
 const LANG_ON = 'block px-4 py-2 text-sm font-semibold text-forest-600 dark:text-forest-300';
 const LANG_OFF = 'block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-white/5';
+
+// The header and footer every page shares, and their Japanese words.
+const LAYOUT = readFileSync('src/_layout.html', 'utf8');
+const HEADER = LAYOUT.slice(LAYOUT.indexOf('<header'), LAYOUT.indexOf('</header>') + 9);
+const FOOTER = LAYOUT.slice(LAYOUT.indexOf('<footer'), LAYOUT.indexOf('</footer>') + 9);
+const jaTable = (html) => Object.fromEntries([...html.matchAll(/^ {2}'([\w.]+)': '([^\n]*)',$/gm)].map((x) => [x[1], x[2]]));
+const LAYOUT_JA = jaTable(LAYOUT);
+const NAV_ON = ' font-semibold text-neutral-900 dark:text-white';
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
@@ -83,7 +97,8 @@ function translate(html, dict) {
 function build(name, lang) {
   const page = PAGES[name];
   let html = readFileSync(page.src, 'utf8');
-  const ja = Object.fromEntries([...html.matchAll(/^ {2}'([\w.]+)': '([^\n]*)',$/gm)].map((x) => [x[1], x[2]]));
+  html = html.replace(/<header[\s\S]*?<\/header>/, HEADER).replace(/<footer[\s\S]*?<\/footer>/, FOOTER);
+  const ja = { ...jaTable(html), ...LAYOUT_JA };
   if (lang === 'ja') html = translate(html, ja);
 
   // drop the draft-only scripts: Tailwind CDN + config, theme bootstrap, translation table
@@ -119,8 +134,11 @@ function build(name, lang) {
   // language menu: link to this page in each language, mark the current one
   html = html.replace(/<a href="\?lang=(en|ja)"([^>]*?) data-lang="(en|ja)" class="[^"]*">/g,
     (_, l, attrs, l2) => `<a href="${page.path[l]}"${attrs} data-lang="${l2}" class="${l === lang ? LANG_ON : LANG_OFF}"${l === lang ? ' aria-current="true"' : ''}>`);
-  // the status page's own script
+  // the menu item for this page
+  html = html.replace(new RegExp(`(<a href="${page.path[lang]}" class="[^"]*)(" data-nav=)`, 'g'), `$1${NAV_ON}" aria-current="page$2`);
+  // the pages' own scripts
   html = html.replace('<script src="status.js"></script>', '<script src="/status.js"></script>');
+  html = html.replace('<script src="diff.js"></script>', '<script src="/diff.js"></script>');
   // anchors on the home page from other pages already point to /#x; on the home page keep #x
   writeFileSync(page.out[lang], html);
 }
@@ -128,6 +146,6 @@ function build(name, lang) {
 mkdirSync('public/ja', { recursive: true });
 for (const name of Object.keys(PAGES)) for (const lang of ['en', 'ja']) build(name, lang);
 copyFileSync('src/icon.svg', 'public/icon.svg');
-copyFileSync('src/status.js', 'public/status.js');
+for (const f of ['status.js', 'diff.js', 'site.js', 'theme.js']) copyFileSync('src/' + f, 'public/' + f);
 execSync('npx --yes tailwindcss@3.4.16 -c tailwind.config.cjs -i src/input.css -o public/tegami.css --minify', { stdio: 'inherit' });
 console.log('built');

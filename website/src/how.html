@@ -81,12 +81,13 @@ tailwind.config = {
     <section class="border-t border-neutral-200 py-8 dark:border-night-line">
       <h2 class="text-xl font-bold" data-i18n="how.count.h">No analytics</h2>
       <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="how.count.t0">Tegami has no analytics and no tracking, in the app or on this website. Nothing records what you tap, read or how long you stay.</p>
-      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="how.count.t1">The server only keeps daily totals, such as how many messages were delivered that day. Accounts are counted in a way that can't be traced back to anyone, and the numbers are public.</p>
+      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="how.count.t1">The server keeps only totals, such as how many messages were delivered. Accounts are counted in a way that can't be traced back to anyone. Weekly numbers are public on the <a href="Tegamiの稼働状況と利用統計案_2026-11-15.html" class="underline">status page</a>.</p>
       <a href="https://relay.tegami.chat/stats" target="_blank" rel="noopener" class="mt-3 inline-block text-sm font-semibold text-forest-600 hover:underline dark:text-forest-300" data-i18n="how.count.link">See what we count →</a>
     </section>
     <section class="border-t border-neutral-200 py-8 dark:border-night-line">
       <h2 class="text-xl font-bold" data-i18n="how.open.h">Open for anyone to check</h2>
       <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="how.open.t0">All of Tegami's code is public under AGPL-3.0. You don't have to take our word for any of this.</p>
+      <p class="mt-4"><a href="Tegamiの開発者向け_2026-11-16.html" class="font-semibold text-forest-600 hover:underline dark:text-forest-300" data-i18n="how.dev">The crypto, the relay rules and which parts of Nostr we use are on the developer page →</a></p>
     </section>
   </div>
 </main>
@@ -137,7 +138,8 @@ tailwind.config = {
 const JA = {
   'how.count.h': 'アナリティクスはありません',
   'how.count.t0': 'Tegamiには、アプリにもこのサイトにも、アナリティクスや追跡の仕組みはありません。何を押したか、何を読んだか、どれだけ使ったかは記録しません。',
-  'how.count.t1': 'サーバーが残すのは、その日に届いたメッセージの数のような、日ごとの合計だけです。アカウントの数は、誰のことか後から分からない方法で数え、数字は公開しています。',
+  'how.count.t1': 'サーバーが残すのは、届いたメッセージの数のような合計だけです。アカウントの数は、誰のことか後から分からない方法で数えます。週ごとの数は<a href="Tegamiの稼働状況と利用統計案_2026-11-15.html" class="underline">稼働状況のページ</a>で公開しています。',
+  'how.dev': '暗号の部品、リレーの決まり、Nostrのどこを使っているかは、開発者向けの説明に書いています →',
   'how.count.link': '数えている内容を見る →',
   'ft.privacy': 'プライバシーポリシー',
   'ft.how': '仕組み',

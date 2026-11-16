@@ -89,9 +89,61 @@ tailwind.config = {
       <p class="mt-1.5 text-neutral-500 dark:text-neutral-400" data-i18n="p3.t">Messages are encrypted and saved right on your device. Even someone with access to Tegami's servers can't see them.</p>
       <a href="Tegamiの仕組み案_2026-11-14.html" class="mt-2 inline-block text-sm font-semibold text-forest-600 hover:underline dark:text-forest-300" data-i18n="more.private">How we keep it private →</a>
     </div>
+    <ul class="md:col-span-3 flex flex-wrap justify-center gap-x-6 gap-y-2 border-t border-neutral-200 pt-6 text-sm text-neutral-500 dark:border-night-line dark:text-neutral-400">
+      <li><a href="https://github.com/tegami-chat/tegami" class="hover:text-neutral-900 hover:underline dark:hover:text-white" target="_blank" rel="noopener" data-i18n="proof.code">All code public (AGPL-3.0)</a></li>
+      <li><a href="Tegamiの稼働状況と利用統計案_2026-11-15.html" class="hover:text-neutral-900 hover:underline dark:hover:text-white" data-i18n="proof.stats">Usage numbers published weekly</a></li>
+      <li><a href="Tegamiの開発者向け_2026-11-16.html" class="hover:text-neutral-900 hover:underline dark:hover:text-white" data-i18n="proof.spec">Full technical spec</a></li>
+      <li><a href="Tegamiのプライバシーポリシー案_2026-11-14.html" class="hover:text-neutral-900 hover:underline dark:hover:text-white" data-i18n="proof.pp">What we keep, and for how long</a></li>
+    </ul>
   </section>
 
 
+
+  <!-- How Tegami is different: typical apps on the left, Tegami on the right -->
+  <div class="border-y border-neutral-200 dark:border-night-line">
+<section id="diff" data-mode="" class="mx-auto max-w-5xl scroll-mt-16 px-4 py-16 md:py-20">
+  <svg width="0" height="0" class="absolute" aria-hidden="true">
+    <defs>
+      <g id="env">
+        <rect x="-23" y="-17" width="46" height="34" rx="6" fill="#1d6b4b"/>
+        <path d="M-23 -15 L0 4 L23 -15 V-17 H-23 Z" fill="#bbd3c9"/>
+        <circle cx="17" cy="11" r="9" fill="#fff"/>
+        <rect x="12.5" y="10" width="9" height="7" rx="1.5" fill="#1d6b4b"/>
+        <path d="M14.5 10 V7.5 A2.5 2.5 0 0 1 19.5 7.5 V10" stroke="#1d6b4b" stroke-width="1.8" fill="none"/>
+      </g>
+      <g id="key">
+        <circle cx="-9" cy="0" r="8" fill="none" stroke="#1d6b4b" stroke-width="4.5"/>
+        <path d="M-1 0 H16 M10 0 V7 M15 0 V6" stroke="#1d6b4b" stroke-width="4.5" stroke-linecap="round"/>
+      </g>
+      <g id="face">
+        <path d="M-15 -7 V-11 Q-15 -15 -11 -15 H-7 M7 -15 H11 Q15 -15 15 -11 V-7 M15 7 V11 Q15 15 11 15 H7 M-7 15 H-11 Q-15 15 -15 11 V7" stroke="#1d6b4b" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <circle cx="-5" cy="-3" r="2" fill="#1d6b4b"/><circle cx="5" cy="-3" r="2" fill="#1d6b4b"/>
+        <path d="M-5 6 Q0 10 5 6" stroke="#1d6b4b" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      </g>
+      <g id="lock">
+        <rect x="-11" y="-3" width="22" height="17" rx="3" fill="currentColor"/>
+        <path d="M-6.5 -3 V-8 A6.5 6.5 0 0 1 6.5 -8 V-3" stroke="currentColor" stroke-width="3.5" fill="none"/>
+      </g>
+      <g id="person">
+        <circle cx="0" cy="-12" r="9" fill="currentColor"/>
+        <path d="M-17 16 Q-17 -1 0 -1 Q17 -1 17 16 Z" fill="currentColor"/>
+      </g>
+      <g id="spark">
+        <path d="M0 -13 Q2 -2 13 0 Q2 2 0 13 Q-2 2 -13 0 Q-2 -2 0 -13 Z" fill="currentColor"/>
+      </g>
+    </defs>
+  </svg>
+  <h2 class="text-center text-3xl font-bold sm:text-4xl" data-i18n="diff.h">How Tegami is different</h2>
+  <p class="mx-auto mt-3 max-w-2xl text-center text-neutral-500 dark:text-neutral-400" data-i18n="diff.t">Seven everyday worries, typical apps on the left and Tegami on the right.</p>
+  <div id="chips" class="mx-auto mt-8 flex max-w-3xl flex-wrap justify-center gap-2" role="tablist"></div>
+  <div class="mx-auto mt-5 flex max-w-xs items-center gap-3">
+    <button id="diff-play" type="button" class="flex shrink-0 items-center gap-1.5 rounded-full border border-neutral-300 px-3.5 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-night-line dark:text-neutral-200 dark:hover:bg-white/5"></button>
+    <div class="h-1 flex-1 overflow-hidden rounded-full bg-neutral-200 dark:bg-night-line" aria-hidden="true"><div id="diff-bar" class="h-full w-full origin-left scale-x-0 rounded-full bg-forest-600 dark:bg-forest-300"></div></div>
+  </div>
+  <div id="scenes" class="mt-8"></div>
+  <p class="mt-10 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm font-semibold"><a href="Tegamiの仕組み案_2026-11-14.html" class="text-forest-600 hover:underline dark:text-forest-300" data-i18n="diff.more">What the server can and can't see →</a><a href="Tegamiの開発者向け_2026-11-16.html" class="text-forest-600 hover:underline dark:text-forest-300" data-i18n="diff.dev">The same scenes, for developers →</a></p>
+</section>
+  </div>
 
   <!-- Everyday features -->
   <section id="features" class="bg-paper py-20 dark:bg-paper-dark md:py-24">
@@ -115,59 +167,6 @@ tailwind.config = {
         <li class="flex items-center gap-2 rounded-xl bg-forest-600 px-4 py-3 font-medium text-white dark:bg-forest-950 dark:text-forest-300"><span aria-hidden="true">✓</span><span data-i18n="feat.vanish">Disappearing messages</span></li>
         <li class="flex items-center gap-2 rounded-xl bg-forest-600 px-4 py-3 font-medium text-white dark:bg-forest-950 dark:text-forest-300"><span aria-hidden="true">✓</span><span data-i18n="feat.export">Export your chats anytime</span></li>
       </ul>
-    </div>
-  </section>
-
-  <!-- Compared with typical apps -->
-  <section class="mx-auto max-w-3xl px-4 py-20 md:py-24">
-    <h2 class="text-center text-3xl font-bold sm:text-4xl" data-i18n="cmp.h">Worries you can drop.</h2>
-    <div class="mt-10 overflow-x-auto">
-      <table class="w-full text-sm sm:text-base">
-        <thead>
-          <tr class="text-left">
-            <th class="pb-3 pr-3"></th>
-            <th scope="col" class="px-3 pb-3 font-bold">Tegami</th>
-            <th scope="col" class="pb-3 pl-3 font-bold text-neutral-500 dark:text-neutral-400" data-i18n="cmp.other">Typical apps</th>
-          </tr>
-        </thead>
-        <tbody>
-        <tr class="border-t border-neutral-200 dark:border-night-line">
-          <th scope="row" class="py-3 pr-3 text-left font-medium" data-i18n="cmp.ads">Ads, news, games, shopping</th>
-          <td class="px-3 py-3 font-semibold text-forest-600 dark:text-forest-300" data-i18n="cmp.ads.t">None at all</td>
-          <td class="py-3 pl-3 font-medium text-red-700 dark:text-red-300/90" data-i18n="cmp.ads.o">Pushed right into your chat list</td>
-        </tr>
-        <tr class="border-t border-neutral-200 dark:border-night-line">
-          <th scope="row" class="py-3 pr-3 text-left font-medium" data-i18n="cmp.data">Your personal data</th>
-          <td class="px-3 py-3 font-semibold text-forest-600 dark:text-forest-300" data-i18n="cmp.data.t">Never, ever used for ads</td>
-          <td class="py-3 pl-3 font-medium text-red-700 dark:text-red-300/90" data-i18n="cmp.data.o">Profiled and turned into ad targeting</td>
-        </tr>
-        <tr class="border-t border-neutral-200 dark:border-night-line">
-          <th scope="row" class="py-3 pr-3 text-left font-medium" data-i18n="cmp.track">Activity tracking</th>
-          <td class="px-3 py-3 font-semibold text-forest-600 dark:text-forest-300" data-i18n="cmp.track.t">None</td>
-          <td class="py-3 pl-3 font-medium text-red-700 dark:text-red-300/90" data-i18n="cmp.track.o">Your activity logged and analyzed</td>
-        </tr>
-        <tr class="border-t border-neutral-200 dark:border-night-line">
-          <th scope="row" class="py-3 pr-3 text-left font-medium" data-i18n="cmp.leak">Data leaks</th>
-          <td class="px-3 py-3 font-semibold text-forest-600 dark:text-forest-300" data-i18n="cmp.leak.t">Nothing readable to leak</td>
-          <td class="py-3 pl-3 font-medium text-red-700 dark:text-red-300/90" data-i18n="cmp.leak.o">Over 500 million phone numbers leaked</td>
-        </tr>
-        <tr class="border-t border-neutral-200 dark:border-night-line">
-          <th scope="row" class="py-3 pr-3 text-left font-medium" data-i18n="cmp.hold">Your chat history</th>
-          <td class="px-3 py-3 font-semibold text-forest-600 dark:text-forest-300" data-i18n="cmp.hold.t">Kept on your device</td>
-          <td class="py-3 pl-3 font-medium text-red-700 dark:text-red-300/90" data-i18n="cmp.hold.o">Held on company servers</td>
-        </tr>
-        <tr class="border-t border-neutral-200 dark:border-night-line">
-          <th scope="row" class="py-3 pr-3 text-left font-medium" data-i18n="cmp.phone">Phone number</th>
-          <td class="px-3 py-3 font-semibold text-forest-600 dark:text-forest-300" data-i18n="cmp.phone.t">Not needed</td>
-          <td class="py-3 pl-3 font-medium text-red-700 dark:text-red-300/90" data-i18n="cmp.phone.o">Hand it over, or no account</td>
-        </tr>
-        <tr class="border-t border-neutral-200 dark:border-night-line">
-          <th scope="row" class="py-3 pr-3 text-left font-medium" data-i18n="cmp.takeover">Account takeover</th>
-          <td class="px-3 py-3 font-semibold text-forest-600 dark:text-forest-300" data-i18n="cmp.takeover.t">No password to steal</td>
-          <td class="py-3 pl-3 font-medium text-red-700 dark:text-red-300/90" data-i18n="cmp.takeover.o">One stolen password, and it's gone</td>
-        </tr>
-        </tbody>
-      </table>
     </div>
   </section>
 
@@ -242,6 +241,7 @@ tailwind.config = {
           <p class="text-sm text-neutral-400" data-i18n="mk.agpl.t">Anyone can read the code and fix it. Apps built from Tegami have to share their code, too.</p>
         </div>
       </div>
+      <a href="Tegamiの開発者向け_2026-11-16.html" class="mt-8 inline-block rounded-full border border-night-line px-6 py-2.5 text-sm font-semibold text-neutral-100 hover:bg-white/5" data-i18n="mk.dev">Read the developer docs →</a>
     </div>
   </section>
 
@@ -279,11 +279,11 @@ tailwind.config = {
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.collect.q">What does Tegami collect?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.collect.a">Only daily totals, like how many messages were delivered that day. No one's activity is tracked, and the numbers are public.</p>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.collect.a">Only totals, like how many messages were delivered in a week. No one's activity is tracked, and the weekly numbers are public on the <a href="Tegamiの稼働状況と利用統計案_2026-11-15.html" class="underline">status page</a>.</p>
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.ai.q">How do I connect my AI?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.ai.a">Install the small Tegami app on your computer and scan its QR code. Your AI shows up in your chat list.</p>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.ai.a">Today, run the small tegami-agent program on your computer and add it with its invite link. Your AI then shows up in your chat list. A setup where you just scan a QR code is on the way.</p>
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.spam.q">What about unwanted messages?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
@@ -292,6 +292,10 @@ tailwind.config = {
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.shutdown.q">What if Tegami shuts down?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
         <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.shutdown.a">The code is public, so anyone can keep it running. You can also export your chats anytime.</p>
+      </details>
+      <details class="group py-4">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.dev.q">Where are the technical details?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.dev.a">On the <a href="Tegamiの開発者向け_2026-11-16.html" class="underline">developer page</a>: which parts of Nostr Tegami uses, what the relay can see, how keys are kept, and the full spec. The code is on <a href="https://github.com/tegami-chat/tegami" class="underline" target="_blank" rel="noopener">GitHub</a>.</p>
       </details>
     </div>
   </section>
@@ -360,14 +364,25 @@ tailwind.config = {
   </div>
 </footer>
 
+<script src="diff.js"></script>
 <script>
 // 言葉の切り替え。HTMLに書いた英語が元で、日本語はここに置く。
 // 下書きでは ?lang=jaで日本語にする。ブラウザの言葉で勝手に切り替えない（Googleの多言語サイトの指針）。
 // 公開する時は、英語をtegami.chat/、日本語をtegami.chat/ja/ の別のページに書き出し、hreflangで結ぶ。
 const JA = {
-  'cmp.track': '行動の追跡',
-  'cmp.track.t': '追跡しない',
-  'cmp.track.o': '行動が記録され分析される',
+  'proof.code': 'コードはすべて公開（AGPL-3.0）',
+  'proof.stats': '利用統計を毎週公開',
+  'proof.spec': '技術仕様を公開',
+  'proof.pp': '預かる情報と期間',
+  'diff.h': 'よくあるアプリとの違い',
+  'diff.t': '毎日の7つの心配ごとを、よくあるアプリを左に、Tegamiを右に並べて見せます。',
+  'diff.more': 'サーバーに見えることと見えないこと →',
+  'diff.dev': '同じ場面を開発者向けに見る →',
+  'mk.dev': '開発者向けの説明を読む →',
+  'faq.collect.a': '1週間に届いたメッセージの数のような合計だけです。誰が何をしたかは記録しません。週ごとの数は<a href="Tegamiの稼働状況と利用統計案_2026-11-15.html" class="underline">稼働状況のページ</a>で公開しています。',
+  'faq.ai.a': 'いまは、パソコンで小さなプログラム（tegami-agent）を動かし、その招待リンクで友だちに追加します。追加すると、あなたのAIがトーク一覧に並びます。QRコードを読むだけでつながる形も準備しています。',
+  'faq.dev.q': '技術的な説明はどこにありますか？',
+  'faq.dev.a': '<a href="Tegamiの開発者向け_2026-11-16.html" class="underline">開発者向けのページ</a>に、TegamiがNostrのどこを使っているか、リレーに何が見えるか、鍵をどう守るか、技術仕様までをまとめています。コードは<a href="https://github.com/tegami-chat/tegami" class="underline" target="_blank" rel="noopener">GitHub</a>で公開しています。',
   'soon.label': '準備中',
   'ft.privacy': 'プライバシーポリシー',
   'ft.how': '仕組み',
@@ -431,9 +446,7 @@ const JA = {
   'faq.multi.q': 'スマホとパソコンで同時に使えますか？',
   'faq.multi.a': 'はい。数タップで別の端末にもアカウントを引き継げて、両方で同時に使えます。',
   'faq.collect.q': 'Tegamiは何を記録していますか？',
-  'faq.collect.a': '「その日に届いたメッセージの数」といった、日ごとの合計値だけです。誰が何をしたかは一切記録せず、数字はすべて公開しています。',
   'faq.ai.q': '自分のAIはどうやってつなぎますか？',
-  'faq.ai.a': 'パソコンに軽量なTegamiアプリを入れて、QRコードを読み取るだけです。あなたのAIがトーク一覧に並びます。',
   'faq.spam.q': '迷惑なメッセージへの対策はありますか？',
   'faq.spam.a': '知らない人からのメッセージは別の受信箱に届きます。どの相手でもブロックと通報ができます。',
   'faq.shutdown.q': 'もしTegamiが終了したらどうなりますか？',
@@ -467,26 +480,6 @@ const JA = {
   'feat.search': '検索',
   'feat.devices': 'スマホとパソコンで同時利用',
   'feat.move': '機種変更の引き継ぎ',
-  'cmp.h': 'その不安はTegamiにはありません。',
-  'cmp.ads': '広告、ニュース、ゲーム、ショッピング',
-  'cmp.ads.t': '一切なし',
-  'cmp.ads.o': 'トーク一覧にまで割り込んでくる',
-  'cmp.data': '個人情報',
-  'cmp.data.t': '広告に一切使わない',
-  'cmp.data.o': '分析されて広告の材料にされる',
-  'cmp.leak': '情報の流出',
-  'cmp.leak.t': '読めるデータは持たない',
-  'cmp.leak.o': '5億人超の電話番号などが流出',
-  'cmp.hold': 'トーク履歴',
-  'cmp.hold.t': 'あなたの端末に保存',
-  'cmp.hold.o': '運営会社のサーバーに握られる',
-  'cmp.phone': '電話番号',
-  'cmp.phone.t': 'いらない',
-  'cmp.phone.o': '差し出さないと使えない',
-  'cmp.takeover': 'アカウントの乗っ取り',
-  'cmp.takeover.t': '盗まれるパスワードがない',
-  'cmp.takeover.o': 'パスワード1つ盗まれたら終わり',
-  'cmp.other': 'よくあるアプリ',
   'ai.h': 'AIを自由に。',
   'ai.pick.h': '好きなAIを使う',
   'ai.pick.t': 'Claude、ChatGPT、Gemini、自分のパソコンで動かしているAI。どれを使うかは、Tegamiではなくあなたが決めます。',
