@@ -91,12 +91,12 @@ tailwind.config = {
     <section id="account" class="scroll-mt-16 border-t border-neutral-200 py-8 dark:border-night-line">
       <h2 class="text-xl font-bold" data-i18n="sec.account.h">No phone number, no password</h2>
       <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.account.1">Your account is a key made on your own device. We don't ask for a phone number or an email address.</p>
-      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.account.2">The key is protected by a passkey, so you unlock Tegami with Face ID or Windows Hello. There is no password to steal or leak.</p>
+      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.account.2">The key is protected by a passkey, your device's built-in way of checking it's you, so you unlock Tegami with Face ID, a fingerprint or Windows Hello. There is no password to steal or leak.</p>
     </section>
     <section id="lost" class="scroll-mt-16 border-t border-neutral-200 py-8 dark:border-night-line">
       <h2 class="text-xl font-bold" data-i18n="sec.lost.h">If you lose your phone</h2>
       <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.lost.1">Make a recovery code in Settings and keep it somewhere safe. With it you can bring your account, friends and groups back on a new device. Without it, no one can bring your account back, not even us. Your chat history doesn't come back with the recovery code.</p>
-      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.lost.2">Moving to a new phone you still have the old one for? Use the transfer link in Settings instead.</p>
+      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.lost.2">Still have your old phone? Use the transfer link in Settings to move to the new one.</p>
     </section>
     <section id="photos" class="scroll-mt-16 border-t border-neutral-200 py-8 dark:border-night-line">
       <h2 class="text-xl font-bold" data-i18n="sec.photos.h">Photos and files</h2>
@@ -104,7 +104,7 @@ tailwind.config = {
     </section>
     <section id="calls" class="scroll-mt-16 border-t border-neutral-200 py-8 dark:border-night-line">
       <h2 class="text-xl font-bold" data-i18n="sec.calls.h">Calls</h2>
-      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.calls.1">Voice and video go straight between your devices, encrypted. Because the two devices connect directly, the person you call can see your network address (IP address).</p>
+      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.calls.1">Voice and video go straight between your devices, encrypted. Because the two devices connect directly, the person you call can see your network address (IP address), which can show roughly where you are.</p>
     </section>
     <section id="strangers" class="scroll-mt-16 border-t border-neutral-200 py-8 dark:border-night-line">
       <h2 class="text-xl font-bold" data-i18n="sec.strangers.h">Strangers and unwanted messages</h2>
@@ -123,7 +123,7 @@ tailwind.config = {
       <ul class="mt-2 list-disc space-y-1 pl-5 text-neutral-600 dark:text-neutral-400">
         <li data-i18n="sec.notyet.1.1">If someone steals your key, they could also read past messages still on the server or your device. That's why the key is locked with a passkey.</li>
         <li data-i18n="sec.notyet.1.2">No outside security audit yet.</li>
-        <li data-i18n="sec.notyet.1.3">With the browser version, whoever serves the app could change its code.</li>
+        <li data-i18n="sec.notyet.1.3">The browser version loads its code each time you open it, so whoever serves it could swap in different code without you noticing.</li>
         <li data-i18n="sec.notyet.1.4">You can't talk with people on other Nostr apps yet.</li>
       </ul>
     </section>
@@ -179,10 +179,10 @@ tailwind.config = {
 // 公開する時は、英語をtegami.chat/、日本語をtegami.chat/ja/ の別のページに書き出し、hreflangで結ぶ。
 const JA = {
   'sec.h': '安全の仕組み',
-  'sec.t': 'メッセージを守る仕組みと、運営者に見えるもの、見えないもの、まだ足りないことを、専門用語を使わずに説明します。',
+  'sec.t': 'メッセージを守る仕組みと、運営者に見えるものと見えないもの、まだ足りないことを、専門用語を使わずに説明します。',
   'sec.seal.h': '開けられるのは相手だけ',
   'sec.seal.1': 'メッセージは、あなたの端末を出る前に鍵をかけ、封筒に入れて送ります。開けられるのは、相手の端末とあなた自身の端末だけです。Tegamiの運営者にも読めません。',
-  'sec.server.h': 'サーバーに見えるもの、見えないもの',
+  'sec.server.h': 'サーバーに見えるものと見えないもの',
   'sec.server.1': '見えないもの',
   'sec.server.2.1': 'メッセージの中身',
   'sec.server.2.2': '写真とファイルの中身',
@@ -194,14 +194,14 @@ const JA = {
   'sec.server.5': 'サーバーがメッセージを届けるには、これらが要ります。封筒は30日で消し、誰が送ったかは残しません。',
   'sec.account.h': '電話番号もパスワードもいりません',
   'sec.account.1': 'あなたのアカウントは、あなたの端末の中で作る鍵です。電話番号もメールアドレスも集めません。',
-  'sec.account.2': '鍵はパスキーで守り、Tegamiを開く時はFace IDやWindows Helloで本人かを確かめます。パスワードが無いので、盗まれたり漏れたりするパスワードもありません。',
+  'sec.account.2': '鍵はパスキーで守ります。パスキーは端末に備わった本人確認の仕組みで、Tegamiを開く時にFace IDや指紋認証、Windows Helloで本人かを確かめます。パスワードが無いので、盗まれたり漏れたりするパスワードもありません。',
   'sec.lost.h': '端末をなくした時',
   'sec.lost.1': '設定で復旧コードを作り、なくさない場所にしまっておいてください。復旧コードがあれば、新しい端末でアカウント、友だち、グループを戻せます。復旧コードが無いと、Tegamiの運営者でも戻せません。会話の履歴は、復旧コードでは戻りません。',
-  'sec.lost.2': '古い端末が手元にあるまま新しい端末へ移る時は、設定の引き継ぎのリンクを使います。',
+  'sec.lost.2': '古い端末が手元にあるまま新しい端末へ移る時は、設定にある引き継ぎ用のリンクを使います。',
   'sec.photos.h': '写真とファイル',
-  'sec.photos.1': '写真とファイルは、1つずつ別の鍵をかけてから預けるので、運営者の置き場には読めないデータしかありません。預かった分は30日で消します。受け取った人の端末には残ります。',
+  'sec.photos.1': '写真とファイルは、1つずつ別の鍵をかけてから預けるので、運営者のサーバーには読めないデータしかありません。預かった分は30日で消します。受け取った人の端末には残ります。',
   'sec.calls.h': '通話',
-  'sec.calls.1': '声と映像は、暗号化したまま端末どうしで直接やり取りします。端末どうしが直接つながるので、通話の相手にはあなたのIPアドレスが見えます。',
+  'sec.calls.1': '声と映像は、暗号化したまま端末どうしで直接やり取りします。端末どうしが直接つながるので、通話の相手にはあなたのIPアドレス（インターネット上の住所）が見え、おおよその地域が分かることがあります。',
   'sec.strangers.h': '知らない人と迷惑なメッセージ',
   'sec.strangers.1': '知らない人からのメッセージは、別の箱に届きます。誰でもブロックと通報ができます。通報にメッセージを添えると、添えたメッセージは運営者が読めます。',
   'sec.ai.h': 'AI',
@@ -211,7 +211,7 @@ const JA = {
   'sec.notyet.h': 'まだ足りないこと',
   'sec.notyet.1.1': '鍵を盗まれると、サーバーや端末に残っている過去のメッセージも読まれるおそれがあります。そのため、鍵をパスキーで守っています。',
   'sec.notyet.1.2': '外部の専門家による安全の監査は、まだ受けていません。',
-  'sec.notyet.1.3': 'ブラウザ版は、アプリを配る側がコードを差し替えられます。',
+  'sec.notyet.1.3': 'ブラウザ版は、開くたびにサーバーからプログラムを受け取って動きます。そのため、配る側がプログラムを差し替えても、使う人は気づけません。',
   'sec.notyet.1.4': 'ほかのNostrアプリの人とは、まだやり取りできません。',
   'sec.check.h': '自分で確かめられます',
   'sec.check.1': 'Tegamiのコードは、すべてAGPL-3.0で公開しています。ここに書いたことを、そのまま信じる必要はありません。詳しい作りは<a href="Tegamiの開発者向け_2026-11-16.html" class="underline">開発者向けの説明</a>に、預かる情報と期間は<a href="Tegamiのプライバシーポリシー案_2026-11-14.html" class="underline">プライバシーポリシー</a>に書いています。',

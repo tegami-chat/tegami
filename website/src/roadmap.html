@@ -55,7 +55,7 @@ tailwind.config = {
   <div class="md:sticky md:top-24 md:self-start">
     <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="rm.h">Roadmap</h1>
     <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="rm.t">What we've built, and what's next.</p>
-    <p class="mt-4 text-sm text-neutral-500 dark:text-neutral-400" data-i18n="rm.note">We open things up step by step, starting with what can be undone. Anything that can't be undone comes last.</p>
+    <p class="mt-4 text-sm text-neutral-500 dark:text-neutral-400" data-i18n="rm.note">We release what can be taken back first. Anything that can't be taken back comes last.</p>
     <a href="https://github.com/tegami-chat/tegami/issues" target="_blank" rel="noopener" class="mt-6 inline-block text-sm font-semibold text-forest-600 hover:underline dark:text-forest-300" data-i18n="rm.issue">Suggest a feature on GitHub</a>
   </div>
   <div class="space-y-4">
@@ -87,7 +87,7 @@ tailwind.config = {
       <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
         <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-forest-50 text-forest-600 dark:bg-forest-950 dark:text-forest-300"><span aria-hidden="true">✓</span><span data-i18n="rm.done">Released</span></span>
         <h3 class="mt-3 text-lg font-bold" data-i18n="rm.ai.h">Your AI as a friend</h3>
-        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.ai.t">A small tool lets the AI on your computer join your chat list. Works with MCP.</p>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.ai.t">A small program (tegami-agent) lets the AI on your computer join your chat list. Works with MCP.</p>
       </article>
       <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
         <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-forest-50 text-forest-600 dark:bg-forest-950 dark:text-forest-300"><span aria-hidden="true">✓</span><span data-i18n="rm.done">Released</span></span>
@@ -95,9 +95,9 @@ tailwind.config = {
         <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.safety.t">Messages from people you don't know wait in a separate box. Block and report anyone.</p>
       </article>
       <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
-        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"><span aria-hidden="true">●</span><span data-i18n="rm.now">In progress</span></span>
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-forest-50 text-forest-600 dark:bg-forest-950 dark:text-forest-300"><span aria-hidden="true">✓</span><span data-i18n="rm.done">Released</span></span>
         <h3 class="mt-3 text-lg font-bold" data-i18n="rm.signup.h">Open sign-up with invites</h3>
-        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.signup.t">Anyone can join. People you invite can reach you straight away; everyone else starts in the strangers box.</p>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.signup.t">Anyone can join. Messages from people who joined without an invite reach you only after you add them as a friend.</p>
       </article>
       <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
         <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"><span aria-hidden="true">●</span><span data-i18n="rm.now">In progress</span></span>
@@ -132,7 +132,7 @@ tailwind.config = {
       <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
         <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-600 dark:bg-white/10 dark:text-neutral-300"><span aria-hidden="true">○</span><span data-i18n="rm.plan">Planned</span></span>
         <h3 class="mt-3 text-lg font-bold" data-i18n="rm.aigroup.h">AI in group chats</h3>
-        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.aigroup.t">Invite an AI into a group with everyone's OK, and let AIs talk to each other when you allow it.</p>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="rm.aigroup.t">Invite an AI into a group once everyone agrees, and let AIs talk to each other when you allow it.</p>
       </article>
       <article class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-night-line dark:bg-night-card">
         <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-600 dark:bg-white/10 dark:text-neutral-300"><span aria-hidden="true">○</span><span data-i18n="rm.plan">Planned</span></span>
@@ -219,7 +219,7 @@ const JA = {
   'roadmap': 'ロードマップ',
   'rm.h': 'ロードマップ',
   'rm.t': 'できたこと、これから作ること。',
-  'rm.note': '戻せることから順に開いていきます。戻せないことは最後に作ります。',
+  'rm.note': 'あとから取り消せる機能から順に公開し、取り消せない機能は最後に作ります。',
   'rm.issue': 'GitHubで機能を提案する',
   'rm.done': 'リリース済み',
   'rm.now': '開発中',
@@ -231,21 +231,21 @@ const JA = {
   'rm.e2e.h': '暗号化とパスキー',
   'rm.e2e.t': 'メッセージは端末の中で暗号化されます。アカウントはパスワードではなくパスキーで守ります。',
   'rm.move.h': '復旧コードと機種変更',
-  'rm.move.t': '復旧コードでアカウントを復元でき、数タップで別の端末へ引き継げます。',
+  'rm.move.t': '復旧コードでアカウントを戻せて、数タップで別の端末へ引き継げます。',
   'rm.accounts.h': '複数のアカウント',
   'rm.accounts.t': '1つの端末で複数のアカウントを使い分けられます。',
-  'rm.ai.h': '自分のAIを友達に',
-  'rm.ai.t': '小さな道具で、パソコンのAIをトーク一覧に並べられます。MCPにも対応しています。',
-  'rm.safety.h': 'ブロックと通報',
+  'rm.ai.h': '自分のAIを友だちに',
+  'rm.ai.t': 'パソコンで小さなプログラム（tegami-agent）を動かすと、自分のAIをトーク一覧に並べられます。MCPにも対応しています。',
+  'rm.safety.h': '知らない人の箱、ブロック、通報',
   'rm.safety.t': '知らない人からのメッセージは別の受信箱に届きます。誰でもブロックと通報ができます。',
   'rm.signup.h': '招待で広がる登録',
-  'rm.signup.t': '誰でも登録できます。招待した人からは直接届き、それ以外の人は知らない人の箱から始まります。',
+  'rm.signup.t': '誰でも登録できます。招待なしで登録した人のメッセージは、相手が友だちに追加するまで届きません。',
   'rm.address.h': '自分のアドレス',
   'rm.address.t': 'name@tegami.chatのような、人に伝えやすいアドレスを持てます。',
   'rm.qr.h': 'QRコードでAIとつなぐ',
   'rm.qr.t': 'パソコンに小さなアプリを入れて、QRコードを読むだけ。コマンドを打つ必要はありません。',
   'rm.mobile.h': 'iPhoneとAndroidのアプリ',
-  'rm.mobile.t': '電話のような着信の画面を持つ、スマホのアプリです。',
+  'rm.mobile.t': '普通の電話と同じ着信の画面が出る、スマホのアプリです。',
   'rm.vanish.h': '消えるメッセージ',
   'rm.vanish.t': '時間がたつと消えるメッセージを、選んで送れます。',
   'rm.desktop.h': 'パソコンのアプリ',
@@ -259,7 +259,7 @@ const JA = {
   'rm.relay.h': '自前のサーバーを動かす',
   'rm.relay.t': '会社や学校、コミュニティが自分たちのサーバーを持てます。使うサーバーも選べます。',
   'rm.nostr.h': 'ほかのNostrアプリとつながる',
-  'rm.nostr.t': 'ほかのNostrアプリの人からのメッセージも、選べば受け取れます。',
+  'rm.nostr.t': '選べば、ほかのNostrアプリの人からのメッセージも受け取れるようにします。',
   'rm.export.h': 'アカウントを持ち出す',
   'rm.export.t': 'アカウントを書き出して、ほかのNostrアプリへ移れます。戻せない機能なので最後に作ります。',
 };
