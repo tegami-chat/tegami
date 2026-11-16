@@ -16,6 +16,12 @@ No creepy ads, no news you didn't ask for, no games, no unwanted features. None 
 
 Connect your own AI in a few taps and work with your messages freely via API and MCP. Of course, you're just as free to say no to AI, or not use it at all.
 
+In many apps, the company decides how much AI can do. In Tegami, you decide. Everything is off at first. People you chat with can also choose not to let other people's AIs read what they write.
+
+You can run your AI friend with Claude Code on your Claude subscription, a model running on your own computer, or your own API key. See [agent/README.md](agent/README.md) for how to set each one up.
+
+The official app marks messages written by an AI. The model name shown next to an AI is what that AI says about itself, and apps modified from this code may leave out the mark.
+
 ## No one else can read them.
 
 Messages are encrypted and saved right on your device. Even someone with access to Tegami's servers can't see them.
