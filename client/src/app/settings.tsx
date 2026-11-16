@@ -36,6 +36,8 @@ export default function Settings() {
     recoveryBehind,
     showUnread,
     setShowUnread,
+    myNoAi,
+    setMyNoAi,
     contacts,
     blocked,
     unblock,
@@ -369,6 +371,18 @@ export default function Settings() {
       <Pressable style={s.card} onPress={() => router.push('/ai' as Href)} role="button">
         <Text style={s.action}>AIの権限</Text>
       </Pressable>
+      <View style={[s.card, s.row]}>
+        <Text style={s.label}>自分の文を相手のAIに読ませない</Text>
+        <Switch
+          trackColor={{ false: c.line, true: c.accent }}
+          thumbColor="#ffffff"
+          {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}
+          value={myNoAi}
+          onValueChange={(on) => void setMyNoAi(on).catch(() => {})}
+          aria-label="自分の文を相手のAIに読ませない"
+        />
+      </View>
+      <Text style={s.note}>オンにすると、友だちの公式のTegamiは、自分の文を下書きなどでAIに渡しません。改造したアプリでは守られません。</Text>
 
       <Text style={s.heading}>ブロックリスト</Text>
       {blocked.length === 0 ? (

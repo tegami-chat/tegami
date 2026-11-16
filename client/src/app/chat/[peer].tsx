@@ -11,6 +11,7 @@ import { FileAttachment, Photo, PhotoViewer, Stamp, Video, VideoViewer, Voice } 
 import { ReportSheet } from '@/components/report-sheet';
 import { Palette, usePalette } from '@/constants/theme';
 import { AI_DRAFT_MESSAGES, markReadNoticeSeen, mayDraft, readNoticeSeen } from '@/lib/ai-draft';
+import { chatNoAi, nothingToReadText, saveChatNoAi } from '@/lib/ai-optout';
 import { aiStageAllows, useAiPermissions } from '@/lib/ai-permissions';
 import { aiApproved, everyoneIn, myAiMayRead } from '@/lib/ai-actions';
 import { useCall } from '@/lib/calls';
@@ -18,7 +19,7 @@ import { cautionFor } from '@/lib/caution';
 import { isFeedback } from '@/lib/feedback';
 import { MAX_FILE_BYTES } from '@/lib/files';
 import { INFO_BESIDE_MIN, useWide, type PressState } from '@/lib/layout';
-import { AiConfirmNeededError, AiNotAllowedError, chatName, clock, isGroup, isMyAi, isPerson, personName, useTegami, type Message, type Stamp as StampItem } from '@/lib/tegami';
+import { AiConfirmNeededError, AiNotAllowedError, AiNothingToReadError, chatName, clock, isGroup, isMyAi, isPerson, personName, useTegami, type Message, type Stamp as StampItem } from '@/lib/tegami';
 
 const SEND_ERROR = '送れませんでした。もう一度送ってください';
 const VOICE_MAX_MS = 5 * 60 * 1000;
@@ -83,6 +84,7 @@ export default function Chat() {
     retrySend,
     askAiDraft,
     onAiDraft,
+    myNoAi,
     aiGroups,
     aiMembersOf,
     inviteAiToGroup,
@@ -95,6 +97,10 @@ export default function Chat() {
   const [aiNotice, setAiNotice] = useState<string | null>(null);
   // The gate wants this one ask confirmed by the person (per-ask permission).
   const [aiConfirm, setAiConfirm] = useState<string | null>(null);
+  // Why a draft could not be asked for: nothing in the chat may be given to the AI (lib/ai-optout.ts).
+  const [aiNothing, setAiNothing] = useState<string | null>(null);
+  // This chat's「AIに読ませない」: every message I send here gets the mark (this device only).
+  const [noAiHere, setNoAiHere] = useState(false);
   // One of my AI friends I am about to invite into this group (every member must say yes).
   const [aiInviting, setAiInviting] = useState<string | null>(null);
   // A message waiting to be sent that was tapped: it offers to stop sending.
@@ -183,6 +189,14 @@ export default function Chat() {
   // 1:1 with a person (an AI friend cannot pick up). Groups later.
   const canCall = supported && !group && !!contact && !contact.model && !isBlocked;
   const thread = useMemo(() => messages.filter((m) => m.peer === peer).reverse(), [messages, peer]);
+  useEffect(() => setNoAiHere(!!peer && chatNoAi(peer)), [peer]);
+  const toggleNoAiHere = useCallback(() => {
+    if (!peer) return;
+    saveChatNoAi(peer, !noAiHere);
+    setNoAiHere(!noAiHere);
+  }, [peer, noAiHere]);
+  // The mark on my messages is for a chat with a person; with my own setting on, every message has it.
+  const canMarkNoAi = (group || (!!contact && !contact.model)) && !myNoAi;
   // AI friends allowed to read this chat and draft a reply. Only a 1:1 chat with a person.
   const draftAis = useMemo(() => {
     if (!peer || group || !contact || !isPerson(contact) || isBlocked) return [];
@@ -280,10 +294,14 @@ export default function Chat() {
           setAiConfirm(ai);
           return;
         }
+        if (e instanceof AiNothingToReadError) {
+          setAiNothing(nothingToReadText(e.reason, contact?.name ?? ''));
+          return;
+        }
         showToast(e instanceof AiNotAllowedError ? 'AIの権限で止めました' : '頼めませんでした。もう一度お試しください');
       }
     },
-    [peer, askAiDraft, showToast],
+    [peer, askAiDraft, showToast, contact],
   );
   // A different chat: a draft asked for in the last one does not belong here.
   useEffect(() => setAiWaiting(null), [peer]);
@@ -1159,6 +1177,12 @@ export default function Chat() {
                     AIが書いた{item.ai.model ? `（${item.ai.model}）` : ''}
                   </Text>
                 )}
+                {item.noai && !(mine && myNoAi) && !(!mine && contacts.some((x) => x.pubkey === item.from && x.noai)) && (
+                  <View style={s.noAiMark} testID="noai-mark">
+                    <MaterialIcons name="visibility-off" size={12} color={c.muted} />
+                    <Text style={s.aiMarkInline}>AIに読ませない</Text>
+                  </View>
+                )}
                 <Text style={s.time}>
                   {unsent
                     ? '未送信'
@@ -1405,6 +1429,20 @@ export default function Chat() {
                 </View>
               ))}
 
+            {canMarkNoAi && noAiHere && !recordPanel && (
+              <View style={s.replyBar} testID="noai-here">
+                <MaterialIcons name="visibility-off" size={18} color={c.accent} />
+                <View style={s.replyBody}>
+                  <Text style={s.quoteName} numberOfLines={1}>
+                    AIに読ませない
+                  </Text>
+                </View>
+                <Pressable role="button" aria-label="AIに読ませないをやめる" style={s.replyClose} onPress={toggleNoAiHere}>
+                  <MaterialIcons name="close" size={24} color={c.muted} />
+                </Pressable>
+              </View>
+            )}
+
             {aiWaiting && !recordPanel && (
               <View style={s.replyBar} testID="ai-waiting">
                 <View style={s.replyBody}>
@@ -1431,6 +1469,22 @@ export default function Chat() {
                   </View>
                   <Text style={s.plusLabel}>ファイル</Text>
                 </Pressable>
+                {canMarkNoAi && (
+                  <Pressable
+                    role="switch"
+                    aria-checked={noAiHere}
+                    aria-label="AIに読ませない"
+                    style={s.plusItem}
+                    onPress={() => {
+                      setPlusOpen(false);
+                      toggleNoAiHere();
+                    }}>
+                    <View style={[s.plusIcon, noAiHere && s.plusIconOn]}>
+                      <MaterialIcons name="visibility-off" size={24} color={noAiHere ? c.onAccent : c.text} />
+                    </View>
+                    <Text style={s.plusLabel}>AIに読ませない</Text>
+                  </Pressable>
+                )}
                 {invitableAis.map((ai) => (
                   <Pressable
                     key={`invite-${ai.pubkey}`}
@@ -1732,7 +1786,11 @@ export default function Chat() {
       {aiNotice && (
         <Dialog
           title="AIにトークを読ませますか？"
-          text={`このトークの新しいメッセージを${AI_DRAFT_MESSAGES}通まで、${personName(aiNotice, contacts)}に渡します。渡したメッセージはTegamiの暗号化の外に出て、AIを動かす会社に届くことがあります。`}
+          text={`このトークの新しいメッセージを${AI_DRAFT_MESSAGES}通まで、${personName(aiNotice, contacts)}に渡します。渡したメッセージはTegamiの暗号化の外に出て、AIを動かす会社に届くことがあります。${
+            contact?.noai
+              ? `${contact.name}さんは、自分の文を相手のAIに読ませない設定にしています。${contact.name}さんの文は渡しません。`
+              : '「AIに読ませない」の印が付いた文は渡しません。'
+          }`}
           onClose={() => setAiNotice(null)}
           buttons={[
             { label: 'キャンセル', variant: 'outlined', onPress: () => setAiNotice(null) },
@@ -1746,6 +1804,15 @@ export default function Chat() {
               },
             },
           ]}
+        />
+      )}
+
+      {aiNothing && (
+        <Dialog
+          title="下書きを頼めません"
+          text={aiNothing}
+          onClose={() => setAiNothing(null)}
+          buttons={[{ label: '閉じる', onPress: () => setAiNothing(null) }]}
         />
       )}
 
@@ -2111,6 +2178,8 @@ const styles = (c: Palette) =>
     text: { fontSize: 16, color: c.text, lineHeight: 22, userSelect: 'none' },
     author: { fontSize: 12, color: c.accent, fontWeight: '600', marginBottom: 2 },
     aiMark: { fontSize: 11, color: c.muted, marginTop: 4 },
+    noAiMark: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 },
+    aiMarkInline: { fontSize: 11, color: c.muted },
     aiGroupBtn: { minHeight: 36, borderRadius: 18, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: c.line },
     aiGroupBtnMain: { backgroundColor: c.accent, borderColor: c.accent },
     aiGroupBtnText: { fontSize: 13, fontWeight: '600', color: c.text },
@@ -2310,6 +2379,7 @@ const styles = (c: Palette) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
+    plusIconOn: { backgroundColor: c.accent, borderColor: c.accent },
     plusLabel: {
       fontSize: 12,
       color: c.text,

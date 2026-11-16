@@ -23,7 +23,7 @@ export type Outgoing = {
   /** Ids of the envelopes the relay accepted. */
   done: string[];
   /** A photo or file whose upload has not succeeded. Its bytes are kept on this device under id. */
-  photo?: { type: string; dim?: string; size: number; name?: string; duration?: number; replyTo?: string };
+  photo?: { type: string; dim?: string; size: number; name?: string; duration?: number; replyTo?: string; noai?: true };
 };
 
 
