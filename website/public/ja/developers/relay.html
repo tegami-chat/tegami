@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>リレー、通知、通話 | 開発者向けのTegamiの説明</title>
+<meta name="description" content="Tegamiのリレーの決まりと、通知、通話、写真の仕組み。">
+<meta property="og:title" content="リレー、通知、通話 | 開発者向けのTegamiの説明">
+<meta property="og:description" content="Tegamiのリレーの決まりと、通知、通話、写真の仕組み。">
+<meta property="og:url" content="https://tegami.chat/ja/developers/relay">
+<link rel="canonical" href="https://tegami.chat/ja/developers/relay">
+<link rel="alternate" hreflang="en" href="https://tegami.chat/developers/relay">
+<link rel="alternate" hreflang="ja" href="https://tegami.chat/ja/developers/relay">
+<link rel="alternate" hreflang="x-default" href="https://tegami.chat/developers/relay">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/tegami.css">
+<script src="/theme.js"></script>
+</head>
+<body class="bg-white text-neutral-900 antialiased dark:bg-[#101311] dark:text-neutral-100">
+
+<header class="sticky top-0 z-50 border-b border-neutral-200/70 bg-white/80 backdrop-blur dark:border-night-line/70 dark:bg-[#101311]/80">
+  <div class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
+    <a href="/ja/" class="flex items-center gap-2.5 text-lg font-bold"><svg viewBox="0 0 1024 1024" class="h-8 w-8 rounded-lg" aria-hidden="true"><rect width="1024" height="1024" fill="#f4f1e8"/><g transform="translate(512 512) scale(2.27) translate(-256 -249.5)"><defs><clipPath id="tg-h"><path d="M164 112 H348 Q406 112 406 170 V304 Q406 362 348 362 H164 Q106 362 106 304 V170 Q106 112 164 112 Z"/></clipPath></defs><path d="M138 356 Q146 376 134 398 Q126 412 142 408 Q192 392 232 358 Z" fill="#1d6b4b"/><path clip-path="url(#tg-h)" d="M86 123 L230 234 Q256 254 282 234 L426 123 L426 382 L86 382 Z" fill="#1d6b4b"/><path clip-path="url(#tg-h)" d="M86 92 L426 92 L426 126 L282 237 Q256 257 230 237 L86 126 Z" fill="#bbd3c9"/></g></svg><span class="max-[359px]:sr-only">Tegami</span></a>
+    <nav class="hidden items-center gap-6 text-sm text-neutral-600 dark:text-neutral-400 lg:flex" aria-label="Main">
+      <a href="/ja/features" class="hover:text-neutral-900 dark:hover:text-white" data-nav="nav.features" data-i18n="nav.features">機能</a>
+      <a href="/ja/how" class="hover:text-neutral-900 dark:hover:text-white" data-nav="nav.how" data-i18n="nav.how">安全の仕組み</a>
+      <a href="/ja/developers" class="hover:text-neutral-900 dark:hover:text-white font-semibold text-neutral-900 dark:text-white" aria-current="page" data-nav="nav.dev" data-i18n="nav.dev">開発者向け</a>
+      <a href="/ja/roadmap" class="hover:text-neutral-900 dark:hover:text-white" data-nav="roadmap" data-i18n="roadmap">ロードマップ</a>
+      <a href="/ja/faq" class="hover:text-neutral-900 dark:hover:text-white" data-nav="nav.faq" data-i18n="nav.faq">よくある質問</a>
+      <a href="https://github.com/tegami-chat/tegami" target="_blank" rel="noopener" class="hover:text-neutral-900 dark:hover:text-white">GitHub</a>
+    </nav>
+    <div class="flex items-center gap-2 sm:gap-3">
+      <div class="hidden sm:flex rounded-full border border-neutral-200 p-0.5 dark:border-night-line" role="group" aria-label="Light or dark" data-seg="theme-h"><button type="button" data-theme-set="light" aria-label="Light" class="rounded-full px-2 py-1 bg-neutral-900 text-white dark:bg-transparent dark:text-neutral-500 dark:hover:text-white"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button><button type="button" data-theme-set="dark" aria-label="Dark" class="rounded-full px-2 py-1 text-neutral-400 hover:text-neutral-900 dark:bg-white dark:text-neutral-900"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div>
+      <details class="relative" data-lang-menu><summary class="flex cursor-pointer list-none items-center gap-0.5 rounded-full px-1.5 py-1 text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white" aria-label="Language"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg><svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M5.3 7.3a1 1 0 011.4 0L10 10.6l3.3-3.3a1 1 0 111.4 1.4l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 010-1.4z"/></svg></summary><div class="absolute right-0 z-50 mt-2 w-36 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 shadow-lg dark:border-night-line dark:bg-night-card"><a href="/developers/relay" hreflang="en" lang="en" data-lang="en" class="block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-white/5">English</a><a href="/ja/developers/relay" hreflang="ja" lang="ja" data-lang="ja" class="block px-4 py-2 text-sm font-semibold text-forest-600 dark:text-forest-300" aria-current="true">日本語</a></div></details>
+      <details class="relative lg:hidden" data-menu><summary class="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-white/5"><svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="sr-only" data-i18n="nav.menu">メニュー</span></summary>
+        <nav class="absolute right-0 z-50 mt-2 w-64 rounded-2xl border border-neutral-200 bg-white p-2 text-base shadow-xl dark:border-night-line dark:bg-night-card" aria-label="Main">
+          <a href="/ja/features" class="block rounded-lg px-3 py-2.5 hover:bg-neutral-100 dark:hover:bg-white/5" data-nav="nav.features" data-i18n="nav.features">機能</a>
+          <a href="/ja/how" class="block rounded-lg px-3 py-2.5 hover:bg-neutral-100 dark:hover:bg-white/5" data-nav="nav.how" data-i18n="nav.how">安全の仕組み</a>
+          <a href="/ja/developers" class="block rounded-lg px-3 py-2.5 hover:bg-neutral-100 dark:hover:bg-white/5 font-semibold text-neutral-900 dark:text-white" aria-current="page" data-nav="nav.dev" data-i18n="nav.dev">開発者向け</a>
+          <a href="/ja/roadmap" class="block rounded-lg px-3 py-2.5 hover:bg-neutral-100 dark:hover:bg-white/5" data-nav="roadmap" data-i18n="roadmap">ロードマップ</a>
+          <a href="/ja/faq" class="block rounded-lg px-3 py-2.5 hover:bg-neutral-100 dark:hover:bg-white/5" data-nav="nav.faq" data-i18n="nav.faq">よくある質問</a>
+          <a href="https://github.com/tegami-chat/tegami" target="_blank" rel="noopener" class="block rounded-lg px-3 py-2.5 hover:bg-neutral-100 dark:hover:bg-white/5">GitHub</a>
+        </nav>
+      </details>
+    </div>
+  </div>
+</header>
+
+<div class="mx-auto max-w-6xl px-4 py-10 md:py-14 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10">
+  <aside class="lg:sticky lg:top-20 lg:self-start"><nav class="devside mb-8 lg:mb-0" aria-label="Developer docs"><p class="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 lg:block" data-i18n="dv.side">開発者向けの目次</p><ul class="-mx-4 flex gap-1 overflow-x-auto px-4 text-sm lg:mx-0 lg:block lg:space-y-0.5 lg:overflow-visible lg:px-0"><li class="shrink-0"><a href="/ja/developers" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dv.ov">概要</a></li><li class="shrink-0"><a href="/ja/developers/protocol" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.protocol">Nostrと暗号と鍵</a></li><li class="shrink-0"><a href="/ja/developers/relay" class="block rounded-lg px-3 py-2 bg-forest-50 font-semibold text-forest-700 dark:bg-forest-950 dark:text-forest-300" aria-current="page" data-i18n="dp.relay">リレー、通知、通話</a></li><li class="shrink-0"><a href="/ja/developers/ai" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.ai">AI</a></li><li class="shrink-0"><a href="/ja/developers/compare" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.compare">ほかのアプリとの比較</a></li><li class="shrink-0"><a href="/ja/developers/spec" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.spec">技術仕様</a></li></ul></nav></aside>
+  <main class="devdoc min-w-0 max-w-3xl">
+<h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dp.relay">リレー、通知、通話</h1>
+<p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dp.relay.t">Tegamiのリレーの決まりと、通知、通話、写真の仕組み。</p>
+<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">「これから」の札の意味：</li><li data-i18n="dv.lg.built"><span class="tag built">公開待ち</span>コードを書き終えて、本番に出す前のもの</li><li data-i18n="dv.lg.decided"><span class="tag decided">決定済み</span>方針を決めて、コードはまだのもの</li><li data-i18n="dv.lg.idea"><span class="tag idea">検討中</span>まだ決めていないもの</li></ul>
+<h2 data-i18n="d.104" id="relay">リレー</h2>
+
+<details><summary data-i18n="d.105">リレーは何で動いていますか？</summary><div>
+<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.106">Cloudflare WorkersとDurable Object（SQLite）上で動作しており、コードは<code>relay/</code>にあります。受け付けるのは宛先が1人のgift wrap（kind 1059）のみで、読み出せるのは自分宛ての封筒だけです。預かった封筒は30日で削除され、送る量の上限はIPアドレスごとと鍵ごとに設けています。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.107">リレーはTegamiが動かす1つのみです。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
+<li data-i18n="d.108"><span class="tag decided">決定済み</span>封筒を預かる期間は30日から始め、使われ方を見て、長く開かない人がほとんどいなければ短縮します。</li>
+</ul></div>
+</div></details>
+
+<details><summary data-i18n="d.109">登録はどうなっていますか？ 誰でも使えますか？</summary><div>
+<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.110">はい、誰でも登録できます。登録はNIP-98で署名した<code>POST /register</code>で行い、招待券または人間かどうかの確認（Cloudflare Turnstile）のどちらかを通します。登録していない鍵は書き込めません。なお、招待券なしで登録した人のメッセージは知らない人の受信箱には届きませんが、相手がQRコードや招待リンクで友だちに追加すればやり取りできます。ただし、その人からのメッセージでは相手の端末に通知が鳴りません。アプリを改造しても、登録を通った鍵ならリレーを使えるため、守っているのはアプリではなく登録の入口です。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.111">本人確認の認証バッジ（本物の印）はまだありません。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
+<li data-i18n="d.112"><span class="tag decided">決定済み</span>なりすましは複数の方法を組み合わせて防ぎます。家族と友だちは会ってQRコードを読み合い、会社とお店はドメインで確かめ、本物の印が欲しい人は外部の本人確認会社を通して有料で付けられるようにします。その際もTegamiが受け取るのは「確かめた」という結果のみで、住所などの個人情報は持ちません。</li>
+</ul></div>
+</div></details>
+
+<details><summary data-i18n="d.113">自分のリレーを立てられますか？</summary><div>
+<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.114">リレーのコードは公開しているため、自分で立ち上げて動かせます。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.115">ただし、現在のTegamiのアプリは公式リレーにしかつながらないため、立てたリレーを使うにはアプリを改造する必要があります。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
+<li data-i18n="d.116"><span class="tag decided">決定済み</span>会社や学校が独自のリレーを置けるようにします。登録のルールは置いた側が決められ、「誰でも」「招待券だけ」「許可した鍵だけ」から選べるようにします。</li>
+</ul></div>
+</div></details>
+
+<details><summary data-i18n="d.117">利用状況は何を数えていますか？</summary><div>
+<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.118">リレーは日ごとの合計（届いた封筒、預かったファイルの数と大きさ、ログインの回数、その日にログインした鍵のおおよその数）を183日間持ち、<a href="https://tegami.chat/status">稼働状況と利用統計</a>には、終わった週の合計だけを直近24週分公開しています。日ごとの数は運営者だけが見られます。ログインした鍵の数はHyperLogLogで推定し、日ごとに変わる値（ソルト）を混ぜてから数え、その値は日が変わると消します。公開する鍵の数は1日あたりの平均です。公開する数は、0から9は0、10以上は10の倍数に切り上げます。アプリにもサイトにもアクセス解析の仕組みはありません。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
+<li data-i18n="d.119"><span class="tag decided">決定済み</span>使う人の動きを追う解析は、これからも入れません。</li>
+</ul></div>
+</div></details>
+
+
+<h2 data-i18n="d.120" id="features">通知、通話、写真</h2>
+
+<details><summary data-i18n="d.121">通知はどう届きますか？</summary><div>
+<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.122">Web Pushを使っています。端末は通知の宛先と通知用の鍵を自分の鍵で署名してリレーに預けておき、封筒が届くと、リレーが端末ごとに暗号化したペイロード（RFC 8291）を送る仕組みです。中身には「メッセージか着信か」の種別、宛先のアカウント、件数のみが入り、送り主や本文は含まれません。ただし、着信を出し分けるために相手を呼び出す封筒にだけ<code>t=call</code>のタグが付くため、リレーには「この封筒が呼び出しだったこと」が分かります。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.123">トークごとに通知を切ることはできません。リレーも端末側の通知を受け取る仕組みも、届いた封筒がどのトーク宛てかを知らないためです。また、iPhoneのブラウザ版では、着信が通常の電話のような全画面になりません。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
+<li data-i18n="d.124"><span class="tag decided">決定済み</span>iPhoneアプリを作る際に、全画面の着信表示（AppleのCallKit）を入れます。</li>
+</ul></div>
+</div></details>
+
+<details><summary data-i18n="d.125">通話はどのように動きますか？</summary><div>
+<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.126">WebRTCによる1対1の音声通話とビデオ通話です。呼び出しや応答などのシグナリングは1分で期限が切れる暗号化した封筒でリレーを通し、接続経路を探す際にはSTUN（<code>stun.cloudflare.com</code>）を使います。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.127">中継サーバー（TURN）が本番に無いため、制限の厳しいネットワークどうしではつながらないことがあります。また、端末どうしが直接つながるため、通話の相手には自分のIPアドレスが見えます。グループ通話もありません。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
+<li data-i18n="d.128"><span class="tag built">公開待ち</span>Cloudflareの中継サーバー（TURN）を使えるようにしました。</li>
+<li data-i18n="d.129"><span class="tag built">公開待ち</span>「通話を常に中継する」を選ぶと、相手に自分のIPアドレスが見えなくなります。</li>
+<li data-i18n="d.130"><span class="tag built">公開待ち</span>自分で用意した中継サーバーを設定できるようにもなっています。</li>
+</ul></div>
+</div></details>
+
+<details><summary data-i18n="d.131">写真とファイルはどう扱われますか？</summary><div>
+<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.132">1つずつ新しいAES-GCMの鍵で暗号化してから、リレー側のストレージ（Cloudflare R2）に預けます。その鍵は暗号化したメッセージの中に入れて相手にだけ届けます。ストレージ上のデータは30日で消去されますが、受け取った人の端末には残ります。なお、写真は送る前に長辺1600pxへ縮められ、ファイルサイズの上限は暗号化した後で10MBです。スタンプだけは扱いが違い、画像とアカウントの秘密鍵から鍵を作り（自分の端末どうしで同じ暗号文になるため）、本人が消すまで別の置き場に残します。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.133">元の画質のまま送る選択肢はありません。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
+<li data-i18n="d.134"><span class="tag decided">決定済み</span>小さくして送るか、元の画質で送るかを、送る人が選べるようにします。</li>
+<li data-i18n="d.135"><span class="tag idea">検討中</span>元の画質で送ることを有料にするかは、まだ決めていません。</li>
+</ul></div>
+</div></details>
+
+
+  </main>
+</div>
+
+<footer class="border-t border-neutral-200 text-sm text-neutral-500 dark:border-night-line dark:text-neutral-400">
+  <div class="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-2 md:grid-cols-5">
+    <div class="sm:col-span-2 md:col-span-1">
+      <a href="/ja/" class="flex items-center gap-2.5 text-base font-bold text-neutral-900 dark:text-neutral-100"><svg viewBox="0 0 1024 1024" class="h-8 w-8 rounded-lg" aria-hidden="true"><rect width="1024" height="1024" fill="#f4f1e8"/><g transform="translate(512 512) scale(2.27) translate(-256 -249.5)"><defs><clipPath id="tg-f"><path d="M164 112 H348 Q406 112 406 170 V304 Q406 362 348 362 H164 Q106 362 106 304 V170 Q106 112 164 112 Z"/></clipPath></defs><path d="M138 356 Q146 376 134 398 Q126 412 142 408 Q192 392 232 358 Z" fill="#1d6b4b"/><path clip-path="url(#tg-f)" d="M86 123 L230 234 Q256 254 282 234 L426 123 L426 382 L86 382 Z" fill="#1d6b4b"/><path clip-path="url(#tg-f)" d="M86 92 L426 92 L426 126 L282 237 Q256 257 230 237 L86 126 Z" fill="#bbd3c9"/></g></svg>Tegami</a>
+      <p class="mt-3" data-i18n="ft.tag">トークはあなたのもの。<br>AIの持ち込み自由。</p>
+    </div>
+    <div>
+      <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.product">Tegami</h3>
+      <ul class="mt-3 space-y-2">
+        <li><a href="https://app.tegami.chat/" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="cta.browser" target="_blank" rel="noopener">ブラウザで始める</a></li>
+        <li><a href="/ja/features" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="nav.features">機能</a></li>
+        <li><a href="/ja/roadmap" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="roadmap">ロードマップ</a></li>
+        <li><a href="/ja/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="nav.faq">よくある質問</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.learn">安心して使うために</h3>
+      <ul class="mt-3 space-y-2">
+        <li><a href="/ja/how" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="nav.how">安全の仕組み</a></li>
+        <li><a href="/ja/privacy" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.privacy">プライバシーポリシー</a></li>
+        <li><a href="/ja/status" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.status">稼働状況と利用統計</a></li>
+        <li><a href="/ja/developers" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="nav.dev">開発者向け</a></li>
+        <li><a href="https://github.com/tegami-chat/tegami" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.src" target="_blank" rel="noopener">ソースコード</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.community">コミュニティ</h3>
+      <ul class="mt-3 space-y-2">
+        <li><a href="https://github.com/tegami-chat/tegami/issues" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.issues" target="_blank" rel="noopener">不具合を報告する</a></li>
+        <li><a href="https://x.com/tegamichat" class="hover:text-neutral-900 dark:hover:text-white" target="_blank" rel="noopener">X</a></li>
+        <li><a href="https://bsky.app/profile/tegami.chat" class="hover:text-neutral-900 dark:hover:text-white" target="_blank" rel="noopener">Bluesky</a></li>
+        <li><a href="https://mastodon.social/@tegamichat" class="hover:text-neutral-900 dark:hover:text-white" target="_blank" rel="noopener">Mastodon</a></li>
+        <li><a href="https://njump.me/npub1zptpqkxhr98glpt4rqv9945f3hd3q82wghaqth4gwqtmzmtjutsse5a98k" class="hover:text-neutral-900 dark:hover:text-white" target="_blank" rel="noopener">Nostr</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.contact">お問い合わせ</h3>
+      <ul class="mt-3 space-y-2">
+        <li><a href="mailto:hello@tegami.chat" class="hover:text-neutral-900 dark:hover:text-white">hello@tegami.chat</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 border-t border-neutral-200 px-4 py-6 text-xs dark:border-night-line">
+    <span><span data-i18n="ft.copy">AGPL-3.0のオープンソースです。</span> © 2026 Tegami contributors</span>
+    <div class="flex items-center gap-2"><div class="flex rounded-full border border-neutral-200 p-0.5 dark:border-night-line" role="group" aria-label="Light or dark"><button type="button" data-theme-set="light" aria-label="Light" class="rounded-full px-2 py-1 bg-neutral-900 text-white dark:bg-transparent dark:text-neutral-500 dark:hover:text-white"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button><button type="button" data-theme-set="dark" aria-label="Dark" class="rounded-full px-2 py-1 text-neutral-400 hover:text-neutral-900 dark:bg-white dark:text-neutral-900"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div></div>
+  </div>
+</footer>
+
+<script src="/site.js"></script>
+</body>
+</html>

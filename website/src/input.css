@@ -32,7 +32,7 @@ h1, h2, h3 { text-wrap: balance; }
 .devdoc details p { margin:0 0 10px; }
 .devdoc details ul, .devdoc .legend { margin:0 0 10px; padding-left:1.3em; list-style:disc; }
 .devdoc .legend { list-style:none; padding:0; }
-.devdoc a:not(nav a) { color:var(--accent); text-decoration:underline; text-underline-offset:2px; }
+.devdoc a:not(nav a):not(.card) { color:var(--accent); text-decoration:underline; text-underline-offset:2px; }
 .devdoc code { background:var(--code); border-radius:4px; padding:1px 5px; font-size:.88em; }
 .devdoc table { border-collapse:collapse; width:100%; font-size:.9rem; margin:0 0 10px; }
 .devdoc th, .devdoc td { border:1px solid var(--line); padding:6px 8px; text-align:left; vertical-align:top; }

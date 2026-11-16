@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tegamiの開発者向け</title>
+<script>
+(function () {
+  var t; try { t = localStorage.getItem('tegami.theme'); } catch (e) {}
+  var dark = t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.classList.toggle('dark', dark);
+})();
+</script>
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: { extend: {
+    colors: {
+      forest: { 50: '#e3f0e8', 300: '#7fd7a8', 600: '#106c4a', 700: '#0b5a3d', 950: '#0b1a12' },
+      nostr: { 300: '#c9a2ff', 600: '#7c2eda' },
+      paper: { DEFAULT: '#f4f1e8', dark: '#171b18' },
+      night: { DEFAULT: '#121614', card: '#1c221f', line: '#2c3430' },
+    },
+    fontFamily: { sans: ['-apple-system', 'BlinkMacSystemFont', '"Hiragino Sans"', '"Yu Gothic UI"', '"Noto Sans JP"', 'sans-serif'] },
+  } },
+}
+</script>
+<style>
+  :lang(ja) h1, :lang(ja) h2, :lang(ja) h3, :lang(ja) th, :lang(ja) td, :lang(ja) summary, :lang(ja) li { word-break: auto-phrase; }
+  :lang(ja) p { word-break: auto-phrase; text-wrap: pretty; }
+  h1, h2, h3 { text-wrap: balance; }
+</style>
+</head>
+<body class="bg-white text-neutral-900 antialiased dark:bg-[#101311] dark:text-neutral-100">
+
+<header></header>
+
+<div class="mx-auto max-w-6xl px-4 py-10 md:py-14 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10">
+  <aside class="lg:sticky lg:top-20 lg:self-start"><nav class="devside mb-8 lg:mb-0" aria-label="Developer docs"><p class="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 lg:block" data-i18n="dv.side">Developer docs</p><ul class="-mx-4 flex gap-1 overflow-x-auto px-4 text-sm lg:mx-0 lg:block lg:space-y-0.5 lg:overflow-visible lg:px-0"><li class="shrink-0"><a href="Tegamiの開発者向け_2026-11-16.html" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dv.ov">Overview</a></li><li class="shrink-0"><a href="Tegamiの開発者向け_Nostrと暗号.html" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.protocol">Nostr, encryption and keys</a></li><li class="shrink-0"><a href="Tegamiの開発者向け_リレー.html" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.relay">Relay, notifications and calls</a></li><li class="shrink-0"><a href="Tegamiの開発者向け_AI.html" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.ai">AI</a></li><li class="shrink-0"><a href="Tegamiの開発者向け_比較.html" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.compare">Compared with other apps</a></li><li class="shrink-0"><a href="Tegamiの開発者向け_技術仕様.html" class="block rounded-lg px-3 py-2 bg-forest-50 font-semibold text-forest-700 dark:bg-forest-950 dark:text-forest-300" aria-current="page" data-i18n="dp.spec">Technical spec</a></li></ul></nav></aside>
+  <main class="devdoc min-w-0 max-w-3xl">
+<h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dp.spec">Technical spec</h1>
+<p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dp.spec.t">Crypto building blocks, relay limits, HTTP endpoints and Tegami's own event kinds.</p>
+<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">Labels on the "Next" items:</li><li data-i18n="dv.lg.built"><span class="tag built">Built, not released</span>the code is written but not in production yet</li><li data-i18n="dv.lg.decided"><span class="tag decided">Decided</span>the direction is set, the code isn't written yet</li><li data-i18n="dv.lg.idea"><span class="tag idea">Considering</span>not decided yet</li></ul>
+<details open><summary data-i18n="d.312">Overall architecture</summary><div>
+<div class="wrap"><table>
+<tr><th data-i18n="d.313">Component</th><th data-i18n="d.314">Overview</th><th data-i18n="d.315">Code</th></tr>
+<tr><td data-i18n="d.316">App</td><td data-i18n="d.317">Expo (React Native, SDK 57). The browser version is currently served at <code>app.tegami.chat</code> (Cloudflare Workers). iPhone and Android versions will be built from the same code</td><td data-i18n="d.318"><code>client/</code></td></tr>
+<tr><td data-i18n="d.319">Relay</td><td data-i18n="d.320">Cloudflare Workers and a single Durable Object (SQLite). <code>wss://relay.tegami.chat</code></td><td data-i18n="d.321"><code>relay/</code></td></tr>
+<tr><td data-i18n="d.322">File storage</td><td data-i18n="d.323">Cloudflare R2. Photos and files deleted after 30 days. Stickers kept in separate storage until the owner deletes them</td><td data-i18n="d.324"><code>relay/</code></td></tr>
+<tr><td data-i18n="d.325">AI friend</td><td data-i18n="d.326"><code>tegami-agent</code> (Node.js). Runs on your PC and calls Claude Code. Also runs as an MCP server</td><td data-i18n="d.327"><code>agent/</code></td></tr>
+<tr><td data-i18n="d.328">Website</td><td data-i18n="d.329"><code>tegami.chat</code> (Cloudflare Workers)</td><td data-i18n="d.330"><code>website/</code></td></tr>
+</table></div>
+</div></details>
+
+<details><summary data-i18n="d.331">Cryptography</summary><div>
+<div class="wrap"><table>
+<tr><th data-i18n="d.332">Where</th><th data-i18n="d.333">Scheme</th></tr>
+<tr><td data-i18n="d.334">Messages</td><td data-i18n="d.335">NIP-44 v2 (secp256k1 ECDH, HKDF, ChaCha20, HMAC-SHA256). Double-wrapped with a seal and gift wrap per NIP-59</td></tr>
+<tr><td data-i18n="d.336">Secret key storage</td><td data-i18n="d.337">Takes 32 bytes from the passkey PRF extension (<code>userVerification: required</code>) and turns it into an AES-GCM 256-bit key with HKDF-SHA256 for encryption. Without PRF, a non-extractable AES-GCM key is kept in IndexedDB</td></tr>
+<tr><td data-i18n="d.338">Photos and files</td><td data-i18n="d.339">A new AES-GCM 256-bit key per file. The key and the sha256 of the encrypted data are sent inside the encrypted message (kind 15). Sticker keys are derived from the image and the account's secret key</td></tr>
+<tr><td data-i18n="d.340">Recovery code</td><td data-i18n="d.341">28 characters (140 bits) fed through HKDF-SHA256 to create three things: a backup ID, an AES-GCM key, and a Nostr signing key</td></tr>
+<tr><td data-i18n="d.342">Device transfer</td><td data-i18n="d.343">Envelope encrypted with NIP-44 to a throwaway key, with a 10-minute NIP-40 expiry. The throwaway secret key is included only after the <code>#</code> in the link</td></tr>
+<tr><td data-i18n="d.344">Notifications</td><td data-i18n="d.345">Web Push (VAPID). Payload encrypted per device with RFC 8291 (aes128gcm)</td></tr>
+<tr><td data-i18n="d.346">Calls</td><td data-i18n="d.347">WebRTC (DTLS-SRTP). Signaling in NIP-17 envelopes (custom kind 25050, 1-minute expiry)</td></tr>
+</table></div>
+</div></details>
+
+<details><summary data-i18n="d.348">What the relay accepts</summary><div>
+<ul>
+<li data-i18n="d.349">Over WebSocket, the only events accepted are kind 1059 (gift wrap) with exactly one recipient (<code>p</code> tag). Size limit 128KB</li>
+<li data-i18n="d.350">Reads and writes are allowed only for keys logged in with NIP-42. Login signatures are valid for 10 minutes, and each connection can hold up to 20 subscriptions</li>
+<li data-i18n="d.351">Only registered, non-suspended keys can write. You can read only envelopes addressed to you, up to 500 per fetch, deleted after 30 days. Each inbox holds up to 10,000 envelopes, and up to 200 from people registered without an invite code</li>
+<li data-i18n="d.352">Sending limits (token bucket): per IP address, a burst of 300 (then 5 per second); per key, a burst of 120 (then 3 per second). Up to 50 connections per IP address</li>
+</ul>
+<p data-i18n="d.353">HTTP endpoints (photo, file, and sticker operations require a kind 24242 signature; other writes require a NIP-98 signature; only <code>/crash</code> needs no signature):</p>
+<div class="wrap"><table>
+<tr><th data-i18n="d.354">Endpoint</th><th data-i18n="d.355">Purpose</th></tr>
+<tr><td data-i18n="d.356"><code>POST /register</code></td><td data-i18n="d.357">Register a key (invite code or Turnstile)</td></tr>
+<tr><td data-i18n="d.358"><code>PUT /upload</code>, <code>GET</code> and <code>HEAD /&lt;sha256&gt;</code></td><td data-i18n="d.359">Store and fetch photos and files. Up to 10MB</td></tr>
+<tr><td data-i18n="d.360"><code>PUT /stamp</code>, <code>GET</code>, <code>HEAD</code> and <code>DELETE /stamp/&lt;sha256&gt;</code></td><td data-i18n="d.361">Stickers. 512KB each, up to 200 per person</td></tr>
+<tr><td data-i18n="d.362"><code>PUT</code>, <code>GET</code>, <code>DELETE /backup/&lt;id&gt;</code></td><td data-i18n="d.363">Recovery code backup. Up to 64KB</td></tr>
+<tr><td data-i18n="d.364"><code>POST</code>, <code>DELETE /push</code>, <code>GET /push/key</code></td><td data-i18n="d.365">Register notification endpoints, and the notification public key</td></tr>
+<tr><td data-i18n="d.366"><code>POST /report</code></td><td data-i18n="d.367">Reports</td></tr>
+<tr><td data-i18n="d.368"><code>GET /stats</code></td><td data-i18n="d.369">Weekly usage statistics (public)</td></tr>
+<tr><td data-i18n="d.370"><code>POST /crash</code></td><td data-i18n="d.371">Error reports, only when the user allows (not stored)</td></tr>
+<tr><td data-i18n="d.372"><code>POST /admin</code></td><td data-i18n="d.373">Admin operations such as suspending keys, usable only with the operator's key</td></tr>
+</table></div>
+</div></details>
+
+<details><summary data-i18n="d.374">Tegami's custom kinds</summary><div>
+<p data-i18n="d.375">All are used only in the encrypted part inside a gift wrap. The relay only sees kind 1059.</p>
+<div class="wrap"><table>
+<tr><th data-i18n="d.376">kind</th><th data-i18n="d.377">Contents</th></tr>
+<tr><td data-i18n="d.378">10100</td><td data-i18n="d.379">Icon. Delivered to friends only</td></tr>
+<tr><td data-i18n="d.380">10101</td><td data-i18n="d.381">Sticker list. Synced between your own devices</td></tr>
+<tr><td data-i18n="d.382">25050</td><td data-i18n="d.383">Call signaling (ring, answer, hang up, WebRTC connection info)</td></tr>
+<tr><td data-i18n="d.384">25060, 25061</td><td data-i18n="d.385">Draft requests to AI, and drafts from AI</td></tr>
+</table></div>
+</div></details>
+
+
+  </main>
+</div>
+
+<footer></footer>
+
+<script>
+// 言葉の切り替え。HTMLに書いた英語が元で、日本語はここに置く。
+// 下書きでは ?lang=jaで日本語にする。ブラウザの言葉で勝手に切り替えない（Googleの多言語サイトの指針）。
+// 公開する時は、英語をtegami.chat/、日本語をtegami.chat/ja/ の別のページに書き出し、hreflangで結ぶ。
+const JA = {
+  'dv.h': '開発者向けの説明',
+  'dv.t': 'Tegamiの作りを、確かめたい人のためにまとめました。どの答えも、本番でいま動いていること、まだ足りないこと、これからのことの3つに分けて書いています。',
+  'dv.base': '本番で動いている内容は、<a href="https://github.com/tegami-chat/tegami" target="_blank" rel="noopener">tegami-chat/tegami</a>のコミット<code>37034b3</code>の時点のものです。',
+  'dv.legend': '「これから」の札の意味：',
+  'dv.lg.built': '<span class="tag built">公開待ち</span>コードを書き終えて、本番に出す前のもの',
+  'dv.lg.decided': '<span class="tag decided">決定済み</span>方針を決めて、コードはまだのもの',
+  'dv.lg.idea': '<span class="tag idea">検討中</span>まだ決めていないもの',
+  'dv.now': 'いま',
+  'dv.not': 'まだ',
+  'dv.next': 'これから',
+  'dv.side': '開発者向けの目次',
+  'dv.ov': '概要',
+  'dv.map': '全体の構成',
+  'dv.pages': 'ページ一覧',
+  'diff.h': 'よくある構成との違い',
+  'diff.t': 'よくある構成を左に、Tegamiを右に並べた7つの場面です。場面の下に、使っている専門用語の説明があります。',
+  'dp.protocol': 'Nostrと暗号と鍵',
+  'dp.protocol.t': 'TegamiがNostrのどこを使うか、メッセージをどう封じるか、リレーに何が見えるか、鍵をどう守るか。',
+  'dp.relay': 'リレー、通知、通話',
+  'dp.relay.t': 'Tegamiのリレーの決まりと、通知、通話、写真の仕組み。',
+  'dp.ai': 'AI',
+  'dp.ai.t': '自分のAIがどうつながり、何を読めて、何がAIの会社に渡るか。',
+  'dp.compare': 'ほかのアプリとの比較',
+  'dp.compare.t': 'LINE、WhatsApp、Signal、Telegramとの比較と、ほかのNostrアプリとの違い。',
+  'dp.spec': '技術仕様',
+  'dp.spec.t': '暗号の部品、リレーの上限、HTTPの口、Tegami独自のkind。',
+  'd.1': 'Nostrとの関係',
+  'd.2': '暗号化とサーバーに見える情報',
+  'd.3': '鍵',
+  'd.4': 'リレー',
+  'd.5': '通知、通話、写真',
+  'd.6': 'AI',
+  'd.7': 'ほかのアプリとの違い',
+  'd.8': '技術仕様',
+  'd.9': 'オープンソース',
+  'd.10': 'Nostrとの関係',
+  'd.11': 'TegamiはNostrクライアントですか？',
+  'd.12': 'Nostrの規格上で動くメッセージアプリですが、SNSとしてのNostrクライアントではありません。アカウントにはNostrの鍵（secp256k1）を使い、メッセージはNIP-17の形式で送受信しますが、公開の投稿（kind 1）もプロフィールの公開（kind 0）も行いません。',
+  'd.13': 'ほかのNostrアプリの人とメッセージをやり取りできますか？',
+  'd.14': 'できません。Tegamiのアプリが接続するのは専用のリレー（<code>wss://relay.tegami.chat</code>）のみで、そのリレーもTegamiに登録された鍵でログインした接続からの封筒しか受け付けないためです。このように閉じた構成にしているのは、迷惑メッセージやなりすましを入口で止めるためであり、リレー側には登録制御、送信量の上限、通報、運営による鍵の停止機能を備えています。',
+  'd.15': '「どのアプリでも同じ鍵で使える」というNostr本来の良さは、いまのTegamiにはありません。',
+  'd.16': '<span class="tag idea">検討中</span>受信先として会社のリレーを追加できる形、ほかのNostrアプリからのメッセージを表示できる形、Tegamiの定めるルールに同意したリレーだけを公式一覧に載せる形を比較しています。どれを採用するかはまだ決めていません。',
+  'd.17': '手持ちのnsecでログインできますか？ Tegamiの鍵を書き出せますか？',
+  'd.18': 'どちらもできません。Tegamiは鍵をアプリ内で生成し、外に出さない仕様になっています。',
+  'd.19': 'Tegamiが無くなった際に、同じ鍵のままほかのアプリへ移行する手段がありません。',
+  'd.20': '<span class="tag idea">検討中</span>Tegamiが無くなった時の避難手段として、鍵を書き出せるようにするかを検討しています。書き出せばほかのアプリへ移れますが、書き出した鍵を盗まれると乗っ取られ、ほかのアプリでプロフィールを公開すれば公開鍵と本人が結び付いてしまいます。',
+  'd.21': '<span class="tag idea">検討中</span>Tegamiを使いながら、同じ鍵でほかのNostrアプリも使いたい人のために、秘密鍵を渡さずにTegamiのアプリが署名を引き受ける方式（NIP-46）も検討しています。ただし、NIP-46はTegamiのアプリが動いている間しか使えないので、避難手段にはなりません。',
+  'd.22': 'Nostrのどの部分を使っていて、どの部分を使っていませんか？',
+  'd.23': 'Nostrの要素',
+  'd.24': 'Tegamiでの扱い',
+  'd.25': 'アカウント＝secp256k1の鍵ペア（npubとnsec）',
+  'd.26': '使う。電話番号もメールアドレスも使わない',
+  'd.27': 'イベント形式（id、pubkey、created_at、kind、tags、content、sig）とSchnorr署名',
+  'd.28': '使う。メッセージ、リレーへのログイン、HTTPエンドポイントへの署名まですべてこの形式',
+  'd.29': 'リレー（WebSocketでイベントを預かり配信するサーバー）',
+  'd.30': '使う。ただし公開リレーではなく、Tegami専用のリレー1つのみ',
+  'd.31': '暗号化したDM（NIP-17、NIP-44、NIP-59）',
+  'd.32': '使う。メッセージングの土台',
+  'd.33': '公開の投稿（kind 1）、フォロー（kind 3）、タイムライン',
+  'd.34': '使わない。SNSとしての機能は持たない',
+  'd.35': '公開のプロフィール（kind 0）',
+  'd.36': '使わない。名前は招待リンクで渡し、アイコンは友だちにだけ暗号化して届ける',
+  'd.37': 'リレーの一覧の公開（NIP-65のkind 10002、NIP-17のkind 10050）',
+  'd.38': '使わない。アプリはTegami専用のリレーにだけ接続する',
+  'd.39': 'Zap（ビットコインの投げ銭）',
+  'd.40': 'アプリでは使わない。公式アカウントでの受け取りのみ対応',
+  'd.41': '古いDM（NIP-04）',
+  'd.42': '使わない。送り主と宛先がリレーに丸見えになるため',
+  'd.43': 'このように、Nostrを「鍵で本人性を表し、署名した封筒をリレーに預ける」仕組みとして使っており、SNSとしての部分は取り入れていません。',
+  'd.44': '<span class="tag idea">検討中</span>ビットコインで自由にお金のやり取りができるようにしたいと考えています。アプリにZapを組み込むかどうかはまだ決めていません。',
+  'd.45': 'どのNIPを使っていますか？',
+  'd.46': 'NIP',
+  'd.47': '使い方',
+  'd.48': 'NIP-17、NIP-59',
+  'd.49': '1対1およびグループのメッセージ。文字はkind 14、写真とファイルはkind 15を用い、seal（kind 13）とgift wrap（kind 1059）で包む',
+  'd.50': 'NIP-44',
+  'd.51': 'sealとgift wrapの暗号化、および端末引き継ぎデータの暗号化',
+  'd.52': 'NIP-42',
+  'd.53': 'リレーへの認証（ログイン）。読み書きともに認証済みの鍵のみ許可',
+  'd.54': 'NIP-40',
+  'd.55': '期限付きの封筒（通話の合図は1分、引き継ぎとAIへの下書きの依頼は10分）',
+  'd.56': 'NIP-98',
+  'd.57': 'HTTPエンドポイント（登録、通知、復旧用のバックアップ、通報、管理操作）への署名',
+  'd.58': 'NIP-05、NIP-11',
+  'd.59': '公式アカウントの識別子（hello@tegami.chat）、およびリレー情報と稼働バージョン',
+  'd.60': 'Blossom（kind 24242の署名）',
+  'd.61': '写真とファイルのストレージ（<code>/upload</code>と<code>/&lt;sha256&gt;</code>）。暗号化した後のデータのsha256で預けて取り出す。スタンプ用の<code>/stamp</code>はTegami独自の拡張',
+  'd.62': 'NIPに規定のない部分は、暗号化した封筒の中だけで使う独自のkindで実装しています。具体的には、アイコン（10100）、スタンプ一覧（10101）、通話のシグナリング（25050）、AIへの下書き依頼と応答（25060、25061）です。',
+  'd.63': '<span class="tag built">公開待ち</span>自分の端末どうしの同期（10102）、グループメンバーの変更（10103）、AIをトークに招く同意（10104）、AIからの依頼と応答（25062〜25068）の独自kindを追加しました。',
+  'd.64': '<span class="tag idea">検討中</span>鍵のローテーションやパスキーで鍵を守る提案（NIPのプルリクエスト#2137と#2519）が採用されたら、仕様に合わせるかを検討します。',
+  'd.65': '暗号化とサーバーに見える情報',
+  'd.66': 'サーバーからは何が見えますか？',
+  'd.67': 'リレーはメッセージの中身を読めません。リレーが把握できるのは、次の情報に限られます。',
+  'd.68': '封筒の宛先の公開鍵（gift wrapの<code>p</code>タグ）、届いた時刻、データサイズ',
+  'd.69': 'ログインして接続している鍵と、接続元のIPアドレス',
+  'd.70': '封筒の外側のタグ：相手を呼び出す封筒かどうか（<code>t=call</code>）、通知を出さない封筒かどうか（<code>t=quiet</code>）、期限（<code>expiration</code>）',
+  'd.71': '封筒のほかに、登録で誰が誰を招待したか（90日で消す）、スタンプを預けた鍵と大きさ、通報の中身（90日で消す）',
+  'd.72': 'gift wrap自体は送り主を隠しますが、Tegamiのリレーは書き込みにもログインを求めるため、受け付ける瞬間には「どの鍵がどの鍵宛てに送ったか」が分かります。ただし、リレーのコードは送信者の鍵を保存していません（<code>relay/src/index.ts</code>の<code>events</code>テーブルに送信者の列はありません）。例外として、招待券なしで登録した人が送った封筒については、知らない人の受信箱から除外するための印を付けて保存します。',
+  'd.73': '稼働中のリレーが公開コードと同じものであることを、外部から確かめる方法がありません。リレーは稼働しているコミットを<code>/stats</code>とNIP-11の<code>version</code>に出していますが、運営者による申告にとどまります。',
+  'd.74': '<span class="tag idea">検討中</span>稼働中のリレーと公開コードの同一性を外部から確かめる方法は、まだ決めていません。',
+  'd.75': '前方秘匿性（forward secrecy）はありますか？',
+  'd.76': 'ありません。NIP-44の暗号鍵は送る人と受け取る人の長期鍵から作るため、秘密鍵が盗まれると、リレーに残っている封筒（最長30日分）や端末に保存されたメッセージを後から復号できてしまいます。なお、gift wrapの外側の層だけは毎回使い捨ての鍵を使っています。Tegamiでは秘密鍵をパスキー（PRFに対応しない環境では端末の中の取り出せない鍵）で暗号化して保管し、鍵自体を盗まれにくくすることで保護しています。',
+  'd.77': 'SignalやMLSのように鍵を継続的に更新し続ける方式と比べると、この点は弱みになります。',
+  'd.78': '<span class="tag idea">検討中</span>鍵を更新し続ける方式へ移行するかどうかは、まだ決めていません。',
+  'd.79': 'グループはどのように暗号化していますか？',
+  'd.80': 'NIP-17の仕様どおり、メンバー1人ずつに別の封筒を作って送ります。たとえば自分のほかに5人いるグループへの1通は、自分用の写しを含めて封筒6通になります。リレーからは誰が同じグループに属しているかは見えません。なお、グループのメンバーは後から変更できず、変更すると別のグループ扱いになります。',
+  'd.81': '人数が増えるほど送る封筒が増えるため、大人数のグループには向きません。MLSは使っていません。',
+  'd.82': '<span class="tag built">公開待ち</span>グループに変わらない識別子を持たせ、メンバーの追加、削除、退会、名前とアイコン、管理者の変更を、変更した人の署名（seal）が付いた変更として全員に伝えるようにしました。管理者がいるグループと、中立なグループを選べます。',
+  'd.83': '<span class="tag idea">検討中</span>Discordのサーバーのように大勢が集まれる場所も作りたいと考えています。',
+  'd.84': 'ブラウザ版は、サーバーが悪いJavaScriptを配信すれば終わりではないですか？',
+  'd.85': 'そのとおりです。ブラウザで動く暗号化アプリに共通する弱点であり、配信元（Cloudflare上の<code>app.tegami.chat</code>）が書き換えられると、鍵を盗むコードを配信できてしまいます。そのためTegamiでは、読み込み元を絞る厳しいCSPを設定し、外部の解析スクリプトも一切入れていません。',
+  'd.86': '配信しているファイルが公開リポジトリからビルドされたものと同じかを確かめる仕組み（再現可能ビルドと照合）がありません。',
+  'd.87': '<span class="tag decided">決定済み</span>iPhone、Android、Windows、Mac向けのアプリを出します。ストアが配信する版は固定されるため、この弱点は小さくなります。',
+  'd.88': '<span class="tag built">公開待ち</span>Androidアプリは、試験用の端末（エミュレーター）上でトーク一覧の表示まで動作しました。',
+  'd.89': '鍵',
+  'd.90': '秘密鍵はどのように守っていますか？',
+  'd.91': 'パスキーのPRF拡張を使い、パスキーごとに決まった32バイトの値を取り出して、その値から導出したAES-GCMの鍵でNostrの秘密鍵を暗号化しています。端末に保存されるのは暗号文だけで、アプリを開くたびにFace IDやWindows Helloによる認証を求めます。PRFに非対応の保存先では、鍵データを取り出せない設定（non-extractable）のAES鍵をIndexedDBに置き、その鍵で暗号化する方式も選べます。なお、パスキーの保存先として動作を確認したのは、iCloudキーチェーンとWindows Helloです。',
+  'd.92': 'Bitwardenはパスキーを保存できてもPRFの値を返さないため、パスキーによる鍵保護には使えません。また、iPhoneとAndroidのアプリにおけるパスキー対応もまだありません。',
+  'd.93': '<span class="tag decided">決定済み</span>Bitwardenに対応します。TegamiはPRFの規格どおりに作っているので、Bitwarden側がPRFの値を返すようになれば、Tegami側を直さずに使えます。',
+  'd.94': '<span class="tag decided">決定済み</span>今後もパスワードは使わず、パスキーで保護する方針を続けます。',
+  'd.95': '端末をなくした場合はどうなりますか？',
+  'd.96': '設定画面で作る28文字（140ビット）の復旧コードを使って復元できます。このコードからHKDFでバックアップ用の番号、暗号化鍵、署名鍵の3つを導出し、秘密鍵、名前、友だち、グループ、ブロック、AIの権限、スタンプの一覧（100枚まで）を暗号化したバックアップをリレーに預ける仕組みです。バックアップの署名には復旧コードから導出した鍵を使うため、リレーからはどのアカウントのバックアップなのか分かりません。',
+  'd.97': '復旧コードを作っていない人が手元の端末をすべてなくすと、Tegami側でも戻せません。また、会話の履歴は復旧コードでは戻りません。',
+  'd.98': '<span class="tag decided">決定済み</span>鍵をなくした際の救済方法は、ユーザーが選べるようにします。',
+  'd.99': '<span class="tag idea">検討中</span>鍵を盗まれた時のために、会って確かめ合った友だちが新しい鍵を認めることで、友だちとのつながりを新しい鍵へ移す方法を検討しています。',
+  'd.100': '新しい端末への引き継ぎはできますか？',
+  'd.101': 'はい、引き継ぎ用のリンクで移行できます。元の端末で使い捨ての鍵を作り、秘密鍵、名前、友だち、グループ、ブロック、AIの権限、スタンプの一覧をNIP-44でその鍵だけが開ける形に暗号化したうえで、10分で消える封筒としてリレーに預けます。使い捨ての秘密鍵はリンクの<code>#</code>より後ろにのみ含めるため、サーバーには届きません。なお、会話履歴は引き継がれず、新しい端末はリレーに残っている直近30日分の封筒（1回に500通まで）から受け取り直す形になります。',
+  'd.102': '<span class="tag built">公開待ち</span>引き継ぎ用のリンクで、すべての会話を新しい端末へ移せるようにしました。会話は圧縮して暗号化し、写真と同じ置き場を通して渡します（圧縮前で約32MBまで、写真そのものは移しません）。',
+  'd.103': '<span class="tag built">公開待ち</span>友だち一覧、名前、ブロック、AIの権限を、自分の端末どうしで同期する仕組みも実装済みです。',
+  'd.104': 'リレー',
+  'd.105': 'リレーは何で動いていますか？',
+  'd.106': 'Cloudflare WorkersとDurable Object（SQLite）上で動作しており、コードは<code>relay/</code>にあります。受け付けるのは宛先が1人のgift wrap（kind 1059）のみで、読み出せるのは自分宛ての封筒だけです。預かった封筒は30日で削除され、送る量の上限はIPアドレスごとと鍵ごとに設けています。',
+  'd.107': 'リレーはTegamiが動かす1つのみです。',
+  'd.108': '<span class="tag decided">決定済み</span>封筒を預かる期間は30日から始め、使われ方を見て、長く開かない人がほとんどいなければ短縮します。',
+  'd.109': '登録はどうなっていますか？ 誰でも使えますか？',
+  'd.110': 'はい、誰でも登録できます。登録はNIP-98で署名した<code>POST /register</code>で行い、招待券または人間かどうかの確認（Cloudflare Turnstile）のどちらかを通します。登録していない鍵は書き込めません。なお、招待券なしで登録した人のメッセージは知らない人の受信箱には届きませんが、相手がQRコードや招待リンクで友だちに追加すればやり取りできます。ただし、その人からのメッセージでは相手の端末に通知が鳴りません。アプリを改造しても、登録を通った鍵ならリレーを使えるため、守っているのはアプリではなく登録の入口です。',
+  'd.111': '本人確認の認証バッジ（本物の印）はまだありません。',
+  'd.112': '<span class="tag decided">決定済み</span>なりすましは複数の方法を組み合わせて防ぎます。家族と友だちは会ってQRコードを読み合い、会社とお店はドメインで確かめ、本物の印が欲しい人は外部の本人確認会社を通して有料で付けられるようにします。その際もTegamiが受け取るのは「確かめた」という結果のみで、住所などの個人情報は持ちません。',
+  'd.113': '自分のリレーを立てられますか？',
+  'd.114': 'リレーのコードは公開しているため、自分で立ち上げて動かせます。',
+  'd.115': 'ただし、現在のTegamiのアプリは公式リレーにしかつながらないため、立てたリレーを使うにはアプリを改造する必要があります。',
+  'd.116': '<span class="tag decided">決定済み</span>会社や学校が独自のリレーを置けるようにします。登録のルールは置いた側が決められ、「誰でも」「招待券だけ」「許可した鍵だけ」から選べるようにします。',
+  'd.117': '利用状況は何を数えていますか？',
+  'd.118': 'リレーは日ごとの合計（届いた封筒、預かったファイルの数と大きさ、ログインの回数、その日にログインした鍵のおおよその数）を183日間持ち、<a href="https://tegami.chat/status">稼働状況と利用統計</a>には、終わった週の合計だけを直近24週分公開しています。日ごとの数は運営者だけが見られます。ログインした鍵の数はHyperLogLogで推定し、日ごとに変わる値（ソルト）を混ぜてから数え、その値は日が変わると消します。公開する鍵の数は1日あたりの平均です。公開する数は、0から9は0、10以上は10の倍数に切り上げます。アプリにもサイトにもアクセス解析の仕組みはありません。',
+  'd.119': '<span class="tag decided">決定済み</span>使う人の動きを追う解析は、これからも入れません。',
+  'd.120': '通知、通話、写真',
+  'd.121': '通知はどう届きますか？',
+  'd.122': 'Web Pushを使っています。端末は通知の宛先と通知用の鍵を自分の鍵で署名してリレーに預けておき、封筒が届くと、リレーが端末ごとに暗号化したペイロード（RFC 8291）を送る仕組みです。中身には「メッセージか着信か」の種別、宛先のアカウント、件数のみが入り、送り主や本文は含まれません。ただし、着信を出し分けるために相手を呼び出す封筒にだけ<code>t=call</code>のタグが付くため、リレーには「この封筒が呼び出しだったこと」が分かります。',
+  'd.123': 'トークごとに通知を切ることはできません。リレーも端末側の通知を受け取る仕組みも、届いた封筒がどのトーク宛てかを知らないためです。また、iPhoneのブラウザ版では、着信が通常の電話のような全画面になりません。',
+  'd.124': '<span class="tag decided">決定済み</span>iPhoneアプリを作る際に、全画面の着信表示（AppleのCallKit）を入れます。',
+  'd.125': '通話はどのように動きますか？',
+  'd.126': 'WebRTCによる1対1の音声通話とビデオ通話です。呼び出しや応答などのシグナリングは1分で期限が切れる暗号化した封筒でリレーを通し、接続経路を探す際にはSTUN（<code>stun.cloudflare.com</code>）を使います。',
+  'd.127': '中継サーバー（TURN）が本番に無いため、制限の厳しいネットワークどうしではつながらないことがあります。また、端末どうしが直接つながるため、通話の相手には自分のIPアドレスが見えます。グループ通話もありません。',
+  'd.128': '<span class="tag built">公開待ち</span>Cloudflareの中継サーバー（TURN）を使えるようにしました。',
+  'd.129': '<span class="tag built">公開待ち</span>「通話を常に中継する」を選ぶと、相手に自分のIPアドレスが見えなくなります。',
+  'd.130': '<span class="tag built">公開待ち</span>自分で用意した中継サーバーを設定できるようにもなっています。',
+  'd.131': '写真とファイルはどう扱われますか？',
+  'd.132': '1つずつ新しいAES-GCMの鍵で暗号化してから、リレー側のストレージ（Cloudflare R2）に預けます。その鍵は暗号化したメッセージの中に入れて相手にだけ届けます。ストレージ上のデータは30日で消去されますが、受け取った人の端末には残ります。なお、写真は送る前に長辺1600pxへ縮められ、ファイルサイズの上限は暗号化した後で10MBです。スタンプだけは扱いが違い、画像とアカウントの秘密鍵から鍵を作り（自分の端末どうしで同じ暗号文になるため）、本人が消すまで別の置き場に残します。',
+  'd.133': '元の画質のまま送る選択肢はありません。',
+  'd.134': '<span class="tag decided">決定済み</span>小さくして送るか、元の画質で送るかを、送る人が選べるようにします。',
+  'd.135': '<span class="tag idea">検討中</span>元の画質で送ることを有料にするかは、まだ決めていません。',
+  'd.136': 'AI',
+  'd.137': 'AIはどうつながりますか？ Tegamiのサーバーで動いているのですか？',
+  'd.138': 'Tegamiのサーバーでは動きません。自分のPCで<code>tegami-agent</code>（Node.js）を動かすと、AIが固有のNostrの鍵を持ち、人間のユーザーと同じリレーと同じ暗号化方式で話します。返事は、既定ではPC上のClaude Code（<code>claude -p</code>）が書きます（<code>--command</code>で、標準入力を読んで返事を出す別のプログラムに替えられます）。AIの契約やログイン情報はPCの中に留まってTegamiには渡りません。さらにMCPサーバーとしても動作するため、Claude Codeから「Tegamiで送って」と頼めます。',
+  'd.139': 'つなぐにはコマンドを打つ必要があります。そのまま使えるAIはClaude Codeだけで、ほかのAIは自分で<code>--command</code>に渡すプログラムを用意する必要があります。',
+  'd.140': '<span class="tag built">公開待ち</span>PCに出るQRコードをアプリで読むだけで、AIを友だちに追加できるようにしました。',
+  'd.141': '<span class="tag built">公開待ち</span>手元で動くモデル（Ollamaなど）や、ユーザー自身のAPIキー（Anthropic、OpenAI、Gemini、OpenRouter）でも返事を書けます。',
+  'd.142': '<span class="tag built">公開待ち</span>AIが持ち主の名前でメッセージを送れるようにしました。最初の設定では、送る前に持ち主が確かめる形だけが使えます。',
+  'd.143': '<span class="tag built">公開待ち</span>全員が同意したグループや1対1のトークにAIを招く仕組みも作りました。最初の設定では使えず、使う人が自分で有効にします。',
+  'd.144': '<span class="tag decided">決定済み</span>Tegamiの公式AIは置きません。',
+  'd.145': '他人の文に指示を混ぜられて、AIが情報を漏らしませんか？',
+  'd.146': '次の3つの仕組みで防いでいます。',
+  'd.147': 'AIが自動で返事をするのは、持ち主が許可した相手（<code>--trust</code>）だけです。友だちでない人のメッセージは、中身をAIに見せず、何人から新しいメッセージが来ているかだけをAIに伝えます。',
+  'd.148': '友だちとのトークをAIに読ませる場合も、アプリ内のスイッチで許したときに限り、その1対1のトークの最新30通までを10分で消える封筒でAIに渡します。その際AIは下書きを作るだけで、送るのは本人です。',
+  'd.149': 'そのスイッチは、持ち主の鍵を持つアプリ側に置いています。AIが動くPCにスイッチを置くと、AI自身が設定を書き換えられてしまうためです。',
+  'd.150': 'AIの秘密鍵は無人稼働を続けるためにPC上に暗号化せず保存しています（SSH鍵と同じ扱い）。また、AIに読ませた内容はAIの提供会社にも渡ります。トークの相手が「自分の文を相手のAIに読ませない」と断る仕組みもまだありません。',
+  'd.151': '<span class="tag built">公開待ち</span>相手が「自分の文を相手のAIに読ませない」を選べ、1通ずつ「AIに読ませない」の印も付けられるようにしました。消えるメッセージもAIには渡しません。公式のアプリがその印を見てAIに渡さない仕組みなので、改造したアプリや手でのコピーまでは止められません。',
+  'd.152': '<span class="tag built">公開待ち</span>AIの秘密鍵とAPIキーを、OSの保管庫で暗号化して保存するようにしました（Windowsで確かめ済み。MacとLinuxは未確認）。',
+  'd.153': '<span class="tag built">公開待ち</span>AIが送る量に上限を置き、リンクを含む文は必ず持ち主が確認するようにしました。「すべてオフにする」操作で、自分のAIをスマートフォンから一度に止められます。',
+  'd.154': 'ほかのアプリとの違い',
+  'd.155': 'LINE、WhatsApp、Signal、Telegramとは何が違いますか？',
+  'd.156': '2026-11-16時点で各社の公式ドキュメントを確認した範囲での比較です。Tegamiの列は、いま本番環境で動いている仕様に基づいています。',
+  'd.158': 'LINE',
+  'd.159': 'WhatsApp',
+  'd.160': 'Signal',
+  'd.161': 'Telegram',
+  'd.162': 'Tegami',
+  'd.163': '始めるのに要るもの',
+  'd.164': '電話番号',
+  'd.165': '電話番号',
+  'd.166': '電話番号（ユーザー名は番号を相手に見せないためのもの）',
+  'd.167': '電話番号（Telegram専用の番号を買う方法もある）',
+  'd.168': '不要。端末で鍵を作る',
+  'd.169': 'エンドツーエンド暗号化',
+  'd.170': '1対1とグループで既定（Letter Sealing）。グループ通話は通信経路の暗号化のみ',
+  'd.171': '既定',
+  'd.172': '既定',
+  'd.173': '通常のチャットは運営のサーバーで開ける形。チャットのエンドツーエンド暗号化は1対1の「シークレットチャット」のみ',
+  'd.174': '1対1とグループで既定（NIP-17）',
+  'd.175': '前方秘匿性',
+  'd.176': 'Letter Sealingは非対応',
+  'd.177': 'あり（Signal Protocolを使用）',
+  'd.178': 'あり（Double Ratchet、PQXDH）',
+  'd.179': 'シークレットチャットのみ',
+  'd.180': 'なし',
+  'd.181': '運営に見えるメタデータ',
+  'd.182': 'やり取りの相手や日時をサーバーに記録する旨を記載',
+  'd.183': '接続情報と使い方の情報を収集する旨を記載',
+  'd.184': '運営に必要な最小限のみ。送り主を隠す仕組み（Sealed Sender）がある',
+  'd.185': 'IPアドレスなどを最大12か月持つことがある旨を記載',
+  'd.186': '宛先、時刻、大きさ、接続している鍵、IPアドレス。受け付ける時は送り主の鍵も分かるが保存しない',
+  'd.187': '広告',
+  'd.188': 'トーク一覧の最上部に出る',
+  'd.189': 'アップデートの画面（ステータスとチャンネル）に出る。個人のチャットは広告に使わない旨を記載',
+  'd.190': 'なし。寄付で運営',
+  'd.191': '登録者1000人を超える公開チャンネルに出る',
+  'd.192': 'なし',
+  'd.193': 'AI',
+  'd.194': '運営のAI（Agent i）。使うとそのトークの最大300通をLINEヤフーが取得する',
+  'd.195': '運営のAI（Meta AI）',
+  'd.196': '公式の文書では見つけていない',
+  'd.197': '運営のAIの要約と、誰でも作れるボット',
+  'd.198': '運営のAIは置かない。自分のPCのAIを友だちとして並べる',
+  'd.199': '運営',
+  'd.200': 'LINEヤフー（ソフトバンクとNAVERが半分ずつ持つ会社が議決権の62.4%を保有）',
+  'd.201': 'Meta',
+  'd.202': 'アメリカの非営利団体',
+  'd.203': 'Telegram Messenger Inc.',
+  'd.204': '日本の個人',
+  'd.205': 'コードの公開',
+  'd.206': 'アプリもサーバーも見つからなかった',
+  'd.207': '未確認',
+  'd.208': 'アプリもサーバーもAGPL-3.0',
+  'd.209': 'アプリは公開。サーバーは非公開',
+  'd.210': 'アプリもリレーもAGPL-3.0',
+  'd.211': '暗号の強さだけで比べると、Signalの方がTegamiより強い設計です。一方でTegamiが異なるのは、電話番号が不要なこと、広告や運営のAIがないこと、自分のAIを友だちとして並べられること、そしてサーバー側までコードを公開していることです（4つのうち、サーバーまで公開しているのはSignalだけです）。',
+  'd.212': 'Tegamiはブラウザ版のみで、ストアのアプリがありません。また、前方秘匿性もありません。',
+  'd.213': 'なお、比較した各社のうち、WhatsAppの暗号化の説明とコードの公開、SignalのAIの機能については、公式のヘルプページを開けず本文を確かめきれていません。',
+  'd.214': '<span class="tag decided">決定済み</span>使う人の情報を使った商売はしません。広告、ニュース、ショッピングのタブも置きません。',
+  'd.215': '<span class="tag idea">検討中</span>現在は開発者が個人で運営しています。開発者が続けられなくなっても会話が消えない仕組みと、将来ほかの団体へ移す方法も考えていきます。',
+  'd.216': '0xchatとは何が違いますか？',
+  'd.217': '0xchatは、Nostrのチャット機能をほぼ全部備えたアプリであり、Tegamiとは向いている方向が異なります。以下は2026-11-16に0xchatの公開リポジトリ（<code>0xchat-app/0xchat-app-main</code>）のコードで確かめた範囲での比較です。',
+  'd.219': '0xchat',
+  'd.220': 'Tegami',
+  'd.221': 'つながる相手',
+  'd.222': 'Nostrの誰とでも。公開リレー（damus、nos.lolなど）を使い、運営のリレーは閉じた',
+  'd.223': 'Tegamiに登録した人のみ。専用のリレー',
+  'd.224': '秘密鍵の保存',
+  'd.225': 'アプリが作ったパスワードで暗号化し、同じデータベースの同じ行にそのパスワードも置いて起動時に自動で開く。アプリのロック（生体認証、PIN）は別にある',
+  'd.226': 'パスキーのPRFで暗号化し、開くたびにパスキー認証を求める（PRFに対応しない環境では端末の中の鍵で暗号化）',
+  'd.227': '外部の署名機能',
+  'd.228': 'NIP-46とNIP-55（Amberなど）に対応',
+  'd.229': '対応していない',
+  'd.230': '鍵の書き出し',
+  'd.231': '設定でnsecを表示してコピーできる',
+  'd.232': 'できない',
+  'd.233': '鍵をなくした時',
+  'd.234': '控えを預ける仕組みは見つからなかった。nsecを自分で保管する前提',
+  'd.235': '復旧コードで戻せる',
+  'd.236': 'AI',
+  'd.237': '翻訳（端末内またはLibreTranslate）のみ。AIのボットやMCPはコードに見つからなかった',
+  'd.238': '自分のPCのAIが友だちとして並ぶ。MCP対応。AIに許す範囲をアプリで決める',
+  'd.239': 'グループ',
+  'd.240': 'NIP-17のグループ、NIP-28のチャンネル、NIP-29のリレーのグループ。MLSは姉妹アプリのXChatで対応',
+  'd.241': 'NIP-17のグループのみ',
+  'd.242': '通話',
+  'd.243': 'NIP-100のWebRTC。中継サーバーは利用者が設定する',
+  'd.244': '暗号化した封筒で合図を送るWebRTC。中継サーバーはまだ無い',
+  'd.245': '端末',
+  'd.246': 'iPhone、Android、Windows、Mac、Linuxのアプリ。ブラウザ版は見つからなかった',
+  'd.247': 'いまはブラウザ版のみ。アプリは準備中',
+  'd.248': 'そのほか',
+  'd.249': 'Tor、Cashuのウォレット、zap、翻訳を内蔵',
+  'd.250': '招待券と人間の確認による登録、運営による鍵の停止',
+  'd.251': '0xchatはすでにNostrを使っている人のためのアプリであるのに対し、TegamiはNostrを知らずにLINEをやめたい人向けのアプリです。Nostrの世界に開いている点や細かく自分で設定できる点では、0xchatの方が進んでいます。',
+  'd.252': 'Tegamiには、外部の署名機能、鍵の書き出し、ストアのアプリ、中継サーバーがありません。',
+  'd.253': 'なお、0xchatのデータベース全体が暗号化されているかどうかは、確かめきれていません（データベースのパスフレーズを入力する画面はあります）。',
+  'd.254': '<span class="tag built">公開待ち</span>中継サーバー（TURN）。Androidアプリは試作版（エミュレーターでトーク一覧まで動作）。',
+  'd.255': '<span class="tag decided">決定済み</span>iPhone、Android、Windows、Macのアプリを出します。',
+  'd.256': '<span class="tag idea">検討中</span>外部の署名機能（NIP-46）と、ほかのNostrアプリとのつながり方。',
+  'd.257': 'White Noiseとは何が違いますか？',
+  'd.258': 'White NoiseはNostr上でMLSを使うメッセージアプリで、自分のマシンで動くAIを連絡先として話せる機能や、複数のプロフィールも持っています。暗号方式としては、前方秘匿性がある分、TegamiのNIP-17より強力です。一方でTegamiとの違いは、パスキーで鍵を守ること、通話機能、専用リレーで登録と通報を持つこと、AIに何を許すかをアプリの中で細かく決められる点にあります（2026-11-13時点のWhite Noiseの公式文書には、パスキー、通話、MCPの語は出てきませんでした）。',
+  'd.259': '暗号方式の強さでは、TegamiはWhite Noiseに及びません。',
+  'd.260': '結局、Tegamiにしかないものは何ですか？',
+  'd.261': '1つ1つの機能を見れば、どれもほかのアプリにあります。Tegamiが目指しているのはその組み合わせです。LINEをやめたいもののNostrを知らない人が、パスワードを使わずパスキーだけで始められ、家族と自分のAIを同じトーク一覧に並べて、迷惑メッセージから守られた場所で使える点にあります。',
+  'd.262': '<span class="tag decided">決定済み</span>「これがあるからTegamiを選ぶ」ではなく、「メッセージは基本Tegamiで送る」と思ってもらえるアプリを目指します。',
+  'd.263': '技術仕様',
+  'd.264': '技術構成図',
+  'd.265': '通話（WebRTC）：声と映像は端末どうしで直接やり取りする',
+  'd.266': '自分の端末',
+  'd.267': 'Cloudflare',
+  'd.268': '相手の端末',
+  'd.269': '通知の会社',
+  'd.270': '自分のPC',
+  'd.271': 'Tegamiアプリ',
+  'd.272': 'Expo（React Native）',
+  'd.273': 'いまはブラウザ版だけ',
+  'd.274': 'アプリは準備中',
+  'd.275': '秘密鍵',
+  'd.276': 'パスキーで暗号化して保管',
+  'd.277': '会話の保存',
+  'd.278': '端末の中だけ（IndexedDB）',
+  'd.279': 'app.tegami.chat',
+  'd.280': 'アプリのJavaScriptを配る',
+  'd.281': 'Nostr',
+  'd.282': 'リレー',
+  'd.283': 'relay.tegami.chat',
+  'd.284': 'Durable Object（SQLite）',
+  'd.285': '封筒を30日預かる',
+  'd.286': 'ファイルの置き場（R2）',
+  'd.287': '写真とファイルは30日、スタンプは消すまで',
+  'd.288': 'STUN（stun.cloudflare.com）',
+  'd.289': '通話でつながる経路を探す',
+  'd.290': 'Tegamiアプリ',
+  'd.291': '受け取った端末で封筒を開ける',
+  'd.292': 'Web Push',
+  'd.293': '中身は暗号化され、会社は読めない',
+  'd.294': 'tegami-agent',
+  'd.295': 'AIの友だち。MCPにもなる',
+  'd.296': 'Claude Code',
+  'd.297': '既定で返事を書くAI',
+  'd.298': '配る',
+  'd.299': '配る',
+  'd.300': '封筒',
+  'd.301': '封筒',
+  'd.302': '暗号化した写真',
+  'd.303': '通知',
+  'd.304': '通知',
+  'd.305': '友だちと同じ封筒',
+  'd.306': '暗号化した中身が通る',
+  'd.307': 'アプリのコードを配る',
+  'd.308': '端末どうしが直接つながる',
+  'd.309': 'メッセージは送る側の端末が相手の鍵で封をしてからリレーに預けるため、リレー、ファイルの置き場、通知配信サービスが封を開けることはありません。封を開けられるのは、相手の端末と自分の別の端末だけです。',
+  'd.310': 'AIの友だちは、自分のPC上で動く<code>tegami-agent</code>が固有のNostrの鍵を持ち、人間の友だちと同じ封筒形式でリレーとやり取りします。AIの会社に届くのは、<code>tegami-agent</code>がAIに渡した文だけです。',
+  'd.311': '通話は合図（シグナリング）のみをリレーの封筒で送り、音声と映像は端末どうしが直接つながって流します。接続経路を探す際には<code>stun.cloudflare.com</code>を使います。',
+  'd.312': '全体の構成',
+  'd.313': 'コンポーネント',
+  'd.314': '概要',
+  'd.315': 'コード',
+  'd.316': 'アプリ',
+  'd.317': 'Expo（React Native、SDK 57）。いまはブラウザ版を<code>app.tegami.chat</code>（Cloudflare Workers）で配信中。iPhone版とAndroid版も同じコードから作る予定',
+  'd.318': '<code>client/</code>',
+  'd.319': 'リレー',
+  'd.320': 'Cloudflare Workersと1つのDurable Object（SQLite）。<code>wss://relay.tegami.chat</code>',
+  'd.321': '<code>relay/</code>',
+  'd.322': 'ファイルの置き場',
+  'd.323': 'Cloudflare R2。写真とファイルは30日で削除。スタンプは別の置き場で、本人が消すまで保持',
+  'd.324': '<code>relay/</code>',
+  'd.325': 'AIの友だち',
+  'd.326': '<code>tegami-agent</code>（Node.js）。自分のPC上で動き、Claude Codeを呼び出す。MCPサーバーとしても動作',
+  'd.327': '<code>agent/</code>',
+  'd.328': 'サイト',
+  'd.329': '<code>tegami.chat</code>（Cloudflare Workers）',
+  'd.330': '<code>website/</code>',
+  'd.331': '暗号仕様',
+  'd.332': '使う場所',
+  'd.333': '方式',
+  'd.334': 'メッセージ',
+  'd.335': 'NIP-44 v2（secp256k1のECDH、HKDF、ChaCha20、HMAC-SHA256）。NIP-59でsealとgift wrapの二重に包む',
+  'd.336': '秘密鍵の保管',
+  'd.337': 'パスキーのPRF拡張（<code>userVerification: required</code>）で32バイトを取り、HKDF-SHA256でAES-GCM 256ビットの鍵にして暗号化。PRFが無い環境では、取り出せない設定のAES-GCMの鍵をIndexedDBに置く',
+  'd.338': '写真とファイル',
+  'd.339': 'ファイルごとに新しいAES-GCM 256ビットの鍵を生成。鍵と、暗号化した後のデータのsha256は、暗号化したメッセージ（kind 15）の中で送信。スタンプは画像とアカウントの秘密鍵から鍵を導出',
+  'd.340': '復旧コード',
+  'd.341': '28文字（140ビット）からHKDF-SHA256でバックアップ用の番号、AES-GCMの鍵、署名用のNostrの鍵の3つを作成',
+  'd.342': '端末の引き継ぎ',
+  'd.343': '使い捨ての鍵宛てにNIP-44で暗号化し、NIP-40で10分の期限を付けた封筒を使用。使い捨ての秘密鍵はリンクの<code>#</code>より後ろにのみ含める',
+  'd.344': '通知',
+  'd.345': 'Web Push（VAPID）。中身は端末ごとにRFC 8291（aes128gcm）で暗号化',
+  'd.346': '通話',
+  'd.347': 'WebRTC（DTLS-SRTP）。合図はNIP-17の封筒（独自のkind 25050、期限1分）',
+  'd.348': 'リレーが受け付けるもの',
+  'd.349': 'WebSocketで受け付けるイベントはkind 1059（gift wrap）のみで、宛先（<code>p</code>タグ）が1つのもの。サイズ上限は128KB',
+  'd.350': '読み書きともにNIP-42でログインした鍵のみ許可。ログインの署名は10分以内のものが有効で、購読は1つの接続で20まで',
+  'd.351': '書き込めるのは登録済みで止められていない鍵だけ。読めるのは自分宛ての封筒のみで、1回の取得は500通まで、30日で削除。1人の受信箱は1万通まで、招待券なしで登録した人からの封筒は200通まで',
+  'd.352': '送る量の上限（トークンバケット）：IPアドレスごとに一度に300通（その後は1秒に5通）、鍵ごとに一度に120通（その後は1秒に3通）。1つのIPアドレスからの接続は50本まで',
+  'd.353': 'HTTPエンドポイント（写真、ファイル、スタンプの操作はkind 24242の署名、それ以外の書き込みはNIP-98の署名が必要。<code>/crash</code>だけは署名なし）：',
+  'd.354': 'エンドポイント',
+  'd.355': '役割',
+  'd.356': '<code>POST /register</code>',
+  'd.357': '鍵の登録（招待券またはTurnstile）',
+  'd.358': '<code>PUT /upload</code>、<code>GET</code>と<code>HEAD /&lt;sha256&gt;</code>',
+  'd.359': '写真とファイルの預け入れと取り出し。10MBまで',
+  'd.360': '<code>PUT /stamp</code>、<code>GET</code>と<code>HEAD</code>と<code>DELETE /stamp/&lt;sha256&gt;</code>',
+  'd.361': 'スタンプ。1枚512KB、1人200枚まで',
+  'd.362': '<code>PUT</code>、<code>GET</code>、<code>DELETE /backup/&lt;番号&gt;</code>',
+  'd.363': '復旧コードのバックアップ。64KBまで',
+  'd.364': '<code>POST</code>、<code>DELETE /push</code>、<code>GET /push/key</code>',
+  'd.365': '通知の宛先の登録と、通知の公開鍵',
+  'd.366': '<code>POST /report</code>',
+  'd.367': '通報',
+  'd.368': '<code>GET /stats</code>',
+  'd.369': '週ごとの利用統計（公開）',
+  'd.370': '<code>POST /crash</code>',
+  'd.371': 'ユーザーが許した時のみのエラー報告（保存しない）',
+  'd.372': '<code>POST /admin</code>',
+  'd.373': '運営の鍵でのみ使える、鍵の停止などの管理操作',
+  'd.374': 'Tegami独自のkind',
+  'd.375': 'いずれもgift wrapの中の暗号化された領域でのみ使用します。リレーに見えるのはkind 1059だけです。',
+  'd.376': 'kind',
+  'd.377': '中身',
+  'd.378': '10100',
+  'd.379': 'アイコン。友だちにだけ届ける',
+  'd.380': '10101',
+  'd.381': 'スタンプ一覧。自分の端末どうしで同期する',
+  'd.382': '25050',
+  'd.383': '通話の合図（呼び出し、応答、終了、WebRTCの接続情報）',
+  'd.384': '25060、25061',
+  'd.385': 'AIへの下書き依頼と、AIからの下書き',
+  'd.386': 'オープンソース',
+  'd.387': 'ライセンスと、開発への参加方法は？',
+  'd.388': 'ライセンスはAGPL-3.0です。Tegamiのコードを使ったアプリをネットワーク越しに提供する人にも、コードの公開が求められます。',
+  'd.389': '現在は、不具合の報告と要望をGitHubのIssueで受け付けています。コードの取り込み（プルリクエスト）は受け付けていません。',
+};
+const EN = {};
+document.querySelectorAll('[data-i18n]').forEach((el) => { EN[el.dataset.i18n] ??= el.innerHTML; });
+
+function pick() {
+  return new URLSearchParams(location.search).get('lang') === 'ja' ? 'ja' : 'en';
+}
+function apply(lang) {
+  const dict = lang === 'ja' ? JA : EN;
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    const v = dict[el.dataset.i18n] ?? EN[el.dataset.i18n];
+    if (v != null) el.innerHTML = v;
+  });
+  document.documentElement.lang = lang;
+
+  document.querySelectorAll('a[href]').forEach((a) => {
+    const h = a.getAttribute('href');
+    if (!h || /^(https?:|mailto:|#|\?)/.test(h) || a.dataset.lang) return;
+    a.dataset.base ??= h;
+    const [path, hash] = a.dataset.base.split('#');
+    a.setAttribute('href', path + (lang === 'ja' ? '?lang=ja' : '') + (hash ? '#' + hash : ''));
+  });
+  document.querySelectorAll('[data-lang]').forEach((a) => {
+    const on = a.dataset.lang === lang;
+    a.className = 'block px-4 py-2 text-sm ' + (on
+      ? 'font-semibold text-forest-600 dark:text-forest-300'
+      : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-white/5');
+    if (on) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
+  });
+}
+apply(pick());
+document.addEventListener('click', (e) => {
+  document.querySelectorAll('[data-lang-menu][open]').forEach((d) => { if (!d.contains(e.target)) d.removeAttribute('open'); });
+});
+
+document.querySelectorAll('[data-theme-set]').forEach((b) => {
+  b.onclick = () => {
+    const dark = b.dataset.themeSet === 'dark';
+    document.documentElement.classList.toggle('dark', dark);
+    try { localStorage.setItem('tegami.theme', b.dataset.themeSet); } catch {}
+  };
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+  let t; try { t = localStorage.getItem('tegami.theme'); } catch {}
+  if (!t) document.documentElement.classList.toggle('dark', e.matches);
+});
+</script>
+</body>
+</html>

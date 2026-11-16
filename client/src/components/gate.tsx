@@ -286,7 +286,7 @@ function Hero() {
         <Text style={s.green}>あなたのもの。</Text>
       </Text>
       <Text style={[h1, s.h1Second]} role="heading" aria-level={1}>
-        {`AIは${br}`}
+        {`AIの${br}`}
         <Text style={s.green}>持ち込み自由。</Text>
       </Text>
     </View>

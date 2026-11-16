@@ -64,7 +64,7 @@ tailwind.config = {
 
     <div class="mt-10 flex flex-wrap justify-center gap-3">
       <a href="https://app.tegami.chat/" class="inline-block rounded-full bg-forest-600 px-8 py-3.5 font-semibold text-white hover:bg-forest-700 dark:bg-forest-300 dark:text-forest-950" data-i18n="cta.browser" target="_blank" rel="noopener">Open in your browser</a>
-      <a href="Tegamiの仕組み案_2026-11-14.html" class="inline-block rounded-full border border-neutral-300 px-8 py-3.5 font-semibold hover:bg-neutral-50 dark:border-night-line dark:hover:bg-white/5" data-i18n="how.cta">How it works</a>
+      <a href="Tegamiの仕組み案_2026-11-14.html" class="inline-block rounded-full border border-neutral-300 px-8 py-3.5 font-semibold hover:bg-neutral-50 dark:border-night-line dark:hover:bg-white/5" data-i18n="how.cta">How it keeps you safe</a>
     </div>
 
     <div class="mx-auto mt-5 flex items-center justify-center gap-2 text-xs max-[419px]:flex-col max-[419px]:gap-1.5 text-neutral-400 dark:text-neutral-500">
@@ -82,12 +82,12 @@ tailwind.config = {
     <div>
       <h3 class="text-lg font-bold" data-i18n="p2.h">Use AI your way.</h3>
       <p class="mt-1.5 text-neutral-500 dark:text-neutral-400" data-i18n="p2.t">Connect your own AI in a few taps and work with your messages freely via API and MCP. Of course, you're just as free to say no to AI, or not use it at all.</p>
-      <a href="#ai" class="mt-2 inline-block text-sm font-semibold text-forest-600 hover:underline dark:text-forest-300" data-i18n="more.ai">What your AI can do →</a>
+      <a href="Tegamiの機能_2026-11-16.html#ai" class="mt-2 inline-block text-sm font-semibold text-forest-600 hover:underline dark:text-forest-300" data-i18n="more.ai">What your AI can do →</a>
     </div>
     <div>
       <h3 class="text-lg font-bold" data-i18n="p3.h">No one else can read them.</h3>
       <p class="mt-1.5 text-neutral-500 dark:text-neutral-400" data-i18n="p3.t">Messages are encrypted and saved right on your device. Even someone with access to Tegami's servers can't see them.</p>
-      <a href="Tegamiの仕組み案_2026-11-14.html" class="mt-2 inline-block text-sm font-semibold text-forest-600 hover:underline dark:text-forest-300" data-i18n="more.private">How we keep it private →</a>
+      <a href="Tegamiの仕組み案_2026-11-14.html" class="mt-2 inline-block text-sm font-semibold text-forest-600 hover:underline dark:text-forest-300" data-i18n="more.private">How it keeps you safe →</a>
     </div>
     <ul class="md:col-span-3 flex flex-wrap justify-center gap-x-6 gap-y-2 border-t border-neutral-200 pt-6 text-sm text-neutral-500 dark:border-night-line dark:text-neutral-400">
       <li><a href="https://github.com/tegami-chat/tegami" class="hover:text-neutral-900 hover:underline dark:hover:text-white" target="_blank" rel="noopener" data-i18n="proof.code">All code public (AGPL-3.0)</a></li>
@@ -167,136 +167,7 @@ tailwind.config = {
         <li class="flex items-center gap-2 rounded-xl bg-forest-600 px-4 py-3 font-medium text-white dark:bg-forest-950 dark:text-forest-300"><span aria-hidden="true">✓</span><span data-i18n="feat.vanish">Disappearing messages</span></li>
         <li class="flex items-center gap-2 rounded-xl bg-forest-600 px-4 py-3 font-medium text-white dark:bg-forest-950 dark:text-forest-300"><span aria-hidden="true">✓</span><span data-i18n="feat.export">Export your chats anytime</span></li>
       </ul>
-    </div>
-  </section>
-
-  <!-- What you can do with AI -->
-  <section id="ai" class="bg-paper py-20 dark:bg-paper-dark md:py-24">
-    <div class="mx-auto max-w-5xl px-4">
-      <h2 class="text-3xl font-bold sm:text-4xl" data-i18n="ai.h">AI, your way.</h2>
-      <div class="mt-10 grid gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
-        <div>
-          <h3 class="font-bold" data-i18n="ai.pick.h">Use the AI you like</h3>
-          <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="ai.pick.t">Claude, ChatGPT, Gemini, or one running on your own computer. Tegami never picks for you.</p>
-        </div>
-        <div>
-          <h3 class="font-bold" data-i18n="ai.talk.h">Talk with your AI</h3>
-          <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="ai.talk.t">Your AI sits in your chat list like a friend. Message it from anywhere, anytime.</p>
-        </div>
-        <div>
-          <h3 class="font-bold" data-i18n="ai.join.h">Bring AI into a chat</h3>
-          <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="ai.join.t">Invite an AI into a group to sum things up, look things up or take notes, with everyone's OK.</p>
-        </div>
-        <div>
-          <h3 class="font-bold" data-i18n="ai.each.h">Let AIs talk to each other</h3>
-          <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="ai.each.t">Your AI and a friend's AI can set up plans and swap details, when you both allow it.</p>
-        </div>
-        <div>
-          <h3 class="font-bold" data-i18n="ai.many.h">Use many AIs</h3>
-          <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="ai.many.t">Add as many AIs as you like, each with its own name, face and role.</p>
-        </div>
-        <div>
-          <h3 class="font-bold" data-i18n="ai.own.h">Make it your own</h3>
-          <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="ai.own.t">Build your own bots and automations with the API and MCP.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Make it yours -->
-  <section id="desk" class="bg-night py-20 text-neutral-100 md:py-24 dark:border-y dark:border-night-line dark:bg-[#0a0d0b]">
-    <div class="mx-auto max-w-5xl px-4">
-      <h2 class="text-3xl font-bold sm:text-4xl" data-i18n="mk.h">Make Tegami yours.</h2>
-      <p class="mt-3 max-w-xl text-neutral-400" data-i18n="mk.t">Your chats, your screen. Change how Tegami looks and works, plug in your own tools, and run it your way. Even a modified app can still talk with everyone on Tegami.</p>
-      <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div class="flex min-w-0 flex-col gap-2 rounded-2xl border border-night-line bg-night-card p-6">
-          <span class="self-start rounded-full bg-[#2b2140] px-2.5 text-xs text-nostr-300" data-i18n="next">Coming soon</span>
-          <h3 class="font-bold" data-i18n="mk.ui.h">Rebuild the screens</h3>
-          <p class="text-sm text-neutral-400" data-i18n="mk.ui.t">Change how Tegami looks and works, or have your AI build a screen just for you.</p>
-        </div>
-        <div class="flex min-w-0 flex-col gap-2 rounded-2xl border border-night-line bg-night-card p-6">
-          <span class="self-start rounded-full bg-[#2b2140] px-2.5 text-xs text-nostr-300" data-i18n="next">Coming soon</span>
-          <h3 class="font-bold" data-i18n="mk.share.h">Share what you make</h3>
-          <p class="text-sm text-neutral-400" data-i18n="mk.share.t">Screens and tools you build can be shared with others.</p>
-        </div>
-        <div class="flex min-w-0 flex-col gap-2 rounded-2xl border border-night-line bg-night-card p-6">
-          <span class="self-start rounded-full bg-forest-950 px-2.5 text-xs text-forest-300" data-i18n="now">Available</span>
-          <h3 class="font-bold" data-i18n="mk.bots.h">Plug in your AI and bots</h3>
-          <p class="text-sm text-neutral-400" data-i18n="mk.bots.t">Give an AI or bot on your computer its own Tegami account, and it chats like anyone else.</p>
-          <code class="overflow-x-auto whitespace-nowrap rounded-md bg-black/40 px-3 py-2 text-[13px] text-neutral-300">node agent.mjs init --name Claude</code>
-        </div>
-        <div class="flex min-w-0 flex-col gap-2 rounded-2xl border border-night-line bg-night-card p-6">
-          <span class="self-start rounded-full bg-[#2b2140] px-2.5 text-xs text-nostr-300" data-i18n="next">Coming soon</span>
-          <h3 class="font-bold" data-i18n="mk.api.h">API and MCP</h3>
-          <p class="text-sm text-neutral-400" data-i18n="mk.api.t">Read and send messages from your own programs and AI tools.</p>
-        </div>
-        <div class="flex min-w-0 flex-col gap-2 rounded-2xl border border-night-line bg-night-card p-6">
-          <span class="self-start rounded-full bg-[#2b2140] px-2.5 text-xs text-nostr-300" data-i18n="next">Coming soon</span>
-          <h3 class="font-bold" data-i18n="mk.relay.h">Run your own server</h3>
-          <p class="text-sm text-neutral-400" data-i18n="mk.relay.t">Companies, schools and communities can run their own private server for messages.</p>
-        </div>
-        <div class="flex min-w-0 flex-col gap-2 rounded-2xl border border-night-line bg-night-card p-6">
-          <span class="self-start rounded-full bg-forest-950 px-2.5 text-xs text-forest-300" data-i18n="open">Open source</span>
-          <h3 class="font-bold" data-i18n="mk.agpl.h">AGPL-3.0</h3>
-          <p class="text-sm text-neutral-400" data-i18n="mk.agpl.t">Anyone can read the code and fix it. Apps built from Tegami have to share their code, too.</p>
-        </div>
-      </div>
-      <a href="Tegamiの開発者向け_2026-11-16.html" class="mt-8 inline-block rounded-full border border-night-line px-6 py-2.5 text-sm font-semibold text-neutral-100 hover:bg-white/5" data-i18n="mk.dev">Read the developer docs →</a>
-    </div>
-  </section>
-
-  <!-- FAQ -->
-  <section id="faq" class="mx-auto max-w-3xl px-4 py-20 md:py-24">
-    <h2 class="text-3xl font-bold sm:text-4xl" data-i18n="faq.h">Questions people ask first.</h2>
-    <div class="mt-8 divide-y divide-neutral-200 border-y border-neutral-200 dark:divide-night-line dark:border-night-line">
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.free.q">Is it free? Who pays for it?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.free.a">Yes, it's free. Tegami is made by an independent developer in Japan, with no investors and no ads. For now the developer covers the costs, and later, people who use Tegami can chip in.</p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.read.q">Who can read my messages?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.read.a">Only you and the people you send them to. Messages are encrypted on your device, so not even Tegami can read them.</p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.phone.q">Do I need a phone number or email?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.phone.a">No. Just pick a name and start.</p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.devices.q">Which devices can I use?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.devices.a">Any web browser, on your phone or computer, today. Apps for iPhone, Android, Windows, Mac and Linux are on the way.</p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.friends.q">How do I add friends?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.friends.a">Send your invite link, or show your QR code. Your friends need Tegami too.</p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.lost.q">What if I lose my phone?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.lost.a">Make a recovery code in Settings, and you can bring your account back on a new device. Without it, no one, not even Tegami, can restore it.</p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.multi.q">Can I use it on my phone and computer at the same time?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.multi.a">Yes. Move your account to another device in a few taps, and use both at once.</p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.collect.q">What does Tegami collect?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.collect.a">Only totals, like how many messages were delivered in a week. No one's activity is tracked, and the weekly numbers are public on the <a href="Tegamiの稼働状況と利用統計案_2026-11-15.html" class="underline">status page</a>.</p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.ai.q">How do I connect my AI?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.ai.a">Today, run the small tegami-agent program on your computer and add it with its invite link. Your AI then shows up in your chat list. A setup where you just scan a QR code is on the way.</p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.spam.q">What about unwanted messages?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.spam.a">Messages from strangers land in a separate box, and you can block and report anyone.</p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.shutdown.q">What if Tegami shuts down?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.shutdown.a">The code is public, so anyone can keep it running. You can also export your chats anytime.</p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.dev.q">Where are the technical details?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.dev.a">On the <a href="Tegamiの開発者向け_2026-11-16.html" class="underline">developer page</a>: which parts of Nostr Tegami uses, what the relay can see, how keys are kept, and the full spec. The code is on <a href="https://github.com/tegami-chat/tegami" class="underline" target="_blank" rel="noopener">GitHub</a>.</p>
-      </details>
+      <p class="mt-8 text-center"><a href="Tegamiの機能_2026-11-16.html" class="inline-block rounded-full border border-neutral-300 px-6 py-2.5 text-sm font-semibold hover:bg-white dark:border-night-line dark:hover:bg-white/5" data-i18n="home.more">See all features, AI and more →</a></p>
     </div>
   </section>
 
@@ -370,6 +241,10 @@ tailwind.config = {
 // 下書きでは ?lang=jaで日本語にする。ブラウザの言葉で勝手に切り替えない（Googleの多言語サイトの指針）。
 // 公開する時は、英語をtegami.chat/、日本語をtegami.chat/ja/ の別のページに書き出し、hreflangで結ぶ。
 const JA = {
+  'fp.h': '機能',
+  'fp.t': 'メッセージアプリにあってほしい機能はすべて。そのうえで、自分のAIをつなぎ、Tegamiを自分仕様にできます。',
+  'fp.every': '毎日の機能',
+  'home.more': 'すべての機能とAIでできることを見る →',
   'proof.code': 'コードはすべて公開（AGPL-3.0）',
   'proof.stats': '利用統計を毎週公開',
   'proof.spec': '技術仕様を公開',
@@ -387,15 +262,15 @@ const JA = {
   'ft.privacy': 'プライバシーポリシー',
   'ft.how': '仕組み',
   'ft.status': '稼働状況',
-  'how.cta': '仕組みを見る',
+  'how.cta': '安全の仕組みを見る',
   'more.ai': 'AIでできること →',
-  'more.private': 'プライバシーを守る仕組み →',
+  'more.private': '安全の仕組みを見る →',
   'nav.desk': '自分仕様に',
   'nav.features': '機能',
   'nav.ai': 'AI',
   'nav.faq': 'よくある質問',
   'nav.open': 'はじめる',
-  'ft.tag': 'トークはあなたのもの。<br>AIは持ち込み自由。',
+  'ft.tag': 'トークはあなたのもの。<br>AIの持ち込み自由。',
   'ft.product': 'Tegami',
   'ft.community': 'コミュニティ',
   'ft.contact': 'お問い合わせ',
@@ -403,7 +278,7 @@ const JA = {
   'beta': 'ベータ版',
   'hero.kicker': '<span class="text-nostr-600 dark:text-nostr-300">Nostrで動く</span>、オープンソースのメッセージアプリ',
   'hero.h1a': 'トークは<br class="sm:hidden"><span class="text-forest-600 dark:text-forest-300">あなたのもの。</span>',
-  'hero.h1b': 'AIは<br class="sm:hidden"><span class="text-forest-600 dark:text-forest-300">持ち込み自由。</span>',
+  'hero.h1b': 'AIの<br class="sm:hidden"><span class="text-forest-600 dark:text-forest-300">持ち込み自由。</span>',
   'cta.browser': 'ブラウザで始める',
   'soon': '準備中',
   'p1.h': 'プラットフォームから自由に。',
@@ -493,7 +368,7 @@ const JA = {
   'ai.many.t': 'AIはいくつでも追加できます。それぞれに名前や顔、役割を設定できます。',
   'ai.own.h': '自分でカスタマイズする',
   'ai.own.t': 'APIとMCPで、自分だけのボットや自動化の仕組みを作れます。',
-  'end.h': 'トークはあなたのもの。<br>AIは持ち込み自由。',
+  'end.h': 'トークはあなたのもの。<br>AIの持ち込み自由。',
 };
 const EN = {};
 document.querySelectorAll('[data-i18n]').forEach((el) => { EN[el.dataset.i18n] ??= el.innerHTML; });

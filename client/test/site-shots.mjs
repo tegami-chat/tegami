@@ -11,7 +11,7 @@ import { chromium } from 'playwright-core';
 const OUT = resolve(process.argv[2] || 'site-shots');
 const BASE = process.argv[3] || 'http://127.0.0.1:8790';
 mkdirSync(OUT, { recursive: true });
-const PAGES = [['index', '/ja/'], ['how', '/ja/how'], ['developers', '/ja/developers'], ['index-en', '/']];
+const PAGES = [['index', '/ja/'], ['features', '/ja/features'], ['how', '/ja/how'], ['developers', '/ja/developers'], ['dev-protocol', '/ja/developers/protocol'], ['faq', '/ja/faq'], ['index-en', '/']];
 const browser = await chromium.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe' });
 for (const [w, tag] of [[390, 'phone'], [1280, 'pc']]) {
   const page = await browser.newPage({ viewport: { width: w, height: 900 }, colorScheme: 'light', deviceScaleFactor: 1 });
