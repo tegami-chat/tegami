@@ -3118,7 +3118,8 @@ async function main() {
 
         // テストB knows あおい and the AI. Before あおい marks it, the AI's owner is not known.
         await befriend(b, a);
-        await befriend(b, aiLink.replace('https://app.tegami.chat', ORIGIN));
+        // テストB calls the AI by a name of their own: the AI's own name shows as 元の名前.
+        await befriend(b, aiLink.replace('https://app.tegami.chat', ORIGIN).replace(/&n=[^&]*/, `&n=${encodeURIComponent('くろちゃん')}`));
         const bp = b.page;
         const info = async () => {
           await bp.goto(`${ORIGIN}/chat/${aiHex}`);
@@ -3130,7 +3131,8 @@ async function main() {
         await info();
         await waitText(bp, '持ち主：未確認');
         await bp.getByTestId('owner-unknown').waitFor();
-        await shot(bp, 'ai-owner-unknown', 'AIの友だちの画面。持ち主の署名が無い時');
+        await waitText(bp, '元の名前：クロード');
+        await shot(bp, 'ai-owner-unknown', 'AIの友だちの画面。持ち主の署名が無い時。自分で付けた呼び名の下に元の名前');
 
         // あおい marks it as their own AI: the app signs a card and hands it to the AI.
         await markMyAi(a, aiHex);
@@ -3142,12 +3144,18 @@ async function main() {
         await info();
         await waitText(bp, '持ち主：あおい');
         await bp.getByTestId('owner-signed').waitFor();
-        // What the AI says of itself: its own name and the model that wrote its last reply.
-        const self = await bp.getByTestId('ai-self').innerText();
-        assert(/AIの名前\s*クロード/.test(self) && /使っているサービス\s*Anthropic Claude/.test(self) && /動いているモデル\s*claude-opus-5-5/.test(self), `the AI's own info: ${self}`);
         await noText(bp, 'ビデオ通話', 0);
         await shot(bp, 'ai-owner-signed', 'AIの友だちの画面。持ち主の署名を確かめた時');
         await noText(bp, '持ち主：未確認', 500);
+        // The details: what the signature proves, apart from what the AI says of itself.
+        await button(bp, 'AIの詳しい情報').click();
+        await waitText(bp, 'あおいの鍵で署名されています。本名や本人確認の印ではありません。');
+        await waitText(bp, 'claude-opus-5-5');
+        const signed = await text(bp);
+        assert(signed.includes('署名で確かめた情報') && /持ち主\s*\S?\s*あおい/.test(signed) && signed.includes('あおいの鍵で署名されています。本名や本人確認の印ではありません。'), `the signed part: ${signed}`);
+        const self = signed;
+        assert(/AIの名前\s*クロード/.test(self) && /使っているサービス\s*Anthropic Claude/.test(self) && /動いているモデル\s*claude-opus-5-5/.test(self), `the AI's own info: ${self}`);
+        await shot(bp, 'ai-about', 'AIの詳しい情報の画面');
         // On あおい's own screen the AI is theirs: no owner line.
         await a.page.goto(`${ORIGIN}/chat/${aiHex}`);
         await button(a.page, 'メニュー').click();
@@ -3163,6 +3171,8 @@ async function main() {
         await info();
         await waitText(bp, '持ち主：未確認');
         await bp.getByTestId('owner-unknown').waitFor();
+        await button(bp, 'AIの詳しい情報').click();
+        await waitText(bp, '持ち主の署名がありません。');
         for (const u of [a, b]) await u.context.close();
       } finally {
         watch?.kill();

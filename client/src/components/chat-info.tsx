@@ -54,6 +54,9 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
   const isBlocked = !!peer && !group && blocked.includes(peer);
   const contact = contacts.find((x) => x.pubkey === peer);
   const canCall = supported && !group && !!contact && !contact.model && !isBlocked;
+  const openAbout = () => {
+    if (peer) router.push({ pathname: '/ai-about/[id]', params: { id: peer } } as unknown as Href);
+  };
   const displayName = peer
     ? group
       ? chatName(peer, contacts, groups)
@@ -127,8 +130,13 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
           <View style={s.profile}>
             <Avatar name={group ? '◎' : displayName} file={group ? groupInfo?.avatar : contact?.avatar} size={76} />
             <Text style={s.name}>{displayName}</Text>
-            {contact?.model ? <ModelTag model={contact.model} style={s.model} center /> : null}
-            <OwnerRow contact={contact} contacts={contacts} me={me} style={s.model} />
+            {contact?.self?.name && contact.self.name !== contact.name ? <Text style={s.model}>元の名前：{contact.self.name}</Text> : null}
+            {peer && contact && (contact.model || isMyAi(contact)) ? (
+              <Pressable role="button" onPress={openAbout} style={{ gap: 4, alignItems: 'center' }}>
+                {contact.model ? <ModelTag model={contact.model} style={s.model} center /> : null}
+                <OwnerRow contact={contact} contacts={contacts} me={me} style={s.model} />
+              </Pressable>
+            ) : null}
           </View>
 
           {!group && peer && (
@@ -293,20 +301,11 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
           )}
 
           {peer && !group && contact && (contact.model || isMyAi(contact)) && (
-            <View testID="ai-self" style={s.card}>
-              <Text style={s.sectionHeading}>AIが自分で伝えている情報</Text>
-              {[
-                ['AIの名前', contact.self?.name],
-                ['使っているサービス', contact.model],
-                ['動いているモデル', contact.self?.running],
-              ].map(([label, value], i) => (
-                <View key={label} style={[s.infoRow, i > 0 && s.rowBorder]}>
-                  <Text style={s.infoLabel}>{label}</Text>
-                  <Text style={[s.infoValue, !value && { color: c.muted }]} numberOfLines={1}>
-                    {value || 'まだ届いていません'}
-                  </Text>
-                </View>
-              ))}
+            <View style={s.card}>
+              <Pressable role="button" aria-label="AIの詳しい情報" style={s.linkRow} onPress={openAbout}>
+                <Text style={s.linkText}>AIの詳しい情報</Text>
+                <MaterialIcons name="chevron-right" size={22} color={c.muted} />
+              </Pressable>
             </View>
           )}
 
@@ -636,9 +635,6 @@ const styles = (c: Palette) =>
       fontSize: 16,
       color: c.text,
     },
-    infoRow: { minHeight: 44, paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
-    infoLabel: { fontSize: 15, color: c.muted },
-    infoValue: { flex: 1, fontSize: 15, color: c.text, textAlign: 'right' },
     editRow: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 8 },
     input: { flex: 1, fontSize: 16, color: c.text, paddingHorizontal: 8, minHeight: 44 },
     smallButton: { backgroundColor: c.accent, borderRadius: 999, paddingHorizontal: 18, minHeight: 44, justifyContent: 'center' },
