@@ -65,7 +65,7 @@ tailwind.config = {
     <li data-i18n="pv.scope.4">The iPhone and Android apps, once released</li>
   </ul>
 
-  <p data-i18n="pv.scope.p">Relays and apps that other people run with Tegami's open-source code are not covered. Neither is an AI friend you run on your own computer.</p>
+  <p data-i18n="pv.scope.p">Relays and apps that other people run with Tegami's open-source code are not covered. Neither is an AI friend you run on your own computer, nor how the AI service it uses handles information. What the official app passes to your AI friend is described in section 7.</p>
 
   <h2 data-i18n="pv.cant.h">2. What the operator can't see</h2>
 
@@ -135,11 +135,31 @@ tailwind.config = {
   <p data-i18n="pv.call.p4">In a call that connects directly, the other person can see your IP address. If you turn on "Always relay calls" in settings, the other person cannot see your IP address. When this setting is on and no relay server is available, the call does not connect.</p>
   <p data-i18n="pv.call.p5">If you set your own relay server under "Your own server" in settings, your device does not use Cloudflare's servers to find a path for the call or to relay it. The server you set receives the IP addresses of both devices and similar information. If the other person uses Tegami's server, their side of the call may still pass your IP address to Cloudflare. The signals that ring and set up a call go through the relay as encrypted envelopes, like messages. The server's address, username and password are stored only on that device.</p>
 
-  <h2 data-i18n="pv.ai.h">7. AI friends</h2>
+  <h2 data-i18n="pv.ai.h">7. What we pass to your AI friends</h2>
 
   <p data-i18n="pv.ai.p1">An AI friend is a program you run on your own computer. Messages with it also pass through the relay in encrypted envelopes.</p>
 
-  <p data-i18n="pv.ai.p2">Messages you let the AI read are sent to the AI service you use and handled under that service's terms. Tegami's encryption no longer protects them.</p>
+  <p data-i18n="pv.ai.p2">The official Tegami app passes the following to your AI friend only when you allow it in the AI permission settings. All AI permissions are off by default.</p>
+
+  <ul>
+    <li data-i18n="pv.ai.1">Reply drafts: up to the 30 most recent text messages in one 1:1 chat with a friend, including your own (each cut to 2,000 characters). Photos, videos, files, voice messages and calls are not passed</li>
+    <li data-i18n="pv.ai.2">Your friend list: your friends' names and public keys. Other people's AIs and people you have blocked are not included</li>
+    <li data-i18n="pv.ai.3">Chats you invite an AI into: messages in that chat or group, only while everyone in it has agreed</li>
+  </ul>
+
+  <p data-i18n="pv.ai.p3">This information is encrypted for your own AI friend's public key. The envelopes for reply drafts and the friend list are deleted from the relay after 10 minutes. The operator cannot see what is passed.</p>
+
+  <p data-i18n="pv.ai.p4">The official app does not pass the following to AI friends:</p>
+
+  <ul>
+    <li data-i18n="pv.ai.n1">Messages from people who are not your friends</li>
+    <li data-i18n="pv.ai.n2">Messages from people who have chosen not to let other people's AIs read what they write</li>
+    <li data-i18n="pv.ai.n3">Messages marked "Don't let AI read"</li>
+  </ul>
+
+  <p data-i18n="pv.ai.p5">What your AI friend receives is saved on the computer it runs on, and may be sent to the AI service you use (such as Anthropic, OpenAI or Google). From there, it is handled under your agreement with that service and that service's privacy policy. If you use a model that runs on your own computer, it is not sent outside your computer. The operator is not involved in how that computer or the AI service handles the information. Once sent, the messages are no longer protected by Tegami's encryption.</p>
+
+  <p data-i18n="pv.ai.p6">Apps modified from Tegami's code may not follow the rules in this section. If the other person uses a modified app, your messages may reach their AI even if you have chosen not to let AI read them. Nothing can stop a recipient from copying a message by hand.</p>
 
   <h2 data-i18n="pv.never.h">8. What we never do</h2>
 
@@ -290,7 +310,7 @@ const JA = {
   'pv.scope.2': 'app.tegami.chat（ブラウザ版のアプリ）',
   'pv.scope.3': 'relay.tegami.chat（リレー）',
   'pv.scope.4': '今後公開するiPhone版とAndroid版のアプリ',
-  'pv.scope.p': '本サービスのオープンソースのコードを使って第三者が運営するリレーやアプリ、および利用者が自分のパソコンで動かすAIの友だちは、本ポリシーの対象外です。',
+  'pv.scope.p': '本サービスのオープンソースのコードを使って第三者が運営するリレーやアプリは、本ポリシーの対象外です。利用者が自分のパソコンで動かすAIの友だちと、AIの友だちが利用するAIサービスでの情報の取扱いも、本ポリシーの対象外です。本サービスの公式のアプリがAIの友だちへ渡す情報については、7で定めます。',
   'pv.cant.h': '2. 運営者が閲覧できない情報',
   'pv.cant.p': 'メッセージは利用者の端末で暗号化されてから送信されます。復号に必要な鍵は、送信者と受信者の端末にのみ保存されます。そのため、運営者は次の情報を閲覧できません。',
   'pv.cant.1': 'メッセージの本文',
@@ -388,9 +408,19 @@ const JA = {
   'pv.call.p3': '中継サーバーには、両方の端末のIPアドレス、通話の日時、データ量が伝わります。リレーは、中継サーバーを利用するための一時的な認証情報をアプリに渡すだけで、誰に渡したかを記録しません。運営者がCloudflareから受け取るのは、時間帯とCloudflareのデータセンターごとのデータ量の集計だけで、通話ごとの記録やIPアドレスは受け取りません。Cloudflareでの保存期間は、<a href="https://www.cloudflare.com/privacypolicy/">Cloudflareのプライバシーポリシー</a>に従います。',
   'pv.call.p4': '直接つながる通話では、通話の相手に利用者のIPアドレスが伝わります。設定の「通話を常に中継する」を有効にすると、相手にIPアドレスが伝わりません。この設定を有効にしている場合、中継サーバーを利用できないときは、通話をつなぎません。',
   'pv.call.p5': '設定の「自分のサーバー」で利用者自身の中継サーバーを指定した場合、利用者の端末は、通話の経路の確立と中継にCloudflareのサーバーを使いません。指定したサーバーには、両方の端末のIPアドレスなどが伝わります。相手がTegamiのサーバーを使っている場合は、相手側の中継によって、利用者のIPアドレスがCloudflareに伝わることがあります。呼び出しの合図は、メッセージと同じく暗号化された封筒としてリレーを経由します。指定したサーバーのアドレス、ユーザー名、パスワードは、その端末にのみ保存されます。',
-  'pv.ai.h': '7. AIの友だち',
+  'pv.ai.h': '7. AIの友だちへ渡す情報',
   'pv.ai.p1': 'AIの友だちは、利用者が自分のパソコンで動かすプログラムです。AIの友だちとのメッセージも、暗号化された封筒としてリレーを経由します。',
-  'pv.ai.p2': 'AIに読み取らせたメッセージは、利用者が利用するAIサービスに送信され、そのサービスの規約に従って取り扱われます。送信後のメッセージは、本サービスの暗号化による保護の対象外となります。',
+  'pv.ai.p2': '本サービスの公式のアプリは、利用者がAIの権限の設定で許可した場合に限り、次の情報をAIの友だちへ渡します。AIの権限は、初期設定ではすべて無効です。',
+  'pv.ai.1': '返信の下書き：友だちとの1対1のトークの文字のメッセージのうち、新しいものから30通まで（利用者自身のメッセージを含みます。1通あたり2,000文字まで）。写真、動画、ファイル、音声メッセージ、通話は渡しません',
+  'pv.ai.2': '友だちの一覧：友だちの名前と公開鍵。ほかの人のAIと、ブロックした相手は含みません',
+  'pv.ai.3': 'AIを呼んだトークとグループ：そのトークのメッセージ。参加者全員が同意している間に限ります',
+  'pv.ai.p3': '渡す情報は、利用者自身のAIの友だちの公開鍵宛てに暗号化します。返信の下書きと友だちの一覧を渡す封筒は、10分でリレーから削除されます。運営者は、渡した情報の中身を閲覧できません。',
+  'pv.ai.p4': '本サービスの公式のアプリは、次のメッセージをAIの友だちへ渡しません。',
+  'pv.ai.n1': '友だちではない人からのメッセージ',
+  'pv.ai.n2': '「自分の文を相手のAIに読ませない」を選んでいる人のメッセージ',
+  'pv.ai.n3': '「AIに読ませない」の印が付いたメッセージ',
+  'pv.ai.p5': 'AIの友だちが受け取った情報は、AIの友だちが動くパソコンに保存され、利用者が利用するAIサービス（Anthropic、OpenAI、Googleなど）に送信されることがあります。送信された情報は、利用者とAIサービスとの間の契約と、AIサービスのプライバシーポリシーに従って取り扱われます。利用者のパソコンで動くモデルを使う場合は、パソコンの外へ送信されません。運営者は、AIの友だちが動くパソコンとAIサービスでの情報の取扱いに関与しません。送信後のメッセージは、本サービスの暗号化による保護の対象外となります。',
+  'pv.ai.p6': '本サービスのコードを改造したアプリは、本節の定めに従わないことがあります。相手が改造したアプリを使っている場合、「自分の文を相手のAIに読ませない」を選んでいても、利用者のメッセージが相手のAIへ渡ることがあります。また、受信者が手作業でメッセージを書き写すことは防げません。',
   'pv.never.h': '8. 運営者が行わないこと',
   'pv.never.1': '個人情報の販売',
   'pv.never.2': '広告の表示',
