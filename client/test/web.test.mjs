@@ -3124,6 +3124,7 @@ async function main() {
       await waitText(p, 'ほかの人のAI');
       await waitText(p, '名乗っているモデル：Anthropic Claude');
       assert(!(await text(p)).includes('AI友だち'), 'a friend with only a model name is listed as my AI');
+      await p.getByText('ほかの人のAI', { exact: true }).scrollIntoViewIfNeeded();
       await shot(p, 'ai-other-ais', 'AIの権限：自分のAIではないAIは「ほかの人のAI」に分ける');
 
       await markMyAi(a, ai.hex, 'ai-mark-mine');
