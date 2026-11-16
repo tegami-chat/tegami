@@ -1,12 +1,36 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router, type Href } from 'expo-router';
+import { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { AiSwitches } from '@/components/ai-switches';
+import { AiSwitches, modelLine } from '@/components/ai-switches';
 import { Avatar } from '@/components/avatar';
 import { Palette, usePalette } from '@/constants/theme';
-import { AI_ACTIONS, FRIEND_ACTIONS, READ_ONLY, setAiSwitches, stopAllAi, switchValue, useAiPermissions, type AiPermissions } from '@/lib/ai-permissions';
-import { useTegami } from '@/lib/tegami';
+import {
+  AI_ACTIONS,
+  AI_LIMIT_KEYS,
+  FRIEND_ACTIONS,
+  LIMIT_MAX,
+  LIMIT_MIN,
+  READ_ONLY,
+  aiLimits,
+  aiStageAllows,
+  setAiLimit,
+  setAiSwitches,
+  switchValue,
+  useAiPermissions,
+  type AiLimits,
+  type AiPermissions,
+} from '@/lib/ai-permissions';
+import { openChat } from '@/lib/layout';
+import { isMyAi, useTegami } from '@/lib/tegami';
+
+const LIMIT_LABEL: Record<keyof AiLimits, string> = {
+  minute: '1分間に送れる数',
+  chat: '同じトークに続けて送れる数',
+  day: '1日に送れる数',
+};
+
 
 function onCount(p: AiPermissions, id: string) {
   return FRIEND_ACTIONS.filter((a) => switchValue(p, { layer: 'friend', id }, a)).length;
@@ -16,10 +40,14 @@ export default function AiPermissionsScreen() {
   const c = usePalette();
   const s = styles(c);
   const p = useAiPermissions();
-  const { contacts } = useTegami();
-  const ais = contacts.filter((x) => x.model);
-  const friends = contacts.filter((x) => !x.model);
-  const models = [...new Set(ais.map((x) => x.model as string))].sort();
+  const { contacts, stopAi, seenAiWidened } = useTegami();
+  // Only my own AIs (the mark set by pairing or chosen in the AI's screen) get switches here.
+  const ais = contacts.filter(isMyAi);
+  const otherAis = contacts.filter((x) => x.model && !isMyAi(x));
+  const friends = contacts.filter((x) => !x.model && !isMyAi(x));
+  const limits = aiLimits(p);
+  useEffect(() => seenAiWidened(), [seenAiWidened]);
+  const models = [...new Set(ais.filter((x) => x.model).map((x) => x.model as string))].sort();
   const anyOn = AI_ACTIONS.some((a) => switchValue(p, { layer: 'all' }, a));
   const readOnly = AI_ACTIONS.every((a) => switchValue(p, { layer: 'all' }, a) === READ_ONLY[a]);
 
@@ -36,7 +64,7 @@ export default function AiPermissionsScreen() {
         </Pressable>
       )}
       {anyOn && (
-        <Pressable style={s.card} onPress={stopAllAi} role="button">
+        <Pressable style={s.card} onPress={() => void stopAi()} role="button">
           <Text style={s.danger}>すべてオフにする</Text>
         </Pressable>
       )}
@@ -52,8 +80,62 @@ export default function AiPermissionsScreen() {
                   <Text style={s.label} numberOfLines={1}>
                     {x.name}
                   </Text>
+                  {x.model ? (
+                    <Text style={s.sub} numberOfLines={1}>
+                      {modelLine(x.model)}
+                    </Text>
+                  ) : null}
+                </View>
+                <MaterialIcons name="chevron-right" size={22} color={c.muted} />
+              </Pressable>
+            ))}
+          </View>
+        </>
+      )}
+
+      {aiStageAllows('autosend') && (
+        <>
+          <Text style={s.heading}>確認なしで送る量の上限</Text>
+          <View style={s.list}>
+            {AI_LIMIT_KEYS.map((key, i) => (
+              <View key={key} style={[s.row, i > 0 && s.border]}>
+                <Text style={s.label}>{LIMIT_LABEL[key]}</Text>
+                <Pressable
+                  role="button"
+                  aria-label={`${LIMIT_LABEL[key]}を減らす`}
+                  disabled={limits[key] <= LIMIT_MIN}
+                  onPress={() => setAiLimit(key, limits[key] - 1)}
+                  style={[s.step, limits[key] <= LIMIT_MIN && s.stepOff]}>
+                  <MaterialIcons name="remove" size={20} color={c.text} />
+                </Pressable>
+                <Text style={s.count} testID={`ai-limit-${key}`}>{`${limits[key]}通`}</Text>
+                <Pressable
+                  role="button"
+                  aria-label={`${LIMIT_LABEL[key]}を増やす`}
+                  disabled={limits[key] >= LIMIT_MAX[key]}
+                  onPress={() => setAiLimit(key, limits[key] + 1)}
+                  style={[s.step, limits[key] >= LIMIT_MAX[key] && s.stepOff]}>
+                  <MaterialIcons name="add" size={20} color={c.text} />
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
+
+      {otherAis.length > 0 && (
+        <>
+          <Text style={s.heading}>ほかの人のAI</Text>
+          <View style={s.list}>
+            {otherAis.map((x, i) => (
+              <Pressable key={x.pubkey} style={[s.row, i > 0 && s.border]} onPress={() => openChat(x.pubkey)} role="button">
+                <Avatar name={x.name} file={x.avatar} size={36} />
+                <View style={s.rowText}>
+                  <Text style={s.label} numberOfLines={1}>
+                    {x.name}
+                  </Text>
                   <Text style={s.sub} numberOfLines={1}>
-                    {x.model}
+                    {modelLine(x.model as string)}
                   </Text>
                 </View>
                 <MaterialIcons name="chevron-right" size={22} color={c.muted} />
@@ -125,4 +207,7 @@ const styles = (c: Palette) =>
     sub: { fontSize: 13, color: c.muted },
     danger: { fontSize: 15, color: c.danger, fontWeight: '600' },
     action: { fontSize: 15, color: c.accent, fontWeight: '600' },
+    step: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: c.line, alignItems: 'center', justifyContent: 'center' },
+    stepOff: { opacity: 0.35 },
+    count: { fontSize: 16, color: c.text, minWidth: 56, textAlign: 'center' },
   });

@@ -1,3 +1,4 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { openChat, type PressState } from '@/lib/layout';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -67,6 +68,12 @@ export function ChatRow({
           {last && <Text style={s.time}>{time(last.at)}</Text>}
         </View>
         <View style={s.bottom}>
+          {last?.ai ? (
+            <View style={s.aiMark} aria-label="AIが書いた" testID="ai-written">
+              <MaterialIcons name="smart-toy" size={14} color={c.muted} />
+              <Text style={s.aiMarkText}>AI</Text>
+            </View>
+          ) : null}
           <Text style={s.preview} numberOfLines={1}>
             {last
               ? last.file
@@ -106,6 +113,8 @@ const styles = (c: Palette) =>
     time: { fontSize: 13, color: c.muted },
     bottom: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
     preview: { flex: 1, fontSize: 14, color: c.muted },
+    aiMark: { flexDirection: 'row', alignItems: 'center', gap: 2, borderWidth: 1, borderColor: c.line, borderRadius: 6, paddingHorizontal: 4 },
+    aiMarkText: { fontSize: 11, color: c.muted, fontWeight: '600' },
     badge: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' },
     badgeText: { fontSize: 12, lineHeight: 16, color: c.onAccent, fontWeight: '700' },
   });

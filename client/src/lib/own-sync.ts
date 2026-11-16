@@ -22,7 +22,7 @@
 //   no admin signed. The ledger carries only the old NIP-17 groups (id = the members' keys).
 // - the AI log: it records what happened on one device.
 
-import { AI_ACTIONS, cleanAiPermissions, type AiPermissions } from './ai-permissions';
+import { AI_ACTIONS, AI_LIMIT_KEYS, clampLimit, cleanAiPermissions, type AiLimits, type AiPermissions } from './ai-permissions';
 import type { Contact, Group } from './tegami';
 
 /** Rumor kind for my ledger, sent to my own key (Tegami's own kind, like 10100 and 10101). */
@@ -53,7 +53,9 @@ const validGroupId = (id: string) => id.split(',').length >= 2 && id.split(',').
 /** The current values of one section, as ledger keys and plain values. */
 export function flatten(section: Section, lists: AccountLists): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  if (section === 'c') for (const c of lists.contacts) out[`c:${c.pubkey}`] = c.model ? { n: c.name, m: c.model } : { n: c.name };
+  // y: the contact is my own AI (lib/tegami.tsx setMyAi). Only a mark I made counts, never a model name.
+  if (section === 'c')
+    for (const c of lists.contacts) out[`c:${c.pubkey}`] = { n: c.name, ...(c.model ? { m: c.model } : {}), ...(c.mine ? { y: 1 } : {}) };
   if (section === 'g') for (const g of lists.groups) if (!isTegamiGroup(g)) out[`g:${g.id}`] = { n: g.name };
   if (section === 'b') for (const p of lists.blocked) out[`b:${p}`] = 1;
   if (section === 'a') {
@@ -62,6 +64,7 @@ export function flatten(section: Section, lists: AccountLists): Record<string, u
     for (const field of ['models', 'ais', 'friends'] as const)
       for (const [id, sw] of Object.entries(ai[field])) for (const [a, v] of Object.entries(sw)) out[`a:${JSON.stringify([field, id, a])}`] = v;
     for (const [id, v] of Object.entries(ai.peerAis)) out[`a:${JSON.stringify(['peerAis', id])}`] = v;
+    for (const [key, v] of Object.entries(ai.limits ?? {})) out[`a:${JSON.stringify(['limits', key])}`] = v;
   }
   return out;
 }
@@ -128,12 +131,13 @@ export function materialize(ledger: Ledger, current: AccountLists): AccountLists
     Object.entries(ledger)
       .filter(([key, e]) => key.startsWith(prefix) && e.v !== undefined)
       .sort((x, y) => x[1].at - y[1].at);
-  const contactValues = new Map(live('c:').map(([key, e]) => [key.slice(2), e.v as { n: string; m?: string }]));
+  const contactValues = new Map(live('c:').map(([key, e]) => [key.slice(2), e.v as { n: string; m?: string; y?: 1 }]));
   const contacts: Contact[] = [];
-  const contactOf = (pubkey: string, v: { n: string; m?: string }, avatar?: Contact['avatar']): Contact => ({
+  const contactOf = (pubkey: string, v: { n: string; m?: string; y?: 1 }, avatar?: Contact['avatar']): Contact => ({
     pubkey,
     name: v.n,
     ...(v.m ? { model: v.m } : {}),
+    ...(v.y === 1 ? { mine: true as const } : {}),
     ...(avatar ? { avatar } : {}),
   });
   for (const c of current.contacts) {
@@ -163,12 +167,13 @@ export function materialize(ledger: Ledger, current: AccountLists): AccountLists
   const blocked = [...current.blocked.filter((p) => blockedSet.has(p))];
   for (const p of blockedSet) if (!blocked.includes(p)) blocked.push(p);
 
-  const raw: Record<string, Record<string, unknown>> & { all: Record<string, unknown>; peerAis: Record<string, unknown> } = {
+  const raw: Record<string, Record<string, unknown>> & { all: Record<string, unknown>; peerAis: Record<string, unknown>; limits: Record<string, unknown> } = {
     all: {},
     models: {},
     ais: {},
     friends: {},
     peerAis: {},
+    limits: {},
   };
   for (const [key, e] of live('a:')) {
     let path: unknown;
@@ -180,6 +185,7 @@ export function materialize(ledger: Ledger, current: AccountLists): AccountLists
     if (!Array.isArray(path)) continue;
     if (path[0] === 'all' && path.length === 2) raw.all[path[1]] = e.v;
     else if (path[0] === 'peerAis' && path.length === 2) raw.peerAis[path[1]] = e.v;
+    else if (path[0] === 'limits' && path.length === 2) raw.limits[path[1]] = e.v;
     else if (['models', 'ais', 'friends'].includes(path[0]) && path.length === 3) {
       const table = raw[path[0]] as Record<string, Record<string, unknown>>;
       (table[path[1]] ??= {})[path[2]] = e.v;
@@ -208,10 +214,10 @@ export function cleanEntries(raw: unknown): Ledger {
 function cleanValue(key: string, v: unknown): unknown {
   const id = key.slice(2);
   if (key.startsWith('c:')) {
-    const c = v as { n?: unknown; m?: unknown };
+    const c = v as { n?: unknown; m?: unknown; y?: unknown };
     if (!HEX.test(id) || !c || typeof c.n !== 'string') return undefined;
     const name = c.n.slice(0, 40);
-    return typeof c.m === 'string' && c.m ? { n: name, m: c.m.slice(0, 80) } : { n: name };
+    return { n: name, ...(typeof c.m === 'string' && c.m ? { m: c.m.slice(0, 80) } : {}), ...(c.y === 1 ? { y: 1 } : {}) };
   }
   if (key.startsWith('g:')) {
     const g = v as { n?: unknown };
@@ -227,6 +233,12 @@ function cleanValue(key: string, v: unknown): unknown {
       return undefined;
     }
     if (!Array.isArray(path) || !path.every((p) => typeof p === 'string')) return undefined;
+    if (path[0] === 'limits') {
+      const key = path[1] as keyof AiLimits;
+      return path.length === 2 && (AI_LIMIT_KEYS as readonly string[]).includes(key) && typeof v === 'number' && Number.isFinite(v)
+        ? clampLimit(key, v)
+        : undefined;
+    }
     const action = path[path.length - 1];
     if (path[0] !== 'peerAis' && !(AI_ACTIONS as readonly string[]).includes(action)) return undefined;
     // Let the AI settings' own check decide which values are valid.

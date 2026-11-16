@@ -40,6 +40,39 @@ export const FRIEND_ACTIONS: readonly AiAction[] = ['read', 'draft', 'send', 'au
 const NEEDS: Partial<Record<AiAction, AiAction>> = { autosend: 'send' };
 
 /**
+ * What AI can do is opened in stages, the least risky first:
+ *   1  read: the friend list, reading a chat, reply drafts
+ *   2  sending in my name after I press 送る
+ *   3  sending without asking, talking to other people's AIs, AI in a group
+ * The app works up to AI_STAGE: an action of a later stage is refused by the gate (and
+ * logged with the reason 'stage') whatever the switches say. The stage is set in the code,
+ * not on screen; a build for tests may raise it with EXPO_PUBLIC_TEGAMI_AI_STAGE.
+ */
+export const AI_STAGE_OF: Record<AiAction | 'group', 1 | 2 | 3> = { contacts: 1, read: 1, draft: 1, send: 2, autosend: 3, otherAi: 3, group: 3 };
+const stageEnv = Number(process.env.EXPO_PUBLIC_TEGAMI_AI_STAGE);
+export const AI_STAGE: number = stageEnv >= 1 && stageEnv <= 3 ? Math.floor(stageEnv) : 2;
+/** Whether this app does an action (or AI in a group) at all at its stage. */
+export const aiStageAllows = (a: AiAction | 'group', stage = AI_STAGE) => AI_STAGE_OF[a] <= stage;
+
+/**
+ * How many messages an AI may send in my name without asking (philosophy: an AI once sent
+ * more than 500 messages to its owner's family). The user can change the numbers but not
+ * turn a limit off: every limit stays between LIMIT_MIN and LIMIT_MAX.
+ *   minute: in one minute, to anyone
+ *   chat:   in a row in one chat, with no message from a person in between
+ *   day:    in 24 hours, to anyone
+ */
+export type AiLimits = { minute: number; chat: number; day: number };
+export const AI_LIMIT_KEYS = ['minute', 'chat', 'day'] as const;
+export const DEFAULT_AI_LIMITS: AiLimits = { minute: 5, chat: 20, day: 100 };
+export const LIMIT_MIN = 1;
+export const LIMIT_MAX: AiLimits = { minute: 60, chat: 200, day: 1000 };
+export const clampLimit = (key: keyof AiLimits, n: unknown) => {
+  const v = Math.floor(Number(n));
+  return Number.isFinite(v) ? Math.min(LIMIT_MAX[key], Math.max(LIMIT_MIN, v)) : DEFAULT_AI_LIMITS[key];
+};
+
+/**
  * One switch. false or missing: off. true: on. 'ask': on, but the user answers each time
  * in the confirm window. { until }: on until that time (seconds), then off again.
  */
@@ -55,6 +88,8 @@ export type AiPermissions = {
    * The first time asks once in the confirm window; the answer is kept for a while.
    */
   peerAis: Record<string, { until: number }>;
+  /** Limits on sending without asking; a missing key is its default (DEFAULT_AI_LIMITS). */
+  limits?: Partial<AiLimits>;
 };
 
 /** What an AI was given to read: how many messages, from when to when (unix seconds). */
@@ -93,7 +128,11 @@ export type Layer =
   /** Photos, videos, files, voice and money: always asked before an AI sends them without asking. */
   | 'always'
   /** My AI has not talked to this person's AI before (or the permission ran out). */
-  | 'firstPeer';
+  | 'firstPeer'
+  /** This version of the app does not do the action yet (AI_STAGE). */
+  | 'stage'
+  /** Sending without asking reached a limit (AiLimits); the message waits for 送る instead. */
+  | 'limit';
 
 const EMPTY: AiPermissions = { all: {}, models: {}, ais: {}, friends: {}, peerAis: {} };
 const LOG_MAX = 1000;
@@ -158,7 +197,87 @@ export function cleanAiPermissions(raw: unknown): AiPermissions {
       const v = cleanValue(g);
       if (id.length <= 200 && v && typeof v === 'object') peerAis[id] = v;
     }
-  return { all: switches(r.all), models: table(r.models), ais: table(r.ais), friends: table(r.friends), peerAis };
+  const limits: Partial<AiLimits> = {};
+  if (r.limits && typeof r.limits === 'object' && !Array.isArray(r.limits))
+    for (const key of AI_LIMIT_KEYS) {
+      const v = (r.limits as Record<string, unknown>)[key];
+      if (typeof v === 'number' && Number.isFinite(v)) limits[key] = clampLimit(key, v);
+    }
+  return {
+    all: switches(r.all),
+    models: table(r.models),
+    ais: table(r.ais),
+    friends: table(r.friends),
+    peerAis,
+    ...(Object.keys(limits).length ? { limits } : {}),
+  };
+}
+
+/** The limits in force: the user's numbers, never off, never 0. */
+export function aiLimits(p: AiPermissions): AiLimits {
+  const out = { ...DEFAULT_AI_LIMITS };
+  for (const key of AI_LIMIT_KEYS) if (p.limits?.[key] !== undefined) out[key] = clampLimit(key, p.limits[key]);
+  return out;
+}
+
+/** Sets one limit (kept between LIMIT_MIN and LIMIT_MAX). */
+export function setAiLimit(key: keyof AiLimits, n: number) {
+  const p = getAiPermissions();
+  put({ ...p, limits: { ...p.limits, [key]: clampLimit(key, n) } });
+}
+
+/** One message an AI sent in my name: when, and to which chat. */
+export type AiSent = { at: number; to: string };
+
+/**
+ * Which limit sending one more message to `to` would pass, or null. `sent` is what AIs sent
+ * in my name on this device; `inARow` is how many messages at the end of that chat an AI
+ * wrote in my name, with no message from a person after them.
+ */
+export function overAiLimit(p: AiPermissions, sent: AiSent[], inARow: number, at = now()): keyof AiLimits | null {
+  const l = aiLimits(p);
+  if (sent.filter((x) => at - x.at < 60).length >= l.minute) return 'minute';
+  if (inARow >= l.chat) return 'chat';
+  if (sent.filter((x) => at - x.at < 86400).length >= l.day) return 'day';
+  return null;
+}
+
+export function loadAiSent(at = now()): AiSent[] {
+  return load<AiSent[]>(k('ai.sent'), []).filter((x) => x && at - x.at < 86400);
+}
+export function recordAiSent(to: string, at = now()) {
+  save(k('ai.sent'), [...loadAiSent(at), { at, to }].slice(-2000));
+}
+
+/**
+ * Whether `next` lets AIs do more than `prev` (settings that came from my other device):
+ * a switch went from off to ask or on, or from ask to on, an AI's or a model's switch that was
+ * off now follows the layer above, a time limit got longer, another person's AI was allowed,
+ * or a limit on sending went up.
+ */
+export function aiWidened(prev: AiPermissions, next: AiPermissions, at = now()): boolean {
+  // How much a switch allows: its level, then how long it stays on.
+  const rank = (v: SwitchValue | undefined, follows: boolean): [number, number] => {
+    if (v === undefined) return follows ? [2, Infinity] : [0, 0];
+    const l = level(v, at);
+    if (l !== 2) return [l, 0];
+    return [2, typeof v === 'object' ? v.until : Infinity];
+  };
+  const more = (a: SwitchValue | undefined, b: SwitchValue | undefined, follows: boolean) => {
+    const [la, ua] = rank(a, follows);
+    const [lb, ub] = rank(b, follows);
+    return lb > la || (lb === la && ub > ua);
+  };
+  for (const act of AI_ACTIONS) if (more(prev.all[act], next.all[act], false)) return true;
+  for (const field of ['models', 'ais', 'friends'] as const) {
+    const ids = new Set([...Object.keys(prev[field]), ...Object.keys(next[field])]);
+    for (const id of ids)
+      for (const act of AI_ACTIONS) if (more(prev[field][id]?.[act], next[field][id]?.[act], field !== 'friends')) return true;
+  }
+  for (const [id, g] of Object.entries(next.peerAis)) if (g.until > at && g.until > (prev.peerAis[id]?.until ?? 0)) return true;
+  const a = aiLimits(prev);
+  const b = aiLimits(next);
+  return AI_LIMIT_KEYS.some((key) => b[key] > a[key]);
 }
 
 /** Replaces every switch at once (an account moved or restored from another device). The log stays. */
@@ -250,14 +369,21 @@ export type AiRequest = {
   range?: AiRange;
 };
 
+/** A web address in a text: http(s)://, www., or a bare domain with a common ending. */
+const LINK = /https?:\/\/|www\.|\b[a-z0-9-]+\.(com|net|org|jp|io|co|app|chat|me|ly|gl|xyz|info|biz|link|site|top|dev|page|shop)\b/;
+
 const MONEY = ['振込', '振り込', '送金', '入金', '支払', '払って', '払う', '返金', '請求', '口座', '暗号資産', '仮想通貨', 'ビットコイン', 'ギフトカード', 'カード番号', '暗証番号', 'bitcoin', 'sats', 'lightning', 'paypay'];
 
-/** Photos, videos, files, voice and money: an AI never sends them without the user seeing them first. */
+/**
+ * Photos, videos, files, voice, links and what looks like money: an AI never sends them
+ * without the user seeing them first. Money is found by words and amounts only, so the screen
+ * says "お金の話に見える文" and never promises every money talk is caught.
+ */
 export function needsConfirm(content?: AiContent): boolean {
   if (!content) return false;
   if (content.kind !== 'text') return true;
   const t = (content.text ?? '').normalize?.('NFKC').toLowerCase() ?? '';
-  return MONEY.some((w) => t.includes(w)) || /[¥$€]\s*\d|\d[\d,.]*\s*(円|万|ドル|ユーロ|元|yen|usd|btc)/.test(t);
+  return LINK.test(t) || MONEY.some((w) => t.includes(w)) || /[¥$€]\s*\d|\d[\d,.]*\s*(円|万|ドル|ユーロ|元|yen|usd|btc)/.test(t);
 }
 
 export type AiDecision = { verdict: 'allow' | 'ask' | 'deny'; by?: Layer };
@@ -267,12 +393,13 @@ export type AiDecision = { verdict: 'allow' | 'ask' | 'deny'; by?: Layer };
  * (strangers are always refused). Every layer must allow the action, and the strictest
  * layer wins: a lower layer can narrow "on" to "ask each time" but never widen.
  */
-export function decideAi(p: AiPermissions, r: AiRequest, isFriend: (pubkey: string) => boolean, at = now()): AiDecision {
+export function decideAi(p: AiPermissions, r: AiRequest, isFriend: (pubkey: string) => boolean, at = now(), stage = AI_STAGE): AiDecision {
   const a = r.action;
+  if (!aiStageAllows(a, stage)) return { verdict: 'deny', by: 'stage' };
   let lv = level(p.all[a], at);
   if (lv === 0) return { verdict: 'deny', by: ranOut(p.all[a], at) ? 'expired' : 'all' };
   const needs = NEEDS[a];
-  if (needs && decideAi(p, { ...r, action: needs }, isFriend, at).verdict === 'deny') return { verdict: 'deny', by: 'needs' };
+  if (needs && decideAi(p, { ...r, action: needs }, isFriend, at, stage).verdict === 'deny') return { verdict: 'deny', by: 'needs' };
   const narrow = (v: SwitchValue | undefined, layer: Layer): AiDecision | null => {
     if (v === undefined) return null;
     const l = level(v, at);
@@ -486,8 +613,19 @@ export function removePeerAi(ai: string, peer: string) {
   put({ ...p, peerAis: rest });
 }
 
-/** Turns every "all AI" switch off at once, which stops every AI whatever the lower layers say. */
-export function stopAllAi() {
+/**
+ * Turns every "all AI" switch off at once, which stops every AI whatever the lower layers say,
+ * and takes back every permission my AIs had to talk to other people's AIs. Returns those
+ * permissions as [my AI, their AI] pairs, so the app can tell each AI (lib/tegami.tsx stopAi).
+ */
+export function stopAllAi(): [string, string][] {
   const p = getAiPermissions();
-  put({ ...p, all: Object.fromEntries(AI_ACTIONS.map((a) => [a, false])) });
+  const taken = Object.keys(p.peerAis).map((key) => key.split('>') as [string, string]);
+  put({ ...p, all: Object.fromEntries(AI_ACTIONS.map((a) => [a, false])), peerAis: {} });
+  return taken;
+}
+
+/** Logs a request stopped outside decideAi (a limit on sending, AI in a group at this stage). */
+export function logAiStop(r: AiRequest, by: Layer) {
+  logRequest(r, false, by);
 }

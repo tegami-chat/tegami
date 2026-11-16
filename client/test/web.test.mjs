@@ -223,6 +223,21 @@ async function befriend(u, other) {
   await button(u.page, '追加').click();
   await u.page.getByPlaceholder('メッセージ').waitFor();
 }
+/** u marks a friend as their own AI: the switch 自分のAI in the chat's info, and its confirm. */
+async function markMyAi(u, hex, shotName) {
+  await u.page.goto(`${ORIGIN}/chat/${hex}`);
+  await button(u.page, 'メニュー').click();
+  await u.page.getByRole('switch', { name: '自分のAI', exact: true }).click();
+  await waitText(u.page, 'を自分のAIにしますか？');
+  if (shotName) await shot(u.page, shotName, '自分のAIにする前の確認');
+  await button(u.page, '自分のAIにする').click();
+  await u.page.waitForFunction((h) => JSON.parse(localStorage.getItem('tegami.contacts') || '[]').some((c) => c.pubkey === h && c.mine), hex, { timeout: 10000 });
+}
+/** u adds an AI by its invite link and marks it as their own AI. */
+async function befriendMyAi(u, link) {
+  await befriend(u, link);
+  await markMyAi(u, nip19.decode(link.match(/npub1[0-9a-z]+/)[0]).data);
+}
 const pcState = (page) => page.evaluate(() => window.__pcs.map((p) => p.connectionState));
 async function waitConnected(page) {
   try {
@@ -407,6 +422,9 @@ async function main() {
       EXPO_PUBLIC_TEGAMI_FILES: `http://localhost:${RELAY_PORT}`,
       EXPO_PUBLIC_TURNSTILE_SITEKEY: '',
       EXPO_PUBLIC_TEGAMI_TEST_HOOKS: '1',
+      // Every AI stage open, so the tests reach sending without asking, other AIs and AI in a
+      // group (the app itself works at stage 2: lib/ai-permissions.ts AI_STAGE).
+      EXPO_PUBLIC_TEGAMI_AI_STAGE: '3',
       EXPO_PUBLIC_TEGAMI_FEEDBACK: FEEDBACK_HEX,
     });
   }
@@ -1845,7 +1863,7 @@ async function main() {
         const u = await newUser(browser);
         await u.page.goto(aiLink.replace('https://app.tegami.chat', ORIGIN));
         await button(u.page, 'はじめる').click();
-        await waitText(u.page, 'AI：Anthropic Claude');
+        await waitText(u.page, '名乗っているモデル：Anthropic Claude');
         // My link carries my invite code once the relay has answered: the AI registers with it.
         await u.page.waitForFunction(() => /&c=[a-z2-9]+/.test(document.body.innerText), null, { timeout: 10000 });
         const myLink = (await text(u.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
@@ -1889,7 +1907,22 @@ async function main() {
         assert((await u.page.evaluate((l) => window.inviteFromQr(l), aiLink)) === aiLink, 'the QR code scan refused the pairing link');
         // My link carries my invite code once the relay has answered: the AI registers with it.
         await u.page.waitForFunction(() => /&c=[a-z2-9]+/.test(document.body.innerText), null, { timeout: 10000 });
-        await befriend(u, aiLink);
+        // A pasted pairing link starts with 自分のAIとしてつなぐ off: the person turns it on.
+        await u.page.goto(ORIGIN + '/add');
+        await waitText(u.page, 'マイQRコード');
+        await u.page.getByPlaceholder('https://app.tegami.chat/i#npub…').fill(aiLink);
+        const asMine = u.page.getByRole('switch', { name: '自分のAIとしてつなぐ', exact: true });
+        await asMine.waitFor();
+        assert(!(await asMine.isChecked()), 'a pasted pairing link starts as my AI');
+        await asMine.click();
+        await shot(u.page, 'ai-pair-add', 'QRコードでつなぐ時。自分のAIとしてつなぐ');
+        await button(u.page, '追加').click();
+        await u.page.getByPlaceholder('メッセージ').waitFor();
+        const aiHex = nip19.decode(aiLink.match(/npub1[0-9a-z]+/)[0]).data;
+        assert(
+          await u.page.evaluate((h) => JSON.parse(localStorage.getItem('tegami.contacts') || '[]').some((c) => c.pubkey === h && c.mine), aiHex),
+          'pairing did not mark the AI as mine',
+        );
         await waitOut('Paired with わたし');
         await waitOut('Registered with the Tegami relay');
         assert((await exited) === 0, 'pair did not finish');
@@ -2469,7 +2502,7 @@ async function main() {
       await befriend(a, b);
       const aiKey = generateSecretKey();
       const aiLink = `${ORIGIN}/i#${nip19.npubEncode(getPublicKey(aiKey))}&n=${encodeURIComponent('クロード')}&m=${encodeURIComponent('Anthropic Claude')}`;
-      await befriend(a, aiLink);
+      await befriendMyAi(a, aiLink);
       const p = a.page;
       const perms = () => p.evaluate(() => JSON.parse(localStorage.getItem('tegami.ai.permissions') || 'null'));
       const sw = (name) => p.getByRole('switch', { name, exact: true });
@@ -2540,7 +2573,7 @@ async function main() {
       await befriend(a, b);
       const aiKey = generateSecretKey();
       const aiHex = getPublicKey(aiKey);
-      await befriend(a, `${ORIGIN}/i#${nip19.npubEncode(aiHex)}&n=${encodeURIComponent('クロード')}&m=${encodeURIComponent('Anthropic Claude')}`);
+      await befriendMyAi(a, `${ORIGIN}/i#${nip19.npubEncode(aiHex)}&n=${encodeURIComponent('クロード')}&m=${encodeURIComponent('Anthropic Claude')}`);
       const p = a.page;
       const perms = () => p.evaluate(() => JSON.parse(localStorage.getItem('tegami.ai.permissions') || 'null'));
       const sw = (name) => p.getByRole('switch', { name, exact: true });
@@ -2657,7 +2690,7 @@ async function main() {
       const b = await person(browser, 'テストB');
       await befriend(a, b);
       const aiLink = `${ORIGIN}/i#${nip19.npubEncode(getPublicKey(generateSecretKey()))}&n=${encodeURIComponent('クロード')}&m=${encodeURIComponent('Anthropic Claude')}`;
-      await befriend(a, aiLink);
+      await befriendMyAi(a, aiLink);
       const p = a.page;
       const perms = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('tegami.ai.permissions') || 'null'));
       // The same settings, whatever order the switches were turned in.
@@ -2753,7 +2786,7 @@ async function main() {
         const p = a.page;
         const aiLink = cli('init', '--name', 'クロード', '--model', 'Anthropic Claude').match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
         const aiHex = nip19.decode(aiLink.match(/npub1[0-9a-z]+/)[0]).data;
-        await befriend(a, aiLink.replace('https://app.tegami.chat', ORIGIN));
+        await befriendMyAi(a, aiLink.replace('https://app.tegami.chat', ORIGIN));
         await p.goto(ORIGIN + '/add');
         await p.waitForFunction(() => /&c=[a-z2-9]+/.test(document.body.innerText), null, { timeout: 10000 });
         cli('add', (await text(p)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0], '--name', 'あおい', '--trust');
@@ -2906,11 +2939,12 @@ async function main() {
 
     // ---------- AI friends acting through the gate (lib/ai-actions.ts) ----------
     // A stand-in AI: its own key, asking its owner's app the way tegami-agent does.
-    const fakeAi = async (owner, name = 'クロード', model = 'Anthropic Claude') => {
+    const fakeAi = async (owner, name = 'クロード', model = 'Anthropic Claude', mine = true) => {
       const sk = generateSecretKey();
       const hex = getPublicKey(sk);
       await devTrust(sk);
-      await befriend(owner, `${ORIGIN}/i#${nip19.npubEncode(hex)}&n=${encodeURIComponent(name)}&m=${encodeURIComponent(model)}`);
+      const link = `${ORIGIN}/i#${nip19.npubEncode(hex)}&n=${encodeURIComponent(name)}&m=${encodeURIComponent(model)}`;
+      await (mine ? befriendMyAi(owner, link) : befriend(owner, link));
       /** Sends one ask to the owner's app (expires like the app's own asks). Returns its id. */
       const ask = async (kind, data, from = sk) => {
         const now = Math.floor(Date.now() / 1000);
@@ -3069,6 +3103,155 @@ async function main() {
       await inboxOf(ai.sk, (rs) => rs.some((r) => r.kind === 25067 && !JSON.parse(r.content).re && JSON.parse(r.content).peer === other && JSON.parse(r.content).until === 0));
       await noText(p, 'テストCのAI', 500);
       await a.context.close();
+    });
+
+    await test('Only my own AI may ask: a friend with only a model name is refused, the AI screen keeps it apart; marking it lets it ask', async () => {
+      const a = await person(browser, 'あおい');
+      const b = await person(browser, 'テストB');
+      await befriend(b, a);
+      await befriend(a, b);
+      const ai = await fakeAi(a, 'なのるAI', 'Anthropic Claude', false);
+      const p = a.page;
+      await setPerms(p, { all: { contacts: true, send: true }, friends: { [b.hex]: { send: true } } });
+      await p.goto(ORIGIN + '/');
+      await ai.ask(25064, {});
+      await ai.ask(25062, { to: b.hex, text: 'モデル名だけの相手' });
+      await p.waitForTimeout(3000);
+      assert(!(await inboxOf(ai.sk)).some((r) => r.kind === 25065 || r.kind === 25063), 'a friend with only a model name was answered');
+      assert((await p.getByTestId('ai-proposal').count()) === 0, 'an ask from a friend with only a model name was shown');
+
+      await p.goto(ORIGIN + '/ai');
+      await waitText(p, 'ほかの人のAI');
+      await waitText(p, '名乗っているモデル：Anthropic Claude');
+      assert(!(await text(p)).includes('AI友だち'), 'a friend with only a model name is listed as my AI');
+      await shot(p, 'ai-other-ais', 'AIの権限：自分のAIではないAIは「ほかの人のAI」に分ける');
+
+      await markMyAi(a, ai.hex, 'ai-mark-mine');
+      await shot(p, 'ai-mark-mine-on', 'トークの相手の画面：自分のAIのスイッチ');
+      const id = await ai.ask(25064, {});
+      const list = (await ai.answer(25065, id)).friends;
+      assert(JSON.stringify(list) === JSON.stringify([{ pubkey: b.hex, name: 'テストB' }]), `the friend list after marking: ${JSON.stringify(list)}`);
+      await p.goto(ORIGIN + '/ai');
+      await waitText(p, 'AI友だち');
+      await noText(p, 'ほかの人のAI', 500);
+      for (const u of [a, b]) await u.context.close();
+    });
+
+    await test('すべてオフにする: my AIs are told to stop, permissions to talk to other AIs are taken back; a switch on again tells them to go on', async () => {
+      const a = await person(browser, 'あおい');
+      const ai = await fakeAi(a);
+      const p = a.page;
+      const other = getPublicKey(generateSecretKey());
+      await setPerms(p, { all: { read: true, otherAi: true }, peerAis: { [`${ai.hex}>${other}`]: { until: Math.floor(Date.now() / 1000) + 86400 } } });
+      await p.goto(ORIGIN + '/ai');
+      await button(p, 'すべてオフにする').click();
+      const content = (r) => JSON.parse(r.content);
+      const got = await inboxOf(ai.sk, (rs) => rs.some((r) => r.kind === 25069) && rs.some((r) => r.kind === 25067 && content(r).peer === other && content(r).until === 0));
+      const stop = got.filter((r) => r.kind === 25069).pop();
+      assert(content(stop).v === 1 && content(stop).stop === true && typeof content(stop).at === 'number', `the stop signal: ${stop.content}`);
+      assert(stop.tags.some((t) => t[0] === 'p' && t[1] === ai.hex), 'the stop signal is not for the AI');
+      const perms = await p.evaluate(() => JSON.parse(localStorage.getItem('tegami.ai.permissions')));
+      assert(Object.keys(perms.peerAis).length === 0, 'a permission to talk to another AI was kept');
+      assert(Object.values(perms.all).every((v) => v === false), 'a switch stayed on');
+
+      await p.getByRole('switch', { name: 'トークを読む', exact: true }).click();
+      await inboxOf(ai.sk, (rs) => rs.some((r) => r.kind === 25069 && content(r).stop === false));
+      await a.context.close();
+    });
+
+    await test('Limits on sending without asking: over the limit the message waits for 送る; the list marks what an AI sent', async () => {
+      const a = await person(browser, 'あおい');
+      const b = await person(browser, 'テストB');
+      await befriend(b, a);
+      await befriend(a, b);
+      const ai = await fakeAi(a);
+      const p = a.page;
+      await setPerms(p, { all: { send: true, autosend: true }, friends: { [b.hex]: { send: true, autosend: true } } });
+      await p.goto(ORIGIN + '/ai');
+      await waitText(p, '確認なしで送る量の上限');
+      for (let i = 0; i < 18; i++) await button(p, '同じトークに続けて送れる数を減らす').click();
+      assert((await p.getByTestId('ai-limit-chat').innerText()) === '2通', 'the limit did not go down to 2');
+      // The limit per minute goes down to 1, never to 0.
+      for (let i = 0; i < 4; i++) await button(p, '1分間に送れる数を減らす').click();
+      assert(await button(p, '1分間に送れる数を減らす').isDisabled(), 'the limit per minute can go below 1');
+      assert((await p.getByTestId('ai-limit-minute').innerText()) === '1通', 'the limit per minute is not 1');
+      for (let i = 0; i < 4; i++) await button(p, '1分間に送れる数を増やす').click();
+      assert((await p.getByTestId('ai-limit-minute').innerText()) === '5通', 'the limit per minute did not go back up');
+      await shot(p, 'ai-limits', 'AIの権限：確認なしで送る量の上限');
+
+      await p.goto(ORIGIN + '/');
+      for (const t of ['一通目', '二通目']) {
+        const id = await ai.ask(25062, { to: b.hex, text: t });
+        assert((await ai.answer(25063, id)).status === 'sent', `${t} was not sent without asking`);
+      }
+      const id = await ai.ask(25062, { to: b.hex, text: '三通目' });
+      const third = await ai.answer(25063, id);
+      assert(third.status === 'waiting' && third.reason === 'limit', `the third: ${JSON.stringify(third)}`);
+      await p.getByTestId('ai-proposal').waitFor({ timeout: 15000 });
+      await p.waitForTimeout(1000);
+      assert(!(await storedTexts(b.page)).includes('三通目'), 'sent over the limit');
+      await p.getByTestId('ai-written').first().waitFor({ timeout: 10000 });
+      await shot(p, 'ai-written-list', 'トーク一覧：AIが自分の名前で送ったメッセージに印');
+      await p.goto(ORIGIN + '/ai/log');
+      await waitText(p, '送る量の上限に達したため');
+      for (const u of [a, b]) await u.context.close();
+    });
+
+    await test('Two of my devices: one more AI permission on one is told on the other; the same AI ask is sent once', async () => {
+      const a = await person(browser, 'あおい');
+      const b = await person(browser, 'テストB');
+      await befriend(b, a);
+      await befriend(a, b);
+      const ai = await fakeAi(a);
+      await a.page.goto(ORIGIN + '/settings');
+      await waitText(a.page, '別の端末でも使う');
+      await a.page.getByText('別の端末でも使う').click();
+      await waitText(a.page, 'まで使えます');
+      const moveLink = (await text(a.page)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)?.[0];
+      const a2 = await newUser(browser, { prf: false });
+      await a2.page.goto(moveLink);
+      await button(a2.page, 'この端末で使う').click();
+      await button(a2.page, 'パスキーを使わずに始める').click();
+      await waitOpen(a2.page);
+      await a2.page.waitForFunction((h) => JSON.parse(localStorage.getItem('tegami.contacts') || '[]').some((c) => c.pubkey === h && c.mine), ai.hex, { timeout: 15000 });
+
+      // A turns a switch on: A2 says so in one line on the list, until the AI screen is opened.
+      await a.page.goto(ORIGIN + '/ai');
+      await a.page.getByRole('switch', { name: 'トークを読む', exact: true }).click();
+      await a2.page.goto(ORIGIN + '/');
+      await a2.page.getByTestId('ai-widened').waitFor({ timeout: 20000 });
+      await waitText(a2.page, 'ほかの端末でAIの権限が広がりました');
+      await shot(a2.page, 'ai-widened', 'トーク一覧：ほかの端末でAIの権限が広がった時の1行');
+      await a2.page.getByTestId('ai-widened').click();
+      await waitText(a2.page, 'AIの使用');
+      await a2.page.goto(ORIGIN + '/');
+      await waitText(a2.page, 'テストB');
+      assert((await a2.page.getByTestId('ai-widened').count()) === 0, 'the line stayed after opening the AI screen');
+      // Narrowing is not told.
+      await a.page.getByRole('switch', { name: 'トークを読む', exact: true }).click();
+      await a2.page.waitForFunction(() => !JSON.parse(localStorage.getItem('tegami.ai.permissions') || '{}').all?.read, null, { timeout: 15000 });
+      await a2.page.waitForTimeout(500);
+      assert((await a2.page.getByTestId('ai-widened').count()) === 0, 'narrowing was told as widening');
+
+      // Both devices handle the same ask without asking: テストB gets the message once.
+      for (const u of [a, a2]) await setPerms(u.page, { all: { send: true, autosend: true }, friends: { [b.hex]: { send: true, autosend: true } } });
+      await a.page.goto(ORIGIN + '/');
+      await a2.page.goto(ORIGIN + '/');
+      await ai.ask(25062, { to: b.hex, text: '二台で一通' });
+      await b.page.goto(`${ORIGIN}/chat/${a.hex}`);
+      await waitText(b.page, '二台で一通');
+      await b.page.waitForTimeout(3000);
+      assert((await storedTexts(b.page)).filter((t) => t === '二台で一通').length === 1, 'the same AI ask reached テストB twice');
+      // Sending after checking: pressing 送る on one device takes the waiting message off the other.
+      for (const u of [a, a2]) await setPerms(u.page, { all: { autosend: false }, friends: { [b.hex]: { autosend: false } } });
+      await ai.ask(25062, { to: b.hex, text: '片方で送る' });
+      await a.page.getByTestId('ai-proposal').waitFor({ timeout: 15000 });
+      await a2.page.getByTestId('ai-proposal').waitFor({ timeout: 15000 });
+      await button(a.page, '送る').click();
+      await a2.page.waitForFunction(() => !document.querySelector('[data-testid="ai-proposal"]'), null, { timeout: 15000 });
+      await b.page.waitForTimeout(2000);
+      assert((await storedTexts(b.page)).filter((t) => t === '片方で送る').length === 1, 'the waiting message reached テストB twice');
+      for (const u of [a, a2, b]) await u.context.close();
     });
 
     await test('AI in a group: invited by its owner, it gets the group only while every member says yes', async () => {

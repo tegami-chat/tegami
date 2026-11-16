@@ -11,14 +11,14 @@ import { FileAttachment, Photo, PhotoViewer, Stamp, Video, VideoViewer, Voice } 
 import { ReportSheet } from '@/components/report-sheet';
 import { Palette, usePalette } from '@/constants/theme';
 import { AI_DRAFT_MESSAGES, markReadNoticeSeen, mayDraft, readNoticeSeen } from '@/lib/ai-draft';
-import { useAiPermissions } from '@/lib/ai-permissions';
+import { aiStageAllows, useAiPermissions } from '@/lib/ai-permissions';
 import { aiApproved, everyoneIn, myAiMayRead } from '@/lib/ai-actions';
 import { useCall } from '@/lib/calls';
 import { cautionFor } from '@/lib/caution';
 import { isFeedback } from '@/lib/feedback';
 import { MAX_FILE_BYTES } from '@/lib/files';
 import { INFO_BESIDE_MIN, useWide, type PressState } from '@/lib/layout';
-import { AiConfirmNeededError, AiNotAllowedError, chatName, clock, isGroup, personName, useTegami, type Message, type Stamp as StampItem } from '@/lib/tegami';
+import { AiConfirmNeededError, AiNotAllowedError, chatName, clock, isGroup, isMyAi, isPerson, personName, useTegami, type Message, type Stamp as StampItem } from '@/lib/tegami';
 
 const SEND_ERROR = '送れませんでした。もう一度送ってください';
 const VOICE_MAX_MS = 5 * 60 * 1000;
@@ -185,13 +185,13 @@ export default function Chat() {
   const thread = useMemo(() => messages.filter((m) => m.peer === peer).reverse(), [messages, peer]);
   // AI friends allowed to read this chat and draft a reply. Only a 1:1 chat with a person.
   const draftAis = useMemo(() => {
-    if (!peer || group || !contact || contact.model || isBlocked) return [];
-    const isFriend = (pk: string) => contacts.some((x) => x.pubkey === pk && !x.model) && !blocked.includes(pk);
-    return contacts.filter((x) => x.model && mayDraft(aiPermissions, x, peer, isFriend));
+    if (!peer || group || !contact || !isPerson(contact) || isBlocked) return [];
+    const isFriend = (pk: string) => contacts.some((x) => x.pubkey === pk && isPerson(x)) && !blocked.includes(pk);
+    return contacts.filter((x) => isMyAi(x) && mayDraft(aiPermissions, x, peer, isFriend));
   }, [peer, group, contact, isBlocked, contacts, blocked, aiPermissions]);
   // AIs invited into this group, or called into this 1:1 chat (lib/ai-actions.ts), and my AI
   // friends I could invite. Every member (in a 1:1 chat: the other person) must say yes.
-  const withPerson = group || (!!contact && !contact.model && !isBlocked);
+  const withPerson = group || (!!contact && isPerson(contact) && !isBlocked);
   const groupAis = useMemo(() => {
     if (!peer || !withPerson || !me) return [];
     // A Tegami group (g-<gid>) is agreed with by the people in it now.
@@ -211,7 +211,8 @@ export default function Chat() {
   const invitableAis = useMemo(() => {
     if (!withPerson) return [];
     return contacts.filter(
-      (x) => x.model && myAiMayRead(aiPermissions, x) && !groupAis.some((g) => g.ai === x.pubkey && !g.refused),
+      // AI in a group (or called into a 1:1 chat) is a later stage (AI_STAGE).
+      (x) => aiStageAllows('group') && isMyAi(x) && myAiMayRead(aiPermissions, x) && !groupAis.some((g) => g.ai === x.pubkey && !g.refused),
     );
   }, [withPerson, contacts, aiPermissions, groupAis]);
   const byId = useMemo(() => new Map(thread.map((m, i) => [m.id, i])), [thread]);

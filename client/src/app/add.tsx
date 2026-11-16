@@ -3,8 +3,9 @@ import { router } from 'expo-router';
 import jsQR from 'jsqr';
 import makeQr from 'qrcode-generator';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
+import { modelLine } from '@/components/ai-switches';
 import { Avatar } from '@/components/avatar';
 import { Palette, usePalette } from '@/constants/theme';
 import { pairCodeOf } from '@/lib/ai-pair';
@@ -94,6 +95,10 @@ export default function Add() {
   const [name, setName] = useState(inviteName(opened));
   const [cameraError, setCameraError] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
+  // A link with a one-time pairing code (tegami-agent pair) makes the AI my own AI, which may
+  // ask this app for things in my name. On only when I read the QR code on my own computer
+  // with the camera or a picture of it; a link that was pasted or opened starts off.
+  const [asMine, setAsMine] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const peer = parsePubkey(invite);
@@ -128,6 +133,7 @@ export default function Add() {
 
   function changeInvite(text: string) {
     setInvite(text);
+    setAsMine(false);
     const n = inviteName(text);
     if (n && !name.trim()) setName(n);
   }
@@ -140,7 +146,7 @@ export default function Add() {
     if (code && registration === 'ok' && !trusted) void registerWith({ invite: code });
     // An AI on my computer showed a one-time code: tell it I am its owner (lib/ai-pair.ts).
     const pair = pairCodeOf(invite);
-    if (pair) void pairAi(peer, pair, myInvite).catch(() => {});
+    if (pair && asMine) void pairAi(peer, pair, myInvite).catch(() => {});
     router.replace({ pathname: '/chat/[peer]', params: { peer } });
   }
 
@@ -152,6 +158,7 @@ export default function Add() {
     }
     keepInviteCode(inviteCodeOf(link));
     setInvite(link);
+    setAsMine(!!pairCodeOf(link));
     const n = inviteName(link);
     if (n) setName(n);
     setScanError(null);
@@ -365,7 +372,23 @@ export default function Add() {
             placeholderTextColor={c.muted}
             onSubmitEditing={add}
           />
-          {peer && model ? <Text style={s.model}>AI：{model}</Text> : null}
+          {peer && model ? <Text style={s.model}>{modelLine(model)}</Text> : null}
+          {peer && pairCodeOf(invite) ? (
+            <View style={s.mineRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.mineLabel}>自分のAIとしてつなぐ</Text>
+                <Text style={s.model}>自分のPCに出たQRコードの時だけオンにしてください</Text>
+              </View>
+              <Switch
+                trackColor={{ false: c.line, true: c.accent }}
+                thumbColor="#ffffff"
+                {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}
+                value={asMine}
+                onValueChange={setAsMine}
+                aria-label="自分のAIとしてつなぐ"
+              />
+            </View>
+          ) : null}
           <Pressable style={[s.primary, !canAdd && s.disabled]} onPress={add} disabled={!canAdd} role="button">
             <Text style={s.primaryText}>{known ? '名前を変える' : '追加'}</Text>
           </Pressable>
@@ -475,6 +498,8 @@ const styles = (c: Palette) =>
     },
     error: { fontSize: 13, color: c.danger, textAlign: 'center' },
     model: { fontSize: 14, color: c.muted },
+    mineRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
+    mineLabel: { fontSize: 16, color: c.text },
     primary: {
       minHeight: 44,
       backgroundColor: c.accent,

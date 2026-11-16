@@ -23,6 +23,8 @@ globalThis.localStorage = {
   removeItem: (k) => store.delete(k),
 };
 
+// Most tests here check the gate with every stage open; the stage itself is tested at the end.
+process.env.EXPO_PUBLIC_TEGAMI_AI_STAGE = '3';
 const P = await import('../src/lib/ai-permissions.ts');
 const { checkAi, gateAi, setAiSwitch, getAiPermissions, stopAllAi } = P;
 
@@ -278,6 +280,78 @@ test('the first version of the settings (only true and false) keeps its meaning'
   P.replaceAiPermissions({ all: { read: true, send: false }, friends: { [TEST_B]: { read: true } } });
   assert.equal(at({ action: 'read', friend: TEST_B }), null);
   assert.equal(at({ action: 'send', friend: TEST_B }), 'all');
+});
+
+test('"stop all AI" also takes back every permission to talk to other AIs, and says which', () => {
+  reset();
+  P.replaceAiPermissions({ all: { otherAi: true }, peerAis: { [`${AI}>${PEER}`]: { until: NOW + 999999999 }, [`${AI2}>${TEST_B}`]: { until: NOW + 999999999 } } });
+  const taken = stopAllAi();
+  assert.deepEqual(taken.sort(), [[AI, PEER], [AI2, TEST_B]].sort());
+  assert.deepEqual(getAiPermissions().peerAis, {});
+  assert.deepEqual(stopAllAi(), []);
+});
+
+test('stages: at stage 2, sending without asking, other AIs and AI in a group are refused whatever the switches say', () => {
+  reset();
+  P.replaceAiPermissions({ all: { send: true, autosend: true, otherAi: true, read: true }, friends: { [TEST_B]: { send: true, autosend: true, read: true } } });
+  const d = (r, stage) => P.decideAi(getAiPermissions(), { ai: AI, model: MODEL, ...r }, isFriend, NOW, stage);
+  assert.deepEqual(d({ action: 'autosend', friend: TEST_B, content: { kind: 'text', text: 'こんにちは' } }, 2), { verdict: 'deny', by: 'stage' });
+  assert.deepEqual(d({ action: 'otherAi', peer: { pubkey: PEER } }, 2), { verdict: 'deny', by: 'stage' });
+  assert.equal(d({ action: 'send', friend: TEST_B }, 2).verdict, 'allow');
+  assert.equal(d({ action: 'read', friend: TEST_B }, 2).verdict, 'allow');
+  assert.equal(d({ action: 'send', friend: TEST_B }, 1).by, 'stage');
+  assert.equal(d({ action: 'autosend', friend: TEST_B, content: { kind: 'text', text: 'こんにちは' } }, 3).verdict, 'allow');
+  assert.equal(P.aiStageAllows('group', 2), false);
+  assert.equal(P.aiStageAllows('group', 3), true);
+  assert.equal(P.AI_STAGE_OF.autosend, 3);
+});
+
+test('links always ask, like money (only what looks like money: words and amounts)', () => {
+  reset();
+  P.replaceAiPermissions({ all: { send: true, autosend: true }, friends: { [TEST_B]: { send: true, autosend: true } } });
+  const send = (text) => at({ action: 'autosend', friend: TEST_B, content: { kind: 'text', text } });
+  for (const text of ['ここ見て https://example.com/x', 'www.example.jp', 'bit.ly/abc を開いて', 'Example.COM にログイン']) assert.equal(send(text), 'always', text);
+  assert.equal(send('3.14は円周率'), null);
+  assert.equal(send('ok. done'), null);
+});
+
+test('limits on sending without asking: per minute, in a row in one chat, per day; changeable, never off', () => {
+  reset();
+  const p = () => getAiPermissions();
+  assert.deepEqual(P.aiLimits(p()), { minute: 5, chat: 20, day: 100 });
+  const sent = (n, ago = 0) => Array.from({ length: n }, (_, i) => ({ at: NOW - ago - i, to: TEST_B }));
+  assert.equal(P.overAiLimit(p(), sent(4), 0, NOW), null);
+  assert.equal(P.overAiLimit(p(), sent(5), 0, NOW), 'minute');
+  assert.equal(P.overAiLimit(p(), sent(5, 61), 0, NOW), null);
+  assert.equal(P.overAiLimit(p(), [], 20, NOW), 'chat');
+  assert.equal(P.overAiLimit(p(), [], 19, NOW), null);
+  assert.equal(P.overAiLimit(p(), sent(100, 120), 0, NOW), 'day');
+  assert.equal(P.overAiLimit(p(), sent(100, 86400), 0, NOW), null);
+  P.setAiLimit('minute', 0);
+  assert.equal(P.aiLimits(p()).minute, 1, 'a limit cannot be 0');
+  P.setAiLimit('day', 1e9);
+  assert.equal(P.aiLimits(p()).day, 1000, 'a limit cannot be taken off');
+  P.setAiLimit('chat', 3);
+  assert.equal(P.overAiLimit(p(), [], 3, NOW), 'chat');
+  // From outside: broken values fall back, out-of-range ones are kept in range.
+  const clean = P.cleanAiPermissions({ limits: { minute: -5, chat: 'x', day: 50, fly: 3 } });
+  assert.deepEqual(clean.limits, { minute: 1, day: 50 });
+  assert.deepEqual(P.aiLimits(clean), { minute: 1, chat: 20, day: 50 });
+});
+
+test('widened: what my other device let AIs do more is noticed; narrowing is not', () => {
+  const base = P.cleanAiPermissions({ all: { read: true, send: 'ask' }, ais: { [AI]: { read: false } }, friends: { [TEST_B]: { read: { until: NOW + 60 } } } });
+  const w = (next) => P.aiWidened(base, P.cleanAiPermissions(next), NOW);
+  assert.equal(w({ all: { read: true, send: 'ask' }, ais: { [AI]: { read: false } }, friends: { [TEST_B]: { read: { until: NOW + 60 } } } }), false, 'the same');
+  assert.equal(w({ all: { read: true, send: true }, ais: { [AI]: { read: false } }, friends: { [TEST_B]: { read: { until: NOW + 60 } } } }), true, 'ask to on');
+  assert.equal(w({ all: { read: true, send: 'ask', draft: true }, ais: { [AI]: { read: false } }, friends: { [TEST_B]: { read: { until: NOW + 60 } } } }), true, 'a new switch');
+  assert.equal(w({ all: { read: true, send: 'ask' }, ais: {}, friends: { [TEST_B]: { read: { until: NOW + 60 } } } }), true, "an AI's off now follows");
+  assert.equal(w({ all: { read: true, send: 'ask' }, ais: { [AI]: { read: false } }, friends: { [TEST_B]: { read: { until: NOW + 3600 } } } }), true, 'longer');
+  assert.equal(w({ all: { read: true, send: 'ask' }, ais: { [AI]: { read: false } }, friends: { [TEST_B]: { read: true } } }), true, 'for good');
+  assert.equal(w({ all: { read: true, send: 'ask' }, ais: { [AI]: { read: false } }, friends: { [TEST_B]: { read: { until: NOW + 60 } } }, peerAis: { [`${AI}>${PEER}`]: { until: NOW + 99 } } }), true, 'another AI');
+  assert.equal(w({ all: { read: true, send: 'ask' }, ais: { [AI]: { read: false } }, friends: { [TEST_B]: { read: { until: NOW + 60 } } }, limits: { day: 500 } }), true, 'a higher limit');
+  assert.equal(w({ all: { read: false }, ais: { [AI]: { read: false } }, friends: {} }), false, 'narrower');
+  assert.equal(w({ all: { read: true, send: 'ask' }, ais: { [AI]: { read: false } }, friends: { [TEST_B]: { read: { until: NOW + 60 } } }, limits: { day: 10 } }), false, 'a lower limit');
 });
 
 await chain;

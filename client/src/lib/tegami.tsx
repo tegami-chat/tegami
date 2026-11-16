@@ -10,7 +10,21 @@ import { accounts, describeAccount, removeAccountHere } from './accounts';
 import { FEEDBACK_NAME, FEEDBACK_PUBKEY } from './feedback';
 import { AI_DRAFT_ASK_KIND, AI_DRAFT_KIND, draftAsk, parseDraft, wrapExpiring } from './ai-draft';
 import { pairWrap } from './ai-pair';
-import { askAi, checkAi, decideAi, gateAi, getAiPermissions, removePeerAi } from './ai-permissions';
+import {
+  aiStageAllows,
+  aiWidened,
+  askAi,
+  checkAi,
+  decideAi,
+  gateAi,
+  getAiPermissions,
+  loadAiSent,
+  logAiStop,
+  overAiLimit,
+  recordAiSent,
+  removePeerAi,
+  stopAllAi,
+} from './ai-permissions';
 import {
   AI_ACTION_KINDS,
   AI_CONTACTS_ASK_KIND,
@@ -21,6 +35,7 @@ import {
   AI_SEND_ASK_KIND,
   AI_SEND_RESULT_KIND,
   PEER_AI_DAILY_LIMIT,
+  AI_STOP_KIND,
   aiOf,
   aiTag,
   applyAiGroup,
@@ -120,8 +135,18 @@ export type Signal = { id: string; from: string; to: string; at: number; data: R
 /** Rumor kind for a private profile card (Tegami's own, not a standard NIP). */
 export const PROFILE_KIND = 10100;
 
-/** model: for an AI friend, which company's which model (always shown, philosophy #93). */
-export type Contact = { pubkey: string; name: string; model?: string; avatar?: FileRef };
+/**
+ * model: for an AI friend, which company's which model as its invite link said (always shown,
+ * philosophy #93, but only what the AI says of itself). mine: my own AI. Set only when I paired
+ * with it by its QR code or chose it in its screen, and synced to my other devices. Only an AI
+ * with this mark may ask this app for anything (lib/ai-actions.ts); a model name never counts.
+ */
+export type Contact = { pubkey: string; name: string; model?: string; avatar?: FileRef; mine?: true };
+
+/** My own AI (the mark I set), not someone who only says they are an AI. */
+export const isMyAi = (c: Contact) => c.mine === true;
+/** A person: not an AI by its own word, and not my AI. */
+export const isPerson = (c: Contact) => !c.model && !c.mine;
 
 /** A stamp in my list (`k('stamps')`): an uploaded file and when it was uploaded (unix seconds). */
 // uploadedAt: only stamps from before the stamp storage (2026-11-15) have it; they are moved
@@ -326,6 +351,13 @@ type TegamiState = {
   answerAiInGroup: (room: string, ai: string, yes: boolean) => Promise<void>;
   /** Takes back my AI's permission to talk to another person's AI, and tells my AI. */
   revokePeerAi: (ai: string, peer: string) => Promise<void>;
+  /** Marks a friend as my own AI (only my AIs may ask this app for anything), or takes the mark away. */
+  setMyAi: (pubkey: string, on: boolean) => void;
+  /** すべてオフにする: every AI switch off, other AIs' permissions taken back, and my AIs told to stop. */
+  stopAi: () => Promise<void>;
+  /** When my other device last let AIs do more; 0 once I have seen it. */
+  aiWidenedAt: number;
+  seenAiWidened: () => void;
   /** Listens for fresh call signals. Returns the function that stops listening. */
   onSignal: (fn: (s: Signal) => void) => () => void;
   /** Adds a call record to a chat on this device. */
@@ -704,6 +736,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   aiGroupsRef.current = aiGroups;
   const [aiProposals, setAiProposals] = useState<AiProposal[]>(() => loadProposals());
   const aiProposalsRef = useRef<AiProposal[]>(aiProposals);
+  // When my other device last let AIs do more (lib/ai-permissions.ts aiWidened); 0 when seen.
+  const [aiWidenedAt, setAiWidenedAt] = useState(() => load<number>(k('ai.widened'), 0));
   aiProposalsRef.current = aiProposals;
   // Set below, once the functions it needs exist: handles an AI ask or a group answer.
   const aiRumorRef = useRef<(rumor: ReturnType<typeof nip59.createRumor>) => void>(() => {});
@@ -735,9 +769,11 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       if (!me) return [];
       const key = aiMembersOf(room);
       if (!key) return [];
+      // AI in a group is a later stage (lib/ai-permissions.ts AI_STAGE): no copies at all.
+      if (!aiStageAllows('group')) return [];
       const p = getAiPermissions();
       return approvedAis(aiGroupsRef.current, key, me).filter((ai) => {
-        const mine = contactsRef.current.find((c) => c.pubkey === ai && c.model);
+        const mine = contactsRef.current.find((c) => c.pubkey === ai && isMyAi(c));
         return !mine || myAiMayRead(p, mine);
       });
     },
@@ -852,7 +888,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
           }
           if (rumor.kind === AI_DRAFT_KIND) {
             // Only from an AI friend; the chat screen matches it to the ask it made.
-            if (!contactsRef.current.some((c) => c.pubkey === rumor.pubkey && c.model)) return;
+            if (!contactsRef.current.some((c) => c.pubkey === rumor.pubkey && isMyAi(c))) return;
             const d = parseDraft(rumor.content);
             if (d) for (const fn of draftListeners.current) fn({ ai: rumor.pubkey, ...d });
             return;
@@ -968,6 +1004,15 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
             ...(writtenByAi ? { ai: writtenByAi } : {}),
           };
           if (rumor.pubkey !== me) m.got = Date.now();
+          // My other device already sent what my AI asked: the same waiting message here goes.
+          if (rumor.pubkey === me && writtenByAi && aiProposalsRef.current.length) {
+            const left = aiProposalsRef.current.filter((x) => !(x.ai === writtenByAi.pubkey && x.to === peer && x.text === rumor.content));
+            if (left.length !== aiProposalsRef.current.length) {
+              aiProposalsRef.current = left;
+              saveProposals(left);
+              setAiProposals(left);
+            }
+          }
           addMessage(m);
         } catch {
           // Not for us or malformed. Ignore.
@@ -1303,7 +1348,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
         const rest = prev.filter((c) => c.pubkey !== pubkey);
         const m = model ?? old?.model;
         const avatar = old?.avatar;
-        const next = [...rest, { pubkey, name, ...(m ? { model: m } : {}), ...(avatar ? { avatar } : {}) }];
+        const next = [...rest, { pubkey, name, ...(m ? { model: m } : {}), ...(avatar ? { avatar } : {}), ...(old?.mine ? { mine: true as const } : {}) }];
         contactsRef.current = next;
         save(k('contacts'), next);
         return next;
@@ -1312,6 +1357,19 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     },
     [sendProfileTo],
   );
+
+  /** Marks a friend as my own AI, or takes the mark away (synced to my other devices). */
+  const setMyAi = useCallback((pubkey: string, on: boolean) => {
+    setContacts((prev) => {
+      const old = prev.find((c) => c.pubkey === pubkey);
+      if (!old || !!old.mine === on) return prev;
+      const { mine: _, ...rest } = old;
+      const next = prev.map((c) => (c.pubkey === pubkey ? (on ? { ...rest, mine: true as const } : rest) : c));
+      contactsRef.current = next;
+      save(k('contacts'), next);
+      return next;
+    });
+  }, []);
 
   const removeContact = useCallback((pubkey: string) => {
     profileAt.current.delete(pubkey);
@@ -2038,10 +2096,10 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     async (ai: string, friend: string, confirmed = false) => {
       if (!secret || !me || !pool.current) throw new Error('not open');
       const people = contactsRef.current;
-      const aiContact = people.find((c) => c.pubkey === ai && c.model);
-      const friendContact = people.find((c) => c.pubkey === friend && !c.model);
+      const aiContact = people.find((c) => c.pubkey === ai && isMyAi(c));
+      const friendContact = people.find((c) => c.pubkey === friend && isPerson(c));
       // Only a friend (a person, not another AI) in a 1:1 chat, not blocked. Never a stranger.
-      const isFriend = (pk: string) => people.some((c) => c.pubkey === pk && !c.model) && !blockedRef.current.includes(pk);
+      const isFriend = (pk: string) => people.some((c) => c.pubkey === pk && isPerson(c)) && !blockedRef.current.includes(pk);
       if (!aiContact || !friendContact || isGroup(friend)) throw new AiNotAllowedError('not an AI friend and a friend');
       const { ask, range } = draftAsk(messagesRef.current, friend, me, { friend: friendContact.name, me: myName || '自分' });
       const r = { ai, model: aiContact.model, friend };
@@ -2084,22 +2142,32 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const pairAi = useCallback(
     async (ai: string, code: string, myInvite: string) => {
       if (!secret || !pool.current) throw new Error('not open');
+      // Pairing with the code on my own computer is the one way, with the switch in the AI's
+      // screen, that a friend becomes my AI (the add screen asks before it calls this).
+      setMyAi(ai, true);
       if (!(await publishOne(pool.current, RELAYS, pairWrap(secret, ai, code, myInvite), authRef.current ?? undefined))) throw new Error('not sent');
     },
-    [secret],
+    [secret, setMyAi],
   );
 
   /** Only a friend who is a person (not another AI), not blocked. Never a stranger. */
   const isPersonFriend = useCallback(
-    (pk: string) => contactsRef.current.some((c) => c.pubkey === pk && !c.model) && !blockedRef.current.includes(pk),
+    (pk: string) => contactsRef.current.some((c) => c.pubkey === pk && isPerson(c)) && !blockedRef.current.includes(pk),
     [],
   );
 
-  /** Sends a text in my name with the "written by an AI" tag. Only after the gate said yes. */
+  /**
+   * Sends a text in my name with the "written by an AI" tag. Only after the gate said yes.
+   * `at` is the time of the AI's ask: two of my devices that both handle the same ask build the
+   * very same message (same words, tags and time, so the same id), and the friend's app keeps
+   * one of them (懸念の6番: the AI's asks reach every one of my devices).
+   */
   const sendFromAi = useCallback(
-    (peer: string, text: string, ai: Contact) => {
+    (peer: string, text: string, ai: Contact, at?: number) => {
       const by = { pubkey: ai.pubkey, ...(ai.model ? { model: ai.model } : {}), ...(ai.name ? { name: ai.name } : {}) };
-      const { rumor, wraps } = build(peer, 14, text, [aiTag(by)]);
+      const { rumor, wraps } = build(peer, 14, text, [aiTag(by)], at);
+      if (messagesRef.current.some((m) => m.id === rumor.id) || outbox.current.some((o) => o.id === rumor.id)) return;
+      recordAiSent(peer);
       saveBox([...outbox.current, { id: rumor.id, peer, at: rumor.created_at, wraps, done: [] }]);
       addMessage({ id: rumor.id, from: me!, peer, text, at: rumor.created_at, pending: 'sending', ai: by });
       void flush();
@@ -2118,12 +2186,12 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       const prop = aiProposalsRef.current.find((x) => x.id === id);
       if (!prop) return false;
       putProposals(aiProposalsRef.current.filter((x) => x.id !== id));
-      const ai = contactsRef.current.find((c) => c.pubkey === prop.ai && c.model);
+      const ai = contactsRef.current.find((c) => c.pubkey === prop.ai && isMyAi(c));
       // Asked again now: a switch may have been turned off since the AI wrote it.
       const ok =
         !!ai &&
         gateAi({ ai: prop.ai, model: ai.model, action: 'send', friend: prop.to, content: { kind: 'text', text: prop.text } }, isPersonFriend);
-      if (ok && ai) sendFromAi(prop.to, prop.text, ai);
+      if (ok && ai) sendFromAi(prop.to, prop.text, ai, prop.askAt);
       void tellAi(prop.ai, AI_SEND_RESULT_KIND, { re: prop.id, status: ok ? 'sent' : 'stopped' });
       return ok;
     },
@@ -2140,17 +2208,38 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     [putProposals, tellAi],
   );
 
+  /** How many messages at the end of this chat an AI wrote in my name, with nobody writing after them. */
+  const aiInARow = useCallback(
+    (peer: string) => {
+      let n = 0;
+      const list = messagesRef.current;
+      for (let i = list.length - 1; i >= 0; i--) {
+        const m = list[i];
+        if (m.peer !== peer || m.notice || m.call) continue;
+        if (m.from !== me || !m.ai) break;
+        n++;
+      }
+      return n;
+    },
+    [me],
+  );
+
   /** My AI asks to send a message for me. The gate decides; nothing is sent around it. */
   const handleSendAsk = useCallback(
     async (rumor: ReturnType<typeof nip59.createRumor>, ai: Contact) => {
       const ask = parseSendAsk(rumor.content);
       if (!ask) return void tellAi(ai.pubkey, AI_SEND_RESULT_KIND, { re: rumor.id, status: 'invalid' });
       const r = { ai: ai.pubkey, model: ai.model, friend: ask.to, content: { kind: 'text' as const, text: ask.text } };
-      // Without asking: the gate may let it go, or show the confirm window (photos, money, "ask each time").
-      const auto = decideAi(getAiPermissions(), { ...r, action: 'autosend' }, isPersonFriend);
+      // Without asking: the gate may let it go, or show the confirm window (photos, links, money, "ask each time").
+      let auto = decideAi(getAiPermissions(), { ...r, action: 'autosend' }, isPersonFriend);
+      // Over a limit on sending (AiLimits): never at once; it waits for 送る below instead.
+      if (auto.verdict !== 'deny' && overAiLimit(getAiPermissions(), loadAiSent(), aiInARow(ask.to))) {
+        logAiStop({ ...r, action: 'autosend' }, 'limit');
+        auto = { verdict: 'deny', by: 'limit' };
+      }
       if (auto.verdict !== 'deny') {
         if (await askAi({ ...r, action: 'autosend' }, isPersonFriend)) {
-          sendFromAi(ask.to, ask.text, ai);
+          sendFromAi(ask.to, ask.text, ai, rumor.created_at);
           return void tellAi(ai.pubkey, AI_SEND_RESULT_KIND, { re: rumor.id, status: 'sent' });
         }
         if (auto.verdict === 'ask') return void tellAi(ai.pubkey, AI_SEND_RESULT_KIND, { re: rumor.id, status: 'declined' });
@@ -2160,10 +2249,14 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
         gateAi({ ...r, action: 'send' }, isPersonFriend); // logs why it stopped
         return void tellAi(ai.pubkey, AI_SEND_RESULT_KIND, { re: rumor.id, status: 'stopped' });
       }
-      putProposals([...aiProposalsRef.current, { id: rumor.id, ai: ai.pubkey, to: ask.to, text: ask.text, at: Math.floor(Date.now() / 1000) }]);
-      void tellAi(ai.pubkey, AI_SEND_RESULT_KIND, { re: rumor.id, status: 'waiting' });
+      if (aiProposalsRef.current.some((x) => x.id === rumor.id)) return;
+      putProposals([
+        ...aiProposalsRef.current,
+        { id: rumor.id, ai: ai.pubkey, to: ask.to, text: ask.text, at: Math.floor(Date.now() / 1000), askAt: rumor.created_at },
+      ]);
+      void tellAi(ai.pubkey, AI_SEND_RESULT_KIND, { re: rumor.id, status: 'waiting', ...(auto.by === 'limit' ? { reason: 'limit' } : {}) });
     },
-    [isPersonFriend, sendFromAi, tellAi, putProposals],
+    [isPersonFriend, sendFromAi, tellAi, putProposals, aiInARow],
   );
 
   /** My AI asks for my friend list (people only). */
@@ -2171,7 +2264,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     async (rumor: ReturnType<typeof nip59.createRumor>, ai: Contact) => {
       const ok = await askAi({ ai: ai.pubkey, model: ai.model, action: 'contacts' }, isPersonFriend);
       const friends = ok
-        ? contactsRef.current.filter((c) => !c.model && !blockedRef.current.includes(c.pubkey)).map((c) => ({ pubkey: c.pubkey, name: c.name }))
+        ? contactsRef.current.filter((c) => isPerson(c) && !blockedRef.current.includes(c.pubkey)).map((c) => ({ pubkey: c.pubkey, name: c.name }))
         : undefined;
       void tellAi(ai.pubkey, AI_CONTACTS_KIND, friends ? { re: rumor.id, friends } : { re: rumor.id, stopped: true });
     },
@@ -2199,6 +2292,54 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     },
     [tellAi],
   );
+
+  /**
+   * Tells every one of my AIs to stop (true) or that it may go on (false): AI_STOP_KIND, for
+   * that AI only, kept by the relay like messages (not expiring) so an AI whose computer was
+   * off hears it when it comes back. The newest `at` wins on the AI's side.
+   */
+  const tellMyAis = useCallback(
+    async (stop: boolean) => {
+      if (!secret || !pool.current) return;
+      const at = Math.floor(Date.now() / 1000);
+      save(k('ai.stopped'), stop);
+      const mine = contactsRef.current.filter(isMyAi);
+      await Promise.all(
+        mine.map((c) => {
+          const rumor = nip59.createRumor(
+            { kind: AI_STOP_KIND, content: JSON.stringify({ v: 1, stop, at }), tags: [['p', c.pubkey]], created_at: at },
+            secret,
+          );
+          return publishOne(pool.current!, RELAYS, wrapQuiet(rumor, secret, c.pubkey), authRef.current ?? undefined).catch(() => false);
+        }),
+      );
+    },
+    [secret],
+  );
+
+  /**
+   * すべてオフにする: every "AI の使用" switch off, every permission to talk to another person's
+   * AI taken back and each AI told (until 0), and every one of my AIs told to stop at once:
+   * replies on its own, its MCP tools and its talks with other AIs do not pass this app's gate.
+   */
+  const stopAi = useCallback(async () => {
+    const taken = stopAllAi();
+    await Promise.all([
+      ...taken.map(([ai, peer]) => tellAi(ai, AI_PEER_RESULT_KIND, { peer, until: 0, limit: 0 })),
+      tellMyAis(true),
+    ]);
+  }, [tellAi, tellMyAis]);
+
+  const seenAiWidened = useCallback(() => {
+    save(k('ai.widened'), 0);
+    setAiWidenedAt(0);
+  }, []);
+
+  // After すべてオフにする, the first "AI の使用" switch turned on again tells my AIs they may go on.
+  useEffect(() => {
+    if (!secret || !load<boolean>(k('ai.stopped'), false)) return;
+    if (Object.values(aiPermissions.all).some((v) => v !== false && v !== undefined)) void tellMyAis(false);
+  }, [aiPermissions, secret, tellMyAis]);
 
   const putAiGroups = useCallback((update: (prev: AiGroups) => AiGroups) => {
     setAiGroups((prev) => {
@@ -2237,9 +2378,14 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
 
   const inviteAiToGroup = useCallback(
     async (room: string, ai: string) => {
-      const c = contactsRef.current.find((x) => x.pubkey === ai && x.model);
+      const c = contactsRef.current.find((x) => x.pubkey === ai && isMyAi(x));
       // A group, or a 1:1 chat with a friend who is a person (philosophy #94).
       if (!c || (!isGroup(room) && !isPersonFriend(room)) || !myAiMayRead(getAiPermissions(), c)) throw new AiNotAllowedError('not my AI');
+      // AI in a group is a later stage (lib/ai-permissions.ts AI_STAGE): refused and logged.
+      if (!aiStageAllows('group')) {
+        logAiStop({ ai, model: c.model, action: 'read', friend: isGroup(room) ? undefined : room }, 'stage');
+        throw new AiNotAllowedError('not at this stage');
+      }
       await sendAiGroup(room, { t: 'invite', ai, name: c.name, ...(c.model ? { model: c.model } : {}) });
     },
     [sendAiGroup, isPersonFriend],
@@ -2260,7 +2406,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       putAiGroups((prev) => applyAiGroup(prev, r, rumor.pubkey, rumor.created_at));
       return;
     }
-    const ai = contactsRef.current.find((c) => c.pubkey === rumor.pubkey && c.model);
+    // Only my own AI (the mark, never the model name it gives: NIP-46 says the same of names).
+    const ai = contactsRef.current.find((c) => c.pubkey === rumor.pubkey && isMyAi(c));
     if (!ai || !freshAsk(rumor.created_at) || handledAsk(rumor.id)) return;
     if (rumor.kind !== AI_SEND_ASK_KIND && rumor.kind !== AI_CONTACTS_ASK_KIND && rumor.kind !== AI_PEER_ASK_KIND) return;
     markHandled(rumor.id);
@@ -2368,6 +2515,13 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
         setBlocked(next.blocked);
       }
       if (changed.has('a')) replaceAiPermissions(next.ai);
+      // My other device let AIs do more (a switch, a limit, or a new "my AI"): one line on the
+      // list until I open the AI screen (懸念の6番).
+      const newMine = next.contacts.some((c) => isMyAi(c) && !current.contacts.some((o) => o.pubkey === c.pubkey && isMyAi(o)));
+      if ((changed.has('a') && aiWidened(current.ai, next.ai)) || (changed.has('c') && newMine)) {
+        save(k('ai.widened'), Math.floor(Date.now() / 1000));
+        setAiWidenedAt(Math.floor(Date.now() / 1000));
+      }
     }
     scheduleSync();
   };
@@ -2568,6 +2722,10 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     inviteAiToGroup,
     answerAiInGroup,
     revokePeerAi,
+    setMyAi,
+    stopAi,
+    aiWidenedAt,
+    seenAiWidened,
     recordCall,
     status,
     me,

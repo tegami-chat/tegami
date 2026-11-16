@@ -247,4 +247,34 @@ test('history: messages of a Tegami group, group lines and AI-written messages m
   assert.equal(h.cleared[room], 1);
 });
 
+test('"my AI" mark: set on one device, reaches the other; taken off, goes there too; a broken mark is dropped', () => {
+  const ai = { pubkey: Z, name: 'クロード', model: 'Anthropic Claude' };
+  const a0 = all(null, lists({ contacts: [ai] }), 1000);
+  const b0 = all(null, lists({ contacts: [ai] }), 1000);
+  const a1 = S.stamp(a0, 'c', lists({ contacts: [{ ...ai, mine: true }] }), 2000).ledger;
+  let got = deliver(a1, b0, lists({ contacts: [ai] }), 2100);
+  assert.equal(got.lists.contacts[0].mine, true);
+  const a2 = S.stamp(a1, 'c', lists({ contacts: [ai] }), 3000).ledger;
+  got = deliver(a2, got.ledger, got.lists, 3100);
+  assert.equal(got.lists.contacts[0].mine, undefined);
+  assert.deepEqual(S.cleanEntries({ [`c:${Z}`]: [5, { n: 'x', y: true }] })[`c:${Z}`].v, { n: 'x' });
+  assert.deepEqual(S.cleanEntries({ [`c:${Z}`]: [5, { n: 'x', y: 1 }] })[`c:${Z}`].v, { n: 'x', y: 1 });
+});
+
+test('limits on AI sending reach my other device, kept in range', () => {
+  const a = S.stamp(null, 'a', lists({ ai: { ...EMPTY_AI, limits: { minute: 3 } } }), 1000).ledger;
+  const b = S.stamp(a, 'a', lists({ ai: { ...EMPTY_AI, limits: { minute: 2, day: 40 } } }), 2000).ledger;
+  const got = deliver(b, null, lists(), 2100);
+  assert.deepEqual(got.lists.ai.limits, { minute: 2, day: 40 });
+  assert.equal(S.cleanEntries({ 'a:["limits","minute"]': [5, 0] })['a:["limits","minute"]'].v, 1);
+  assert.equal(S.cleanEntries({ 'a:["limits","fly"]': [5, 3] })['a:["limits","fly"]'], undefined);
+});
+
+const P = await import('../src/lib/ai-permissions.ts');
+test('the app works at stage 2 unless a build says otherwise', () => {
+  assert.equal(process.env.EXPO_PUBLIC_TEGAMI_AI_STAGE, undefined);
+  assert.equal(P.AI_STAGE, 2);
+  assert.equal(P.aiStageAllows('autosend'), false);
+});
+
 console.log(`${n} passed`);

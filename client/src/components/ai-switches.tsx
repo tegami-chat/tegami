@@ -6,6 +6,7 @@ import { Palette, usePalette } from '@/constants/theme';
 import {
   AI_ACTIONS,
   FRIEND_ACTIONS,
+  aiStageAllows,
   rawValue,
   setAiSwitch,
   switchValue,
@@ -24,6 +25,9 @@ export const AI_ACTION_LABEL: Record<AiAction, string> = {
   autosend: '確認なしで送る',
   otherAi: 'ほかの人のAIと話す',
 };
+
+/** The model an AI gives for itself in its invite link: shown as its own word, not as a fact (philosophy #93). */
+export const modelLine = (model: string) => `名乗っているモデル：${model}`;
 
 type Term = 'always' | 'today' | 'hour' | 'ask';
 const TERM_LABEL: Record<Term, string> = { always: 'ずっと', today: '今日だけ', hour: '1時間', ask: '毎回確認' };
@@ -61,7 +65,8 @@ export function AiSwitches({ scope, blocked, name }: { scope: Scope; blocked?: (
   const s = styles(c);
   const p = useAiPermissions();
   const [confirmAutosend, setConfirmAutosend] = useState(false);
-  const actions = scope.layer === 'friend' ? FRIEND_ACTIONS : AI_ACTIONS;
+  // Actions of a later stage than this app's (AI_STAGE) are not shown: they would do nothing.
+  const actions = (scope.layer === 'friend' ? FRIEND_ACTIONS : AI_ACTIONS).filter((a) => aiStageAllows(a));
 
   const turn = (a: AiAction, on: boolean) => {
     // Sending in the user's name without a look first: asked once, here, when it is turned on.
@@ -122,7 +127,7 @@ export function AiSwitches({ scope, blocked, name }: { scope: Scope; blocked?: (
       <Modal transparent visible={confirmAutosend} onRequestClose={() => setConfirmAutosend(false)}>
         <Dialog
           title="「確認なしで送る」をオンにしますか？"
-          text={`AIが、確認の画面を出さずに、あなたの名前で${name ? `${name}に` : ''}メッセージを送れるようになります。ただし、写真、動画、ファイル、音声、お金の話は、オンにしても送る前に確認の画面が出ます。`}
+          text={`AIが、確認の画面を出さずに、あなたの名前で${name ? `${name}に` : ''}メッセージを送れるようになります。ただし、写真、動画、ファイル、音声、リンクを含む文、お金の話に見える文は、オンにしても送る前に確認の画面が出ます。`}
           stacked
           onClose={() => setConfirmAutosend(false)}
           buttons={[

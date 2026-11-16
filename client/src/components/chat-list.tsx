@@ -37,7 +37,7 @@ function openPeer(pathname: string): string | undefined {
 export function ChatList({ wide = false }: { wide?: boolean }) {
   const c = usePalette();
   const s = styles(c);
-  const { myName, myAvatar, contacts, groups, messages, unread, blocked, removeContact, deleteChat, block } = useTegami();
+  const { myName, myAvatar, contacts, groups, messages, unread, blocked, removeContact, deleteChat, block, aiWidenedAt } = useTegami();
   const { startCall } = useCall();
   const [phoneTab, setTab] = useState<'chats' | 'friends'>('chats');
   const railTab = useListTab();
@@ -287,12 +287,20 @@ export function ChatList({ wide = false }: { wide?: boolean }) {
               data={rows}
               keyExtractor={(r) => r.room}
               ListHeaderComponent={
-                unknown.length > 0 ? (
-                  <Pressable style={s.strangers} onPress={() => router.push('/strangers')} role="button">
-                    <Text style={s.strangersText}>知らない人から</Text>
-                    {unknownUnread > 0 ? <Badge count={unknownUnread} /> : <Text style={s.count}>{unknown.length}</Text>}
-                  </Pressable>
-                ) : null
+                <>
+                  {aiWidenedAt > 0 && (
+                    <Pressable style={s.strangers} onPress={() => router.push('/ai' as Href)} role="button" testID="ai-widened">
+                      <Text style={s.strangersText}>ほかの端末でAIの権限が広がりました</Text>
+                      <MaterialIcons name="chevron-right" size={22} color={c.muted} />
+                    </Pressable>
+                  )}
+                  {unknown.length > 0 ? (
+                    <Pressable style={s.strangers} onPress={() => router.push('/strangers')} role="button">
+                      <Text style={s.strangersText}>知らない人から</Text>
+                      {unknownUnread > 0 ? <Badge count={unknownUnread} /> : <Text style={s.count}>{unknown.length}</Text>}
+                    </Pressable>
+                  ) : null}
+                </>
               }
               renderItem={({ item }) => (
                 <ChatRow

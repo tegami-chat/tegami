@@ -38,6 +38,13 @@ export const AI_PEER_ASK_KIND = 25066;
 export const AI_PEER_RESULT_KIND = 25067;
 /** An invitation of an AI into a group, and the members' answers. Kept by the relay like messages. */
 export const AI_GROUP_KIND = 10104;
+/**
+ * From my app to each of my AIs (すべてオフにする, and the first switch turned on again after it):
+ * content {"v":1,"stop":true,"at":<unix seconds>} or {"v":1,"stop":false,"at":...}, a p tag for
+ * the AI, sealed for the AI only, not expiring. The newest `at` wins. With stop true the AI stops
+ * replying and sending (its own replies, its MCP tools, its talks with other AIs) until stop false.
+ */
+export const AI_STOP_KIND = 25069;
 export const AI_ACTION_KINDS = [AI_SEND_ASK_KIND, AI_SEND_RESULT_KIND, AI_CONTACTS_ASK_KIND, AI_CONTACTS_KIND, AI_PEER_ASK_KIND, AI_PEER_RESULT_KIND, AI_GROUP_KIND];
 
 /** Seconds an ask lives; older asks are not handled. */
@@ -105,7 +112,8 @@ export function parsePeerAsk(content: string): { pubkey: string; name?: string; 
 
 // ---------- messages waiting for the owner (send after checking) ----------
 
-export type AiProposal = { id: string; ai: string; to: string; text: string; at: number };
+/** askAt: when the AI asked (the sent message gets this time, so two devices build the same one). */
+export type AiProposal = { id: string; ai: string; to: string; text: string; at: number; askAt?: number };
 
 export function loadProposals(now = Math.floor(Date.now() / 1000)): AiProposal[] {
   return load<AiProposal[]>(k('ai.proposals'), []).filter((p) => p && now - p.at < PROPOSAL_TTL);

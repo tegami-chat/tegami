@@ -2,15 +2,16 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as ImagePicker from 'expo-image-picker';
 import { router, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
+import { modelLine } from '@/components/ai-switches';
 import { Avatar } from '@/components/avatar';
 import { Dialog } from '@/components/dialog';
 import { ReportSheet } from '@/components/report-sheet';
 import { Palette, usePalette } from '@/constants/theme';
 import { useCall } from '@/lib/calls';
 import { canManage } from '@/lib/groups';
-import { chatName, isGroup, personName, shortId, useTegami } from '@/lib/tegami';
+import { chatName, isGroup, isMyAi, personName, shortId, useTegami } from '@/lib/tegami';
 
 /**
  * The person (or group) of a chat: video call, block, report, AI permissions, delete the chat.
@@ -36,10 +37,11 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
     renameGroup,
     setGroupAvatar,
     leaveGroup,
+    setMyAi,
   } = useTegami();
   const { supported, startCall } = useCall();
 
-  const [dialog, setDialog] = useState<null | 'block' | 'unblock' | 'delete' | 'leave'>(null);
+  const [dialog, setDialog] = useState<null | 'block' | 'unblock' | 'delete' | 'leave' | 'myAi'>(null);
   // A Tegami group (lib/groups.ts): its members, name and picture can change.
   const [editing, setEditing] = useState<null | 'name' | 'add'>(null);
   const [newName, setNewName] = useState('');
@@ -125,7 +127,7 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
           <View style={s.profile}>
             <Avatar name={group ? '◎' : displayName} file={group ? groupInfo?.avatar : contact?.avatar} size={76} />
             <Text style={s.name}>{displayName}</Text>
-            {contact?.model ? <Text style={s.model}>{contact.model}</Text> : null}
+            {contact?.model ? <Text style={s.model}>{modelLine(contact.model)}</Text> : null}
           </View>
 
           {!group && peer && (
@@ -286,13 +288,29 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
             </View>
           )}
 
-          {peer && !group && contact && (
+          {peer && !group && contact && (contact.model || isMyAi(contact)) && (
+            <View style={s.card}>
+              <View style={s.linkRow}>
+                <Text style={s.linkText}>自分のAI</Text>
+                <Switch
+                  trackColor={{ false: c.line, true: c.accent }}
+                  thumbColor="#ffffff"
+                  {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}
+                  value={isMyAi(contact)}
+                  onValueChange={(on) => (on ? setDialog('myAi') : setMyAi(peer, false))}
+                  aria-label="自分のAI"
+                />
+              </View>
+            </View>
+          )}
+
+          {peer && !group && contact && (isMyAi(contact) || !contact.model) && (
             <View style={s.card}>
               <Pressable
                 role="button"
                 style={s.linkRow}
                 onPress={() =>
-                  router.push({ pathname: '/ai/[layer]/[id]', params: { layer: contact.model ? 'ai' : 'friend', id: peer } } as unknown as Href)
+                  router.push({ pathname: '/ai/[layer]/[id]', params: { layer: isMyAi(contact) ? 'ai' : 'friend', id: peer } } as unknown as Href)
                 }>
                 <Text style={s.linkText}>AIの権限</Text>
                 <MaterialIcons name="chevron-right" size={22} color={c.muted} />
@@ -313,6 +331,26 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
           )}
         </ScrollView>
       </View>
+
+      {dialog === 'myAi' && peer && (
+        <Dialog
+          title={`${personName(peer, contacts)}を自分のAIにしますか？`}
+          text="自分のPCで動かしているAIだけを選んでください。自分のAIは、AIの権限で許したことを、あなたの名前で頼めるようになります。"
+          stacked
+          onClose={() => setDialog(null)}
+          buttons={[
+            {
+              label: '自分のAIにする',
+              variant: 'danger',
+              onPress: () => {
+                setMyAi(peer, true);
+                setDialog(null);
+              },
+            },
+            { label: 'キャンセル', variant: 'outlined', onPress: () => setDialog(null) },
+          ]}
+        />
+      )}
 
       {dialog === 'block' && peer && (
         <Dialog

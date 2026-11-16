@@ -14,8 +14,10 @@ const STOPPED_BY: Record<Layer, string> = {
   needs: '「確認してから送る」がオフ',
   expired: '期間が終わったためオフ',
   ask: '毎回確認',
-  always: '写真、動画、ファイル、音声、お金の話は確認',
+  always: '写真、動画、ファイル、音声、リンク、お金の話に見える文は確認',
   firstPeer: '初めて話すほかの人のAI',
+  stage: 'このアプリではまだ使えない機能',
+  limit: '送る量の上限に達したため',
 };
 
 function result(e: AiLogEntry) {
