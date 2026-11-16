@@ -15,7 +15,7 @@ import * as nip19 from 'nostr-tools/nip19';
 import * as nip44 from 'nostr-tools/nip44';
 import * as nip59 from 'nostr-tools/nip59';
 import { SimplePool, useWebSocketImplementation } from 'nostr-tools/pool';
-import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
+import { finalizeEvent, generateSecretKey, getPublicKey, verifyEvent } from 'nostr-tools/pure';
 import { bytesToHex, hexToBytes } from 'nostr-tools/utils';
 import WebSocket from 'ws';
 
@@ -106,9 +106,39 @@ export function saveSettings(dir, patch) {
   return next;
 }
 
-/** The "written by an AI" tag: on the AI's own messages it names itself (other AIs see it is an AI). */
-export function aiTag(pubkey, profile) {
-  return ['ai', pubkey, String(profile.model ?? '').slice(0, 60), String(profile.name ?? '').slice(0, 60)];
+/**
+ * The "written by an AI" tag: on the AI's own messages it names itself (other AIs see it is an AI).
+ * The fifth element is the owner's signed card (below), or '' when no owner signed this AI now.
+ */
+export function aiTag(pubkey, profile, ownerCard = null) {
+  return ['ai', pubkey, String(profile.model ?? '').slice(0, 60), String(profile.name ?? '').slice(0, 60), ownerCard ? JSON.stringify(ownerCard) : ''];
+}
+
+// The owner's signature on this AI's key (client/src/lib/ai-owner.ts, concern 4): a Nostr event
+// by the owner's key, { kind: 25070, tags: [['p', <this AI>], ['expiration', unix]] }, handed over
+// in a rumor of the same kind, {"v":1,"card":<event>} or {"v":1,"card":null}. Only the owner's
+// app can make one; the AI only carries it, so anyone can check whose AI it is.
+export const OWNER_CARD_KIND = 25070;
+
+/** The card if it is good for this AI now (signed by `owner`, naming `ai`, not run out), else null. */
+export function checkOwnerCard(raw, ai, owner, now = Math.floor(Date.now() / 1000)) {
+  // Read back from text: nostr-tools marks a signed or checked event as "verified", and a copy keeps the mark.
+  let card;
+  try {
+    card = raw ? JSON.parse(JSON.stringify(raw)) : null;
+  } catch {
+    return null;
+  }
+  if (!card || typeof card !== 'object' || card.kind !== OWNER_CARD_KIND || card.pubkey !== owner) return null;
+  const p = (card.tags ?? []).filter((t) => Array.isArray(t) && t[0] === 'p');
+  if (p.length !== 1 || p[0][1] !== ai) return null;
+  const until = Number((card.tags ?? []).find((t) => Array.isArray(t) && t[0] === 'expiration')?.[1]);
+  if (!Number.isInteger(until) || until <= now) return null;
+  try {
+    return verifyEvent(card) ? card : null;
+  } catch {
+    return null;
+  }
 }
 
 // Pairing by QR code (client/src/lib/tegami.tsx pairAi): `tegami-agent pair` shows the AI's
@@ -277,6 +307,13 @@ export class Agent {
   /** The owner: the first trusted contact (the person whose app holds the AI permissions). */
   get owner() {
     return this.contacts.find((c) => c.trusted) ?? null;
+  }
+
+  /** The owner's card for this AI, if the owner's app gave one and it is still good. Read fresh each time. */
+  get ownerCard() {
+    const owner = this.owner;
+    if (!owner) return null;
+    return checkOwnerCard(read(this.dir, 'owner-card.json', null)?.card ?? null, this.pubkey, owner.pubkey);
   }
 
   /** Other people's AIs the owner's app lets this AI talk to now. */
@@ -654,6 +691,21 @@ export class Agent {
       if (this.setStopped(stop, at)) for (const l of this.stopListeners) l(stop);
       return;
     }
+    if (rumor.kind === OWNER_CARD_KIND) {
+      // Only the owner's app signs or takes back the card; an older word changes nothing.
+      if (!this.owner || rumor.pubkey !== this.owner.pubkey) return;
+      let d;
+      try {
+        d = JSON.parse(rumor.content);
+      } catch {
+        return;
+      }
+      const kept = read(this.dir, 'owner-card.json', null);
+      if ((kept?.at ?? 0) > rumor.created_at) return;
+      if (d?.card === null) write(this.dir, 'owner-card.json', { at: rumor.created_at, card: null });
+      else if (checkOwnerCard(d?.card, this.pubkey, this.owner.pubkey)) write(this.dir, 'owner-card.json', { at: rumor.created_at, card: d.card });
+      return;
+    }
     if (rumor.kind === PROFILE_KIND) {
       // Only whether this person keeps their words from AIs; the rest of the card is not used here.
       let p;
@@ -742,7 +794,7 @@ export class Agent {
     }
     if (toAi) this.aiTalkCheck(peer);
     const members = peer.split(',');
-    const tags = [...members.map((m) => ['p', m]), aiTag(this.pubkey, this.profile)];
+    const tags = [...members.map((m) => ['p', m]), aiTag(this.pubkey, this.profile, this.ownerCard)];
     const rumor = nip59.createRumor({ kind: 14, content: text, tags, created_at: Math.floor(Date.now() / 1000) }, this.secret);
     const wraps = [...members, this.pubkey].map((to) => nip59.createWrap(nip59.createSeal(rumor, this.secret, to), to));
     await Promise.any(wraps.flatMap((w) => this.pool.publish(RELAYS, w, { onauth: this.onauth })));

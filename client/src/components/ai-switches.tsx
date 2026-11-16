@@ -3,6 +3,8 @@ import { Modal, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { Dialog } from '@/components/dialog';
 import { Palette, usePalette } from '@/constants/theme';
+import { liveOwner } from '@/lib/ai-owner';
+import { personName, type Contact } from '@/lib/tegami';
 import {
   AI_ACTIONS,
   FRIEND_ACTIONS,
@@ -28,6 +30,17 @@ export const AI_ACTION_LABEL: Record<AiAction, string> = {
 
 /** The model an AI gives for itself in its invite link: shown as its own word, not as a fact (philosophy #93). */
 export const modelLine = (model: string) => `名乗っているモデル：${model}`;
+
+/**
+ * Whose AI this friend is, by its owner's signature on its key (lib/ai-owner.ts, concern 4).
+ * Nothing for my own AI or for a person; for an AI with no good card, that it is not known.
+ */
+export function ownerLine(c: Contact | undefined, contacts: Contact[], me: string | null): string | null {
+  if (!c || c.mine) return null;
+  const o = liveOwner(c.owner);
+  if (o) return `持ち主：${o.pubkey === me ? '自分' : personName(o.pubkey, contacts)}（署名を確かめました）`;
+  return c.model ? '持ち主：確かめられていません' : null;
+}
 
 type Term = 'always' | 'today' | 'hour' | 'ask';
 const TERM_LABEL: Record<Term, string> = { always: 'ずっと', today: '今日だけ', hour: '1時間', ask: '毎回確認' };

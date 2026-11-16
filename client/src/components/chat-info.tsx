@@ -4,7 +4,7 @@ import { router, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
-import { modelLine } from '@/components/ai-switches';
+import { modelLine, ownerLine } from '@/components/ai-switches';
 import { Avatar } from '@/components/avatar';
 import { Dialog } from '@/components/dialog';
 import { ReportSheet } from '@/components/report-sheet';
@@ -128,6 +128,7 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
             <Avatar name={group ? '◎' : displayName} file={group ? groupInfo?.avatar : contact?.avatar} size={76} />
             <Text style={s.name}>{displayName}</Text>
             {contact?.model ? <Text style={s.model}>{modelLine(contact.model)}</Text> : null}
+            {ownerLine(contact, contacts, me) ? <Text style={s.model}>{ownerLine(contact, contacts, me)}</Text> : null}
           </View>
 
           {!group && peer && (

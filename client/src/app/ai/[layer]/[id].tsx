@@ -1,7 +1,7 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { AiSwitches, modelLine } from '@/components/ai-switches';
+import { AiSwitches, modelLine, ownerLine } from '@/components/ai-switches';
 import { Avatar } from '@/components/avatar';
 import { Palette, usePalette } from '@/constants/theme';
 import { FRIEND_ACTIONS, READ_ONLY, setAiSwitches, switchValue, useAiPermissions, type AiAction } from '@/lib/ai-permissions';
@@ -14,7 +14,7 @@ export default function AiLayerScreen() {
   const s = styles(c);
   const { layer, id } = useLocalSearchParams<{ layer: string; id: string }>();
   const p = useAiPermissions();
-  const { contacts, revokePeerAi } = useTegami();
+  const { contacts, revokePeerAi, me } = useTegami();
   if (!id || (layer !== 'ai' && layer !== 'model' && layer !== 'friend')) return null;
 
   const contact = contacts.find((x) => x.pubkey === id);
@@ -33,6 +33,7 @@ export default function AiLayerScreen() {
         {layer !== 'model' && <Avatar name={name} file={contact?.avatar} size={64} />}
         <Text style={s.name}>{name}</Text>
         {layer === 'ai' && contact?.model ? <Text style={s.sub}>{modelLine(contact.model)}</Text> : null}
+        {layer === 'ai' && ownerLine(contact, contacts, me) ? <Text style={s.sub}>{ownerLine(contact, contacts, me)}</Text> : null}
       </View>
       <Text style={s.heading}>{layer === 'friend' ? `${name}とのトークでAIができること` : 'AIができること'}</Text>
       <AiSwitches scope={{ layer, id }} blocked={blocked} name={layer === 'friend' ? name : undefined} />

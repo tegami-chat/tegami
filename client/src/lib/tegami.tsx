@@ -10,6 +10,7 @@ import { accounts, describeAccount, removeAccountHere } from './accounts';
 import { FEEDBACK_NAME, FEEDBACK_PUBKEY } from './feedback';
 import { AI_DRAFT_ASK_KIND, AI_DRAFT_KIND, draftAsk, parseDraft, wrapExpiring } from './ai-draft';
 import { pairWrap } from './ai-pair';
+import { OWNER_CARD_KIND, OWNER_CARD_RENEW, ownerCardTemplate, ownerOfMessage, type OwnerMark } from './ai-owner';
 import { aiReadable, chatNoAi, keptFromAi, myNoAi, nothingToRead, profileNoAi, saveMyNoAi, withNoAi, type NothingToRead } from './ai-optout';
 import {
   aiStageAllows,
@@ -151,8 +152,12 @@ export const PROFILE_KIND = 10100;
  * with this mark may ask this app for anything (lib/ai-actions.ts); a model name never counts.
  *
  * noai: this friend keeps their words away from my AI (from their profile card, lib/ai-optout.ts).
+ *
+ * owner: for an AI friend, who signed this AI's key as theirs (lib/ai-owner.ts), from the card on
+ * the AI's own newest message. Checked with the owner's key; kept on this device only. An empty
+ * pubkey means the AI's newest message said "no owner" (at is that message's time).
  */
-export type Contact = { pubkey: string; name: string; model?: string; avatar?: FileRef; mine?: true; noai?: true };
+export type Contact = { pubkey: string; name: string; model?: string; avatar?: FileRef; mine?: true; noai?: true; owner?: OwnerMark };
 
 /** My own AI (the mark I set), not someone who only says they are an AI. */
 export const isMyAi = (c: Contact) => c.mine === true;
@@ -1015,6 +1020,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
           // Written by an AI in the sender's name (not an AI writing as itself).
           const byAi = rumor.kind === 14 ? aiOf(rumor.tags) : undefined;
           const writtenByAi = byAi && byAi.pubkey !== rumor.pubkey ? byAi : undefined;
+          // An AI friend writing as itself: its owner's card, or none (concern 4).
+          if (byAi && byAi.pubkey === rumor.pubkey && rumor.pubkey !== me) takeOwnerRef.current(rumor.pubkey, rumor.tags, rumor.created_at);
           if (isGroup(peer) && !gidOf(peer)) {
             const subject = rumor.tags.find((t) => t[0] === 'subject')?.[1]?.slice(0, 60);
             rememberGroup(peer, subject, rumor.pubkey);
@@ -1404,7 +1411,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
         const rest = prev.filter((c) => c.pubkey !== pubkey);
         const m = model ?? old?.model;
         const avatar = old?.avatar;
-        const next = [...rest, { pubkey, name, ...(m ? { model: m } : {}), ...(avatar ? { avatar } : {}), ...(old?.mine ? { mine: true as const } : {}) }];
+        const next = [...rest, { pubkey, name, ...(m ? { model: m } : {}), ...(avatar ? { avatar } : {}), ...(old?.mine ? { mine: true as const } : {}), ...(old?.owner ? { owner: old.owner } : {}) }];
         contactsRef.current = next;
         save(k('contacts'), next);
         return next;
@@ -1426,6 +1433,56 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
   }, []);
+
+  /**
+   * The owner a message from AI friend `ai` shows (lib/ai-owner.ts). Only a message newer than the
+   * card kept here changes it, so the relay handing out older messages again changes nothing.
+   */
+  const takeOwnerRef = useRef<(ai: string, tags: string[][], at: number) => void>(() => {});
+  takeOwnerRef.current = (ai, tags, at) => {
+    const c = contactsRef.current.find((x) => x.pubkey === ai);
+    if (!c) return;
+    const said = ownerOfMessage(tags, ai);
+    if (said === undefined) return;
+    if (said === 'none' ? at <= (c.owner?.at ?? 0) : said.at <= (c.owner?.at ?? 0)) return;
+    // "No owner" is kept as a mark with no owner and the message's time: the relay hands out the
+    // older message with the card again on the next start, and that card must not come back.
+    if (said === 'none' && (!c.owner || !c.owner.pubkey)) return;
+    if (said !== 'none' && c.owner?.pubkey === said.pubkey && c.owner.until === said.until) return;
+    const owner: OwnerMark = said === 'none' ? { pubkey: '', at, until: 0 } : said;
+    const next = contactsRef.current.map((x) => (x.pubkey === ai ? { ...x, owner } : x));
+    contactsRef.current = next;
+    save(k('contacts'), next);
+    setContacts(next);
+  };
+
+  // My signature on each of my AIs' keys (lib/ai-owner.ts): a new card when the mark「自分のAI」is
+  // set or the last card is old, and "no card" when the mark is taken away. Which card went to
+  // which AI and when is kept per account; each of my devices may send its own, which is fine.
+  useEffect(() => {
+    if (!secret || !pool.current || !me) return;
+    const sent = load<Record<string, number>>(k('ai.ownerCards'), {});
+    const now = Math.floor(Date.now() / 1000);
+    const mine = new Set(contacts.filter(isMyAi).map((c) => c.pubkey));
+    const tell = (ai: string, card: unknown) => {
+      const rumor = nip59.createRumor({ kind: OWNER_CARD_KIND, content: JSON.stringify({ v: 1, card }), tags: [['p', ai]], created_at: now }, secret);
+      return publishOne(pool.current!, RELAYS, wrapQuiet(rumor, secret, ai), authRef.current ?? undefined).catch(() => false);
+    };
+    // Written down only once the relay took it, so a card that did not go out is tried again.
+    const note = (ai: string, at: number | null) => {
+      const cur = load<Record<string, number>>(k('ai.ownerCards'), {});
+      if (at === null) delete cur[ai];
+      else cur[ai] = at;
+      save(k('ai.ownerCards'), cur);
+    };
+    for (const ai of mine) {
+      if (now - (sent[ai] ?? 0) < OWNER_CARD_RENEW) continue;
+      void tell(ai, finalizeEvent(ownerCardTemplate(ai, now), secret)).then((ok) => ok && note(ai, now));
+    }
+    for (const ai of Object.keys(sent)) {
+      if (!mine.has(ai)) void tell(ai, null).then((ok) => ok && note(ai, null));
+    }
+  }, [secret, me, contacts]);
 
   const removeContact = useCallback((pubkey: string) => {
     profileAt.current.delete(pubkey);

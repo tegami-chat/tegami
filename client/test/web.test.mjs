@@ -3090,6 +3090,74 @@ async function main() {
       }
     });
 
+    await test("AI owner: marking my AI signs its key; a friend of the AI sees whose AI it is, and not after the mark is taken away", async () => {
+      const AGENT = join(ROOT, '../agent');
+      const home = mkdtempSync(join(tmpdir(), 'tegami-agent-'));
+      const env = { ...process.env, TEGAMI_AGENT_HOME: home, TEGAMI_RELAYS: `ws://localhost:${RELAY_PORT}`, TEGAMI_SECRET_STORE: 'plain' };
+      const cli = (...args) => execFileSync(process.execPath, [join(AGENT, 'agent.mjs'), ...args], { env, encoding: 'utf8' });
+      const cardFile = join(home, 'owner-card.json');
+      const card = () => (existsSync(cardFile) ? JSON.parse(readFileSync(cardFile, 'utf8')).card : undefined);
+      const waitCard = async (pred) => {
+        for (let i = 0; i < 150 && !pred(card()); i++) await new Promise((r) => setTimeout(r, 100));
+        assert(pred(card()), `the AI's card is not as expected: ${JSON.stringify(card())}`);
+      };
+      let watch;
+      try {
+        const a = await person(browser, 'あおい');
+        const b = await person(browser, 'テストB');
+        const aiLink = cli('init', '--name', 'クロード', '--model', 'Anthropic Claude').match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
+        const aiHex = nip19.decode(aiLink.match(/npub1[0-9a-z]+/)[0]).data;
+        await befriend(a, aiLink.replace('https://app.tegami.chat', ORIGIN));
+        await a.page.goto(ORIGIN + '/add');
+        await a.page.waitForFunction(() => /&c=[a-z2-9]+/.test(document.body.innerText), null, { timeout: 10000 });
+        cli('add', (await text(a.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0], '--name', 'あおい', '--trust');
+        cli('add', b.link, '--name', 'テストB');
+        cli('setting', 'dailyReplies', '20');
+        watch = spawn(process.execPath, [join(AGENT, 'agent.mjs'), 'watch', '--command', `node "${join(AGENT, 'test/echo.mjs')}"`], { env, stdio: 'pipe' });
+        await new Promise((r) => watch.stdout.once('data', r));
+
+        // テストB knows あおい and the AI. Before あおい marks it, the AI's owner is not known.
+        await befriend(b, a);
+        await befriend(b, aiLink.replace('https://app.tegami.chat', ORIGIN));
+        const bp = b.page;
+        const info = async () => {
+          await bp.goto(`${ORIGIN}/chat/${aiHex}`);
+          await button(bp, 'メニュー').click();
+          await waitText(bp, '名乗っているモデル：Anthropic Claude');
+        };
+        cli('send', 'テストB', '印の前');
+        await waitText(bp, '印の前');
+        await info();
+        await waitText(bp, '持ち主：確かめられていません');
+
+        // あおい marks it as their own AI: the app signs a card and hands it to the AI.
+        await markMyAi(a, aiHex);
+        await waitCard((c) => c?.pubkey === a.hex);
+        cli('send', 'テストB', '印の後');
+        await waitText(bp, '印の後');
+        await info();
+        await waitText(bp, '持ち主：あおい（署名を確かめました）');
+        await shot(bp, 'ai-owner-signed', 'AIの友だちの画面。持ち主の署名を確かめた時');
+        await noText(bp, '持ち主：確かめられていません', 500);
+        // On あおい's own screen the AI is theirs: no owner line.
+        await a.page.goto(`${ORIGIN}/chat/${aiHex}`);
+        await button(a.page, 'メニュー').click();
+        await waitText(a.page, '名乗っているモデル：Anthropic Claude');
+        await noText(a.page, '持ち主：', 500);
+
+        // あおい takes the mark away: the card is taken back, and the next message says no owner.
+        await a.page.getByRole('switch', { name: '自分のAI', exact: true }).click();
+        await waitCard((c) => c === null);
+        cli('send', 'テストB', '取り消しの後');
+        await waitText(bp, '取り消しの後');
+        await info();
+        await waitText(bp, '持ち主：確かめられていません');
+        for (const u of [a, b]) await u.context.close();
+      } finally {
+        watch?.kill();
+      }
+    });
+
     await test('AI sends in my name: only through the gate, after I press 送る or without asking when allowed; the friend sees AIが書いた', async () => {
       const a = await person(browser, 'あおい');
       const b = await person(browser, 'テストB');
