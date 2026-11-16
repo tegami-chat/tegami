@@ -2991,7 +2991,7 @@ async function main() {
         const p = a.page;
         const aiLink = cli('init', '--name', 'クロード', '--model', 'Anthropic Claude').match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
         const aiHex = nip19.decode(aiLink.match(/npub1[0-9a-z]+/)[0]).data;
-        await befriend(a, aiLink.replace('https://app.tegami.chat', ORIGIN));
+        await befriendMyAi(a, aiLink.replace('https://app.tegami.chat', ORIGIN));
         await p.goto(ORIGIN + '/add');
         await p.waitForFunction(() => /&c=[a-z2-9]+/.test(document.body.innerText), null, { timeout: 10000 });
         cli('add', (await text(p)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0], '--name', 'あおい', '--trust');
