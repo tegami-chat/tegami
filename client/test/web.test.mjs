@@ -3134,6 +3134,7 @@ async function main() {
         await markMyAi(a, aiHex);
         await waitCard((c) => c?.pubkey === a.hex);
         cli('send', 'テストB', '印の後');
+        await bp.goto(`${ORIGIN}/chat/${aiHex}`);
         await waitText(bp, '印の後');
         await info();
         await waitText(bp, '持ち主：あおい（署名を確かめました）');
@@ -3149,6 +3150,7 @@ async function main() {
         await a.page.getByRole('switch', { name: '自分のAI', exact: true }).click();
         await waitCard((c) => c === null);
         cli('send', 'テストB', '取り消しの後');
+        await bp.goto(`${ORIGIN}/chat/${aiHex}`);
         await waitText(bp, '取り消しの後');
         await info();
         await waitText(bp, '持ち主：確かめられていません');
