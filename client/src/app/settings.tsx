@@ -10,6 +10,7 @@ import { Dialog } from '@/components/dialog';
 import { ThemeSwitch } from '@/components/theme-switch';
 import { Palette, usePalette } from '@/constants/theme';
 import { FEEDBACK_PUBKEY, openFeedback } from '@/lib/feedback';
+import { useCallNetwork } from '@/lib/call-network';
 import { pushState, type PushState } from '@/lib/push';
 import { personName, shortId, useTegami } from '@/lib/tegami';
 
@@ -42,6 +43,7 @@ export default function Settings() {
     removeFromDevice,
     deleteAccount,
   } = useTegami();
+  const callNet = useCallNetwork();
   const accountLabel = myName || (me ? shortId(me) : '');
   const [confirm, setConfirm] = useState<null | 'here' | 'everywhere'>(null);
   const [deleting, setDeleting] = useState(false);
@@ -355,6 +357,12 @@ export default function Settings() {
       </View>
       <Pressable style={s.card} onPress={exportFile} role="button">
         <Text style={s.action}>{exported ? '書き出しました' : 'トーク履歴を書き出す'}</Text>
+      </Pressable>
+
+      <Text style={s.heading}>通話</Text>
+      <Pressable style={[s.card, s.row]} onPress={() => router.push('/call-network' as Href)} role="button" aria-label="通話の中継">
+        <Text style={s.label}>通話の中継</Text>
+        <Text style={s.value}>{callNet.own ? '自分のサーバー' : 'Tegamiのサーバー'}{callNet.relayOnly ? '、常に中継' : ''}</Text>
       </Pressable>
 
       <Text style={s.heading}>AI</Text>

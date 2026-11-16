@@ -1367,6 +1367,98 @@ async function main() {
       for (const u of [a, b, c2, d]) await u.context.close();
     });
 
+    await test('Call relay settings: "always relay" never goes direct; my own TURN server replaces Tegami and Cloudflare', async () => {
+      const devTurn = (on) => fetch(`http://localhost:${RELAY_PORT}/_turn`, { method: 'POST', body: JSON.stringify({ on }) });
+      const config = (page) =>
+        page.evaluate(() => {
+          const c = window.__pcs.at(-1)?.getConfiguration();
+          return c ? { iceServers: c.iceServers, iceTransportPolicy: c.iceTransportPolicy } : null;
+        });
+      const urls = (cfg) => cfg.iceServers.flatMap((s) => [s.urls].flat());
+      const openCallNetwork = async (page) => {
+        await page.goto(ORIGIN + '/');
+        await openSettings(page);
+        await button(page, '通話の中継').click();
+        await waitText(page, '通話を常に中継する');
+      };
+      await devTurn(false);
+      const a = await person(browser, 'あさひ');
+      const b = await person(browser, 'ぶどう');
+      await befriend(b, a);
+      await befriend(a, b);
+      await a.page.goto(ORIGIN + '/');
+      await openSettings(a.page);
+      await waitText(a.page, 'Tegamiのサーバー');
+      await button(a.page, '通話の中継').click();
+      await waitText(a.page, '直接つながる通話では、相手にIPアドレスが見えます。');
+      await a.page.getByRole('switch', { name: '通話を常に中継する' }).click();
+      await waitText(a.page, '相手にIPアドレスが見えません。');
+      await shot(a.page, 'call-network-relay', '設定の「通話の中継」：通話を常に中継するをオンにした画面');
+
+      // Always relay, but the relay has no TURN: the call ends before it rings, and nothing goes direct.
+      await a.page.goto(ORIGIN + '/');
+      await a.page.goto(`${ORIGIN}/chat/${b.hex}`);
+      await button(a.page, '通話').click();
+      await button(a.page, '音声通話').click();
+      await waitText(a.page, '中継のサーバーを使えませんでした');
+      await noText(b.page, '応答', 4000);
+      assert((await a.page.evaluate(() => window.__pcs.length)) === 0, 'a peer connection was made without TURN');
+
+      // Always relay with TURN: my side gathers relay candidates only, so my address is not in the offer.
+      // (Reloaded: the app remembers for ten minutes that the relay had no TURN.)
+      await devTurn(true);
+      await a.page.goto(`${ORIGIN}/chat/${b.hex}`);
+      await button(a.page, '通話').click();
+      await button(a.page, '音声通話').click();
+      await button(b.page, '応答').waitFor({ timeout: 15000 });
+      const cfgA = await config(a.page);
+      assert(cfgA.iceTransportPolicy === 'relay', `policy: ${cfgA.iceTransportPolicy}`);
+      assert(urls(cfgA).some((u) => u.startsWith('turn:')), `no TURN: ${JSON.stringify(cfgA.iceServers)}`);
+      const sdp = await a.page.evaluate(() => window.__pcs.at(-1).localDescription?.sdp ?? '');
+      assert(sdp && !/typ (host|srflx)/.test(sdp), `my address in the offer: ${sdp.match(/a=candidate.*/g)}`);
+      await button(b.page, '応答').click();
+      await b.page.waitForFunction(() => window.__pcs.length > 0, null, { timeout: 10000 });
+      const cfgB = await config(b.page);
+      assert(cfgB.iceTransportPolicy === 'all', `the other side was forced to relay: ${cfgB.iceTransportPolicy}`);
+      await button(a.page, '通話を終了').click();
+      await devTurn(false);
+
+      // My own TURN server: only it is used (no Tegami relay credentials, no stun.cloudflare.com).
+      await openCallNetwork(a.page);
+      await a.page.getByRole('switch', { name: '通話を常に中継する' }).click();
+      await a.page.getByRole('radio', { name: '自分のサーバー' }).click();
+      await a.page.getByLabel('アドレス', { exact: true }).fill('http://example.com');
+      await waitText(a.page, '「turn:」か「turns:」で始まるアドレスを入れてください。');
+      assert(await button(a.page, '保存').isDisabled(), 'saved an address that is not turn:');
+      await a.page.getByLabel('アドレス', { exact: true }).fill('turn:127.0.0.1:9');
+      await a.page.getByLabel('ユーザー名', { exact: true }).fill('me');
+      await a.page.getByLabel('パスワード', { exact: true }).fill('secret');
+      await button(a.page, '接続を試す').click();
+      await waitText(a.page, 'つながりませんでした。');
+      await button(a.page, '保存').click();
+      await waitText(a.page, '保存しました');
+      await shot(a.page, 'call-network-own', '設定の「通話の中継」：自分のサーバーを入れて保存した画面');
+      await a.page.goto(ORIGIN + '/');
+      await a.page.goto(`${ORIGIN}/chat/${b.hex}`);
+      await button(a.page, '通話').click();
+      await button(a.page, '音声通話').click();
+      await button(b.page, '応答').click();
+      await waitConnected(a.page);
+      const own = urls(await config(a.page));
+      assert(own.includes('turn:127.0.0.1:9') && own.includes('stun:127.0.0.1:9'), `own: ${own}`);
+      assert(!own.some((u) => u.includes('cloudflare')), `Cloudflare still used: ${own}`);
+      assert((await config(a.page)).iceServers.some((s) => s.username === 'me' && s.credential === 'secret'), 'no credentials');
+      await button(a.page, '通話を終了').click();
+
+      // Back to the Tegami server.
+      await openCallNetwork(a.page);
+      await a.page.getByRole('radio', { name: 'Tegamiのサーバー' }).click();
+      await a.page.goto(ORIGIN + '/');
+      await openSettings(a.page);
+      await waitText(a.page, 'Tegamiのサーバー');
+      for (const u of [a, b]) await u.context.close();
+    });
+
     await test('A late signal (written more than a minute ago) does not ring; a fresh one does', async () => {
       const b = await person(browser, 'ぼたん');
       const x = generateSecretKey();

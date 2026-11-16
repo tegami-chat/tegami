@@ -17,6 +17,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { k, load, save } from './storage';
 import { useTegami, type Signal } from './tegami';
+import { getCallNetwork, hasTurn, ownServers } from './call-network';
 import { STUN, within } from './turn';
 
 // Where the two browsers look for a path: STUN, plus TURN (Cloudflare Realtime) when the
@@ -25,6 +26,12 @@ import { STUN, within } from './turn';
 // stays encrypted end to end, TURN only forwards it.
 /** How long a call waits for TURN credentials before going on with STUN only. */
 const TURN_WAIT_MS = 1500;
+/**
+ * With "always relay" on, a call without TURN would show my IP address, so it waits longer for
+ * the credentials and ends when there are none (lib/call-network.ts).
+ */
+const RELAY_WAIT_MS = 8000;
+const RELAY_FAILED = '中継のサーバーを使えませんでした';
 
 /** How long a call rings before it gives up. */
 export const RING_MS = 45_000;
@@ -241,8 +248,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   /** A peer connection with my media on it, wired to this call. */
   const makePc = useCallback(
-    (l: Live, stream: MediaStream, iceServers: RTCIceServer[]) => {
-      const pc = new RTCPeerConnection({ iceServers });
+    (l: Live, stream: MediaStream, iceServers: RTCIceServer[], relay: boolean) => {
+      const pc = new RTCPeerConnection(relay ? { iceServers, iceTransportPolicy: 'relay' } : { iceServers });
       l.pc = pc;
       for (const t of stream.getTracks()) pc.addTrack(t, stream);
       void tuneSenders(pc);
@@ -315,6 +322,29 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     end(l, l.video ? 'カメラかマイクを使えませんでした' : 'マイクを使えませんでした', false);
   }, [end]);
 
+  /** Where to ask for ICE servers: my own TURN server when set, else the Tegami relay. */
+  const pathFor = useCallback(
+    (): Promise<RTCIceServer[]> => {
+      const n = getCallNetwork();
+      return n.own ? Promise.resolve(ownServers(n.own)) : callIceServers();
+    },
+    [callIceServers],
+  );
+
+  /**
+   * The servers a call uses now, read with the settings at this moment. null when "always
+   * relay" is on and no TURN server is available: the call must not go direct.
+   */
+  const settle = useCallback(
+    async (asked?: Promise<RTCIceServer[]>): Promise<{ servers: RTCIceServer[]; relay: boolean } | null> => {
+      const n = getCallNetwork();
+      const servers = n.own ? ownServers(n.own) : await within(asked ?? callIceServers(), n.relayOnly ? RELAY_WAIT_MS : TURN_WAIT_MS, STUN);
+      if (n.relayOnly && !hasTurn(servers)) return null;
+      return { servers, relay: n.relayOnly };
+    },
+    [callIceServers],
+  );
+
   const startCall = useCallback(
     (peer: string, video: boolean) => {
       if (live.current || !supported || blockedRef.current.includes(peer)) return;
@@ -322,7 +352,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       const asked = media(video);
       const l: Live = { id: newId(), peer, video, role: 'caller', pendingIce: [], outIce: [], descSent: false, timers: [] };
       // Asked for at the same time as the microphone, so it seldom adds to the wait.
-      l.ice = within(callIceServers(), TURN_WAIT_MS, STUN);
+      l.ice = pathFor();
       live.current = l;
       clearTimeout(endedTimer.current);
       setView({ ...IDLE, phase: 'outgoing', peer, video });
@@ -336,9 +366,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         if (live.current !== l) return stream.getTracks().forEach((t) => t.stop());
         l.stream = stream;
         setView((v) => ({ ...v, local: stream }));
-        const servers = await l.ice!;
+        const path = await settle(l.ice);
         if (live.current !== l) return;
-        const pc = makePc(l, stream, servers);
+        if (!path) return end(l, RELAY_FAILED, false);
+        const pc = makePc(l, stream, path.servers, path.relay);
         await pc.setLocalDescription(await pc.createOffer());
         await gathered(pc, GATHER_MS);
         if (live.current !== l) return;
@@ -353,7 +384,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         );
       })().catch(() => end(l, 'つながりませんでした', false));
     },
-    [supported, makePc, signal, end, failedMedia, callIceServers],
+    [supported, makePc, signal, end, failedMedia, pathFor, settle],
   );
 
   const accept = useCallback(() => {
@@ -374,9 +405,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       if (live.current !== l) return stream.getTracks().forEach((t) => t.stop());
       l.stream = stream;
       setView((v) => ({ ...v, local: stream }));
-      const servers = await within(l.ice ?? callIceServers(), TURN_WAIT_MS, STUN);
+      const path = await settle(l.ice);
       if (live.current !== l) return;
-      const pc = makePc(l, stream, servers);
+      if (!path) {
+        signal(l, { t: 'decline' }, true);
+        return end(l, RELAY_FAILED, false);
+      }
+      const pc = makePc(l, stream, path.servers, path.relay);
       await pc.setRemoteDescription({ type: 'offer', sdp: l.offer });
       addIce(l, l.pendingIce.splice(0));
       await pc.setLocalDescription(await pc.createAnswer());
@@ -390,7 +425,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       signal(l, { t: 'hangup' });
       end(l, 'つながりませんでした');
     });
-  }, [makePc, signal, end, addIce, failedMedia, waitForConnection, callIceServers]);
+  }, [makePc, signal, end, addIce, failedMedia, waitForConnection, settle]);
 
   const decline = useCallback(() => {
     const l = live.current;
@@ -512,14 +547,14 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         };
         live.current = n;
         // Ready by the time the call is answered.
-        n.ice = callIceServers();
+        n.ice = pathFor();
         clearTimeout(endedTimer.current);
         setView({ ...IDLE, phase: 'incoming', peer: s.from, video: n.video });
         // The ring stops on its own; the caller gives up at the same time.
         n.timers.push(setTimeout(() => end(n, undefined, true), RING_MS));
       }
     });
-  }, [me, onSignal, sendSignal, recordCall, end, signal, addIce, waitForConnection, markDone, callIceServers]);
+  }, [me, onSignal, sendSignal, recordCall, end, signal, addIce, waitForConnection, markDone, pathFor]);
 
   // Blocking someone while their call is on screen stops it quietly.
   useEffect(() => {
