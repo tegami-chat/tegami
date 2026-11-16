@@ -2676,7 +2676,7 @@ async function main() {
       await p.waitForFunction(() => JSON.parse(localStorage.getItem('tegami.ai.permissions')).all.contacts === false, null, { timeout: 5000 });
       await p.getByText('AIの記録', { exact: true }).click();
       await waitText(p, '期間が終わったため、自動でオフに戻しました');
-      await waitText(p, '写真、動画、ファイル、音声、お金の話は確認：許可しました');
+      await waitText(p, '写真、動画、ファイル、音声、リンク、お金の話に見える文は確認：許可しました');
       await waitText(p, '初めて話すほかの人のAI：許可しました');
       await waitText(p, 'クロード：ほかの人のAIと話す（テストCのAI）');
       assert(!(await p.getByText(/npub1/).count()), 'the log shows the other AI by its key');
