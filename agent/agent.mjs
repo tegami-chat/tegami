@@ -54,6 +54,7 @@ import { autostartCommands, autostartFile, carriedEnv, keepArgs, launchdPlist, s
 import { BACKENDS, backendLabel, loadBackend, loadKeys, makeResponder, ownEnv, saveBackend, saveKey } from './backends.mjs';
 import { Agent, DRAFT_TTL, PAIR_TTL, loadSettings, needsInit, parseAsk, parseInvite, saveSettings, shortId } from './lib.mjs';
 import { qrHtml, qrTerminal } from './qr.mjs';
+import { cleanForAi } from './screen.mjs';
 
 export { ownEnv };
 
@@ -239,7 +240,7 @@ const commands = {
       if (!ask || !ask.messages.length) return;
       const name = agent.contacts.find((c) => c.pubkey === a.from)?.name ?? shortId(a.from);
       drafting = drafting.then(async () => {
-        const prompt = ask.messages.map((m) => `${m.mine ? ask.me : ask.friend}: ${m.text}`).join('\n');
+        const prompt = ask.messages.map((m) => `${m.mine ? ask.me : ask.friend}: ${cleanForAi(String(m.text))}`).join('\n');
         try {
           const text = await reply(prompt, { draft: true });
           if (text.trim()) await agent.sendDraft(a.from, a.id, text.trim());

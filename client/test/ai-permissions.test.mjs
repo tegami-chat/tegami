@@ -95,7 +95,7 @@ test('sending without asking needs sending with asking', () => {
   setAiSwitch({ layer: 'friend', id: TEST_B }, 'autosend', true);
   assert.equal(check({ action: 'autosend', friend: TEST_B }), 'needs');
   setAiSwitch({ layer: 'all' }, 'send', true);
-  assert.equal(check({ action: 'autosend', friend: TEST_B }), null);
+  assert.equal(check({ action: 'autosend', friend: TEST_B, readOthers: false }), null);
 });
 
 test('the gate writes every decision to the log', () => {
@@ -254,7 +254,7 @@ test('sending without asking still asks for photos, videos, files, voice and mon
     setAiSwitch({ layer: 'all' }, a, true);
     setAiSwitch({ layer: 'friend', id: TEST_B }, a, true);
   }
-  const send = (content) => at({ action: 'autosend', friend: TEST_B, content });
+  const send = (content) => at({ action: 'autosend', friend: TEST_B, content, readOthers: false });
   assert.equal(send({ kind: 'text', text: '明日の10時でどう？' }), null);
   for (const kind of ['photo', 'video', 'file', 'voice']) assert.equal(send({ kind }), 'always', kind);
   for (const text of ['3000円振り込んで', '口座はこちら', '¥5,000 です', '2万円かかる', 'ビットコインで払う']) assert.equal(send({ kind: 'text', text }), 'always', text);
@@ -300,7 +300,7 @@ test('stages: at stage 2, sending without asking, other AIs and AI in a group ar
   assert.equal(d({ action: 'send', friend: TEST_B }, 2).verdict, 'allow');
   assert.equal(d({ action: 'read', friend: TEST_B }, 2).verdict, 'allow');
   assert.equal(d({ action: 'send', friend: TEST_B }, 1).by, 'stage');
-  assert.equal(d({ action: 'autosend', friend: TEST_B, content: { kind: 'text', text: 'こんにちは' } }, 3).verdict, 'allow');
+  assert.equal(d({ action: 'autosend', friend: TEST_B, content: { kind: 'text', text: 'こんにちは' }, readOthers: false }, 3).verdict, 'allow');
   assert.equal(P.aiStageAllows('group', 2), false);
   assert.equal(P.aiStageAllows('group', 3), true);
   assert.equal(P.AI_STAGE_OF.autosend, 3);
@@ -309,7 +309,7 @@ test('stages: at stage 2, sending without asking, other AIs and AI in a group ar
 test('links always ask, like money (only what looks like money: words and amounts)', () => {
   reset();
   P.replaceAiPermissions({ all: { send: true, autosend: true }, friends: { [TEST_B]: { send: true, autosend: true } } });
-  const send = (text) => at({ action: 'autosend', friend: TEST_B, content: { kind: 'text', text } });
+  const send = (text) => at({ action: 'autosend', friend: TEST_B, content: { kind: 'text', text }, readOthers: false });
   for (const text of ['ここ見て https://example.com/x', 'www.example.jp', 'bit.ly/abc を開いて', 'Example.COM にログイン']) assert.equal(send(text), 'always', text);
   assert.equal(send('3.14は円周率'), null);
   assert.equal(send('ok. done'), null);
@@ -352,6 +352,41 @@ test('widened: what my other device let AIs do more is noticed; narrowing is not
   assert.equal(w({ all: { read: true, send: 'ask' }, ais: { [AI]: { read: false } }, friends: { [TEST_B]: { read: { until: NOW + 60 } } }, limits: { day: 500 } }), true, 'a higher limit');
   assert.equal(w({ all: { read: false }, ais: { [AI]: { read: false } }, friends: {} }), false, 'narrower');
   assert.equal(w({ all: { read: true, send: 'ask' }, ais: { [AI]: { read: false } }, friends: { [TEST_B]: { read: { until: NOW + 60 } } }, limits: { day: 10 } }), false, 'a lower limit');
+});
+
+test('AIの検査: a key, a recovery code, a card number or an API key is never sent by an AI, whatever the switches say', () => {
+  reset();
+  P.replaceAiPermissions({ all: { send: true, autosend: true }, friends: { [TEST_B]: { send: true, autosend: true } } });
+  const d = (action, text) => P.decideAi(getAiPermissions(), { ai: AI, model: MODEL, action, friend: TEST_B, content: { kind: 'text', text }, readOthers: false }, isFriend, NOW, 3);
+  const secrets = [
+    'これ使って nsec1qqqsyqcyq5rqwzqfpg9scrgwpugpzysnzs23v9ccrydpk8qarc0jqgj4a9e',
+    `鍵は ${'ab'.repeat(32)} です`,
+    '復旧コード K7QM-3XRA-ABCD-EFGH-JKLM-NPQR-STUV',
+    'https://app.tegami.chat/link#k=abc123',
+    'キーは sk-ant-api03-AbCdEfGhIjKlMnOpQrStUvWx です',
+    'カード 4242 4242 4242 4242',
+    '全角でも ｎｓｅｃ１ｑｑｑｓｙｑｃｙｑ５ｒｑｗｚｑｆｐｇ９ｓｃｒｇｗｐｕｇｐｚｙ',
+    '見えない文字 nsec​1qqqsyqcyq5rqwzqfpg9scrgwpugpzysnzs',
+  ];
+  for (const text of secrets) {
+    assert.deepEqual(d('autosend', text), { verdict: 'deny', by: 'secret' }, text);
+    assert.deepEqual(d('send', text), { verdict: 'deny', by: 'secret' }, text);
+  }
+  // Everyday Japanese is not stopped: phone numbers, dates, times, prices, an npub to share.
+  for (const text of ['電話は 090-1234-5678 です', '2026年11月17日 10:30 に', '会員番号 12345678', 'npub1zptpqkxhr98glpt4rqv9945f3hd3q82wghaqth4gwqtmzmtjutsse5a98k', '明日の10時でどう？'])
+    assert.equal(d('autosend', text).verdict, 'allow', text);
+});
+
+test('Rule of Two: what an AI sends after reading what others wrote always waits for the user', () => {
+  reset();
+  P.replaceAiPermissions({ all: { send: true, autosend: true }, friends: { [TEST_B]: { send: true, autosend: true } } });
+  const d = (r) => P.decideAi(getAiPermissions(), { ai: AI, model: MODEL, action: 'autosend', friend: TEST_B, content: { kind: 'text', text: '了解です' }, ...r }, isFriend, NOW, 3);
+  assert.deepEqual(d({ readOthers: true }), { verdict: 'ask', by: 'others' });
+  // An AI program that does not say counts as having read others.
+  assert.deepEqual(d({}), { verdict: 'ask', by: 'others' });
+  assert.equal(d({ readOthers: false }).verdict, 'allow');
+  // Sending after the user saw it is a look already: not stopped.
+  assert.equal(P.decideAi(getAiPermissions(), { ai: AI, action: 'send', friend: TEST_B, content: { kind: 'text', text: '了解です' }, readOthers: true }, isFriend, NOW, 3).verdict, 'allow');
 });
 
 await chain;

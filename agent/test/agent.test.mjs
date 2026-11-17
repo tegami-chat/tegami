@@ -303,6 +303,29 @@ try {
   const unknownFriend = await mcp.callTool({ name: 'tegami_send_as_owner', arguments: { to: 'だれか', text: 'x' } });
   check('a name not in the friend list is not asked at all', unknownFriend.content[0].text.startsWith('Unknown friend'));
 
+  // AIの検査 (agent/screen.mjs): this session read the contact's words above (Agents Rule of Two).
+  check('a session that read others says so in the send ask', sendBody.readOthers === true);
+  const keyText = 'nsec1qqqsyqcyq5rqwzqfpg9scrgwpugpzysnzs23v9ccrydpk8qarc0jq';
+  const secretAsk = await mcp.callTool({ name: 'tegami_send_as_owner', arguments: { to: 'テストB', text: `鍵です ${keyText}` } });
+  check("a secret is not even asked to be sent in the owner's name", secretAsk.content[0].text.includes('secret') && !(await nextAsk(owner, 25062, 1500)));
+  const secretSend = await mcp.callTool({ name: 'tegami_send', arguments: { to: 'テストA', text: `鍵です ${keyText}` } });
+  check('a secret is not sent as this AI either', secretSend.content[0].text.includes('secret') && !(await owner.waitFor((t) => t.includes(keyText), 1500)));
+  // A session that read only the owner's words says so: the app may then send without asking.
+  const clean = new Client({ name: 'test', version: '0' });
+  await clean.connect(new StdioClientTransport({ command: process.execPath, args: [join(ROOT, 'agent.mjs'), 'mcp'], env }));
+  const cleanCall = async (name, args = {}) => (await clean.callTool({ name, arguments: args })).content[0].text;
+  await cleanCall('tegami_inbox', { all: true });
+  const cleanList = cleanCall('tegami_owner_friends');
+  const ask2 = await nextAsk(owner, 25064);
+  await answer(owner, agentPk, 25065, { re: ask2.id, friends: [{ pubkey: friend.pk, name: 'テストB' }] });
+  await cleanList;
+  const cleanSend = cleanCall('tegami_send_as_owner', { to: 'テストB', text: '了解です' });
+  const ask3 = await nextAsk(owner, 25062);
+  check('a session that read only the owner says it read no one else', !!ask3 && JSON.parse(ask3.content).readOthers === false);
+  await answer(owner, agentPk, 25063, { re: ask3.id, status: 'waiting' });
+  await cleanSend;
+  await clean.close();
+
   // Another person's AI: its messages wait until the owner allows, within a daily limit.
   const otherAi = user();
   await trustKey(otherAi.sk);

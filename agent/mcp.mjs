@@ -38,7 +38,15 @@ export async function startMcp(agent) {
     return s.mcpContacts;
   };
   const fromOthers = (m) => m.from !== agent.pubkey && (m.peer.includes(',') || !agent.isTrusted(m.from));
-  const view = (m) => ({
+  // Meta's Agents Rule of Two: once this session (this MCP server, one Claude Code session) has
+  // read what anyone but the owner wrote, what it asks the owner's app to send waits for the owner.
+  // A message this AI sent into a chat with others counts too: the chat around it is theirs.
+  let readOthers = false;
+  const view = (m) => {
+    if (fromOthers(m) || (m.from === agent.pubkey && !agent.isTrusted(m.peer))) readOthers = true;
+    return viewOf(m);
+  };
+  const viewOf = (m) => ({
     from: nameOf(m.from),
     with: m.peer.split(',').map(nameOf).join(', '),
     ...(m.peer.includes(',') ? { group: m.peer } : {}),
@@ -135,12 +143,13 @@ export async function startMcp(agent) {
     async ({ to, text: body }) => {
       const f = agent.ownerFriends.find((x) => x.name === to || x.pubkey === to);
       if (!f) return text(`Unknown friend: ${to}. Call tegami_owner_friends first.`);
-      const status = await agent.sendAsOwner(f.pubkey, body, 60_000).catch((e) => e.message);
+      const status = await agent.sendAsOwner(f.pubkey, body, 60_000, { readOthers }).catch((e) => e.message);
       const said = {
         sent: `Sent to ${f.name} in your owner's name.`,
         waiting: 'Waiting for your owner to press send.',
         declined: 'Your owner did not send it.',
         stopped: "Stopped by your owner's AI permissions.",
+        secret: 'Not sent: the text looks like it carries a secret (a key, a recovery code, an API key or a card number).',
       };
       return text(said[status] ?? (status ? String(status) : "No answer from the owner's app."));
     },

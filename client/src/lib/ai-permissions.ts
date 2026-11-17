@@ -27,6 +27,7 @@
 
 import { useSyncExternalStore } from 'react';
 
+import { findSecret } from './ai-screen';
 import { k, load, save } from './storage';
 
 /** Actions, from the least to the most power. */
@@ -132,7 +133,14 @@ export type Layer =
   /** This version of the app does not do the action yet (AI_STAGE). */
   | 'stage'
   /** Sending without asking reached a limit (AiLimits); the message waits for 送る instead. */
-  | 'limit';
+  | 'limit'
+  /** AIの検査: the text looks like it carries a secret (a key, a recovery code, a card number). Never sent by an AI. */
+  | 'secret'
+  /**
+   * The AI read what someone else wrote in the same session (Meta's Agents Rule of Two): what it
+   * sends from that session always waits for the user, even with 確認なしで送る on.
+   */
+  | 'others';
 
 const EMPTY: AiPermissions = { all: {}, models: {}, ais: {}, friends: {}, peerAis: {} };
 const LOG_MAX = 1000;
@@ -367,6 +375,11 @@ export type AiRequest = {
   peer?: { pubkey: string; name?: string; model?: string };
   /** For reading: the messages that will be handed over, kept in the log. */
   range?: AiRange;
+  /**
+   * For sending: false only when the AI's program says this session read nothing written by
+   * anyone but the user. Left out counts as read (an older program does not say).
+   */
+  readOthers?: boolean;
 };
 
 /** A web address in a text: http(s)://, www., or a bare domain with a common ending. */
@@ -396,6 +409,8 @@ export type AiDecision = { verdict: 'allow' | 'ask' | 'deny'; by?: Layer };
 export function decideAi(p: AiPermissions, r: AiRequest, isFriend: (pubkey: string) => boolean, at = now(), stage = AI_STAGE): AiDecision {
   const a = r.action;
   if (!aiStageAllows(a, stage)) return { verdict: 'deny', by: 'stage' };
+  // AIの検査: a key, a recovery code or a card number is never sent by an AI, whatever the switches say.
+  if ((a === 'send' || a === 'autosend') && r.content?.text && findSecret(r.content.text)) return { verdict: 'deny', by: 'secret' };
   let lv = level(p.all[a], at);
   if (lv === 0) return { verdict: 'deny', by: ranOut(p.all[a], at) ? 'expired' : 'all' };
   const needs = NEEDS[a];
@@ -424,6 +439,7 @@ export function decideAi(p: AiPermissions, r: AiRequest, isFriend: (pubkey: stri
   }
   if (lv === 1) return { verdict: 'ask', by: 'ask' };
   if (a === 'autosend' && needsConfirm(r.content)) return { verdict: 'ask', by: 'always' };
+  if (a === 'autosend' && r.readOthers !== false) return { verdict: 'ask', by: 'others' };
   return { verdict: 'allow' };
 }
 

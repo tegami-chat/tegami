@@ -2668,16 +2668,24 @@ async function main() {
       // Plain text goes without a window; a photo and money always ask, with to whom and what.
       await p.goto(ORIGIN + '/ai');
       await waitText(p, 'AIの使用');
-      let answer = await ask({ action: 'autosend', friend: b.hex, content: { kind: 'text', text: '明日の10時でどう？' } });
+      // readOthers: false = the AI's session has read only the owner's own words (Rule of Two).
+      let answer = await ask({ action: 'autosend', friend: b.hex, readOthers: false, content: { kind: 'text', text: '明日の10時でどう？' } });
       assert((await answer()) === true && !(await confirmShown()), 'plain text was asked');
-      answer = await ask({ action: 'autosend', friend: b.hex, content: { kind: 'photo' } });
+      // After reading someone else's words (or not saying), sending without asking asks first.
+      answer = await ask({ action: 'autosend', friend: b.hex, content: { kind: 'text', text: '明日の10時でどう？' } });
+      await p.getByTestId('ai-confirm').waitFor();
+      await waitText(p, 'クロードが送ろうとしています');
+      await shot(p, 'ai-confirm-others', 'ほかの人の文を読んだAIが確認なしで送ろうとした時の確認');
+      await button(p, '送らない').click();
+      assert((await answer()) === false, 'refusing after reading others still sent');
+      answer = await ask({ action: 'autosend', friend: b.hex, readOthers: false, content: { kind: 'photo' } });
       await p.getByTestId('ai-confirm').waitFor();
       await waitText(p, 'クロードが送ろうとしています');
       await waitText(p, '宛先');
       await shot(p, 'ai-confirm-photo', 'AI が写真を確認なしで送ろうとした時の確認（宛先と中身を大きく出す）');
       await button(p, '送る').click();
       assert((await answer()) === true, 'sending the photo was not allowed');
-      answer = await ask({ action: 'autosend', friend: b.hex, content: { kind: 'text', text: '3000円を振り込んでください' } });
+      answer = await ask({ action: 'autosend', friend: b.hex, readOthers: false, content: { kind: 'text', text: '3000円を振り込んでください' } });
       await waitText(p, '3000円を振り込んでください');
       await shot(p, 'ai-confirm-money', 'AI がお金の話を確認なしで送ろうとした時の確認');
       await button(p, '送らない').click();
@@ -2983,8 +2991,9 @@ async function main() {
       /** Sends one ask to the owner's app (expires like the app's own asks). Returns its id. */
       const ask = async (kind, data, from = sk) => {
         const now = Math.floor(Date.now() / 1000);
+        // A send ask says the AI read only the owner's words, unless a test says otherwise (Rule of Two).
         // Two asks with the same words in the same second would be the same rumor (one id): a nonce keeps them apart.
-        const rumor = nip59.createRumor({ kind, content: JSON.stringify({ v: 1, ...data, n: Math.random() }), tags: [['p', owner.hex]], created_at: now }, from);
+        const rumor = nip59.createRumor({ kind, content: JSON.stringify({ v: 1, ...(kind === 25062 ? { readOthers: false } : {}), ...data, n: Math.random() }), tags: [['p', owner.hex]], created_at: now }, from);
         const seal = nip59.createSeal(rumor, from, owner.hex);
         const key = generateSecretKey();
         const wrap = finalizeEvent(

@@ -85,11 +85,12 @@ export function markHandled(id: string) {
 
 // ---------- reading asks ----------
 
-export function parseSendAsk(content: string): { to: string; text: string } | null {
+/** readOthers is false only when the AI's program says so (Agents Rule of Two); left out counts as read. */
+export function parseSendAsk(content: string): { to: string; text: string; readOthers: boolean } | null {
   try {
-    const a = JSON.parse(content) as { v?: unknown; to?: unknown; text?: unknown };
+    const a = JSON.parse(content) as { v?: unknown; to?: unknown; text?: unknown; readOthers?: unknown };
     if (a.v !== 1 || typeof a.to !== 'string' || !HEX.test(a.to) || typeof a.text !== 'string' || !a.text.trim()) return null;
-    return { to: a.to, text: a.text.slice(0, TEXT_MAX) };
+    return { to: a.to, text: a.text.slice(0, TEXT_MAX), readOthers: a.readOthers !== false };
   } catch {
     return null;
   }

@@ -18,6 +18,8 @@ const STOPPED_BY: Record<Layer, string> = {
   firstPeer: '初めて話すほかの人のAI',
   stage: 'このアプリではまだ使えない機能',
   limit: '送る量の上限に達したため',
+  secret: '鍵、復旧コード、カード番号に見える文',
+  others: 'ほかの人の文を読んだ後の送信は確認',
 };
 
 function result(e: AiLogEntry) {

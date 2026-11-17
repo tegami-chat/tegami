@@ -17,6 +17,7 @@ import { finalizeEvent, generateSecretKey } from 'nostr-tools/pure';
 
 import { checkAi, type AiPermissions, type AiRange } from './ai-permissions';
 import { k, load, save } from './storage';
+import { cleanForAi } from './ai-screen';
 
 /** Rumor kinds (Tegami's own, in the ephemeral range like call signals). Never shown as messages. */
 export const AI_DRAFT_ASK_KIND = 25060;
@@ -45,7 +46,7 @@ export function draftAsk(all: ChatMessage[], friend: string, me: string, names: 
     v: 1,
     friend: names.friend.slice(0, 60),
     me: names.me.slice(0, 60),
-    messages: texts.map((m) => ({ mine: m.from === me, text: m.text.slice(0, TEXT_MAX), at: m.at })),
+    messages: texts.map((m) => ({ mine: m.from === me, text: cleanForAi(m.text).slice(0, TEXT_MAX), at: m.at })),
   };
   const range: AiRange = { count: texts.length, from: texts[0]?.at ?? 0, to: texts[texts.length - 1]?.at ?? 0 };
   return { ask, range };

@@ -2373,7 +2373,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     async (rumor: ReturnType<typeof nip59.createRumor>, ai: Contact) => {
       const ask = parseSendAsk(rumor.content);
       if (!ask) return void tellAi(ai.pubkey, AI_SEND_RESULT_KIND, { re: rumor.id, status: 'invalid' });
-      const r = { ai: ai.pubkey, model: ai.model, friend: ask.to, content: { kind: 'text' as const, text: ask.text } };
+      const r = { ai: ai.pubkey, model: ai.model, friend: ask.to, content: { kind: 'text' as const, text: ask.text }, readOthers: ask.readOthers };
       // Without asking: the gate may let it go, or show the confirm window (photos, links, money, "ask each time").
       let auto = decideAi(getAiPermissions(), { ...r, action: 'autosend' }, isPersonFriend);
       // Over a limit on sending (AiLimits): never at once; it waits for 送る below instead.

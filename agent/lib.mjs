@@ -8,6 +8,7 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync, existsSync, chmodSync } from 'node:fs';
 import { accountFor, forget, protect, storeKind, unprotect, warnPlain } from './secrets.mjs';
+import { cleanForAi, findSecret } from './screen.mjs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import * as nip17 from 'nostr-tools/nip17';
@@ -770,7 +771,8 @@ export class Agent {
       }
     }
     // Kept from AIs by its writer: remembered as seen (no answer, no repeat), without its words.
-    const m = this.keptFromAi(rumor) ? { ...base, noai: true } : { ...base, text: rumor.content };
+    // AIの検査: characters a person cannot see are taken out before the AI ever reads the words.
+    const m = this.keptFromAi(rumor) ? { ...base, noai: true } : { ...base, text: cleanForAi(String(rumor.content)) };
     this.messages = this.fresh([...this.messages, m].sort((a, b) => a.at - b.at));
     write(this.dir, 'messages.json', this.messages);
     for (const l of this.listeners) l(m);
@@ -782,6 +784,9 @@ export class Agent {
    */
   async send(peer, text, { notice = false } = {}) {
     if (this.stopped) throw new Error('Stopped by your owner. Nothing is sent until they resume you.');
+    // AIの検査: a key, a recovery code, an API key or a card number never leaves as this AI's message.
+    const secret = findSecret(String(text));
+    if (secret) throw Object.assign(new Error(`Not sent: the text looks like it carries a secret (${secret}).`), { code: 'SECRET' });
     const toAi = this.isAiChat(peer);
     const why = toAi ? this.aiTalkCheck(peer, { count: false }) : '';
     if (why) throw new Error(why);
@@ -845,10 +850,15 @@ export class Agent {
 
   /**
    * Asks the owner's app to send `text` to one of the owner's friends, in the owner's name.
-   * Answers sent, waiting (for the owner to press 送る), declined, stopped, or null (no answer).
+   * Answers sent, waiting (for the owner to press 送る), declined, stopped, secret (AIの検査 stopped it
+   * here, before asking), or null (no answer).
+   * `readOthers`: whether this session read what anyone but the owner wrote (Meta's Agents Rule
+   * of Two). The app then never sends it without the owner's look. Left out, the app counts it as read.
    */
-  async sendAsOwner(to, text, ms) {
-    const r = await this.askOwner(SEND_ASK_KIND, { to, text: String(text).slice(0, DRAFT_TEXT_MAX) }, ms);
+  async sendAsOwner(to, text, ms, { readOthers = true } = {}) {
+    const body = String(text).slice(0, DRAFT_TEXT_MAX);
+    if (findSecret(body)) return 'secret';
+    const r = await this.askOwner(SEND_ASK_KIND, { to, text: body, readOthers: readOthers !== false }, ms);
     return r?.status ?? null;
   }
 
