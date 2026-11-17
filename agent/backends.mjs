@@ -38,6 +38,8 @@ const HISTORY_TURNS = 20;
  */
 export const MAX_TURNS = 2;
 export const MAX_TURNS_WITH_TOOLS = 8;
+/** The AI check's Claude Code is stopped after this long (check.mjs counts it as ASK_OWNER sooner). */
+export const CHECK_PROCESS_TIMEOUT = 95_000;
 const DAY = 86400;
 
 export function readJson(dir, file, fallback) {
@@ -175,20 +177,25 @@ export function redact(text, keys) {
  * Makes the function that writes a reply.
  *   reply(prompt, { draft, peer }) -> Promise<string>
  * draft: a one-off reply draft for a friend's chat: no conversation, no tools, nothing kept.
+ * check: the AI check (check.mjs) with its own instructions (checkSystem): run like a draft.
  * peer: whose conversation this continues (API backends keep the last turns per person).
  * settings (lib.mjs loadSettings): tools (Claude Code may use its tools), remember (keep the
  * conversation), keepDays (how long a conversation is kept).
  */
-export function makeResponder({ dir, config, system, draftSystem, state, saveState, command, settings = {}, vault }) {
+export function makeResponder({ dir, config, system, draftSystem, checkSystem = draftSystem, state, saveState, command, settings = {}, vault }) {
   // history.json is sealed by the AI friend's vault (vault.mjs). Without one it stays in memory.
   const records = vault ?? new Vault(dir, () => null);
   const { tools = false, remember = true, keepDays = 30 } = settings;
   if (command) return (prompt) => runCommand(command, prompt, dir);
   const b = BACKENDS[config.type] ?? BACKENDS['claude-code'];
   if (b.kind === 'claude-code')
-    return (prompt, opts = {}) => runClaude({ dir, prompt, system, draftSystem, state, saveState, draft: !!opts.draft, tools, remember, keepDays });
+    return (prompt, opts = {}) =>
+      opts.check
+        ? runClaude({ dir, prompt, system, draftSystem: checkSystem, state, saveState, draft: true, check: true, timeout: opts.timeout ?? CHECK_PROCESS_TIMEOUT, tools, remember, keepDays })
+        : runClaude({ dir, prompt, system, draftSystem, state, saveState, draft: !!opts.draft, tools, remember, keepDays });
   if (b.kind === 'command') throw new Error('The command backend needs --command "<program>" on watch.');
-  return async (prompt, { draft = false, peer = '' } = {}) => {
+  return async (prompt, { draft = false, check = false, peer = '' } = {}) => {
+    if (check) draft = true;
     const keys = loadKeys(dir);
     const key = keys[config.type] ?? '';
     if (b.key === true && !key) throw new Error(`No API key for ${config.type}. Run: tegami-agent key ${config.type}`);
@@ -200,11 +207,11 @@ export function makeResponder({ dir, config, system, draftSystem, state, saveSta
     const turns = [...history.map(({ role, text }) => ({ role, text })), { role: 'user', text: prompt }];
     let text;
     try {
-      text = await callApi(b.kind, { url: config.url, model: config.model, key, system: draft ? draftSystem : system, turns });
+      text = await callApi(b.kind, { url: config.url, model: config.model, key, system: check ? checkSystem : draft ? draftSystem : system, turns });
     } catch (e) {
       throw new Error(redact(e.message, keys));
     }
-    noteModel(dir, config.model);
+    if (!check) noteModel(dir, config.model);
     if (keep) {
       const all = records.read('history.json', {});
       // Older than keepDays: gone, for everyone in the file (not only this person).
@@ -290,18 +297,43 @@ export async function callApi(kind, { url, model, key, system, turns }) {
 // ---------- programs on this computer ----------
 
 /** Runs a shell command line, feeding `input` on stdin. Resolves with the exit code and output. */
-function run(commandLine, input, cwd, env = process.env) {
+function run(commandLine, input, cwd, env = process.env, { timeout = 0 } = {}) {
   return new Promise((resolve, reject) => {
     // One command line through the shell, so `claude` (claude.cmd on Windows) is found.
-    const p = spawn(commandLine, { cwd, env, shell: true, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
+    // With a timeout on macOS and Linux, the shell leads its own process group, so killTree can
+    // stop the group (the shell and `claude` under it), not only the shell.
+    const detached = timeout > 0 && process.platform !== 'win32';
+    const p = spawn(commandLine, { cwd, env, shell: true, windowsHide: true, detached, stdio: ['pipe', 'pipe', 'pipe'] });
     let out = '';
     let err = '';
+    let timer;
+    // timeout: the whole process tree is stopped (the shell and the program it started), and
+    // the call fails. Used by the AI check, so a hung check never keeps a process alive.
+    if (timeout > 0)
+      timer = setTimeout(() => {
+        killTree(p.pid);
+        reject(Object.assign(new Error('the program took too long'), { code: 'TIMEOUT' }));
+      }, timeout);
     p.stdout.on('data', (d) => (out += d));
     p.stderr.on('data', (d) => (err += d));
-    p.on('error', reject);
-    p.on('exit', (code) => resolve({ code, out, err }));
+    p.on('error', (e) => (clearTimeout(timer), reject(e)));
+    p.on('exit', (code) => (clearTimeout(timer), resolve({ code, out, err })));
+    p.stdin.on('error', () => {});
     p.stdin.end(input);
   });
+}
+
+/** Stops a process and what it started (on Windows the shell's child does not stop with it). */
+function killTree(pid) {
+  if (!pid) return;
+  try {
+    if (process.platform === 'win32') spawn('taskkill', ['/pid', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+    else process.kill(-pid, 'SIGKILL');
+  } catch {
+    try {
+      process.kill(pid, 'SIGKILL');
+    } catch {}
+  }
 }
 
 async function runCommand(command, prompt, cwd) {
@@ -351,8 +383,8 @@ export function claudeLine({ system, tools = false, remember = true, draft = fal
  * draft: a reply draft for a friend's chat instead. It runs once on its own: no tools (the
  * friend's words must not make it act), no saved session, and not added to the conversation.
  */
-async function runClaude({ dir, prompt, system, draftSystem, state, saveState, draft, tools, remember, keepDays }) {
-  const work = join(dir, draft ? 'draft' : 'work');
+async function runClaude({ dir, prompt, system, draftSystem, state, saveState, draft, check = false, timeout = 0, tools, remember, keepDays }) {
+  const work = join(dir, check ? 'check' : draft ? 'draft' : 'work');
   mkdirSync(work, { recursive: true });
   const now = Math.floor(Date.now() / 1000);
   if (!draft && state.claudeSession && (!remember || (state.claudeSessionAt ?? 0) < now - keepDays * DAY)) {
@@ -361,7 +393,7 @@ async function runClaude({ dir, prompt, system, draftSystem, state, saveState, d
     saveState();
   }
   const line = claudeLine({ system: draft ? draftSystem : system, tools, remember, draft, session: state.claudeSession });
-  const r = await run(line, prompt, work, ownEnv());
+  const r = await run(line, prompt, work, ownEnv(), { timeout });
   let out;
   try {
     out = JSON.parse(r.out);
@@ -376,6 +408,6 @@ async function runClaude({ dir, prompt, system, draftSystem, state, saveState, d
   if (out.is_error) throw new Error(String(out.result ?? 'Claude returned an error'));
   // The model Claude Code really ran (its JSON names it under modelUsage), shown to friends.
   const used = Object.entries(out.modelUsage ?? {}).sort((x, y) => (y[1]?.outputTokens ?? 0) - (x[1]?.outputTokens ?? 0))[0]?.[0];
-  if (used) noteModel(dir, used);
+  if (used && !check) noteModel(dir, used);
   return String(out.result ?? '');
 }

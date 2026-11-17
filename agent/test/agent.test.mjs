@@ -135,6 +135,9 @@ try {
   const added = cli('add', `https://app.tegami.chat/i#${owner.npub}&n=${encodeURIComponent('テストA')}&c=${ownerCode}`, '--trust');
   check('add registers the AI with the code in the link', added.includes('Registered with the Tegami relay'));
   cli('add', friend.npub, '--name', 'ともだち');
+  // AIの検査 by a model is tested with a fake Claude Code in check.test.mjs. Here the MCP server would
+  // run the real `claude`, so the model check is off for this AI friend.
+  cli('setting', 'modelCheck', 'off');
   check('contacts list the trusted owner', /\* テストA/.test(cli('contacts')));
 
   watch = spawn(process.execPath, [join(ROOT, 'agent.mjs'), 'watch', '--command', `node "${join(ROOT, 'test/echo.mjs')}"`], { env, stdio: 'pipe' });

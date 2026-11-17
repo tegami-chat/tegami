@@ -257,7 +257,9 @@ test('sending without asking still asks for photos, videos, files, voice and mon
   const send = (content) => at({ action: 'autosend', friend: TEST_B, content, readOthers: false });
   assert.equal(send({ kind: 'text', text: '明日の10時でどう？' }), null);
   for (const kind of ['photo', 'video', 'file', 'voice']) assert.equal(send({ kind }), 'always', kind);
-  for (const text of ['3000円振り込んで', '口座はこちら', '¥5,000 です', '2万円かかる', 'ビットコインで払う']) assert.equal(send({ kind: 'text', text }), 'always', text);
+  for (const text of ['3000円振り込んで', '口座はこちら', '¥5,000 送って', '2万円かかるから今日中に払って', 'ビットコインで払う', 'PayPayで2000円送っておいて', '三万円貸してくれない？', 'Amazonギフト券を買ってきて']) assert.equal(send({ kind: 'text', text }), 'always', text);
+  // A price said in passing is not money talk (findMoney): the AI may send it.
+  for (const text of ['ランチ1200円だった', '2万円かかるらしい', '一万歩歩いたよ']) assert.equal(send({ kind: 'text', text }), null, text);
   // Sending after the user saw the draft is already a look: no extra asking.
   assert.equal(at({ action: 'send', friend: TEST_B, content: { kind: 'photo' } }), null);
 });

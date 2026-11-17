@@ -27,7 +27,7 @@
 
 import { useSyncExternalStore } from 'react';
 
-import { findSecret } from './ai-screen';
+import { findMoney, findSecret } from './ai-screen';
 import { k, load, save } from './storage';
 
 /** Actions, from the least to the most power. */
@@ -396,18 +396,17 @@ export type AiRequest = {
 /** A web address in a text: http(s)://, www., or a bare domain with a common ending. */
 const LINK = /https?:\/\/|www\.|\b[a-z0-9-]+\.(com|net|org|jp|io|co|app|chat|me|ly|gl|xyz|info|biz|link|site|top|dev|page|shop)\b/;
 
-const MONEY = ['振込', '振り込', '送金', '入金', '支払', '払って', '払う', '返金', '請求', '口座', '暗号資産', '仮想通貨', 'ビットコイン', 'ギフトカード', 'カード番号', '暗証番号', 'bitcoin', 'sats', 'lightning', 'paypay'];
-
 /**
  * Photos, videos, files, voice, links and what looks like money: an AI never sends them
- * without the user seeing them first. Money is found by words and amounts only, so the screen
- * says "お金の話に見える文" and never promises every money talk is caught.
+ * without the user seeing them first. Money is found by fixed patterns (ai-screen.ts findMoney:
+ * accounts, payment apps, crypto, gift cards, words that move money, an amount someone asks for),
+ * so the screen says "お金の話に見える文" and never promises every money talk is caught.
  */
 export function needsConfirm(content?: AiContent): boolean {
   if (!content) return false;
   if (content.kind !== 'text') return true;
   const t = (content.text ?? '').normalize?.('NFKC').toLowerCase() ?? '';
-  return LINK.test(t) || MONEY.some((w) => t.includes(w)) || /[¥$€]\s*\d|\d[\d,.]*\s*(円|万|ドル|ユーロ|元|yen|usd|btc)/.test(t);
+  return LINK.test(t) || findMoney(content.text ?? '') !== null;
 }
 
 export type AiDecision = { verdict: 'allow' | 'ask' | 'deny'; by?: Layer };
