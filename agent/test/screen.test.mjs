@@ -1,6 +1,7 @@
 // AIの検査: the watcher's fixed checks (agent/screen.mjs) and the app's (client/src/lib/ai-screen.ts)
 // answer the same for the same texts. Run: node test/screen.test.mjs (no relay needed).
 import { register } from 'node:module';
+import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -58,6 +59,38 @@ const smuggled = `a${'︀︁︂︃'.repeat(5)}`;
 check('a long run of variation selectors is cut to one', agent.cleanForAi(smuggled) === 'a︀' && app.cleanForAi(smuggled) === 'a︀');
 check('ordinary Japanese is unchanged', agent.cleanForAi('明日、駅で待ってるね。') === '明日、駅で待ってるね。');
 check('a long text is cut for the AI', agent.cleanForAi('あ'.repeat(30000)).length === agent.AI_TEXT_MAX);
+
+// Money talk (findMoney): the labelled Japanese lines in fixtures/money-ja.json. The app and the
+// watcher answer the same for every line; recall and false alarms are printed and held to a floor.
+const fixture = JSON.parse(readFileSync(join(import.meta.dirname, 'fixtures/money-ja.json'), 'utf8'));
+const sets = [
+  ['tuned', fixture.money, fixture.everyday],
+  ['held out', fixture.heldOut.money, fixture.heldOut.everyday],
+];
+let disagree = 0;
+for (const [name, money, everyday] of sets) {
+  for (const t of [...money, ...everyday]) if (agent.findMoney(t) !== app.findMoney(t)) disagree++;
+  const missed = money.filter((t) => !agent.findMoney(t));
+  const alarms = everyday.filter((t) => agent.findMoney(t));
+  console.log(`money (${name}): found ${money.length - missed.length}/${money.length}, false alarms ${alarms.length}/${everyday.length}`);
+  for (const t of missed) console.log(`  missed: ${t}`);
+  for (const t of alarms) console.log(`  false alarm: ${t}`);
+  check(`money (${name}): at least 90% found`, money.length - missed.length >= money.length * 0.9);
+  check(`money (${name}): at most 3% false alarms`, alarms.length <= everyday.length * 0.03);
+}
+check('money: at least 80 money lines and 80 everyday lines', fixture.money.length + fixture.heldOut.money.length >= 80 && fixture.everyday.length + fixture.heldOut.everyday.length >= 80);
+check('money: the app and the watcher answer the same for every line', disagree === 0);
+const kinds = {
+  bankAccount: 'さくら銀行 渋谷支店 普通 1234567',
+  paymentApp: 'PayPayで2000円送っておいて',
+  crypto: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+  giftCard: 'コードはこれ AQ7K-9BZ3PQ-R4TX',
+  moneyWords: '暗証番号教えて',
+  amountAsk: '三万円貸してくれない？',
+  urgentMoney: '至急！お金のことで相談',
+};
+for (const [kind, t] of Object.entries(kinds)) check(`money kind ${kind}`, agent.findMoney(t) === kind && app.findMoney(t) === kind);
+check('money: full-width amounts and hidden characters do not hide it', agent.findMoney(`５万円今すぐ用意${ZW}できる？`) === 'amountAsk');
 
 console.log(failures ? `\n${failures} failed` : '\nall passed');
 process.exit(failures ? 1 : 0);
