@@ -32,6 +32,7 @@ const PAGES = {
   roadmap: page('roadmap', '/roadmap', 'roadmap'),
   faq: page('faq', '/faq', 'nav.faq'),
   privacy: page('privacy', '/privacy', ''),
+  about: page('about', '/about', ''),
   status: page('status', '/status', ''),
 };
 // The draft file names the sources link to, and which page each one is.
@@ -48,6 +49,7 @@ const DRAFT_LINKS = {
   'Tegamiのロードマップ案_2026-11-14.html': 'roadmap',
   'Tegamiのよくある質問_2026-11-16.html': 'faq',
   'Tegamiのプライバシーポリシー案_2026-11-14.html': 'privacy',
+  'Tegamiの運営者情報案_2026-11-17.html': 'about',
   'Tegamiの稼働状況と利用統計案_2026-11-15.html': 'status',
 };
 const META = {
@@ -94,6 +96,10 @@ const META = {
   privacy: {
     en: { title: 'Tegami privacy policy', desc: 'What Tegami keeps, why, and for how long.' },
     ja: { title: 'Tegamiのプライバシーポリシー', desc: 'Tegamiが何を、なぜ、どれだけの期間預かるか。' },
+  },
+  about: {
+    en: { title: 'About the Tegami operator', desc: 'Who runs Tegami, and how to contact us.' },
+    ja: { title: 'Tegamiの運営者情報', desc: 'Tegamiの運営者と連絡先。' },
   },
   developers: {
     en: { title: 'Tegami for developers', desc: 'How Tegami uses Nostr, what the relay can see, keys, AI, and the full technical spec.' },
