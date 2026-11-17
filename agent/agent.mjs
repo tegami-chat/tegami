@@ -72,17 +72,24 @@ const flag = (name) => {
   argv.splice(i, v && !v.startsWith('--') ? 2 : 1);
   return v && !v.startsWith('--') ? v : true;
 };
+// An on/off flag takes no value: the word after it (a command, a link) stays where it is.
+const on = (name) => {
+  const i = argv.indexOf(`--${name}`);
+  if (i < 0) return false;
+  argv.splice(i, 1);
+  return true;
+};
 const agentName = flag('agent') ?? 'claude';
 // Where the computer has no secret store: keep the AI's key and API keys unencrypted, on purpose.
-if (flag('insecure-store')) process.env.TEGAMI_INSECURE_STORE = '1';
+if (on('insecure-store')) process.env.TEGAMI_INSECURE_STORE = '1';
 const agent = new Agent(agentName);
 // Flags that open something for this run only (settings.json keeps what is chosen for good).
 const runFlags = {
-  tools: flag('allow-tools') ? true : undefined,
-  remember: flag('no-memory') ? false : undefined,
-  mcpContacts: flag('include-contacts') ? true : undefined,
-  mcpPeerAis: flag('include-ai') ? true : undefined,
-  mcpGroups: flag('include-groups') ? true : undefined,
+  tools: on('allow-tools') ? true : undefined,
+  remember: on('no-memory') ? false : undefined,
+  mcpContacts: on('include-contacts') ? true : undefined,
+  mcpPeerAis: on('include-ai') ? true : undefined,
+  mcpGroups: on('include-groups') ? true : undefined,
 };
 for (const [k, v] of Object.entries(runFlags)) if (v !== undefined) agent.settings[k] = v;
 const cmd = argv.shift();
@@ -147,7 +154,7 @@ const commands = {
   },
   async add() {
     needsInit(agent);
-    const trusted = !!flag('trust');
+    const trusted = on('trust');
     const name = flag('name');
     const p = parseInvite(argv[0] ?? '');
     if (!p) throw new Error('Give an invite link or an npub.');
@@ -313,7 +320,7 @@ const commands = {
     // trusts that person and registers with the code in their invite link.
     const name = flag('name');
     const minutes = Number(flag('minutes') ?? PAIR_TTL / 60);
-    const browser = !!flag('browser');
+    const browser = on('browser');
     if (!(minutes > 0 && minutes <= 60)) throw new Error('--minutes is 1 to 60.');
     if (!agent.ready) agent.init({ name: typeof name === 'string' ? name : undefined, model: backendLabel(loadBackend(agent.dir)) });
     else if (typeof name === 'string') agent.init({ name });
@@ -375,7 +382,7 @@ const commands = {
   async key() {
     // Saves an API key, read from the keyboard (hidden) or from stdin. Never from the command
     // line, so it does not end up in the shell's history. --remove deletes it.
-    const remove = !!flag('remove');
+    const remove = on('remove');
     const type = argv[0] ?? loadBackend(agent.dir).type;
     if (!BACKENDS[type]?.key) throw new Error(`${type} does not take an API key.`);
     if (remove) {
@@ -735,7 +742,11 @@ if (!fn) {
   console.log('Commands: pair, init, invite, add, contacts, send, backend, key, try, setting, stop, resume, watch, keep, autostart, mcp');
   process.exit(cmd ? 1 : 0);
 }
-Promise.resolve(fn()).catch((e) => {
-  console.error(e.message);
-  process.exit(1);
-});
+// .then(fn): a command that throws at once (init where there is no store) is caught here too,
+// and prints its one-line message instead of a stack trace.
+Promise.resolve()
+  .then(fn)
+  .catch((e) => {
+    console.error(e.message);
+    process.exit(1);
+  });

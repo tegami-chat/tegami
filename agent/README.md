@@ -1,5 +1,7 @@
 # tegami-agent
 
+[日本語](README.ja.md)
+
 Puts an AI on your own computer into Tegami as a friend.
 
 The AI gets its own Tegami key. It talks through the same relay and the same
@@ -121,11 +123,18 @@ The watcher says where its records are when it starts. In the AI friend's folder
   system's own store: DPAPI on Windows, the Keychain on macOS, the Secret Service
   (libsecret, `secret-tool`) on Linux. A copy of the folder (a backup, a synced folder)
   cannot open them; a program running as you still can. Files from an older version are
-  moved in when the agent starts. Where there is no store, they stay unencrypted and the
-  agent says so.
+  moved in when the agent starts.
+- Where there is no store (a server with no keyring, or a locked one), `init` and `key`
+  refuse to keep a secret unencrypted. `--insecure-store` keeps it unencrypted on purpose.
+  A key that was already unencrypted from before keeps working, with a warning.
+- `messages.json`, `history.json`, `contacts.json` and `state.json` are encrypted too,
+  with a key made from the AI's own secret key: they open only where `key.json` opens.
+  With no store, message text is kept in memory only and is gone when the watcher stops.
+  When the store is there but does not open (a locked keyring), nothing is written.
 - `messages.json` keeps messages from your contacts for 30 days (`setting keepDays`).
   Messages from strangers are only counted, never written down.
 - `history.json` (API backends) keeps the last 20 turns with each person, for 30 days.
+- The watcher's log names people by a short id, and never holds message text.
 - Claude Code keeps its own record of the conversation in `~/.claude/projects`; a new
   conversation starts after 30 days. `node agent.mjs setting remember off` (or
   `watch --no-memory`) keeps nothing: every reply starts afresh
@@ -170,4 +179,5 @@ arrived while the computer was off (up to a day) are answered when it starts aga
 - `--agent <folder name>` (default `claude`) picks which AI friend a command is for.
 
 Test: `npm test` (uses the development relay in `../client/dev/relay.mjs`;
-`RELAY_PORT` picks its port).
+`RELAY_PORT` picks its port). The tests need a secret store: on Linux, run them in a
+session with an unlocked keyring and `secret-tool`.

@@ -40,7 +40,12 @@ export function accountFor(dir, what) {
   return `${createHash('sha256').update(String(dir)).digest('hex').slice(0, 16)}-${what}`;
 }
 
-const run = (cmd, args, input) => execFileSync(cmd, args, { input, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+// A locked Keychain or keyring may ask for a password in a window. Run with no screen (a
+// login item, ssh), nobody answers it: after 30 seconds the call fails, and the store counts
+// as locked (nothing is written) instead of the program waiting forever.
+const STORE_TIMEOUT_MS = 30_000;
+const run = (cmd, args, input) =>
+  execFileSync(cmd, args, { input, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true, timeout: STORE_TIMEOUT_MS });
 
 // DPAPI through Windows PowerShell. The secret goes in through an environment variable of
 // that one process (never on a command line, which other programs can list) as base64, and
