@@ -11,6 +11,12 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
   try { t = localStorage.getItem('tegami.theme'); } catch {}
   if (!t) document.documentElement.classList.toggle('dark', e.matches);
 });
+// Close the language menu and the phone menu on a click outside them, or on a link inside them.
 document.addEventListener('click', (e) => {
-  document.querySelectorAll('[data-lang-menu][open]').forEach((d) => { if (!d.contains(e.target)) d.removeAttribute('open'); });
+  document.querySelectorAll('[data-lang-menu][open], [data-menu][open]').forEach((d) => {
+    if (!d.contains(e.target) || e.target.closest('a')) d.removeAttribute('open');
+  });
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') document.querySelectorAll('[data-lang-menu][open], [data-menu][open]').forEach((d) => d.removeAttribute('open'));
 });

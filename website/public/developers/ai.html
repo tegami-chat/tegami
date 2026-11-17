@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI | Tegami for developers</title>
+<meta name="description" content="How your own AI joins Tegami, what it can read, and what goes to the AI provider.">
+<meta property="og:title" content="AI | Tegami for developers">
+<meta property="og:description" content="How your own AI joins Tegami, what it can read, and what goes to the AI provider.">
+<meta property="og:url" content="https://tegami.chat/developers/ai">
+<link rel="canonical" href="https://tegami.chat/developers/ai">
+<link rel="alternate" hreflang="en" href="https://tegami.chat/developers/ai">
+<link rel="alternate" hreflang="ja" href="https://tegami.chat/ja/developers/ai">
+<link rel="alternate" hreflang="x-default" href="https://tegami.chat/developers/ai">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/tegami.css">
+<script src="/theme.js"></script>
+</head>
+<body class="bg-white text-neutral-900 antialiased dark:bg-[#101311] dark:text-neutral-100">
+
+<header class="sticky top-0 z-50 border-b border-neutral-200/70 bg-white/80 backdrop-blur dark:border-night-line/70 dark:bg-[#101311]/80">
+  <div class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
+    <a href="/" class="flex items-center gap-2.5 text-lg font-bold"><svg viewBox="0 0 1024 1024" class="h-8 w-8 rounded-lg" aria-hidden="true"><rect width="1024" height="1024" fill="#f4f1e8"/><g transform="translate(512 512) scale(2.27) translate(-256 -249.5)"><defs><clipPath id="tg-h"><path d="M164 112 H348 Q406 112 406 170 V304 Q406 362 348 362 H164 Q106 362 106 304 V170 Q106 112 164 112 Z"/></clipPath></defs><path d="M138 356 Q146 376 134 398 Q126 412 142 408 Q192 392 232 358 Z" fill="#1d6b4b"/><path clip-path="url(#tg-h)" d="M86 123 L230 234 Q256 254 282 234 L426 123 L426 382 L86 382 Z" fill="#1d6b4b"/><path clip-path="url(#tg-h)" d="M86 92 L426 92 L426 126 L282 237 Q256 257 230 237 L86 126 Z" fill="#bbd3c9"/></g></svg><span class="max-[359px]:sr-only">Tegami</span></a>
+    <nav class="hidden items-center gap-6 text-sm text-neutral-600 dark:text-neutral-400 lg:flex" aria-label="Main">
+      <a href="/features" class="hover:text-neutral-900 dark:hover:text-white" data-nav="nav.features" data-i18n="nav.features">Features</a>
+      <a href="/how" class="hover:text-neutral-900 dark:hover:text-white" data-nav="nav.how" data-i18n="nav.how">Security</a>
+      <a href="/developers" class="hover:text-neutral-900 dark:hover:text-white font-semibold text-neutral-900 dark:text-white" aria-current="page" data-nav="nav.dev" data-i18n="nav.dev">Developers</a>
+      <a href="/roadmap" class="hover:text-neutral-900 dark:hover:text-white" data-nav="roadmap" data-i18n="roadmap">Roadmap</a>
+      <a href="/faq" class="hover:text-neutral-900 dark:hover:text-white" data-nav="nav.faq" data-i18n="nav.faq">FAQ</a>
+      <a href="https://github.com/tegami-chat/tegami" target="_blank" rel="noopener" class="hover:text-neutral-900 dark:hover:text-white">GitHub</a>
+    </nav>
+    <div class="flex items-center gap-2 sm:gap-3">
+      <div class="hidden sm:flex rounded-full border border-neutral-200 p-0.5 dark:border-night-line" role="group" aria-label="Light or dark" data-seg="theme-h"><button type="button" data-theme-set="light" aria-label="Light" class="rounded-full px-2 py-1 bg-neutral-900 text-white dark:bg-transparent dark:text-neutral-500 dark:hover:text-white"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button><button type="button" data-theme-set="dark" aria-label="Dark" class="rounded-full px-2 py-1 text-neutral-400 hover:text-neutral-900 dark:bg-white dark:text-neutral-900"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div>
+      <details class="relative" data-lang-menu><summary class="flex cursor-pointer list-none items-center gap-0.5 rounded-full px-1.5 py-1 text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white" aria-label="Language"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg><svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M5.3 7.3a1 1 0 011.4 0L10 10.6l3.3-3.3a1 1 0 111.4 1.4l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 010-1.4z"/></svg></summary><div class="absolute right-0 z-50 mt-2 w-36 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 shadow-lg dark:border-night-line dark:bg-night-card"><a href="/developers/ai" hreflang="en" lang="en" data-lang="en" class="block px-4 py-2 text-sm font-semibold text-forest-600 dark:text-forest-300" aria-current="true">English</a><a href="/ja/developers/ai" hreflang="ja" lang="ja" data-lang="ja" class="block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-white/5">日本語</a></div></details>
+      <details class="relative lg:hidden" data-menu><summary class="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-white/5"><svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="sr-only" data-i18n="nav.menu">Menu</span></summary>
+        <nav class="absolute right-0 z-50 mt-2 w-64 rounded-2xl border border-neutral-200 bg-white p-2 text-base shadow-xl dark:border-night-line dark:bg-night-card" aria-label="Main">
+          <a href="/features" class="block rounded-lg px-3 py-2.5 hover:bg-neutral-100 dark:hover:bg-white/5" data-nav="nav.features" data-i18n="nav.features">Features</a>
+          <a href="/how" class="block rounded-lg px-3 py-2.5 hover:bg-neutral-100 dark:hover:bg-white/5" data-nav="nav.how" data-i18n="nav.how">Security</a>
+          <a href="/developers" class="block rounded-lg px-3 py-2.5 hover:bg-neutral-100 dark:hover:bg-white/5 font-semibold text-neutral-900 dark:text-white" aria-current="page" data-nav="nav.dev" data-i18n="nav.dev">Developers</a>
+          <a href="/roadmap" class="block rounded-lg px-3 py-2.5 hover:bg-neutral-100 dark:hover:bg-white/5" data-nav="roadmap" data-i18n="roadmap">Roadmap</a>
+          <a href="/faq" class="block rounded-lg px-3 py-2.5 hover:bg-neutral-100 dark:hover:bg-white/5" data-nav="nav.faq" data-i18n="nav.faq">FAQ</a>
+          <a href="https://github.com/tegami-chat/tegami" target="_blank" rel="noopener" class="block rounded-lg px-3 py-2.5 hover:bg-neutral-100 dark:hover:bg-white/5">GitHub</a>
+        </nav>
+      </details>
+    </div>
+  </div>
+</header>
+
+<div class="mx-auto max-w-6xl px-4 py-10 md:py-14 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10">
+  <aside class="lg:sticky lg:top-20 lg:self-start"><nav class="devside mb-8 lg:mb-0" aria-label="Developer docs"><p class="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 lg:block" data-i18n="dv.side">Developer docs</p><ul class="flex flex-wrap gap-1 text-sm lg:block lg:space-y-0.5"><li class="shrink-0"><a href="/developers" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dv.ov">Overview</a></li><li class="shrink-0"><a href="/developers/protocol" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.protocol">Nostr, encryption and keys</a></li><li class="shrink-0"><a href="/developers/relay" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.relay">Relay, notifications and calls</a></li><li class="shrink-0"><a href="/developers/ai" class="block rounded-lg px-3 py-2 bg-forest-50 font-semibold text-forest-700 dark:bg-forest-950 dark:text-forest-300" aria-current="page" data-i18n="dp.ai">AI</a></li><li class="shrink-0"><a href="/developers/compare" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.compare">Compared with other apps</a></li><li class="shrink-0"><a href="/developers/spec" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.spec">Technical spec</a></li></ul></nav></aside>
+  <main class="devdoc min-w-0 max-w-3xl">
+<h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dp.ai">AI</h1>
+<p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dp.ai.t">How your own AI joins Tegami, what it can read, and what goes to the AI provider.</p>
+<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">Labels on the "Next" items:</li><li data-i18n="dv.lg.built"><span class="tag built">Built, not released</span>the code is written but not in production yet</li><li data-i18n="dv.lg.decided"><span class="tag decided">Decided</span>the direction is set, the code isn't written yet</li><li data-i18n="dv.lg.idea"><span class="tag idea">Considering</span>not decided yet</li></ul>
+<details><summary data-i18n="d.137">How does AI connect? Does it run on Tegami's servers?</summary><div>
+<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.138">No, it does not run on our servers. When you run <code>tegami-agent</code> (Node.js) on your own PC, the AI gets its own Nostr key and talks over the same relay with the same encryption as human users. By default, replies are written by Claude Code on your PC (<code>claude -p</code>). With <code>--command</code> you can swap in another program that reads standard input and outputs a reply. Your AI subscription and login stay on your PC and are never passed to Tegami. It also runs as an MCP server, so you can ask Claude Code to "send it on Tegami."</p></div>
+<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.139">Connecting requires typing commands. Claude Code is the only AI that works out of the box; for any other AI you need to provide your own program to pass to <code>--command</code>.</p></div>
+<div class="ph next"><b data-i18n="dv.next">Next</b><ul>
+<li data-i18n="d.140"><span class="tag built">Built, not released</span>You can now add an AI as a friend just by scanning the QR code shown on your PC with the app.</li>
+<li data-i18n="d.141"><span class="tag built">Built, not released</span>Replies can also be written by local models (such as Ollama) or with your own API key (Anthropic, OpenAI, Gemini, OpenRouter).</li>
+<li data-i18n="d.142"><span class="tag built">Built, not released</span>AI can now send messages in its owner's name. By default, only the mode where the owner reviews each message before it is sent is available.</li>
+<li data-i18n="d.143"><span class="tag built">Built, not released</span>We also built a way to invite an AI into a group or one-to-one chat once everyone agrees. It is off by default; users turn it on themselves.</li>
+<li data-i18n="d.144"><span class="tag decided">Decided</span>Tegami will not run an official AI.</li>
+</ul></div>
+</div></details>
+
+<details><summary data-i18n="d.145">Could someone slip instructions into their messages and make the AI leak information?</summary><div>
+<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.146">Three mechanisms guard against this:</p>
+<ul>
+<li data-i18n="d.147">The AI only replies automatically to people its owner has allowed (<code>--trust</code>). For messages from people who are not friends, the AI never sees the content; it is only told how many people have sent new messages.</li>
+<li data-i18n="d.148">Even when you let the AI read a chat with a friend, it only happens when you allow it with a switch in the app, and then only the latest 30 messages of that one-to-one chat are handed to the AI in an envelope that expires in 10 minutes. The AI only writes a draft; you are the one who sends it.</li>
+<li data-i18n="d.149">That switch lives in the app, which holds the owner's key. If the switch were on the PC where the AI runs, the AI could change the setting itself.</li>
+</ul></div>
+<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.150">The AI's secret key is stored unencrypted on the PC so it can keep running unattended (treated like an SSH key). Anything you let the AI read also goes to the AI provider. There is also no way yet for the other person in a chat to refuse to have their messages read by your AI.</p></div>
+<div class="ph next"><b data-i18n="dv.next">Next</b><ul>
+<li data-i18n="d.151"><span class="tag built">Built, not released</span>The other person can now choose "Don't let others' AI read my messages," and mark individual messages "Don't let AI read." Disappearing messages are not passed to AI either. This works because the official app checks the mark and does not hand the message to AI, so it cannot stop modified apps or manual copying.</li>
+<li data-i18n="d.152"><span class="tag built">Built, not released</span>The AI's secret key and API keys are now stored encrypted in the OS keystore (verified on Windows; not yet verified on Mac and Linux).</li>
+<li data-i18n="d.153"><span class="tag built">Built, not released</span>We added limits on how much an AI can send, and any message containing a link must be confirmed by the owner. "Turn all off" lets you stop all your AIs at once from your phone.</li>
+</ul></div>
+</div></details>
+
+
+  </main>
+</div>
+
+<footer class="border-t border-neutral-200 text-sm text-neutral-500 dark:border-night-line dark:text-neutral-400">
+  <div class="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-2 md:grid-cols-5">
+    <div class="sm:col-span-2 md:col-span-1">
+      <a href="/" class="flex items-center gap-2.5 text-base font-bold text-neutral-900 dark:text-neutral-100"><svg viewBox="0 0 1024 1024" class="h-8 w-8 rounded-lg" aria-hidden="true"><rect width="1024" height="1024" fill="#f4f1e8"/><g transform="translate(512 512) scale(2.27) translate(-256 -249.5)"><defs><clipPath id="tg-f"><path d="M164 112 H348 Q406 112 406 170 V304 Q406 362 348 362 H164 Q106 362 106 304 V170 Q106 112 164 112 Z"/></clipPath></defs><path d="M138 356 Q146 376 134 398 Q126 412 142 408 Q192 392 232 358 Z" fill="#1d6b4b"/><path clip-path="url(#tg-f)" d="M86 123 L230 234 Q256 254 282 234 L426 123 L426 382 L86 382 Z" fill="#1d6b4b"/><path clip-path="url(#tg-f)" d="M86 92 L426 92 L426 126 L282 237 Q256 257 230 237 L86 126 Z" fill="#bbd3c9"/></g></svg>Tegami</a>
+      <p class="mt-3" data-i18n="ft.tag">Your chats belong to you.<br>Bring your own AI.</p>
+    </div>
+    <div>
+      <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.product">Product</h3>
+      <ul class="mt-3 space-y-2">
+        <li><a href="https://app.tegami.chat/" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="cta.browser" target="_blank" rel="noopener">Open in your browser</a></li>
+        <li><a href="/features" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="nav.features">Features</a></li>
+        <li><a href="/roadmap" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="roadmap">Roadmap</a></li>
+        <li><a href="/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="nav.faq">FAQ</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.learn">Trust</h3>
+      <ul class="mt-3 space-y-2">
+        <li><a href="/how" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="nav.how">Security</a></li>
+        <li><a href="/status" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.status">Status and usage</a></li>
+        <li><a href="/developers" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="nav.dev">Developers</a></li>
+        <li><a href="https://github.com/tegami-chat/tegami" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.src" target="_blank" rel="noopener">Source code</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.community">Community</h3>
+      <ul class="mt-3 space-y-2">
+        <li><a href="https://github.com/tegami-chat/tegami/issues" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.issues" target="_blank" rel="noopener">Report a bug</a></li>
+        <li><a href="https://x.com/tegamichat" class="hover:text-neutral-900 dark:hover:text-white" target="_blank" rel="noopener">X</a></li>
+        <li><a href="https://bsky.app/profile/tegami.chat" class="hover:text-neutral-900 dark:hover:text-white" target="_blank" rel="noopener">Bluesky</a></li>
+        <li><a href="https://mastodon.social/@tegamichat" class="hover:text-neutral-900 dark:hover:text-white" target="_blank" rel="noopener">Mastodon</a></li>
+        <li><a href="https://njump.me/npub1zptpqkxhr98glpt4rqv9945f3hd3q82wghaqth4gwqtmzmtjutsse5a98k" class="hover:text-neutral-900 dark:hover:text-white" target="_blank" rel="noopener">Nostr</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.contact">Contact</h3>
+      <ul class="mt-3 space-y-2">
+        <li><a href="mailto:hello@tegami.chat" class="hover:text-neutral-900 dark:hover:text-white">hello@tegami.chat</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 border-t border-neutral-200 px-4 py-6 text-xs dark:border-night-line">
+    <div class="flex flex-wrap items-center gap-x-5 gap-y-2"><a href="/privacy" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.privacy">Privacy policy</a><a href="/about" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.about">About us</a><span><span data-i18n="ft.copy">Open source under AGPL-3.0.</span> © 2026 Tegami contributors</span></div>
+    <div class="flex items-center gap-2"><div class="flex rounded-full border border-neutral-200 p-0.5 dark:border-night-line" role="group" aria-label="Light or dark"><button type="button" data-theme-set="light" aria-label="Light" class="rounded-full px-2 py-1 bg-neutral-900 text-white dark:bg-transparent dark:text-neutral-500 dark:hover:text-white"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button><button type="button" data-theme-set="dark" aria-label="Dark" class="rounded-full px-2 py-1 text-neutral-400 hover:text-neutral-900 dark:bg-white dark:text-neutral-900"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div></div>
+  </div>
+</footer>
+
+<script src="/site.js"></script>
+</body>
+</html>

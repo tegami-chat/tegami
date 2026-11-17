@@ -12,29 +12,82 @@ import { readFileSync, writeFileSync, mkdirSync, copyFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 
 const SITE = 'https://tegami.chat';
+// Each page: its source, its address in each language, and which top menu item it belongs to.
+const page = (name, path, nav) => ({
+  src: `src/${name}.html`,
+  path: { en: path, ja: path === '/' ? '/ja/' : '/ja' + path },
+  out: { en: `public${path === '/' ? '/index' : path}.html`, ja: `public/ja${path === '/' ? '/index' : path}.html` },
+  nav,
+});
 const PAGES = {
-  index: { src: 'src/index.html', path: { en: '/', ja: '/ja/' }, out: { en: 'public/index.html', ja: 'public/ja/index.html' } },
-  how: { src: 'src/how.html', path: { en: '/how', ja: '/ja/how' }, out: { en: 'public/how.html', ja: 'public/ja/how.html' } },
-  roadmap: { src: 'src/roadmap.html', path: { en: '/roadmap', ja: '/ja/roadmap' }, out: { en: 'public/roadmap.html', ja: 'public/ja/roadmap.html' } },
-  privacy: { src: 'src/privacy.html', path: { en: '/privacy', ja: '/ja/privacy' }, out: { en: 'public/privacy.html', ja: 'public/ja/privacy.html' } },
-  status: { src: 'src/status.html', path: { en: '/status', ja: '/ja/status' }, out: { en: 'public/status.html', ja: 'public/ja/status.html' } },
+  index: page('index', '/', ''),
+  features: page('features', '/features', 'nav.features'),
+  how: page('how', '/how', 'nav.how'),
+  developers: page('developers', '/developers', 'nav.dev'),
+  'dev-protocol': page('dev-protocol', '/developers/protocol', 'nav.dev'),
+  'dev-relay': page('dev-relay', '/developers/relay', 'nav.dev'),
+  'dev-ai': page('dev-ai', '/developers/ai', 'nav.dev'),
+  'dev-compare': page('dev-compare', '/developers/compare', 'nav.dev'),
+  'dev-spec': page('dev-spec', '/developers/spec', 'nav.dev'),
+  roadmap: page('roadmap', '/roadmap', 'roadmap'),
+  faq: page('faq', '/faq', 'nav.faq'),
+  privacy: page('privacy', '/privacy', ''),
+  about: page('about', '/about', ''),
+  status: page('status', '/status', ''),
 };
 // The draft file names the sources link to, and which page each one is.
 const DRAFT_LINKS = {
   'TegamiのLP案_2026-11-14.html': 'index',
+  'Tegamiの機能_2026-11-16.html': 'features',
   'Tegamiの仕組み案_2026-11-14.html': 'how',
+  'Tegamiの開発者向け_2026-11-16.html': 'developers',
+  'Tegamiの開発者向け_Nostrと暗号.html': 'dev-protocol',
+  'Tegamiの開発者向け_リレー.html': 'dev-relay',
+  'Tegamiの開発者向け_AI.html': 'dev-ai',
+  'Tegamiの開発者向け_比較.html': 'dev-compare',
+  'Tegamiの開発者向け_技術仕様.html': 'dev-spec',
   'Tegamiのロードマップ案_2026-11-14.html': 'roadmap',
+  'Tegamiのよくある質問_2026-11-16.html': 'faq',
   'Tegamiのプライバシーポリシー案_2026-11-14.html': 'privacy',
+  'Tegamiの運営者情報案_2026-11-17.html': 'about',
   'Tegamiの稼働状況と利用統計案_2026-11-15.html': 'status',
 };
 const META = {
+  features: {
+    en: { title: 'Tegami features', desc: 'Everyday messaging, your own AI, and a Tegami you can make your own.' },
+    ja: { title: 'Tegamiの機能', desc: '毎日のメッセージの機能、自分のAI、自分仕様にできるTegami。' },
+  },
+  faq: {
+    en: { title: 'Tegami FAQ', desc: 'Questions people ask first about Tegami.' },
+    ja: { title: 'Tegamiのよくある質問', desc: 'Tegamiについて、よく聞かれること。' },
+  },
+  'dev-protocol': {
+    en: { title: 'Nostr, encryption and keys | Tegami for developers', desc: 'Which parts of Nostr Tegami uses, how messages are sealed, what the relay can see, and how keys are kept.' },
+    ja: { title: 'Nostrと暗号と鍵 | 開発者向けのTegamiの説明', desc: 'TegamiがNostrのどこを使うか、メッセージをどう封じるか、リレーに何が見えるか、鍵をどう守るか。' },
+  },
+  'dev-relay': {
+    en: { title: 'Relay, notifications and calls | Tegami for developers', desc: 'The rules of the Tegami relay, and how notifications, calls and photos work.' },
+    ja: { title: 'リレー、通知、通話 | 開発者向けのTegamiの説明', desc: 'Tegamiのリレーの決まりと、通知、通話、写真の仕組み。' },
+  },
+  'dev-ai': {
+    en: { title: 'AI | Tegami for developers', desc: 'How your own AI joins Tegami, what it can read, and what goes to the AI provider.' },
+    ja: { title: 'AI | 開発者向けのTegamiの説明', desc: '自分のAIがどうつながり、何を読めて、何がAIの会社に渡るか。' },
+  },
+  'dev-compare': {
+    en: { title: 'Compared with other apps | Tegami for developers', desc: 'Tegami next to LINE, WhatsApp, Signal, Telegram and other Nostr apps.' },
+    ja: { title: 'ほかのアプリとの比較 | 開発者向けのTegamiの説明', desc: 'LINE、WhatsApp、Signal、Telegram、ほかのNostrアプリとの比較。' },
+  },
+  'dev-spec': {
+    en: { title: 'Technical spec | Tegami for developers', desc: 'Crypto building blocks, relay limits, HTTP endpoints and Tegami event kinds.' },
+    ja: { title: '技術仕様 | 開発者向けのTegamiの説明', desc: '暗号の部品、リレーの上限、HTTPの口、Tegami独自のkind。' },
+  },
   index: {
     en: { title: 'Tegami: your chats belong to you', desc: 'An open-source messaging app built on Nostr. No ads, no tracking, and bring your own AI.' },
     ja: { title: 'Tegami: トークはあなたのもの', desc: 'Nostrで動く、オープンソースのメッセージアプリ。広告も追跡もなく、いつものAIを連れてこられます。' },
   },
   how: {
-    en: { title: 'How Tegami keeps your chats private', desc: 'What happens to a message, and what the server can and can\'t see.' },
-    ja: { title: 'Tegamiが会話を守る仕組み', desc: 'メッセージがどう届き、サーバーに何が見えて何が見えないのか。' },
+    en: { title: 'How Tegami keeps you safe', desc: 'What protects your messages, what we can and can\'t see, and what isn\'t done yet.' },
+    ja: { title: 'Tegamiの安全の仕組み', desc: 'メッセージを守る仕組みと、運営者に見えるもの、見えないもの、まだ足りないこと。' },
   },
   roadmap: {
     en: { title: 'Tegami roadmap', desc: 'What we\'ve built, and what\'s next.' },
@@ -44,6 +97,14 @@ const META = {
     en: { title: 'Tegami privacy policy', desc: 'What Tegami keeps, why, and for how long.' },
     ja: { title: 'Tegamiのプライバシーポリシー', desc: 'Tegamiが何を、なぜ、どれだけの期間預かるか。' },
   },
+  about: {
+    en: { title: 'About the Tegami operator', desc: 'Who runs Tegami, and how to contact us.' },
+    ja: { title: 'Tegamiの運営者情報', desc: 'Tegamiの運営者と連絡先。' },
+  },
+  developers: {
+    en: { title: 'Tegami for developers', desc: 'How Tegami uses Nostr, what the relay can see, keys, AI, and the full technical spec.' },
+    ja: { title: '開発者向けのTegamiの説明', desc: 'TegamiがNostrのどこを使うか、リレーに見えるもの、鍵、AI、技術仕様。' },
+  },
   status: {
     en: { title: 'Tegami status and usage', desc: 'Whether the Tegami relay is responding, and weekly usage statistics.' },
     ja: { title: 'Tegamiの稼働状況と利用統計', desc: 'Tegamiのリレーの稼働状況と、週ごとの利用統計。' },
@@ -51,6 +112,14 @@ const META = {
 };
 const LANG_ON = 'block px-4 py-2 text-sm font-semibold text-forest-600 dark:text-forest-300';
 const LANG_OFF = 'block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-white/5';
+
+// The header and footer every page shares, and their Japanese words.
+const LAYOUT = readFileSync('src/_layout.html', 'utf8');
+const HEADER = LAYOUT.slice(LAYOUT.indexOf('<header'), LAYOUT.indexOf('</header>') + 9);
+const FOOTER = LAYOUT.slice(LAYOUT.indexOf('<footer'), LAYOUT.indexOf('</footer>') + 9);
+const jaTable = (html) => Object.fromEntries([...html.matchAll(/^ {2}'([\w.]+)': '([^\n]*)',$/gm)].map((x) => [x[1], x[2]]));
+const LAYOUT_JA = jaTable(LAYOUT);
+const NAV_ON = ' font-semibold text-neutral-900 dark:text-white';
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
@@ -83,7 +152,8 @@ function translate(html, dict) {
 function build(name, lang) {
   const page = PAGES[name];
   let html = readFileSync(page.src, 'utf8');
-  const ja = Object.fromEntries([...html.matchAll(/^ {2}'([\w.]+)': '([^\n]*)',$/gm)].map((x) => [x[1], x[2]]));
+  html = html.replace(/<header[\s\S]*?<\/header>/, HEADER).replace(/<footer[\s\S]*?<\/footer>/, FOOTER);
+  const ja = { ...jaTable(html), ...LAYOUT_JA };
   if (lang === 'ja') html = translate(html, ja);
 
   // drop the draft-only scripts: Tailwind CDN + config, theme bootstrap, translation table
@@ -119,15 +189,19 @@ function build(name, lang) {
   // language menu: link to this page in each language, mark the current one
   html = html.replace(/<a href="\?lang=(en|ja)"([^>]*?) data-lang="(en|ja)" class="[^"]*">/g,
     (_, l, attrs, l2) => `<a href="${page.path[l]}"${attrs} data-lang="${l2}" class="${l === lang ? LANG_ON : LANG_OFF}"${l === lang ? ' aria-current="true"' : ''}>`);
-  // the status page's own script
+  // the menu item for this page
+  if (page.nav) html = html.replace(new RegExp(`(<a href="[^"]*" class="[^"]*)(" data-nav="${page.nav.replace('.', '\.')}")`, 'g'), `$1${NAV_ON}" aria-current="page$2`);
+  // the pages' own scripts
   html = html.replace('<script src="status.js"></script>', '<script src="/status.js"></script>');
+  html = html.replace('<script src="diff.js"></script>', '<script src="/diff.js"></script>');
   // anchors on the home page from other pages already point to /#x; on the home page keep #x
   writeFileSync(page.out[lang], html);
 }
 
-mkdirSync('public/ja', { recursive: true });
+mkdirSync('public/ja/developers', { recursive: true });
+mkdirSync('public/developers', { recursive: true });
 for (const name of Object.keys(PAGES)) for (const lang of ['en', 'ja']) build(name, lang);
 copyFileSync('src/icon.svg', 'public/icon.svg');
-copyFileSync('src/status.js', 'public/status.js');
+for (const f of ['status.js', 'diff.js', 'site.js', 'theme.js']) copyFileSync('src/' + f, 'public/' + f);
 execSync('npx --yes tailwindcss@3.4.16 -c tailwind.config.cjs -i src/input.css -o public/tegami.css --minify', { stdio: 'inherit' });
 console.log('built');

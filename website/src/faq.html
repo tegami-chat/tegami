@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TegamiのLP案</title>
+<script>
+(function () {
+  var t; try { t = localStorage.getItem('tegami.theme'); } catch (e) {}
+  var dark = t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.classList.toggle('dark', dark);
+})();
+</script>
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: { extend: {
+    colors: {
+      forest: { 50: '#e3f0e8', 300: '#7fd7a8', 600: '#106c4a', 700: '#0b5a3d', 950: '#0b1a12' },
+      nostr: { 300: '#c9a2ff', 600: '#7c2eda' },
+      paper: { DEFAULT: '#f4f1e8', dark: '#171b18' },
+      night: { DEFAULT: '#121614', card: '#1c221f', line: '#2c3430' },
+    },
+    fontFamily: { sans: ['-apple-system', 'BlinkMacSystemFont', '"Hiragino Sans"', '"Yu Gothic UI"', '"Noto Sans JP"', 'sans-serif'] },
+  } },
+}
+</script>
+<style>
+  :lang(ja) h1, :lang(ja) h2, :lang(ja) h3, :lang(ja) th, :lang(ja) td, :lang(ja) summary, :lang(ja) li { word-break: auto-phrase; }
+  :lang(ja) p { word-break: auto-phrase; text-wrap: pretty; }
+  h1, h2, h3 { text-wrap: balance; }
+</style>
+</head>
+<body class="bg-white text-neutral-900 antialiased dark:bg-[#101311] dark:text-neutral-100">
+
+<header class="sticky top-0 z-50 border-b border-neutral-200/70 bg-white/80 backdrop-blur dark:border-night-line/70 dark:bg-[#101311]/80">
+  <div class="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
+    <a href="#" class="flex items-center gap-2.5 text-lg font-bold"><svg viewBox="0 0 1024 1024" class="h-8 w-8 rounded-lg" aria-hidden="true"><rect width="1024" height="1024" fill="#f4f1e8"/><g transform="translate(512 512) scale(2.27) translate(-256 -249.5)"><defs><clipPath id="tg-h"><path d="M164 112 H348 Q406 112 406 170 V304 Q406 362 348 362 H164 Q106 362 106 304 V170 Q106 112 164 112 Z"/></clipPath></defs><path d="M138 356 Q146 376 134 398 Q126 412 142 408 Q192 392 232 358 Z" fill="#1d6b4b"/><path clip-path="url(#tg-h)" d="M86 123 L230 234 Q256 254 282 234 L426 123 L426 382 L86 382 Z" fill="#1d6b4b"/><path clip-path="url(#tg-h)" d="M86 92 L426 92 L426 126 L282 237 Q256 257 230 237 L86 126 Z" fill="#bbd3c9"/></g></svg><span class="max-[359px]:sr-only">Tegami</span></a>
+    <nav class="hidden items-center gap-6 text-sm text-neutral-600 dark:text-neutral-400 md:flex">
+      <a href="#features" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="nav.features">Features</a>
+      <a href="#ai" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="nav.ai">AI</a>
+      <a href="#desk" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="nav.desk">Make it yours</a>
+      <a href="#faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="nav.faq">FAQ</a>
+      <a href="https://github.com/tegami-chat/tegami" target="_blank" rel="noopener" class="hover:text-neutral-900 dark:hover:text-white">GitHub</a>
+    </nav>
+    <div class="flex items-center gap-2 sm:gap-3">
+      <div class="hidden sm:flex rounded-full border border-neutral-200 p-0.5 dark:border-night-line" role="group" aria-label="Light or dark" data-seg="theme-h"><button type="button" data-theme-set="light" aria-label="Light" class="rounded-full px-2 py-1 bg-neutral-900 text-white dark:bg-transparent dark:text-neutral-500 dark:hover:text-white"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button><button type="button" data-theme-set="dark" aria-label="Dark" class="rounded-full px-2 py-1 text-neutral-400 hover:text-neutral-900 dark:bg-white dark:text-neutral-900"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div>
+      <details class="relative" data-lang-menu><summary class="flex cursor-pointer list-none items-center gap-0.5 rounded-full px-1.5 py-1 text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white" aria-label="Language"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg><svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M5.3 7.3a1 1 0 011.4 0L10 10.6l3.3-3.3a1 1 0 111.4 1.4l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 010-1.4z"/></svg></summary><div class="absolute right-0 z-50 mt-2 w-36 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 shadow-lg dark:border-night-line dark:bg-night-card"><a href="?lang=en" hreflang="en" lang="en" data-lang="en" class="block px-4 py-2 text-sm">English</a><a href="?lang=ja" hreflang="ja" lang="ja" data-lang="ja" class="block px-4 py-2 text-sm">日本語</a></div></details>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- FAQ -->
+  <section id="faq" class="mx-auto max-w-3xl px-4 py-14 md:py-20">
+    <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="faq.h">Frequently asked questions</h1>
+    <div class="mt-8 divide-y divide-neutral-200 border-y border-neutral-200 dark:divide-night-line dark:border-night-line">
+      <details class="group py-4">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.free.q">Is it free? Who pays for it?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.free.a">Yes, it's free. Tegami is made by an independent developer in Japan, with no investors and no ads. For now the developer covers the costs, and later, people who use Tegami can chip in.</p>
+      </details>
+      <details class="group py-4">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.read.q">Who can read my messages?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.read.a">Only you and the people you send them to. Messages are encrypted on your device, so not even Tegami can read them.</p>
+      </details>
+      <details class="group py-4">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.phone.q">Do I need a phone number or email?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.phone.a">No. Just pick a name and start.</p>
+      </details>
+      <details class="group py-4">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.devices.q">Which devices can I use?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.devices.a">Any web browser, on your phone or computer, today. Apps for iPhone, Android, Windows, Mac and Linux are on the way.</p>
+      </details>
+      <details class="group py-4">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.friends.q">How do I add friends?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.friends.a">Send your invite link, or show your QR code. Your friends need Tegami too.</p>
+      </details>
+      <details class="group py-4">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.lost.q">What if I lose my phone?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.lost.a">Make a recovery code in Settings, and you can bring your account back on a new device. Without it, no one, not even Tegami, can restore it.</p>
+      </details>
+      <details class="group py-4">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.multi.q">Can I use it on my phone and computer at the same time?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.multi.a">Yes. Use the transfer link in Settings to use the same account on another device at the same time. Earlier chats don't move over; the new device picks up the last 30 days of messages still on the server.</p>
+      </details>
+      <details class="group py-4">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.collect.q">What does Tegami collect?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.collect.a">Only totals, like how many messages were delivered in a week. No one's activity is tracked, and the weekly numbers are public on the <a href="Tegamiの稼働状況と利用統計案_2026-11-15.html" class="underline">status page</a>.</p>
+      </details>
+      <details class="group py-4">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.ai.q">How do I connect my AI?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.ai.a">Today, run the small tegami-agent program on your computer and add it with its invite link. Your AI then shows up in your chat list. A setup where you just scan a QR code is on the way.</p>
+      </details>
+      <details class="group py-4">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.spam.q">What about unwanted messages?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.spam.a">Messages from strangers land in a separate box, and you can block and report anyone.</p>
+      </details>
+      <details class="group py-4">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.shutdown.q">What if Tegami shuts down?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.shutdown.a">The code is public, so anyone can keep it running. You can also export your chats anytime.</p>
+      </details>
+      <details class="group py-4">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.dev.q">Where are the technical details?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.dev.a">On the <a href="Tegamiの開発者向け_2026-11-16.html" class="underline">developer page</a>: which parts of Nostr Tegami uses, what the relay can see, how keys are kept, and the full spec. The code is on <a href="https://github.com/tegami-chat/tegami" class="underline" target="_blank" rel="noopener">GitHub</a>.</p>
+      </details>
+    </div>
+  </section>
+</main>
+
+<footer class="border-t border-neutral-200 text-sm text-neutral-500 dark:border-night-line dark:text-neutral-400">
+  <div class="mx-auto grid max-w-5xl gap-10 px-4 py-14 sm:grid-cols-2 md:grid-cols-4">
+    <div>
+      <a href="#" class="flex items-center gap-2.5 text-base font-bold text-neutral-900 dark:text-neutral-100"><svg viewBox="0 0 1024 1024" class="h-8 w-8 rounded-lg" aria-hidden="true"><rect width="1024" height="1024" fill="#f4f1e8"/><g transform="translate(512 512) scale(2.27) translate(-256 -249.5)"><defs><clipPath id="tg-f"><path d="M164 112 H348 Q406 112 406 170 V304 Q406 362 348 362 H164 Q106 362 106 304 V170 Q106 112 164 112 Z"/></clipPath></defs><path d="M138 356 Q146 376 134 398 Q126 412 142 408 Q192 392 232 358 Z" fill="#1d6b4b"/><path clip-path="url(#tg-f)" d="M86 123 L230 234 Q256 254 282 234 L426 123 L426 382 L86 382 Z" fill="#1d6b4b"/><path clip-path="url(#tg-f)" d="M86 92 L426 92 L426 126 L282 237 Q256 257 230 237 L86 126 Z" fill="#bbd3c9"/></g></svg>Tegami</a>
+      <p class="mt-3" data-i18n="ft.tag">Your chats belong to you.<br>Bring your own AI.</p>
+    </div>
+      <div>
+        <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.product">Product</h3>
+        <ul class="mt-3 space-y-2">
+          <li><a href="https://app.tegami.chat/" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="cta.browser" target="_blank" rel="noopener">Open in your browser</a></li>
+          <li><a href="#features" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="nav.features">Features</a></li>
+          <li><a href="#faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="nav.faq">FAQ</a></li>
+          <li><a href="Tegamiのロードマップ案_2026-11-14.html" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="roadmap">Roadmap</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.community">Community</h3>
+        <ul class="mt-3 space-y-2">
+          <li><a href="https://github.com/tegami-chat/tegami" class="hover:text-neutral-900 dark:hover:text-white" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="https://x.com/tegamichat" class="hover:text-neutral-900 dark:hover:text-white" target="_blank" rel="noopener">X</a></li>
+          <li><a href="https://bsky.app/profile/tegami.chat" class="hover:text-neutral-900 dark:hover:text-white" target="_blank" rel="noopener">Bluesky</a></li>
+          <li><a href="https://mastodon.social/@tegamichat" class="hover:text-neutral-900 dark:hover:text-white" target="_blank" rel="noopener">Mastodon</a></li>
+          <li><a href="https://njump.me/npub1zptpqkxhr98glpt4rqv9945f3hd3q82wghaqth4gwqtmzmtjutsse5a98k" class="hover:text-neutral-900 dark:hover:text-white" target="_blank" rel="noopener">Nostr</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.contact">Contact</h3>
+        <ul class="mt-3 space-y-2">
+          <li><a href="mailto:hello@tegami.chat" class="hover:text-neutral-900 dark:hover:text-white">hello@tegami.chat</a></li>
+        </ul>
+      </div>
+  </div>
+  <div class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 border-t border-neutral-200 px-4 py-6 text-xs dark:border-night-line">
+    <div class="flex flex-col gap-1"><span class="flex flex-wrap gap-x-4 gap-y-1"><a href="Tegamiのプライバシーポリシー案_2026-11-14.html" class="hover:underline" data-i18n="ft.privacy">Privacy policy</a><a href="Tegamiの仕組み案_2026-11-14.html" class="hover:underline" data-i18n="ft.how">How it works</a><a href="Tegamiの稼働状況と利用統計案_2026-11-15.html" class="hover:underline" data-i18n="ft.status">Status</a></span><span><span data-i18n="ft.copy">Open source under AGPL-3.0.</span> © 2026 Tegami contributors</span></div>
+    <div class="flex items-center gap-2"><div class="flex rounded-full border border-neutral-200 p-0.5 dark:border-night-line" role="group" aria-label="Light or dark"><button type="button" data-theme-set="light" aria-label="Light" class="rounded-full px-2 py-1 bg-neutral-900 text-white dark:bg-transparent dark:text-neutral-500 dark:hover:text-white"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button><button type="button" data-theme-set="dark" aria-label="Dark" class="rounded-full px-2 py-1 text-neutral-400 hover:text-neutral-900 dark:bg-white dark:text-neutral-900"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div>
+    </div>
+  </div>
+</footer>
+
+<script src="diff.js"></script>
+<script>
+// 言葉の切り替え。HTMLに書いた英語が元で、日本語はここに置く。
+// 下書きでは ?lang=jaで日本語にする。ブラウザの言葉で勝手に切り替えない（Googleの多言語サイトの指針）。
+// 公開する時は、英語をtegami.chat/、日本語をtegami.chat/ja/ の別のページに書き出し、hreflangで結ぶ。
+const JA = {
+  'fp.h': '機能',
+  'fp.t': 'メッセージアプリに欲しい機能は、ひと通りそろっています。さらに、自分のAIをつないだり、Tegamiを自分好みに変えたりできます。',
+  'fp.every': '毎日の機能',
+  'home.more': 'すべての機能とAIでできることを見る →',
+  'proof.code': 'コードはすべて公開（AGPL-3.0）',
+  'proof.stats': '利用統計を毎週公開',
+  'proof.spec': '技術仕様を公開',
+  'proof.pp': '預かる情報と期間',
+  'diff.h': 'よくあるアプリとの違い',
+  'diff.t': '毎日気になる7つのことを、よくあるアプリとTegamiで左右に並べて比べます。',
+  'diff.more': 'サーバーに見えることと見えないこと →',
+  'diff.dev': '同じ場面を開発者向けに見る →',
+  'mk.dev': '開発者向けの説明を読む →',
+  'faq.collect.a': '数えているのは、1週間に届いたメッセージの数など、全体の合計だけです。誰が何をしたかは記録しません。週ごとの数は<a href="Tegamiの稼働状況と利用統計案_2026-11-15.html" class="underline">稼働状況のページ</a>で公開しています。',
+  'faq.ai.a': 'いまは、パソコンで小さなプログラム（tegami-agent）を動かし、その招待リンクで友だちに追加します。追加すると、あなたのAIがトーク一覧に並びます。QRコードを読むだけでつながる形も準備しています。',
+  'faq.dev.q': '技術的な説明はどこにありますか？',
+  'faq.dev.a': '<a href="Tegamiの開発者向け_2026-11-16.html" class="underline">開発者向けのページ</a>に、TegamiがNostrのどこを使っているか、リレーに何が見えるか、鍵をどう守るか、技術仕様までをまとめています。コードは<a href="https://github.com/tegami-chat/tegami" class="underline" target="_blank" rel="noopener">GitHub</a>で公開しています。',
+  'soon.label': '準備中',
+  'ft.privacy': 'プライバシーポリシー',
+  'ft.how': '仕組み',
+  'ft.status': '稼働状況',
+  'how.cta': '仕組みを見る',
+  'more.ai': 'AIでできること →',
+  'more.private': 'プライバシーを守る仕組み →',
+  'nav.desk': '自分仕様に',
+  'nav.features': '機能',
+  'nav.ai': 'AI',
+  'nav.faq': 'よくある質問',
+  'nav.open': 'はじめる',
+  'ft.tag': 'トークはあなたのもの。<br>AIの持ち込み自由。',
+  'ft.product': 'Tegami',
+  'ft.community': 'コミュニティ',
+  'ft.contact': 'お問い合わせ',
+  'ft.copy': 'AGPL-3.0のオープンソースです。',
+  'beta': 'ベータ版',
+  'hero.kicker': '<span class="text-nostr-600 dark:text-nostr-300">Nostrで動く</span>、オープンソースのメッセージアプリ',
+  'hero.h1a': 'トークは<br class="sm:hidden"><span class="text-forest-600 dark:text-forest-300">あなたのもの。</span>',
+  'hero.h1b': 'AIの<br class="sm:hidden"><span class="text-forest-600 dark:text-forest-300">持ち込み自由。</span>',
+  'cta.browser': 'ブラウザで始める',
+  'soon': '準備中',
+  'p1.h': 'プラットフォームから自由に。',
+  'p1.t': '気持ち悪い広告も、見たくないニュースも、やりたくないゲームも、いらない機能も、全部ありません。あなたの個人情報を、企業のマーケティングに売ることはありません。',
+  'p2.h': 'AIを自由に使う。',
+  'p2.t': '自分のAIと、簡単につながります。APIやMCPで、メッセージを自由に扱えます。もちろん、AIを断ることも、AIを使わないことも、あなたの自由です。',
+  'p3.h': '誰にも覗かれない。',
+  'p3.t': 'メッセージは端末の中で暗号化してから送り、端末に保存します。Tegamiのサーバーを通る間も暗号化したままなので、運営者にも読めません。',
+  'now': '提供中',
+  'next': '準備中',
+  'open': 'オープンソース',
+  'roadmap': 'ロードマップ',
+  'mk.h': 'Tegamiを自分仕様に。',
+  'mk.t': '画面も使い方も、自分の好みに合わせられます。見た目や使い勝手を変えたり、手持ちのツールとつないだりできます。アプリを作り変えても、Tegamiのみんなとそのまま話せます。',
+  'mk.ui.h': '画面を作り替える',
+  'mk.ui.t': 'Tegamiの見た目や動きを変えたり、AIに自分専用の画面を作ってもらったりできます。',
+  'mk.share.h': '作ったものを共有する',
+  'mk.share.t': '自分で作った画面やツールは、ほかの人にも共有できます。',
+  'mk.bots.h': 'AIやボットをつなぐ',
+  'mk.bots.t': 'パソコン上のAIやボットにTegamiのアカウントを持たせれば、普通の相手と同じようにトークできます。',
+  'mk.api.h': 'APIとMCP',
+  'mk.api.t': '自作のプログラムやAIツールから、メッセージを読んだり送ったりできます。',
+  'mk.relay.h': '自前のサーバーを動かす',
+  'mk.relay.t': '会社や学校、コミュニティで、自分たち専用のメッセージサーバーを持てます。',
+  'mk.agpl.h': 'AGPL-3.0',
+  'mk.agpl.t': '誰でもコードを読んで改善できます。Tegamiをもとにしたアプリも、同じくコードを公開するルールです。',
+  'faq.h': 'よくある質問',
+  'faq.free.q': '無料ですか？ 費用は誰が出しているのですか？',
+  'faq.free.a': 'はい、無料です。Tegamiは日本の個人開発者が作っており、投資家も広告もありません。現在は開発者が費用を負担していますが、今後は使う人からの支援でまかなう予定です。',
+  'faq.read.q': 'メッセージを読めるのは誰ですか？',
+  'faq.read.a': 'あなたと、送った相手だけです。メッセージは端末の中で暗号化されるので、Tegamiにも読めません。',
+  'faq.phone.q': '電話番号やメールアドレスは必要ですか？',
+  'faq.phone.a': 'いりません。名前を決めるだけで始められます。',
+  'faq.devices.q': 'どの端末で使えますか？',
+  'faq.devices.a': '現在はスマホやパソコンのブラウザからすぐに使えます。iPhone、Android、Windows、Mac、Linux向けのアプリも準備中です。',
+  'faq.friends.q': '友だちはどうやって追加しますか？',
+  'faq.friends.a': '招待リンクを送るか、QRコードを見せるだけです。友だちにもTegamiを入れてもらう必要があります。',
+  'faq.lost.q': 'スマホをなくしたらどうなりますか？',
+  'faq.lost.a': '設定で復旧コードを作っておけば、新しい端末でアカウントを戻せます。復旧コードがないと、Tegamiの運営者でも戻せません。',
+  'faq.multi.q': 'スマホとパソコンで同時に使えますか？',
+  'faq.multi.a': 'はい。設定の引き継ぎ用のリンクで、別の端末でも同じアカウントを同時に使えます。それまでの会話は移らず、新しい端末はサーバーに残っている直近30日分のメッセージを受け取り直します。',
+  'faq.collect.q': 'Tegamiは何を記録していますか？',
+  'faq.ai.q': '自分のAIはどうやってつなぎますか？',
+  'faq.spam.q': '迷惑なメッセージへの対策はありますか？',
+  'faq.spam.a': '知らない人からのメッセージは別の受信箱に届きます。どの相手でもブロックと通報ができます。',
+  'faq.shutdown.q': 'もしTegamiが終了したらどうなりますか？',
+  'faq.shutdown.a': 'コードを公開しているので、誰でも動かし続けられます。トーク履歴もいつでも書き出せます。',
+  'don.h': 'Tegamiの独立を守るために。',
+  'don.t': 'Tegamiは、日本の個人開発者が作っています。投資家も広告もなく、あなたの情報を売ることもありません。だからこそ、費用は使う人たちの支えでまかないます。',
+  'don.server.h': 'サーバー',
+  'don.server.t': 'メッセージを届けるために',
+  'don.notify.h': '通知',
+  'don.notify.t': 'メッセージを見逃さないために',
+  'don.photo.h': '写真の保管',
+  'don.photo.t': '写真や動画を送るために',
+  'don.dev.h': '開発',
+  'don.dev.t': '新しい機能とアプリのために',
+  'don.btn': '寄付する',
+  'don.note': '寄付に対する特典や返金はなく、寄付金控除の対象にもなりません。',
+  'feat.h': 'いつもの機能は<br class="sm:hidden">ぜんぶあります。',
+  'feat.ai': '自分のAIとトーク',
+  'feat.block': 'ブロックと通報',
+  'feat.accounts': '複数のアカウント',
+  'feat.vanish': '消えるメッセージ',
+  'feat.export': 'トーク履歴をいつでも書き出し',
+  'feat.one': '1対1のトーク',
+  'feat.group': 'グループトーク',
+  'feat.photo': '写真と動画',
+  'feat.voice': '音声通話',
+  'feat.video': 'ビデオ通話',
+  'feat.sticker': 'スタンプ',
+  'feat.vmsg': '音声メッセージ',
+  'feat.file': 'ファイル',
+  'feat.search': '検索',
+  'feat.devices': 'スマホとパソコンで同時利用',
+  'feat.move': '機種変更の引き継ぎ',
+  'ai.h': 'AIを自由に。',
+  'ai.pick.h': '好きなAIを使う',
+  'ai.pick.t': 'Claude、ChatGPT、Gemini、自分のパソコンで動かしているAI。どれを使うかは、Tegamiではなくあなたが決めます。',
+  'ai.talk.h': 'AIと話す',
+  'ai.talk.t': 'あなたのAIが、友だちと同じようにトーク一覧に並びます。いつでも、どこからでも話しかけられます。',
+  'ai.join.h': 'AIをトークに呼ぶ',
+  'ai.join.t': 'グループにAIを呼んで、話の要約や調べもの、メモを任せられます。参加には全員の同意が必要です。',
+  'ai.each.h': 'AI同士でやり取りさせる',
+  'ai.each.t': 'お互いが許可すれば、あなたのAIと友だちのAIが、予定の調整や情報のやり取りをしてくれます。',
+  'ai.many.h': '複数のAIを使う',
+  'ai.many.t': 'AIはいくつでも追加できます。それぞれに名前や顔、役割を設定できます。',
+  'ai.own.h': '自分でカスタマイズする',
+  'ai.own.t': 'APIとMCPで、自分だけのボットや自動化の仕組みを作れます。',
+  'end.h': 'トークはあなたのもの。<br>AIの持ち込み自由。',
+};
+const EN = {};
+document.querySelectorAll('[data-i18n]').forEach((el) => { EN[el.dataset.i18n] ??= el.innerHTML; });
+
+function pick() {
+  return new URLSearchParams(location.search).get('lang') === 'ja' ? 'ja' : 'en';
+}
+function apply(lang) {
+  const dict = lang === 'ja' ? JA : EN;
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    const v = dict[el.dataset.i18n] ?? EN[el.dataset.i18n];
+    if (v != null) el.innerHTML = v;
+  });
+  document.documentElement.lang = lang;
+
+  document.querySelectorAll('a[href]').forEach((a) => {
+    const h = a.getAttribute('href');
+    if (!h || /^(https?:|mailto:|#|\?)/.test(h) || a.dataset.lang) return;
+    a.dataset.base ??= h;
+    const [path, hash] = a.dataset.base.split('#');
+    a.setAttribute('href', path + (lang === 'ja' ? '?lang=ja' : '') + (hash ? '#' + hash : ''));
+  });
+  document.querySelectorAll('[data-lang]').forEach((a) => {
+    const on = a.dataset.lang === lang;
+    a.className = 'block px-4 py-2 text-sm ' + (on
+      ? 'font-semibold text-forest-600 dark:text-forest-300'
+      : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-white/5');
+    if (on) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
+  });
+}
+apply(pick());
+document.addEventListener('click', (e) => {
+  document.querySelectorAll('[data-lang-menu][open]').forEach((d) => { if (!d.contains(e.target)) d.removeAttribute('open'); });
+});
+
+document.querySelectorAll('[data-theme-set]').forEach((b) => {
+  b.onclick = () => {
+    const dark = b.dataset.themeSet === 'dark';
+    document.documentElement.classList.toggle('dark', dark);
+    try { localStorage.setItem('tegami.theme', b.dataset.themeSet); } catch {}
+  };
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+  let t; try { t = localStorage.getItem('tegami.theme'); } catch {}
+  if (!t) document.documentElement.classList.toggle('dark', e.matches);
+});
+</script>
+</body>
+</html>
