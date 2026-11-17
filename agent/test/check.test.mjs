@@ -2,7 +2,7 @@
 // first. It fails closed (an error, a timeout or an odd answer holds the message), runs with
 // the backend's closed form, and holds replies in the watcher and sends in the MCP server.
 // Claude Code is replaced by test/fake-claude.mjs (FAKE_CHECK picks its verdict), so nothing
-// reaches an AI. Run: node test/check.test.mjs (starts the dev relay on RELAY_PORT, default 7466).
+// reaches an AI. Run: node test/check.test.mjs (starts the dev relay on RELAY_PORT, default 7471).
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -20,7 +20,7 @@ import { CHECK_SYSTEM, checkPrompt, modelCheck, parseVerdict } from '../check.mj
 
 useWebSocketImplementation(WebSocket);
 const ROOT = resolve(import.meta.dirname, '..');
-const PORT = Number(process.env.RELAY_PORT || 7466);
+const PORT = Number(process.env.RELAY_PORT || 7471);
 const RELAY = `ws://localhost:${PORT}`;
 const HTTP = `http://localhost:${PORT}`;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -119,6 +119,18 @@ try {
   check('Claude Code that fails: ASK_OWNER', (await modelCheck((pr) => reply(pr, { check: true }), { text: '了解' })).verdict === 'ASK_OWNER');
   process.env.FAKE_CHECK = 'ASK_OWNER: it passes on a bank account';
   check('Claude Code that says ASK_OWNER: ASK_OWNER', (await modelCheck((pr) => reply(pr, { check: true }), { text: '了解' })).verdict === 'ASK_OWNER');
+  process.env.FAKE_CHECK = 'hang';
+  const h0 = Date.now();
+  let hangErr = null;
+  // Raced against 8 s, so a missing process timeout shows as a FAIL here, not as a test that never ends.
+  await Promise.race([reply('x', { check: true, timeout: 800 }), sleep(8000).then(() => Promise.reject(new Error('still running')))]).catch((e) => (hangErr = e));
+  check('Claude Code that hangs is stopped and fails (the process timeout)', hangErr?.code === 'TIMEOUT' && Date.now() - h0 < 5000);
+  const hv = await modelCheck((pr) => reply(pr, { check: true, timeout: 5000 }), { text: '了解' }, { timeout: 700 });
+  check('Claude Code that hangs: ASK_OWNER after the check timeout', hv.verdict === 'ASK_OWNER' && hv.failed && Date.now() - h0 < 8000);
+  process.env.FAKE_CHECK = 'SAFE';
+  check('Claude Code that says SAFE with no reason: SAFE', (await modelCheck((pr) => reply(pr, { check: true }), { text: '了解' })).verdict === 'SAFE');
+  process.env.FAKE_CHECK = 'Sure! Here is my review: looks fine';
+  check('Claude Code that answers in prose: ASK_OWNER', (await modelCheck((pr) => reply(pr, { check: true }), { text: '了解' })).verdict === 'ASK_OWNER');
   delete process.env.FAKE_CHECK;
 
   // ---------- end to end: the watcher and the MCP server ----------
@@ -165,7 +177,13 @@ try {
     const w = spawn(process.execPath, [join(ROOT, 'agent.mjs'), 'watch', ...args], { env: { ...env, ...extra }, stdio: ['ignore', 'pipe', 'pipe'] });
     procs.push(w);
     w.stdout.on('data', (d) => (out += d));
-    while (!out.includes('is listening')) await sleep(100);
+    w.stderr.on('data', (d) => (out += d));
+    const end = Date.now() + 20_000;
+    while (!out.includes('is listening')) {
+      if (Date.now() > end || w.exitCode !== null) throw new Error(`the watcher did not start:
+${out}`);
+      await sleep(100);
+    }
     return { w, log: () => out };
   };
   const stop = async (w) => {
@@ -177,7 +195,9 @@ try {
   resetCalls();
   let run = await startWatch({ FAKE_CHECK: 'SAFE: ordinary' });
   await owner.send('こんにちは');
-  check('the owner is answered', await owner.waitFor((t) => t === 'fake: テストA: こんにちは'));
+  const answered = await owner.waitFor((t) => t === 'fake: テストA: こんにちは');
+  check('the owner is answered', answered);
+  if (!answered) console.log(run.log(), owner.inbox);
   check("a reply to the owner is not checked (the owner reads it)", checkCalls().length === 0);
   await friend.send('明日ひま？');
   check('SAFE: the second trusted person is answered', await friend.waitFor((t) => t === 'fake: ともだち: 明日ひま？'));

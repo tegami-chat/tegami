@@ -99,11 +99,11 @@ const PAY_ACT = /送|払|振|請求|チャージ|残高|受け取|入金|出金|
 // Bitcoin (bech32 and legacy), Lightning invoices and LNURL, Ethereum-style addresses.
 const CRYPTO = /\b(bc1|tb1)[02-9ac-hj-np-z]{25,87}\b|(?<![A-Za-z0-9])[13][a-km-zA-HJ-NP-Z1-9]{25,34}(?![A-Za-z0-9])|\bln(bc|tb|bcrt)[0-9a-z]{20,}|\blnurl1[02-9ac-hj-np-z]{20,}|lightning:|\b0x[0-9a-fA-F]{40}\b/i;
 // Gift and prepaid cards by name.
-const GIFT_WORDS = /ギフト\s*(券|カード|コード)|gift\s*card|プリペイド|itunes\s*カード|google\s*play\s*(カード|ギフト)|apple\s*(gift|ギフト)|amazon\s*ギフト|(amazon|apple|google)s*の?ギフト|webmoney|bitcash|電子マネー/;
+const GIFT_WORDS = /ギフト\s*(券|カード|コード)|gift\s*card|プリペイド|itunes\s*カード|google\s*play\s*(カード|ギフト)|apple\s*(gift|ギフト)|amazon\s*ギフト|(amazon|apple|google)\s*の?ギフト|webmoney|bitcash|電子マネー/;
 // Card codes: Amazon (4-6-4/5), Apple (X and 15), groups of four. Letters and digits both.
 const GIFT_CODE = /(?<![A-Z0-9])([A-Z0-9]{4}-[A-Z0-9]{6}-[A-Z0-9]{4,5}|X[A-Z0-9]{15}|[A-Z0-9]{4}(-[A-Z0-9]{4}){3,4})(?![A-Z0-9])/g;
 // Words that move money, or that only come up when someone wants money.
-const MONEY_WORDS = /振込|振り込|振込み|送金|入金|暗証番号|カード番号|口座番号|口座情報|ネットバンキング|キャッシュカード|仮想通貨|暗号資産|ビットコイン|bitcoin|\bbtc\b|イーサリアム|ethereum|\busdt\b|ウォレット|元本保証|配当|利回り|月利|儲か|稼げ|稼い|融資|還付|売上金|示談|登録料|前払い|未納|滞納|未払い|還付金|給付金|当選金|手数料|示談金|立て替|立替|精算(?!機)|払い戻し|返済|atmで操作|atmに行|お金が戻|\bsats\b/;
+const MONEY_WORDS = /振込|振り込|振込み|送金|入金|暗証番号|カード番号|口座番号|口座情報|ネットバンキング|キャッシュカード|仮想通貨|暗号資産|ビットコイン|bitcoin|\bbtc\b|イーサリアム|ethereum|\busdt\b|ウォレット|元本保証|配当|利回り|月利|儲か|稼げ|稼い|融資|還付|売上金|示談|登録料|前払い|未納|滞納|未払い|還付金|給付金|当選金|手数料|示談金|立て替|立替|精算(?!機)|払い戻し|返済|atmで操作|atmに行|お金が戻|\bsats\b|bank\s*account|account\s*number|routing\s*number|card\s*number|\bpin\s*(code|number)|\bwire\s*(money|transfer|the|me|it)|\btax\s*refund|guaranteed\s*returns?/;
 // Words about money that need an ask, an amount or a hurry beside them.
 const MONEY_SOFT = /お金|支払|払い|払って|払う|払え|返金|請求|会費|費用|代金|チケット代|生活費|家賃|口座|現金|残高|投資|利益|両替|お年玉|おこづかい|お小遣い/;
 // Asking for something, or promising to do it.

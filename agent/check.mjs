@@ -76,7 +76,8 @@ export function checkPrompt({ text, context = '', to = 'contact' }) {
 export function parseVerdict(out) {
   const text = String(out ?? '').trim();
   const first = text.split(/\r?\n/).find((l) => l.trim()) ?? '';
-  const line = first.replace(/[*`_#>]/g, '').trim();
+  // Markdown marks around the verdict are taken off (not `_`: it is part of ASK_OWNER).
+  const line = first.replace(/[*`#>]/g, '').trim();
   const m = line.match(/^(SAFE|ASK_OWNER)\b\s*[:：\-–—]?\s*(.*)$/);
   const reason = (m?.[2] ?? '').trim().slice(0, 200);
   if (!m) return { verdict: 'ASK_OWNER', reason: 'the check did not answer SAFE or ASK_OWNER', unparsed: true };

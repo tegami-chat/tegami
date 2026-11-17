@@ -277,7 +277,9 @@ export class Agent {
     this.profile = read(this.dir, 'profile.json', { name: 'Claude', model: '' });
     this.contacts = read(this.dir, 'contacts.json', []);
     this.messages = this.fresh(read(this.dir, 'messages.json', []));
-    this.state = read(this.dir, 'state.json', { lastRead: 0, replied: [] });
+    // Defaults under what is on disk: saveState writes only the keys that changed, so a state.json
+    // can lack `replied` (it stayed at its default) and must still read as an empty list.
+    this.state = { lastRead: 0, replied: [], ...read(this.dir, 'state.json', {}) };
     this.stateBase = snapshot(this.state);
     // Messages from strangers: counted (who and when), never kept with their words, never on disk.
     this.strangers = [];

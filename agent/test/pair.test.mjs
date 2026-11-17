@@ -147,6 +147,9 @@ try {
   const set = start(['backend', 'local', '--model', 'tiny', '--url', `http://127.0.0.1:${api.address().port}/v1`]);
   await set.done;
   check('backend local: shown as the model', set.out.includes('Shown as: tiny (local)'));
+  // AIの検査 by a model is tested in check.test.mjs. This fake API answers every call with its
+  // reply, never SAFE, so the check would hold each reply to people other than the owner.
+  await start(['setting', 'modelCheck', 'off']).done;
   const watch = start(['watch']);
   procs.push(watch);
   check('the watcher starts', await watch.waitOut('is listening'));

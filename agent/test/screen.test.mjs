@@ -90,6 +90,8 @@ const kinds = {
   urgentMoney: '至急！お金のことで相談',
 };
 for (const [kind, t] of Object.entries(kinds)) check(`money kind ${kind}`, agent.findMoney(t) === kind && app.findMoney(t) === kind);
+for (const t of ['I need you to wire money to my bank account today', 'Your tax refund is ready, enter your card number here', 'Amazon のギフトを買って'])
+  check(`money (English and brand words): ${t.slice(0, 30)}`, !!agent.findMoney(t) && agent.findMoney(t) === app.findMoney(t));
 check('money: full-width amounts and hidden characters do not hide it', agent.findMoney(`５万円今すぐ用意${ZW}できる？`) === 'amountAsk');
 
 console.log(failures ? `\n${failures} failed` : '\nall passed');
