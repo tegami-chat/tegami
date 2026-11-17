@@ -143,6 +143,19 @@ export function checkOwnerCard(raw, ai, owner, now = Math.floor(Date.now() / 100
   }
 }
 
+// AI limits at the relay (relay/src/ai.ts): this AI registers there as an AI with its owner card
+// (POST /register {ai_card}), and the relay counts the envelopes it publishes, per AI key and per
+// owner. When the relay refuses one for that, the reason starts with 'rate-limited: ai-'. The
+// agent then sends nothing more until the window is over, and does not retry in a loop.
+
+/** Until when (unix seconds) the relay's refusal `reason` holds this AI back, or 0 when it is not an AI limit. */
+export function aiLimitUntil(reason, now = Math.floor(Date.now() / 1000)) {
+  const r = String(reason ?? '');
+  if (r.includes('rate-limited: ai-minute')) return now + 60;
+  if (r.includes('rate-limited: ai-day') || r.includes('rate-limited: ai-owner-day')) return (Math.floor(now / 86400) + 1) * 86400;
+  return 0;
+}
+
 // Pairing by QR code (client/src/lib/tegami.tsx pairAi): `tegami-agent pair` shows the AI's
 // invite link with a one-time code (&p=). The app that adds the AI from it sends back, sealed
 // for the AI, that code and its own invite link; the AI then trusts that person and registers
@@ -303,6 +316,11 @@ export class Agent {
     this.pairListeners = new Set();
     // Told when the owner's app stops (true) or resumes (false) this AI.
     this.stopListeners = new Set();
+    // Told (with the relay's reason and until when) when the relay's AI limit holds this AI back.
+    this.aiLimitListeners = new Set();
+    this.aiPausedUntil = 0;
+    // Which owner the relay last accepted this AI for (memory only; asked again after a restart).
+    this.aiDeclared = null;
     this.pool = null;
   }
 
@@ -617,6 +635,8 @@ export class Agent {
       this.sub = sub;
     };
     open();
+    // An AI with a card from an earlier run says so to the relay once per run.
+    if (this.ownerCard) void this.declareAi().catch(() => {});
     await Promise.race([synced, new Promise((r) => setTimeout(r, 8000))]);
   }
 
@@ -705,7 +725,11 @@ export class Agent {
       const kept = read(this.dir, 'owner-card.json', null);
       if ((kept?.at ?? 0) > rumor.created_at) return;
       if (d?.card === null) write(this.dir, 'owner-card.json', { at: rumor.created_at, card: null });
-      else if (checkOwnerCard(d?.card, this.pubkey, this.owner.pubkey)) write(this.dir, 'owner-card.json', { at: rumor.created_at, card: d.card });
+      else if (checkOwnerCard(d?.card, this.pubkey, this.owner.pubkey)) {
+        write(this.dir, 'owner-card.json', { at: rumor.created_at, card: d.card });
+        // Tell the relay this key is an AI (it stays one; a taken-back card changes nothing there).
+        void this.declareAi().catch(() => {});
+      }
       return;
     }
     if (rumor.kind === PROFILE_KIND) {
@@ -803,9 +827,48 @@ export class Agent {
     const tags = [...members.map((m) => ['p', m]), aiTag(this.pubkey, this.profile, this.ownerCard, read(this.dir, 'model.json', null)?.model ?? '')];
     const rumor = nip59.createRumor({ kind: 14, content: text, tags, created_at: Math.floor(Date.now() / 1000) }, this.secret);
     const wraps = [...members, this.pubkey].map((to) => nip59.createWrap(nip59.createSeal(rumor, this.secret, to), to));
-    await Promise.any(wraps.flatMap((w) => this.pool.publish(RELAYS, w, { onauth: this.onauth })));
+    await this.publish(wraps);
     this.receive(wraps[1]);
     return rumor.id;
+  }
+
+  /** Whether the relay's AI limit holds this AI back now (then nothing is sent). */
+  aiPaused(now = Math.floor(Date.now() / 1000)) {
+    return this.aiPausedUntil > now;
+  }
+
+  /**
+   * Publishes envelopes. When the relay refuses one for its AI limit, stops sending until that
+   * window is over (each later send fails at once, without asking the relay again).
+   */
+  async publish(wraps) {
+    if (this.aiPaused()) {
+      throw Object.assign(new Error(`Held back by the relay's AI limit until ${new Date(this.aiPausedUntil * 1000).toISOString()}.`), { code: 'AI_LIMIT' });
+    }
+    try {
+      await Promise.any(wraps.flatMap((w) => this.pool.publish(RELAYS, w, { onauth: this.onauth })));
+    } catch (e) {
+      const reasons = [...(e?.errors ?? [e])].map((x) => String(x?.message ?? x));
+      const reason = reasons.find((r) => aiLimitUntil(r));
+      if (!reason) throw e;
+      this.aiPausedUntil = Math.max(this.aiPausedUntil, aiLimitUntil(reason));
+      for (const l of this.aiLimitListeners) l(reason, this.aiPausedUntil);
+      throw Object.assign(new Error(`The relay's AI limit: ${reason}`), { code: 'AI_LIMIT' });
+    }
+  }
+
+  /**
+   * Registers this key at the relay as an AI, with the owner card the owner's app gave
+   * (POST /register {ai_card}). Once per owner per run. Returns the relay's answer, or null
+   * when there is no good card.
+   */
+  async declareAi() {
+    const card = this.ownerCard;
+    if (!card) return null;
+    if (this.aiDeclared === card.pubkey) return { member: true, ai: true };
+    const r = await this.register({ ai_card: card });
+    if (r?.ai) this.aiDeclared = card.pubkey;
+    return r;
   }
 
   /** Sends a reply draft to the one who asked (`re` is the ask's id). It expires like the ask. */
@@ -814,7 +877,7 @@ export class Agent {
     await this.connect();
     const content = JSON.stringify({ re, text: String(text).slice(0, DRAFT_TEXT_MAX) });
     const rumor = nip59.createRumor({ kind: DRAFT_KIND, content, tags: [['p', to], ['e', re]], created_at: Math.floor(Date.now() / 1000) }, this.secret);
-    await Promise.any(this.pool.publish(RELAYS, wrapExpiring(rumor, this.secret, to), { onauth: this.onauth }));
+    await this.publish([wrapExpiring(rumor, this.secret, to)]);
     return rumor.id;
   }
 
@@ -838,7 +901,7 @@ export class Agent {
         resolve(d);
       });
     });
-    await Promise.any(this.pool.publish(RELAYS, wrapExpiring(rumor, this.secret, owner.pubkey), { onauth: this.onauth }));
+    await this.publish([wrapExpiring(rumor, this.secret, owner.pubkey)]);
     return answer;
   }
 
