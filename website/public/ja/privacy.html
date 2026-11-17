@@ -60,7 +60,7 @@
     <li data-i18n="pv.scope.4">今後公開するiPhone版とAndroid版のアプリ</li>
   </ul>
 
-  <p data-i18n="pv.scope.p">本サービスのオープンソースのコードを使って第三者が運営するリレーやアプリ、および利用者が自分のパソコンで動かすAIの友だちは、本ポリシーの対象外です。</p>
+  <p data-i18n="pv.scope.p">本サービスのオープンソースのコードを使って第三者が運営するリレーやアプリは、本ポリシーの対象外です。利用者が自分のパソコンで動かすAIの友だちと、AIの友だちが利用するAIサービスでの情報の取扱いも、本ポリシーの対象外です。本サービスの公式のアプリがAIの友だちへ渡す情報については、7で定めます。</p>
 
   <h2 data-i18n="pv.cant.h">2. 運営者が閲覧できない情報</h2>
 
@@ -76,7 +76,7 @@
     <li data-i18n="pv.cant.7">秘密鍵（端末の外へ送信される際も、必ず暗号化されています）</li>
   </ul>
 
-  <p data-i18n="pv.cant.ex">ただし、通報に添付されたメッセージについては、本文と送信者を運営者が閲覧できます。また、誰が誰を招待したかの記録は、リレーに90日間保存されます。どのアカウントがどのスタンプを保存しているかも、リレーに記録されます（スタンプの画像は暗号化されたままです）。</p>
+  <p data-i18n="pv.cant.ex">ただし、通報に添付されたメッセージについては、本文と送信者を運営者が閲覧できます。また、誰が誰を招待したかの記録は、リレーに90日間保存されます。どのアカウントがどのスタンプを保存しているかも、リレーに記録されます（スタンプの画像は暗号化されたままです）。「Tegamiへの意見」から送ったメッセージは、運営者宛てのメッセージとして運営者が読みます。</p>
 
   <h2 data-i18n="pv.keep.h">3. リレーが保存する情報</h2>
 
@@ -85,9 +85,10 @@
   <div class="mt-6 divide-y divide-neutral-200 rounded-xl border border-neutral-200 dark:divide-night-line dark:border-night-line">
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.1.t">登録したアカウント</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">取得する情報</span><p data-i18n="pv.k.1.1">公開鍵、招待の有無、登録日時、利用停止の有無</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">利用目的</span><p data-i18n="pv.k.1.2">登録済みのアカウントのみがメッセージを送信できるようにするため。不正なアカウントの利用を停止するため</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">保存期間</span><p data-i18n="pv.k.1.3">アカウントの削除まで</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.2.t">メッセージの封筒</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">取得する情報</span><p data-i18n="pv.k.2.1">暗号化されたメッセージ（以下「封筒」といいます。メッセージ1通につき、受信者ごとに1つと、送信者の控えに1つ作られます）、宛先の公開鍵、受信日時、データサイズ</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">利用目的</span><p data-i18n="pv.k.2.2">端末の電源が切れている時やオフラインの時に、後からメッセージを配信するため</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">保存期間</span><p data-i18n="pv.k.2.3">30日間。新しい端末へアカウントを移すための封筒は10分間</p></div></div>
-    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.3.t">写真、動画、ファイル、音声メッセージ</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">取得する情報</span><p data-i18n="pv.k.3.1">暗号化されたデータ。アップロードした利用者は記録しません</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">利用目的</span><p data-i18n="pv.k.3.2">受信者に配信するため</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">保存期間</span><p data-i18n="pv.k.3.3">30日間</p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.3.t">写真、動画、ファイル、音声メッセージ、新しい端末へ移す会話の履歴</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">取得する情報</span><p data-i18n="pv.k.3.1">暗号化されたデータ。アップロードした利用者は記録しません</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">利用目的</span><p data-i18n="pv.k.3.2">受信者や、移した先の端末に配信するため</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">保存期間</span><p data-i18n="pv.k.3.3">30日間</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.st.t">スタンプ</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">取得する情報</span><p data-i18n="pv.k.st.1">暗号化されたスタンプの画像、そのスタンプを保存しているアカウントの公開鍵、データサイズ、保存日時</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">利用目的</span><p data-i18n="pv.k.st.2">同じスタンプを繰り返し送信し、利用者のすべての端末で使えるようにするため。スタンプを保存したアカウントだけが削除できるようにするため</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">保存期間</span><p data-i18n="pv.k.st.3">利用者がスタンプを削除するまで。削除後も、配信のための一時的な保存に最大1日残る場合があります</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.4.t">招待の記録</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">取得する情報</span><p data-i18n="pv.k.4.1">誰が誰を招待したか</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">利用目的</span><p data-i18n="pv.k.4.2">不正行為を行った利用者と、その利用者が招待した利用者の利用を停止するため</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">保存期間</span><p data-i18n="pv.k.4.3">90日間</p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.dl.t">削除したアカウント</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">取得する情報</span><p data-i18n="pv.k.dl.1">削除したアカウントの公開鍵と、削除した日時</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">利用目的</span><p data-i18n="pv.k.dl.2">同じ公開鍵で再び登録できないようにするため（利用を停止されたアカウントが、自分で削除して登録し直すことを防ぐため）。また、削除したアカウント宛ての封筒をリレーに保存しないようにするため</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">保存期間</span><p data-i18n="pv.k.dl.3">無期限</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.5.t">通報</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">取得する情報</span><p data-i18n="pv.k.5.1">通報した利用者と通報された利用者の公開鍵、通報の理由。通報者が選択した場合は、通報された利用者のメッセージ20件まで（通報者の端末で復号したもの）。通報されたことは、通報された利用者に通知しません</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">利用目的</span><p data-i18n="pv.k.5.2">不正行為を防止するため</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">保存期間</span><p data-i18n="pv.k.5.3">90日間</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.6.t">通知の宛先</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">取得する情報</span><p data-i18n="pv.k.6.1">端末の通知の宛先、通知の暗号化に使う鍵、その端末で利用するアカウントの公開鍵</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">利用目的</span><p data-i18n="pv.k.6.2">新着メッセージと着信を通知するため</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">保存期間</span><p data-i18n="pv.k.6.3">通知をオフにするまで</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.7.t">復旧用バックアップ</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">取得する情報</span><p data-i18n="pv.k.7.1">復旧コードで暗号化したアカウントのバックアップ。どのアカウントのものかは、リレーでは識別できません</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">利用目的</span><p data-i18n="pv.k.7.2">端末の紛失時などにアカウントを復元するため</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">保存期間</span><p data-i18n="pv.k.7.3">利用者が削除するまで</p></div></div>
@@ -115,7 +116,7 @@
   <div class="mt-6 divide-y divide-neutral-200 rounded-xl border border-neutral-200 dark:divide-night-line dark:border-night-line">
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.c.1.t">Cloudflare, Inc.</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l1">国</span><p data-i18n="pv.c.1.1">アメリカ</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l2">利用目的</span><p data-i18n="pv.c.1.2">サイト、アプリ、リレー、ファイル保存の運用</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l3">送信される情報</span><p data-i18n="pv.c.1.3">接続時のIPアドレスと、リレーが保存する情報。通報に添付されたメッセージを除き、メッセージ、ファイル、復旧用バックアップは暗号化されたまま保存されます</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.c.2.t">Cloudflare, Inc.</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l1">国</span><p data-i18n="pv.c.2.1">アメリカ</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l2">利用目的</span><p data-i18n="pv.c.2.2">招待なしの登録時に、自動プログラムでないことを確認（Turnstile）</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l3">送信される情報</span><p data-i18n="pv.c.2.3">IPアドレスとブラウザの情報</p></div></div>
-    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.c.3.t">Cloudflare, Inc.</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l1">国</span><p data-i18n="pv.c.3.1">アメリカ</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l2">利用目的</span><p data-i18n="pv.c.3.2">通話時に、端末間の接続経路を確立（STUN）</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l3">送信される情報</span><p data-i18n="pv.c.3.3">IPアドレス</p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.c.3.t">Cloudflare, Inc.</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l1">国</span><p data-i18n="pv.c.3.1">アメリカ</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l2">利用目的</span><p data-i18n="pv.c.3.2">通話時に、端末間の接続経路を確立（STUN）。端末間で直接つながらない場合や、「通話を常に中継する」を有効にした場合に、音声と映像を中継（TURN）</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l3">送信される情報</span><p data-i18n="pv.c.3.3">IPアドレス。中継する場合は、両方の端末のIPアドレス、通話の日時、データ量。音声と映像は暗号化されたまま中継されます。設定の「自分のサーバー」を指定した場合、利用者の端末からCloudflareへは送信されません</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.c.4.t">Apple、Google、Mozilla、Microsoft</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l1">国</span><p data-i18n="pv.c.4.1">アメリカ</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l2">利用目的</span><p data-i18n="pv.c.4.2">端末への通知の配信</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.c.l3">送信される情報</span><p data-i18n="pv.c.4.3">通知の宛先と送信日時。通知の内容は暗号化され、利用者の端末でのみ開けます。内容は、メッセージか着信かの区別、宛先のアカウント、新着件数のみです</p></div></div>
   </div>
 
@@ -123,13 +124,37 @@
 
   <h2 data-i18n="pv.call.h">6. 通話</h2>
 
-  <p data-i18n="pv.call.p">通話の音声と映像は暗号化され、端末間で直接送受信されます。運営者のサーバーは経由しません。そのため、通話の相手には利用者のIPアドレスが伝わります。</p>
+  <p data-i18n="pv.call.p1">通話の音声と映像は、端末間で暗号化されます（DTLS-SRTP）。</p>
+  <p data-i18n="pv.call.p2">通話は、通常は端末間で直接送受信されます。端末間で直接つながらない場合や、「通話を常に中継する」を有効にした場合は、Cloudflareの中継サーバー（TURN）を経由することがあります。中継サーバーは、暗号化された音声と映像を転送するだけで、内容を閲覧できません。</p>
+  <p data-i18n="pv.call.p3">中継サーバーには、両方の端末のIPアドレス、通話の日時、データ量が伝わります。リレーは、中継サーバーを利用するための一時的な認証情報をアプリに渡すだけで、誰に渡したかを記録しません。運営者がCloudflareから受け取るのは、時間帯とCloudflareのデータセンターごとのデータ量の集計だけで、通話ごとの記録やIPアドレスは受け取りません。Cloudflareでの保存期間は、<a href="https://www.cloudflare.com/privacypolicy/">Cloudflareのプライバシーポリシー</a>に従います。</p>
+  <p data-i18n="pv.call.p4">直接つながる通話では、通話の相手に利用者のIPアドレスが伝わります。設定の「通話を常に中継する」を有効にすると、相手にIPアドレスが伝わりません。この設定を有効にしている場合、中継サーバーを利用できないときは、通話をつなぎません。</p>
+  <p data-i18n="pv.call.p5">設定の「自分のサーバー」で利用者自身の中継サーバーを指定した場合、利用者の端末は、通話の経路の確立と中継にCloudflareのサーバーを使いません。指定したサーバーには、両方の端末のIPアドレスなどが伝わります。相手がTegamiのサーバーを使っている場合は、相手側の中継によって、利用者のIPアドレスがCloudflareに伝わることがあります。呼び出しの合図は、メッセージと同じく暗号化された封筒としてリレーを経由します。指定したサーバーのアドレス、ユーザー名、パスワードは、その端末にのみ保存されます。</p>
 
-  <h2 data-i18n="pv.ai.h">7. AIの友だち</h2>
+  <h2 data-i18n="pv.ai.h">7. AIの友だちへ渡す情報</h2>
 
   <p data-i18n="pv.ai.p1">AIの友だちは、利用者が自分のパソコンで動かすプログラムです。AIの友だちとのメッセージも、暗号化された封筒としてリレーを経由します。</p>
 
-  <p data-i18n="pv.ai.p2">AIに読み取らせたメッセージは、利用者が利用するAIサービスに送信され、そのサービスの規約に従って取り扱われます。送信後のメッセージは、本サービスの暗号化による保護の対象外となります。</p>
+  <p data-i18n="pv.ai.p2">本サービスの公式のアプリは、利用者がAIの権限の設定で許可した場合に限り、次の情報をAIの友だちへ渡します。AIの権限は、初期設定ではすべて無効です。</p>
+
+  <ul>
+    <li data-i18n="pv.ai.1">返信の下書き：友だちとの1対1のトークの文字のメッセージのうち、新しいものから30通まで（利用者自身のメッセージを含みます。1通あたり2,000文字まで）。写真、動画、ファイル、音声メッセージ、通話は渡しません</li>
+    <li data-i18n="pv.ai.2">友だちの一覧：友だちの名前と公開鍵。ほかの人のAIと、ブロックした相手は含みません</li>
+    <li data-i18n="pv.ai.3">AIを呼んだトークとグループ：そのトークのメッセージ。参加者全員が同意している間に限ります</li>
+  </ul>
+
+  <p data-i18n="pv.ai.p3">渡す情報は、利用者自身のAIの友だちの公開鍵宛てに暗号化します。返信の下書きと友だちの一覧を渡す封筒は、10分でリレーから削除されます。運営者は、渡した情報の中身を閲覧できません。</p>
+
+  <p data-i18n="pv.ai.p4">本サービスの公式のアプリは、次のメッセージをAIの友だちへ渡しません。</p>
+
+  <ul>
+    <li data-i18n="pv.ai.n1">友だちではない人からのメッセージ</li>
+    <li data-i18n="pv.ai.n2">「自分の文を相手のAIに読ませない」を選んでいる人のメッセージ</li>
+    <li data-i18n="pv.ai.n3">「AIに読ませない」の印が付いたメッセージ</li>
+  </ul>
+
+  <p data-i18n="pv.ai.p5">AIの友だちが受け取った情報は、AIの友だちが動くパソコンに保存され、利用者が利用するAIサービス（Anthropic、OpenAI、Googleなど）に送信されることがあります。送信された情報は、利用者とAIサービスとの間の契約と、AIサービスのプライバシーポリシーに従って取り扱われます。利用者のパソコンで動くモデルを使う場合は、パソコンの外へ送信されません。運営者は、AIの友だちが動くパソコンとAIサービスでの情報の取扱いに関与しません。送信後のメッセージは、本サービスの暗号化による保護の対象外となります。</p>
+
+  <p data-i18n="pv.ai.p6">本サービスのコードを改造したアプリは、本節の定めに従わないことがあります。相手が改造したアプリを使っている場合、「自分の文を相手のAIに読ませない」を選んでいても、利用者のメッセージが相手のAIへ渡ることがあります。また、受信者が手作業でメッセージを書き写すことは防げません。</p>
 
   <h2 data-i18n="pv.never.h">8. 運営者が行わないこと</h2>
 
@@ -156,6 +181,9 @@
     <li data-i18n="pv.del.a.2">設定の「復旧コードを削除」を押すと、リレーは復旧用バックアップを削除します</li>
     <li data-i18n="pv.del.a.3">封筒と、スタンプ以外のファイルは、30日後に自動で削除されます</li>
     <li data-i18n="pv.del.a.4">スタンプを削除すると、リレーはスタンプの画像と保存の記録を削除します</li>
+    <li data-i18n="pv.del.a.5">設定の「アカウントを削除」を押すと、リレーはそのアカウント宛ての封筒、スタンプ、通知の宛先、アカウントの登録、招待コードを削除し、操作した端末のデータも削除されます。その端末に復旧コードがある場合は、復旧用バックアップも先に削除されます</li>
+    <li data-i18n="pv.del.a.6">アカウントを削除した後も、次の情報は残ります。同じ公開鍵で再び登録できないようにするための公開鍵と削除した日時。ほかの利用者に送った封筒、ファイル、移した会話の履歴（30日後に自動で削除）。通報の記録と、そのアカウントが招待した記録（90日後に自動で削除）。ほかの端末で作った復旧コードの復旧用バックアップ（その端末で「復旧コードを削除」を押すと削除）。ほかの端末のデータ（それぞれの端末で「この端末から削除」を押すと削除）</li>
+    <li data-i18n="pv.del.a.7">設定の「この端末から削除」は、その端末のデータだけを削除します。リレーの情報は削除しません</li>
   </ul>
 
   <p data-i18n="pv.del.ask">公開鍵に結び付いた情報（登録、招待、通報の記録、通知の宛先、スタンプなど）について、利用目的の通知、開示、訂正、追加、削除、利用の停止、第三者への提供の停止を求める場合は、アカウントの公開鍵を記載して <a href="mailto:hello@tegami.chat">hello@tegami.chat</a> までご連絡ください。開示は電子メールで行います。</p>
@@ -169,7 +197,6 @@
     <li data-i18n="pv.del.b.6">手数料は無料です</li>
   </ul>
 
-  <p data-i18n="pv.del.app">アプリ内でアカウントを削除する機能は、今後提供する予定です。</p>
 
   <h2 data-i18n="pv.kid.h">11. 子どもの利用</h2>
 
@@ -196,7 +223,7 @@
 
   <ul>
     <li data-i18n="pv.eu.1">サービスの提供に必要な取扱い：公開鍵の登録、メッセージとファイルの送受信、通話の接続、スタンプの保管、復旧用バックアップの保管</li>
-    <li data-i18n="pv.eu.2">運営者の正当な利益：不正行為の防止、接続数と送信量の制限、利用状況の統計</li>
+    <li data-i18n="pv.eu.2">運営者の正当な利益：不正行為の防止（削除したアカウントの再登録の防止を含む）、接続数と送信量の制限、利用状況の統計</li>
     <li data-i18n="pv.eu.3">利用者の同意：通知とエラーの報告。設定からいつでも同意を撤回できます。撤回前の取扱いの適法性には影響しません</li>
   </ul>
 
@@ -224,7 +251,7 @@
     <dt class="font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="pv.op.3.k">連絡先</dt><dd data-i18n="pv.op.3.v"><a href="mailto:hello@tegami.chat">hello@tegami.chat</a></dd>
   </dl>
 
-  <p class="!mt-10 text-sm !text-neutral-500" data-i18n="pv.date">制定日：2026年11月15日<br>改定日：2026年11月15日（「利用状況の統計」の公開方法と保存期間を変更、「メッセージの封筒」の説明を追加、スタンプの保管を追加）</p>
+  <p class="!mt-10 text-sm !text-neutral-500" data-i18n="pv.date">制定日：2026年11月15日<br>改定日：2026年11月15日<br>改定日：2026年11月○日</p>
 </main>
 
 <footer class="border-t border-neutral-200 text-sm text-neutral-500 dark:border-night-line dark:text-neutral-400">
