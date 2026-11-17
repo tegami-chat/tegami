@@ -7,7 +7,9 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { randomBytes } from 'node:crypto';
 import { backendLabel, callApi, loadBackend, loadKeys, makeResponder, saveBackend, saveKey } from '../backends.mjs';
+import { Vault } from '../vault.mjs';
 
 const ROOT = resolve(import.meta.dirname, '..');
 let failures = 0;
@@ -55,7 +57,9 @@ const DIR = mkdtempSync(join(tmpdir(), 'tegami-backends-'));
 
 try {
   const state = { lastRead: 0, replied: [] };
-  const responder = () => makeResponder({ dir: DIR, config: loadBackend(DIR), system: 'SYS', draftSystem: 'DRAFT', state, saveState: () => {} });
+  // The records key stands in for one from the AI's key (vault.mjs).
+  const vault = new Vault(DIR, () => randomBytes(32));
+  const responder = () => makeResponder({ dir: DIR, config: loadBackend(DIR), system: 'SYS', draftSystem: 'DRAFT', state, saveState: () => {}, vault });
 
   // ---------- Anthropic ----------
   saveBackend(DIR, { type: 'anthropic', model: 'claude-test', url: `${BASE}/v1` });
@@ -73,7 +77,8 @@ try {
   check('each person has their own conversation', requests[2].body.messages.length === 1);
   await responder()('下書き', { draft: true, peer: 'a' });
   check('a draft has no conversation and its own instructions', requests[3].body.messages.length === 1 && requests[3].body.system === 'DRAFT');
-  check('a draft is not kept in the conversation', !readFileSync(join(DIR, 'history.json'), 'utf8').includes('下書き'));
+  check('a draft is not kept in the conversation', !JSON.stringify(vault.read('history.json', {})).includes('下書き') && JSON.stringify(vault.read('history.json', {})).includes('2回目'));
+  check('history.json on disk shows no words', !readFileSync(join(DIR, 'history.json'), 'utf8').includes('2回目'));
   mode = 'refusal';
   check('Anthropic: a refusal is an error, not an empty reply', (await throws(() => responder()('x', { peer: 'a' }))).includes('declined'));
   mode = 'echo-key';

@@ -13,6 +13,8 @@ import * as nip59 from 'nostr-tools/nip59';
 import { SimplePool, useWebSocketImplementation } from 'nostr-tools/pool';
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import WebSocket from 'ws';
+import { records } from './records.mjs';
+import { shortId } from '../lib.mjs';
 
 useWebSocketImplementation(WebSocket);
 const ROOT = resolve(import.meta.dirname, '..');
@@ -139,7 +141,8 @@ try {
   check('the right code pairs the owner', await pair.waitOut('Paired with テストA'));
   check('the AI registers with the code in the owner\'s link', await pair.waitOut('Registered with the Tegami relay'));
   check('pair exits when done', (await pair.done) === 0);
-  const contacts = JSON.parse(readFileSync(join(HOME, 'contacts.json'), 'utf8'));
+  const contacts = records(HOME)('contacts.json', []);
+  check('contacts.json on disk does not show the name', !readFileSync(join(HOME, 'contacts.json'), 'utf8').includes('テストA'));
   check('the owner is a trusted contact, named from their link', contacts.length === 1 && contacts[0].pubkey === owner.pk && contacts[0].trusted && contacts[0].name === 'テストA');
   check('the code is used up', !existsSync(join(HOME, 'pair.json')));
 
@@ -157,7 +160,7 @@ try {
   check('the model got the instructions and the message', seen[0]?.model === 'tiny' && seen[0].messages[0].role === 'system');
   await stranger.send(ai, 'ねえ');
   await sleep(2500);
-  check('a used code does not make anyone else trusted', JSON.parse(readFileSync(join(HOME, 'contacts.json'), 'utf8')).every((c) => c.pubkey !== stranger.pk));
+  check('a used code does not make anyone else trusted', records(HOME)('contacts.json', []).every((c) => c.pubkey !== stranger.pk));
   check('the stranger gets no reply', !(await stranger.waitFor(() => true, 500)) && seen.length === 1);
 
   // A pairing code answered while the watcher runs: the watcher pairs too.
@@ -168,11 +171,11 @@ try {
   const friend = user('テストB');
   await fetch(`${HTTP}/_trust`, { method: 'POST', body: JSON.stringify({ pubkey: friend.pk }) });
   await friend.pair(ai, second.code, friend.link(await inviteCode(friend.sk)));
-  check('a running watcher accepts a pairing too', await watch.waitOut('Paired with テストB'));
+  check('a running watcher accepts a pairing too', await watch.waitOut(`Paired with ${shortId(friend.pk)}`));
   await friend.send(ai, 'はじめまして');
   check('and then answers that person right away', !!(await friend.waitFor((t) => t === 'local: テストB: はじめまして')));
   check('each person starts their own conversation', seen.at(-1).messages.length === 2);
-  const trustedNow = () => JSON.parse(readFileSync(join(HOME, 'contacts.json'), 'utf8')).filter((c) => c.trusted).map((c) => c.pubkey);
+  const trustedNow = () => records(HOME)('contacts.json', []).filter((c) => c.trusted).map((c) => c.pubkey);
   await stranger.pair(ai, second.code, stranger.link());
   await sleep(2500);
   check('the code the watcher used works only once', !trustedNow().includes(stranger.pk));

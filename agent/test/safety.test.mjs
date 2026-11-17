@@ -14,6 +14,7 @@ import { SimplePool, useWebSocketImplementation } from 'nostr-tools/pool';
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import { bytesToHex } from 'nostr-tools/utils';
 import WebSocket from 'ws';
+import { onDisk } from './records.mjs';
 
 useWebSocketImplementation(WebSocket);
 const ROOT = resolve(import.meta.dirname, '..');
@@ -116,14 +117,32 @@ try {
     });
   });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
-  const api = (settings) => makeResponder({ dir: D2, config: { type: 'ollama', model: 'm', url: `http://127.0.0.1:${server.address().port}/v1` }, system: 'S', draftSystem: 'D', state: {}, saveState: () => {}, settings });
+  // The records key stands in for one from the AI's key (vault.mjs). The plain history.json above
+  // is from before the records were sealed: it is moved over when first read.
+  const { Vault } = await import('../vault.mjs');
+  const { randomBytes } = await import('node:crypto');
+  const vault = new Vault(D2, () => randomBytes(32));
+  const api = (settings, v = vault) => makeResponder({ dir: D2, config: { type: 'ollama', model: 'm', url: `http://127.0.0.1:${server.address().port}/v1` }, system: 'S', draftSystem: 'D', state: {}, saveState: () => {}, settings, vault: v });
   const r1 = await api({ keepDays: 30 })('新しい', { peer: 'p' });
-  const hist = JSON.parse(readFileSync(join(D2, 'history.json'), 'utf8'));
+  const hist = vault.read('history.json', {});
   check('turns older than keepDays are not sent to the AI', r1 === 'n=2');
-  check('and are removed from history.json, for everyone', !JSON.stringify(hist).includes('古い') && !hist.q && hist.p.every((t) => t.at));
+  check('and are removed from history.json, for everyone', !JSON.stringify(hist).includes('古い') && !hist.q && hist.p.every((t) => t.at) && JSON.stringify(hist).includes('新しい'));
+  check('history.json is sealed on disk: no words in it', JSON.parse(readFileSync(join(D2, 'history.json'), 'utf8')).tegamiSealed === 1 && !onDisk(D2, '新しい').length && !onDisk(D2, '古い').length);
+  // Pruning works on a sealed file too: a turn made old by hand goes at the next write.
+  const aged = vault.read('history.json', {});
+  aged.p = aged.p.map((t) => ({ ...t, at: old }));
+  vault.write('history.json', aged);
+  check('turns older than keepDays leave a sealed history.json too', (await api({ keepDays: 30 })('次', { peer: 'p' })) === 'n=2' && !JSON.stringify(vault.read('history.json', {})).includes('新しい'));
   rmSync(join(D2, 'history.json'));
   await api({ remember: false })('覚えない', { peer: 'p' });
   check('remember off: history.json is not written', !existsSync(join(D2, 'history.json')));
+  // No store: the conversation stays in memory, never on disk.
+  const DM = newHome();
+  const memoryOnly = new Vault(DM, () => null);
+  const r2 = makeResponder({ dir: DM, config: { type: 'ollama', model: 'm', url: `http://127.0.0.1:${server.address().port}/v1` }, system: 'S', draftSystem: 'D', state: {}, saveState: () => {}, settings: {}, vault: memoryOnly });
+  await r2('メモリだけ', { peer: 'p' });
+  check('no store: the conversation goes on in memory', (await r2('2回目', { peer: 'p' })) === 'n=4');
+  check('no store: history.json is not written', !existsSync(join(DM, 'history.json')) && !onDisk(DM, 'メモリだけ').length);
   server.close();
 
   // ---------- 11. settings ----------
@@ -243,14 +262,16 @@ try {
   await owner.send('AIに見せないで', [['noai']]);
   await sleep(2000);
   check('a message tagged noai is not handed to the AI', !calls().some((c) => c.prompt.includes('AIに見せないで')));
-  check("and its words are not written down", !readFileSync(join(HOME, 'messages.json'), 'utf8').includes('AIに見せないで'));
+  // No store here (TEGAMI_SECRET_STORE=plain): message text never goes to disk at all.
+  check("and its words are not written down", !onDisk(HOME, 'AIに見せないで').length);
+  check('with no store, no message text is on disk', !onDisk(HOME, '1通目').length && !existsSync(join(HOME, 'messages.json')));
 
   // A contact whose profile card says "no AI": their words are not shown through MCP even when opened.
   await friend.say(10100, JSON.stringify({ avatar: null, noai: true }));
   await sleep(500);
   await friend.send('友だちの文');
   await sleep(1500);
-  check('a contact who chose "no AI" in their profile card: their words are not kept', !readFileSync(join(HOME, 'messages.json'), 'utf8').includes('友だちの文'));
+  check('a contact who chose "no AI" in their profile card: their words are not kept', !onDisk(HOME, '友だちの文').length);
 
   // 16. Stop from someone who is not the owner: ignored. From the owner: no replies until resume.
   await friend.say(25069, JSON.stringify({ stop: true }));
