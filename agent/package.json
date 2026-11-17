@@ -8,7 +8,7 @@
     "tegami-agent": "./agent.mjs"
   },
   "scripts": {
-    "test": "node test/screen.test.mjs && node test/backends.test.mjs && node test/autostart.test.mjs && node test/agent.test.mjs && node test/pair.test.mjs && node test/safety.test.mjs && node test/owner.test.mjs"
+    "test": "node test/screen.test.mjs && node test/records.test.mjs && node test/backends.test.mjs && node test/autostart.test.mjs && node test/agent.test.mjs && node test/pair.test.mjs && node test/safety.test.mjs && node test/owner.test.mjs"
   },
   "license": "AGPL-3.0-only",
   "dependencies": {

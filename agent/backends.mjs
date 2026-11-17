@@ -10,7 +10,8 @@
 import { spawn } from 'node:child_process';
 import { chmodSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { accountFor, forget, protect, storeKind, unprotect, warnPlain } from './secrets.mjs';
+import { accountFor, forget, protect, refusePlain, storeKind, unprotect, warnPlain } from './secrets.mjs';
+import { Vault } from './vault.mjs';
 
 /**
  * kind: how the request is shaped. key: an API key is needed ('optional' for servers that
@@ -132,17 +133,22 @@ export function loadKeys(dir) {
   else {
     // From before the secret store: plain keys. Move them in now (the plain file is replaced).
     keys = file;
-    if (Object.keys(keys).length && storeKind() !== 'plain') writeKeys(dir, keys);
+    if (Object.keys(keys).length && storeKind() !== 'plain') writeKeys(dir, keys, { existing: true });
   }
   opened.set(dir, { stamp: statSync(path).mtimeMs, keys });
   return { ...keys };
 }
 
-function writeKeys(dir, keys) {
+/** existing: plain keys from before; where there is still no store they stay as they are. */
+function writeKeys(dir, keys, { existing = false } = {}) {
   const old = readJson(dir, 'keys.json', {});
   const kind = storeKind();
   const any = Object.keys(keys).length > 0;
   const sealed = kind === 'plain' || !any ? null : protect(JSON.stringify(keys), accountFor(dir, 'keys'), kind);
+  if (!sealed && any && kind !== 'plain') {
+    if (existing) return;
+    refusePlain('the API keys');
+  }
   if (!sealed && any) warnPlain('the API keys');
   writePrivate(dir, 'keys.json', sealed ?? keys);
   if (!sealed && typeof old.store === 'string') forget(old);
@@ -173,7 +179,9 @@ export function redact(text, keys) {
  * settings (lib.mjs loadSettings): tools (Claude Code may use its tools), remember (keep the
  * conversation), keepDays (how long a conversation is kept).
  */
-export function makeResponder({ dir, config, system, draftSystem, state, saveState, command, settings = {} }) {
+export function makeResponder({ dir, config, system, draftSystem, state, saveState, command, settings = {}, vault }) {
+  // history.json is sealed by the AI friend's vault (vault.mjs). Without one it stays in memory.
+  const records = vault ?? new Vault(dir, () => null);
   const { tools = false, remember = true, keepDays = 30 } = settings;
   if (command) return (prompt) => runCommand(command, prompt, dir);
   const b = BACKENDS[config.type] ?? BACKENDS['claude-code'];
@@ -188,7 +196,7 @@ export function makeResponder({ dir, config, system, draftSystem, state, saveSta
     const now = Math.floor(Date.now() / 1000);
     const since = now - keepDays * DAY;
     const keep = !draft && remember && !!peer;
-    const history = keep ? (readJson(dir, 'history.json', {})[peer] ?? []).filter((t) => (t.at ?? now) >= since) : [];
+    const history = keep ? (records.read('history.json', {})[peer] ?? []).filter((t) => (t.at ?? now) >= since) : [];
     const turns = [...history.map(({ role, text }) => ({ role, text })), { role: 'user', text: prompt }];
     let text;
     try {
@@ -198,14 +206,14 @@ export function makeResponder({ dir, config, system, draftSystem, state, saveSta
     }
     noteModel(dir, config.model);
     if (keep) {
-      const all = readJson(dir, 'history.json', {});
+      const all = records.read('history.json', {});
       // Older than keepDays: gone, for everyone in the file (not only this person).
       for (const [k, list] of Object.entries(all)) {
         all[k] = list.filter((t) => (t.at ?? now) >= since);
         if (!all[k].length) delete all[k];
       }
       all[peer] = [...history, { role: 'user', text: prompt, at: now }, { role: 'assistant', text, at: now }].slice(-HISTORY_TURNS * 2);
-      writePrivate(dir, 'history.json', all);
+      records.write('history.json', all);
     }
     return text;
   };

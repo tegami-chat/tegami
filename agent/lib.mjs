@@ -7,7 +7,8 @@
 
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync, existsSync, chmodSync } from 'node:fs';
-import { accountFor, forget, protect, storeKind, unprotect, warnPlain } from './secrets.mjs';
+import { accountFor, forget, protect, refusePlain, storeKind, unprotect, warnPlain } from './secrets.mjs';
+import { Vault, recordsKey } from './vault.mjs';
 import { cleanForAi, findSecret } from './screen.mjs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -270,12 +271,18 @@ export class Agent {
     this.keyRecord = read(this.dir, 'key.json', null);
     this._secret = null;
     // A key.json from before the secret store: move the key into it now, and drop the plain copy.
-    if (this.keyRecord?.secretHex) this.keyRecord = this.protectKey(this.keyRecord.secretHex);
+    // Where there is still no store, the plain key stays as it is (with a warning).
+    if (this.keyRecord?.secretHex) this.keyRecord = this.protectKey(this.keyRecord.secretHex, { existing: true });
     this.pubkey = this.keyRecord?.pubkey ?? null;
+    // contacts, messages, state (and history.json for API backends): sealed with a key from the AI's key.
+    this.vault = new Vault(this.dir, () => this.recordsKey());
     this.profile = read(this.dir, 'profile.json', { name: 'Claude', model: '' });
-    this.contacts = read(this.dir, 'contacts.json', []);
-    this.messages = this.fresh(read(this.dir, 'messages.json', []));
-    this.state = read(this.dir, 'state.json', { lastRead: 0, replied: [] });
+    this.contacts = this.vault.read('contacts.json', []);
+    const kept = this.vault.read('messages.json', []);
+    this.messages = this.fresh(kept);
+    // Older than keepDays: off the disk now, not only at the next message.
+    if (this.messages.length !== kept.length) this.vault.write('messages.json', this.messages);
+    this.state = this.vault.read('state.json', { lastRead: 0, replied: [] });
     this.stateBase = snapshot(this.state);
     // Messages from strangers: counted (who and when), never kept with their words, never on disk.
     this.strangers = [];
@@ -363,11 +370,16 @@ export class Agent {
     return this._secret;
   }
 
-  /** Writes key.json: encrypted by the system's store, or (where there is none) in plain text with a warning. */
-  protectKey(hex) {
+  /**
+   * Writes key.json, encrypted by the system's store. Where there is no store, a new key is
+   * refused unless the owner chose to keep it unencrypted (--insecure-store); a key that is
+   * already in plain text (`existing`) stays as it is, with a warning.
+   */
+  protectKey(hex, { existing = false } = {}) {
     const pubkey = getPublicKey(hexToBytes(hex));
     const kind = storeKind();
     const sealed = kind === 'plain' ? null : protect(hex, accountFor(this.dir, 'key'), kind);
+    if (!sealed && kind !== 'plain' && !existing) refusePlain("the AI's secret key");
     if (!sealed) warnPlain("the AI's secret key");
     const record = sealed ? { pubkey, ...sealed } : { pubkey, secretHex: hex };
     const file = join(this.dir, 'key.json');
@@ -381,10 +393,16 @@ export class Agent {
     return record;
   }
 
+  /** The key that seals the records; null where the AI's key itself is not in a store. Throws when the store does not open. */
+  recordsKey() {
+    if (!this.keyRecord || this.keyRecord.secretHex) return null;
+    return recordsKey(this.secret);
+  }
+
   /** Where this AI friend keeps what it writes down, for the line the watcher shows at start. */
   recordsLine(backend) {
     const s = this.settings;
-    const parts = [`${this.dir} (messages.json and history.json keep ${s.keepDays} days; strangers' messages are not kept)`];
+    const parts = [`${this.dir} (messages.json and history.json keep ${s.keepDays} days; strangers' messages are not kept; ${this.vault.describe()})`];
     if (backend === 'claude-code' && s.remember) parts.push(`Claude Code keeps the conversation in ${join(homedir(), '.claude', 'projects')}`);
     if (!s.remember) parts.push('nothing is remembered between messages (remember: off)');
     return `Records: ${parts.join('; ')}`;
@@ -487,7 +505,7 @@ export class Agent {
     const prev = this.contacts.find((c) => c.pubkey === pubkey);
     const next = { pubkey, name: name || prev?.name || shortId(pubkey), trusted: trusted ?? prev?.trusted ?? false };
     this.contacts = [...this.contacts.filter((c) => c.pubkey !== pubkey), next];
-    write(this.dir, 'contacts.json', this.contacts);
+    this.vault.write('contacts.json', this.contacts);
     return next;
   }
 
@@ -500,7 +518,7 @@ export class Agent {
 
   /** Reads the contacts again (another command, like `pair`, may have changed them). */
   reloadContacts() {
-    this.contacts = read(this.dir, 'contacts.json', this.contacts);
+    this.contacts = this.vault.read('contacts.json', this.contacts);
   }
 
   /** Starts pairing: saves a new one-time code (only its hash) and returns the link to show as a QR code. */
@@ -563,10 +581,10 @@ export class Agent {
    * program may have changed them, like a permission the owner took back).
    */
   saveState() {
-    const disk = read(this.dir, 'state.json', {});
+    const disk = this.vault.read('state.json', {});
     for (const k of Object.keys(this.state)) if (JSON.stringify(this.state[k]) !== this.stateBase[k]) disk[k] = this.state[k];
     for (const k of Object.keys(disk)) this.state[k] = disk[k];
-    write(this.dir, 'state.json', disk);
+    this.vault.write('state.json', disk);
     this.stateBase = snapshot(this.state);
   }
 
@@ -575,7 +593,7 @@ export class Agent {
     const now = Date.now();
     if (now - (this.refreshedAt ?? 0) < 500) return;
     this.refreshedAt = now;
-    const disk = read(this.dir, 'state.json', null);
+    const disk = this.vault.read('state.json', null);
     if (!disk) return;
     for (const k of Object.keys(disk)) {
       if (JSON.stringify(this.state[k]) !== this.stateBase[k]) continue;
@@ -774,7 +792,7 @@ export class Agent {
     // AIの検査: characters a person cannot see are taken out before the AI ever reads the words.
     const m = this.keptFromAi(rumor) ? { ...base, noai: true } : { ...base, text: cleanForAi(String(rumor.content)) };
     this.messages = this.fresh([...this.messages, m].sort((a, b) => a.at - b.at));
-    write(this.dir, 'messages.json', this.messages);
+    this.vault.write('messages.json', this.messages);
     for (const l of this.listeners) l(m);
   }
 

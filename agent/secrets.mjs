@@ -4,15 +4,18 @@
 //   macOS:   the login Keychain, through `security`. The file holds only a reference.
 //   Linux:   the Secret Service (GNOME Keyring, KWallet), through `secret-tool` (libsecret).
 //            The file holds only a reference.
-// Where none of these works, the secret stays in the file unencrypted and a warning is shown.
+// Where none of these works, a new secret is refused: the owner has to choose to keep it
+// unencrypted (--insecure-store, or TEGAMI_SECRET_STORE=plain). A secret that is already in
+// plain text from before stays as it is, with a warning.
 //
 // This protects copies of the folder (a backup, a synced folder, a repair shop). A program
 // running as the same user can still ask the store, as the agent itself does.
 //
 // TEGAMI_SECRET_STORE picks the store: plain, dpapi, keychain or libsecret (tests use plain
-// and dpapi).
+// and dpapi). TEGAMI_INSECURE_STORE=1 (what --insecure-store sets) allows plain text where
+// the store does not work.
 
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 
 const SERVICE = 'chat.tegami.agent';
@@ -23,17 +26,13 @@ export function storeKind(env = process.env, platform = process.platform) {
   if (forced) return forced;
   if (platform === 'win32') return 'dpapi';
   if (platform === 'darwin') return 'keychain';
-  if (platform === 'linux') return has('secret-tool') ? 'libsecret' : 'plain';
-  return 'plain';
+  // Linux and the rest: libsecret where secret-tool is installed. 'none': no store here.
+  return has('secret-tool') ? 'libsecret' : 'none';
 }
 
+/** The program is installed (it starts at all: secret-tool with no arguments prints its usage). */
 function has(program) {
-  try {
-    execFileSync('which', [program], { stdio: 'ignore' });
-    return true;
-  } catch {
-    return false;
-  }
+  return spawnSync(program, [], { stdio: 'ignore' }).error?.code !== 'ENOENT';
 }
 
 /** A name for one secret in the store: the AI friend's folder and what the secret is. */
@@ -72,13 +71,18 @@ export function protect(text, account, kind = storeKind()) {
       return { store: 'dpapi', data };
     }
     if (kind === 'keychain') {
-      // `security -i` reads commands on stdin, so the secret is not on a command line.
-      const q = (s) => `"${String(s).replace(/(["\\])/g, '\\$1')}"`;
-      run('security', ['-i'], `add-generic-password -U -a ${q(account)} -s ${q(SERVICE)} -l ${q('Tegami AI friend')} -w ${q(text)}\n`);
-      if (unprotect({ store: 'keychain', account }) !== text) return null;
-      return { store: 'keychain', account };
+      // `security -i` reads its commands on stdin, so the secret is not on a command line (other
+      // programs can list command lines; `security add-generic-password -w <secret>` would put it
+      // there). Every word on the line is letters, digits, '.', '-', or base64 (+ / =): nothing
+      // that the way `security -i` splits a line (spaces, quotes, backslashes) could change.
+      const b64 = Buffer.from(text, 'utf8').toString('base64');
+      run('security', ['-i'], `add-generic-password -U -a ${account} -s ${SERVICE} -l tegami-agent -w ${b64}\n`);
+      const record = { store: 'keychain', account, encoding: 'base64' };
+      if (unprotect(record) !== text) return null;
+      return record;
     }
     if (kind === 'libsecret') {
+      // secret-tool reads the secret on stdin: it is never on a command line.
       run('secret-tool', ['store', '--label=Tegami AI friend', 'service', SERVICE, 'account', account], text);
       if (unprotect({ store: 'libsecret', account }) !== text) return null;
       return { store: 'libsecret', account };
@@ -92,8 +96,13 @@ export function protect(text, account, kind = storeKind()) {
 /** Opens a record made by protect. Throws when the store cannot open it. */
 export function unprotect(record) {
   if (record.store === 'dpapi') return Buffer.from(dpapi('Unprotect', record.data), 'base64').toString('utf8');
-  if (record.store === 'keychain') return run('security', ['find-generic-password', '-a', record.account, '-s', SERVICE, '-w'], '').replace(/\n$/, '');
-  if (record.store === 'libsecret') return run('secret-tool', ['lookup', 'service', SERVICE, 'account', record.account], '');
+  if (record.store === 'keychain') {
+    // -w prints the stored password and a newline. Stored as base64 since encoding was added.
+    const out = run('security', ['find-generic-password', '-a', record.account, '-s', SERVICE, '-w'], '').replace(/\n$/, '');
+    return record.encoding === 'base64' ? Buffer.from(out, 'base64').toString('utf8') : out;
+  }
+  // secret-tool prints a newline after the secret only on a terminal; none of the secrets ends with one.
+  if (record.store === 'libsecret') return run('secret-tool', ['lookup', 'service', SERVICE, 'account', record.account], '').replace(/\n$/, '');
   throw new Error(`Unknown secret store: ${record.store}`);
 }
 
@@ -114,4 +123,16 @@ export function warnPlain(what) {
   if (warned || process.env.TEGAMI_SECRET_STORE === 'plain') return;
   warned = true;
   console.error(`Warning: this computer has no secret store Tegami can use, so ${what} is kept unencrypted. Keep the folder out of backups and shared drives.`);
+}
+
+/** Throws unless the owner chose to keep secrets unencrypted where there is no store. */
+export function refusePlain(what) {
+  if (process.env.TEGAMI_INSECURE_STORE === '1') return;
+  throw new Error(
+    `This computer has no secret store Tegami can use, so ${what} would be kept unencrypted. ` +
+      (process.platform === 'linux'
+        ? 'Install and unlock a keyring (for example gnome-keyring and libsecret-tools, in a desktop or dbus session), '
+        : 'Check the system keychain, ') +
+      'or run again with --insecure-store to keep it unencrypted in this folder on purpose.',
+  );
 }

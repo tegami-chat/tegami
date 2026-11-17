@@ -44,6 +44,8 @@
 //
 // Options: --agent <folder name> (default "claude") picks which AI friend to use.
 // --allow-tools (Claude Code may use its tools) and --no-memory (keep nothing) on watch, for one run.
+// --insecure-store: where the computer has no secret store (a server with no keyring), keep the
+// AI's key and API keys unencrypted in its folder. Without it, init and key refuse there.
 
 import { spawn, execFileSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -71,6 +73,8 @@ const flag = (name) => {
   return v && !v.startsWith('--') ? v : true;
 };
 const agentName = flag('agent') ?? 'claude';
+// Where the computer has no secret store: keep the AI's key and API keys unencrypted, on purpose.
+if (flag('insecure-store')) process.env.TEGAMI_INSECURE_STORE = '1';
 const agent = new Agent(agentName);
 // Flags that open something for this run only (settings.json keeps what is chosen for good).
 const runFlags = {
@@ -184,6 +188,8 @@ const commands = {
       log(`stopped: ${e.stack ?? e.message}`);
       process.exit(1);
     });
+    // The records' notes (message text kept in memory only, a locked store) go to the log.
+    agent.vault.say = log;
     // Answer what arrived while the watcher was off (the PC was shut down), up to a day back.
     const now = Math.floor(Date.now() / 1000);
     const started = agent.state.alive ? Math.max(agent.state.alive - 60, now - DAY) : now - 5;
@@ -238,7 +244,8 @@ const commands = {
       }
       const ask = parseAsk(a.content);
       if (!ask || !ask.messages.length) return;
-      const name = agent.contacts.find((c) => c.pubkey === a.from)?.name ?? shortId(a.from);
+      // The log names people by a short id, not by name (the log file is not encrypted).
+      const name = shortId(a.from);
       drafting = drafting.then(async () => {
         const prompt = ask.messages.map((m) => `${m.mine ? ask.me : ask.friend}: ${cleanForAi(String(m.text))}`).join('\n');
         try {
@@ -252,7 +259,7 @@ const commands = {
     };
     agent.askListeners.add(onAsk);
     // A pairing code shown by `pair` may be answered while this watcher runs too.
-    agent.pairListeners.add((r) => void onPair(r, log));
+    agent.pairListeners.add((r) => void onPair(r, log, true));
     // Listen before connecting: the relay hands over waiting messages right after login.
     agent.listeners.add(consider);
     await agent.connect();
@@ -266,6 +273,7 @@ const commands = {
         const batch = queue.filter((m) => m.from === peer);
         queue.splice(0, queue.length, ...queue.filter((m) => m.from !== peer));
         const name = agent.contacts.find((c) => c.pubkey === peer)?.name ?? shortId(peer);
+        const who = shortId(peer);
         const prompt = batch.map((m) => `${name}: ${m.text}`).join('\n');
         try {
           if (agent.stopped) throw new Error('stopped by the owner');
@@ -274,10 +282,10 @@ const commands = {
           const text = await reply(prompt, { peer });
           // Stopped while the AI was writing: the reply is dropped (send checks again too).
           if (text.trim()) await agent.send(peer, text.trim());
-          log(`replied to ${name}`);
+          log(`replied to ${who}`);
         } catch (e) {
           if (e.code === 'DAILY_LIMIT') await tellOwnerLimit(peer, name);
-          else log(`could not reply to ${name}: ${e.message}`);
+          else log(`could not reply to ${who}: ${e.message}`);
         }
         markReplied(batch);
       }
@@ -285,7 +293,7 @@ const commands = {
     }
     /** Once a day per chat: tells the owner that the daily limit stopped the replies. */
     async function tellOwnerLimit(peer, name) {
-      log(`daily limit (${agent.settings.dailyReplies}) reached for ${name}: no more replies today`);
+      log(`daily limit (${agent.settings.dailyReplies}) reached for ${shortId(peer)}: no more replies today`);
       const day = new Date().toISOString().slice(0, 10);
       agent.state.limitTold ??= {};
       if (agent.state.limitTold[peer] === day || !agent.owner) return;
@@ -297,7 +305,7 @@ const commands = {
     if (agent.settings.tools && backendType === 'claude-code' && typeof command !== 'string') log(TOOLS_OPEN);
     log(agent.recordsLine(backendType));
     if (agent.stopped) log('stopped by the owner: no replies until resumed (tegami-agent resume, or the app)');
-    log(`${agent.profile.name} is listening. Trusted: ${agent.contacts.filter((c) => c.trusted).map((c) => c.name).join(', ') || 'nobody yet'}`);
+    log(`${agent.profile.name} is listening. Trusted: ${agent.contacts.filter((c) => c.trusted).map((c) => shortId(c.pubkey)).join(', ') || 'nobody yet'}`);
   },
   async pair() {
     // Shows the AI's invite link with a one-time code as a QR code. Reading it with Tegami's
@@ -599,17 +607,17 @@ function taskXml(logPath) {
 
 /** The function that writes replies, with the backend set for this AI friend (or --command). */
 function responder(command) {
-  return makeResponder({ dir: agent.dir, config: loadBackend(agent.dir), system: SYSTEM, draftSystem: DRAFT_SYSTEM, state: agent.state, saveState: () => agent.saveState(), command, settings: agent.settings });
+  return makeResponder({ dir: agent.dir, config: loadBackend(agent.dir), system: SYSTEM, draftSystem: DRAFT_SYSTEM, state: agent.state, saveState: () => agent.saveState(), command, settings: agent.settings, vault: agent.vault });
 }
 
 /** Handles a pairing message: trusts the sender when the code is right, then registers. Returns whether it paired. */
-async function onPair(r, say) {
+async function onPair(r, say, toLog = false) {
   const res = agent.acceptPair(r);
   if (!res.ok) {
     if (res.reason !== 'not pairing') say(`ignored a pairing message: ${res.reason}`);
     return false;
   }
-  say(`Paired with ${res.contact.name}. The AI replies to this person.`);
+  say(`Paired with ${toLog ? shortId(res.contact.pubkey) : res.contact.name}. The AI replies to this person.`);
   noteSecondTrusted(say);
   if (res.invite.code) {
     const reg = await agent.register({ invite: res.invite.code }).catch((e) => ({ member: false, error: e.message }));
