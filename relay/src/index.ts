@@ -50,7 +50,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { verifyEvent, type NostrEvent } from 'nostr-tools/pure';
 
-import { AI_PER_MINUTE, AiKeys, checkAiCard } from './ai';
+import { AI_PER_MINUTE, AiKeys, HELD_OWNER_BANNED, HELD_OWNER_DELETED, checkAiCard } from './ai';
 import { Members, turnstileOk, type Member } from './members';
 import { MAX_DEVICES, Vapid, allowedEndpoint, nip98, validKeys, type PushKeys } from './push';
 import { Reports, parseReport } from './reports';
@@ -458,9 +458,17 @@ export class Relay extends DurableObject<Env> {
       if (this.ai.setOwnerLimit(a.pubkey, a.per_day) === null) return new Response('invalid', { status: 400, headers: CORS });
       return Response.json({ changed: 1, per_day: this.ai.ownerLimit(a.pubkey) }, { headers: CORS });
     }
+    // The keys this action stops or lets back by name (the key and, with invitees, those it invited).
+    const named = [a.pubkey];
+    if (a.invitees === true) for (const r of this.sql.exec('SELECT pubkey FROM members WHERE invited_by = ?', a.pubkey).toArray()) named.push(r.pubkey as string);
+    if (a.action === 'ban' || a.action === 'unban') for (const k of named) this.ai.clearHold(k);
     const changed = this.members.admin(a.action, a.pubkey, { invitees: a.invitees === true, per_day: a.per_day as number });
     if (changed === null) return new Response('invalid', { status: 400, headers: CORS });
-    return Response.json({ changed, member: this.describe(this.members.get(a.pubkey)) }, { headers: CORS });
+    // An AI is part of its owner, not an invitee: stopping an owner stops their AI keys too.
+    let ais = 0;
+    if (a.action === 'ban') for (const k of named) ais += this.ai.holdAisOf(k, HELD_OWNER_BANNED);
+    if (a.action === 'unban') for (const k of named) ais += this.ai.releaseAisOf(k);
+    return Response.json({ changed, ais, member: this.describe(this.members.get(a.pubkey)) }, { headers: CORS });
   }
 
   reports: Reports;
@@ -558,6 +566,8 @@ export class Relay extends DurableObject<Env> {
     this.pendingMessages.delete(pubkey);
     this.members.markDeleted(pubkey);
     this.ai.forget(pubkey);
+    // Its AI keys cannot go on sending without an owner: stopped for good.
+    const ais = this.ai.holdAisOf(pubkey, HELD_OWNER_DELETED);
     for (const ws of this.ctx.getWebSockets()) {
       if ((ws.deserializeAttachment() as Attachment)?.pubkey !== pubkey) continue;
       try {
@@ -566,7 +576,7 @@ export class Relay extends DurableObject<Env> {
         // Already closed.
       }
     }
-    return Response.json({ deleted: true, already, envelopes, stamps: shas.length, push }, { headers: CORS });
+    return Response.json({ deleted: true, already, envelopes, stamps: shas.length, push, ais }, { headers: CORS });
   }
 
   ipBytes = new Buckets(FILE_RATE.ip.burst, FILE_RATE.ip.perSecond);

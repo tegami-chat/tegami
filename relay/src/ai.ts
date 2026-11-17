@@ -14,6 +14,10 @@
 // owner. The relay does not check the 'ai' tag (it is inside the envelope) and the app does not
 // ask the relay whether a sender declared itself.
 //
+// The AI follows its owner: when the operator stops the owner, the owner's AI keys are stopped
+// too (with or without --invitees), and let back with the owner unless the operator stopped one
+// by itself. When the owner deletes their account, the AI keys are stopped for good.
+//
 // Kept: the AI key, its owner's key and when it registered (ai_keys, as long as the relay runs;
 // the row goes when the AI's account is deleted), the operator's per-owner limit if changed
 // (ai_owner_limits), and how many envelopes each AI key and each owner published per UTC day
@@ -32,6 +36,11 @@ export const AI_PER_MINUTE = 30;
 export const AI_PER_DAY = 600;
 /** Envelopes all of one owner's AI keys together may publish in a UTC day (the operator can change it per owner). */
 export const AI_OWNER_PER_DAY = 600;
+
+/** ai_keys.held: stopped because the owner was stopped (let back with the owner). */
+export const HELD_OWNER_BANNED = 1;
+/** ai_keys.held: stopped because the owner deleted their account (for good). */
+export const HELD_OWNER_DELETED = 2;
 
 const HEX = /^[0-9a-f]{64}$/;
 
@@ -74,6 +83,14 @@ export class AiKeys {
   constructor(private sql: SqlStorage) {
     sql.exec('CREATE TABLE IF NOT EXISTS ai_keys (pubkey TEXT PRIMARY KEY, owner TEXT, created_at INTEGER)');
     sql.exec('CREATE INDEX IF NOT EXISTS ai_keys_owner ON ai_keys (owner)');
+    // held: why the AI key is stopped because of its owner. 0 not for that, HELD_OWNER_BANNED,
+    // or HELD_OWNER_DELETED. A key the operator stopped by itself has 0, so it stays stopped
+    // when its owner is let back.
+    try {
+      sql.exec('ALTER TABLE ai_keys ADD COLUMN held INTEGER DEFAULT 0');
+    } catch {
+      // Already there.
+    }
     sql.exec('CREATE TABLE IF NOT EXISTS ai_owner_limits (owner TEXT PRIMARY KEY, per_day INTEGER)');
     // k: 'ai:<key>' or 'owner:<key>'; day: days since 1970 (UTC).
     sql.exec('CREATE TABLE IF NOT EXISTS ai_counts (k TEXT, day INTEGER, n INTEGER, PRIMARY KEY (k, day))');
@@ -121,6 +138,37 @@ export class AiKeys {
   /** Counts older than yesterday are not needed. */
   forgetOld() {
     this.sql.exec('DELETE FROM ai_counts WHERE day < ?', today() - 1);
+  }
+
+  /**
+   * Stops every AI key of `owner` that is not stopped already (the owner was stopped or deleted
+   * its account: an AI is part of its owner, so it cannot go on sending alone). Returns how many.
+   */
+  holdAisOf(owner: string, why: number): number {
+    let n = 0;
+    for (const r of this.sql.exec('SELECT pubkey FROM ai_keys WHERE owner = ?', owner).toArray()) {
+      const k = r.pubkey as string;
+      if (!this.sql.exec('UPDATE members SET banned = 1 WHERE pubkey = ? AND banned = 0', k).rowsWritten) continue;
+      this.sql.exec('UPDATE ai_keys SET held = ? WHERE pubkey = ?', why, k);
+      n++;
+    }
+    return n;
+  }
+
+  /** Lets back the AI keys that were stopped only because their owner was stopped. Returns how many. */
+  releaseAisOf(owner: string): number {
+    let n = 0;
+    for (const r of this.sql.exec('SELECT pubkey FROM ai_keys WHERE owner = ? AND held = ?', owner, HELD_OWNER_BANNED).toArray()) {
+      const k = r.pubkey as string;
+      n += this.sql.exec('UPDATE members SET banned = 0 WHERE pubkey = ?', k).rowsWritten;
+      this.sql.exec('UPDATE ai_keys SET held = 0 WHERE pubkey = ?', k);
+    }
+    return n;
+  }
+
+  /** The operator stopped or let back this key by itself: no longer held for its owner. */
+  clearHold(pubkey: string) {
+    this.sql.exec('UPDATE ai_keys SET held = 0 WHERE pubkey = ?', pubkey);
   }
 
   /** The AI's account was deleted. */
