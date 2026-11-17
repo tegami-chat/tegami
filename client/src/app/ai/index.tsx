@@ -3,6 +3,7 @@ import { router, type Href } from 'expo-router';
 import { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { AiOptOutSettings } from '@/components/ai-optout-settings';
 import { AiSwitches, ModelTag } from '@/components/ai-switches';
 import { Avatar } from '@/components/avatar';
 import { Palette, usePalette } from '@/constants/theme';
@@ -56,6 +57,8 @@ export default function AiPermissionsScreen() {
 
   return (
     <ScrollView style={s.fill} contentContainerStyle={s.body}>
+      <Text style={s.heading}>自分のAI</Text>
+      <Text style={s.note}>自分のAIにできることは、オンにしたものだけです。最初はすべてオフです。</Text>
       <Text style={s.heading}>AIの使用</Text>
       <AiSwitches scope={{ layer: 'all' }} />
       {!readOnly && (
@@ -176,6 +179,8 @@ export default function AiPermissionsScreen() {
         </>
       )}
 
+      <AiOptOutSettings />
+
       <Text style={s.heading}>記録</Text>
       <Pressable style={[s.card, s.rowPlain]} onPress={() => router.push('/ai/log' as Href)} role="button">
         <Text style={s.label}>AIの記録</Text>
@@ -199,6 +204,7 @@ const styles = (c: Palette) =>
     border: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line },
     label: { fontSize: 16, color: c.text, flex: 1 },
     sub: { fontSize: 13, color: c.muted },
+    note: { fontSize: 13, color: c.muted, lineHeight: 20 },
     danger: { fontSize: 15, color: c.danger, fontWeight: '600' },
     action: { fontSize: 15, color: c.accent, fontWeight: '600' },
     step: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: c.line, alignItems: 'center', justifyContent: 'center' },

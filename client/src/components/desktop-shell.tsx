@@ -40,7 +40,7 @@ function Rail() {
   const path = usePathname();
   const unreadAll = Object.values(unread).reduce((n, x) => n + x, 0);
 
-  const inSettings = path === '/settings' || path.startsWith('/ai');
+  const inSettings = path.startsWith('/settings') || path.startsWith('/ai') || path === '/call-network';
   const showList = (next: 'chats' | 'friends') => {
     setListTab(next);
     // From a page that is not a chat, go back to the list's own empty screen.

@@ -1,7 +1,7 @@
 // First: the iPhone and Android apps fill in what the browser has (localStorage, crypto).
 import '@/lib/platform-setup';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Stack, router, type ErrorBoundaryProps, type Href } from 'expo-router';
+import { Stack, router, usePathname, type ErrorBoundaryProps, type Href } from 'expo-router';
 import { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -40,14 +40,22 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   );
 }
 
+/** Where 戻る goes when there is no screen behind (a page opened by its address). */
+function parentOf(path: string) {
+  if (path.startsWith('/ai/')) return '/ai';
+  if (path.startsWith('/settings/') || path === '/ai' || path === '/call-network') return '/settings';
+  return '/';
+}
+
 function BackButton() {
   const c = usePalette();
+  const path = usePathname();
   return (
     <Pressable
       role="button"
       aria-label="戻る"
       style={{ width: 44, height: 44, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
-      onPress={() => (router.canGoBack() ? router.back() : router.replace('/' as Href))}>
+      onPress={() => (router.canGoBack() ? router.back() : router.replace(parentOf(path) as Href))}>
       <MaterialIcons name="chevron-left" size={24} color={c.text} />
     </Pressable>
   );
@@ -77,12 +85,16 @@ function Shell() {
         <Stack.Screen name="index" options={{ title: 'Tegami', headerLeft: () => null }} />
         <Stack.Screen name="add" options={{ title: '友だち追加', ...top }} />
         <Stack.Screen name="group" options={{ title: 'グループを作る', ...top }} />
-        <Stack.Screen name="settings" options={{ title: '設定', ...top }} />
+        <Stack.Screen name="settings/index" options={{ title: '設定', ...top }} />
+        <Stack.Screen name="settings/profile" options={{ title: 'プロフィール' }} />
+        <Stack.Screen name="settings/account" options={{ title: 'アカウント' }} />
+        <Stack.Screen name="settings/privacy" options={{ title: 'プライバシー' }} />
+        <Stack.Screen name="settings/talk" options={{ title: 'トーク' }} />
         <Stack.Screen name="accounts" options={{ title: 'アカウント', ...top }} />
         <Stack.Screen name="i" options={{ headerShown: false }} />
         <Stack.Screen name="link" options={{ title: '', headerLeft: () => null }} />
         <Stack.Screen name="strangers" options={{ title: '知らない人から', ...top }} />
-        <Stack.Screen name="ai/index" options={{ title: 'AIの権限' }} />
+        <Stack.Screen name="ai/index" options={{ title: 'AI' }} />
         <Stack.Screen name="ai/[layer]/[id]" options={{ title: 'AIの権限' }} />
         <Stack.Screen name="ai/log" options={{ title: 'AIの記録' }} />
         <Stack.Screen name="ai-about/[id]" options={{ title: 'AIの詳しい情報' }} />

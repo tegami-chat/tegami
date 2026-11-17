@@ -87,6 +87,10 @@ export function saveMyNoAi(on: boolean) {
 export function chatNoAi(peer: string): boolean {
   return load<Record<string, boolean>>(k('noaiChats'), {})[peer] === true;
 }
+/** The chats where every message I send carries the noai mark (this device). */
+export function noAiChats(): string[] {
+  return Object.keys(load<Record<string, boolean>>(k('noaiChats'), {}));
+}
 export function saveChatNoAi(peer: string, on: boolean) {
   const all = { ...load<Record<string, boolean>>(k('noaiChats'), {}) };
   if (on) all[peer] = true;

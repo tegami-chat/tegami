@@ -165,7 +165,11 @@ const storage = (page) => page.evaluate(() => Object.fromEntries(Object.entries(
 const calls = (page) => page.evaluate(() => window.__calls);
 const button = (page, name) => page.getByRole('button', { name, exact: true });
 /** Opens settings: the header link on a phone, the gear on the rail on a desktop (both are buttons named 設定). */
-const openSettings = (page) => button(page, '設定').click();
+const openSettings = async (page, part) => {
+  await button(page, '設定').click();
+  // A row of the top list (the rail on a wide screen has buttons of its own: the page's is last).
+  if (part) await page.getByRole('button', { name: part, exact: true }).last().click();
+};
 /** Where the person's details are: a screen of their own on a phone, a column beside the chat on a desktop. */
 const infoArea = (page) => (NARROW ? page : page.getByRole('complementary'));
 /** Leaves the person's details: back on a phone, the close button of the column on a desktop. */
@@ -670,7 +674,12 @@ async function main() {
       await button(u.page, 'はじめる').click();
       await waitOpen(u.page);
       await openSettings(u.page);
+      await waitText(u.page, 'パスキー');
+      await u.page.goto(ORIGIN + '/settings/account');
+      await button(u.page, 'ひらく').click();
       await waitText(u.page, 'パスキーで守っています');
+      await u.page.goto(ORIGIN + '/settings/privacy');
+      await button(u.page, 'ひらく').click();
       const crashes = async () => (await fetch(`http://localhost:${RELAY_PORT}/_crashes`)).json();
       const throwSoon = (tag) =>
         u.page.evaluate((tag) => setTimeout(() => { throw new Error(`boom-${tag} "my secret text" ${'ab'.repeat(32)}`); }), tag);
@@ -697,12 +706,11 @@ async function main() {
       // Reloading /settings shows the lock first, then the same screen again.
       await u.page.reload();
       await button(u.page, 'ひらく').click();
-      await waitText(u.page, 'アカウントの守り方');
-      await waitText(u.page, 'アカウントの復旧');
-      await waitText(u.page, 'トーク');
       await waitText(u.page, '利用状況の統計');
-      await waitText(u.page, '送受信の数などを日ごとに見る');
+      await waitText(u.page, '送受信の数などを週ごとに見る');
       assert(await u.page.getByRole('switch', { name: 'Tegamiに報告を送る' }).isChecked(), 'the choice was not remembered');
+      await u.page.goto(ORIGIN + '/settings/talk');
+      await button(u.page, 'ひらく').click();
 
       // Export: a JSON file with the chats, never the key.
       const dl = u.page.waitForEvent('download');
@@ -713,8 +721,13 @@ async function main() {
       const vault = await u.page.evaluate(() => localStorage.getItem('tegami.vault'));
       assert(!readFileSync(file, 'utf8').includes(JSON.parse(vault).ciphertext), 'export contains the vault');
 
-      // Back button returns from settings to the home screen (on a desktop: the rail's chats).
-      await button(u.page, NARROW ? '戻る' : 'トーク').click();
+      // 戻る goes up one page at a time: the talk page, the settings list, then the home screen
+      // (on a desktop: the rail's chats).
+      if (NARROW) {
+        await button(u.page, '戻る').click();
+        await u.page.getByTestId('ai-permissions-state').waitFor();
+        await button(u.page, '戻る').click();
+      } else await button(u.page, 'トーク').first().click();
       await waitOpen(u.page);
       await u.context.close();
     });
@@ -753,7 +766,7 @@ async function main() {
       const aHex = nip19.decode(aInvite.match(/npub1[0-9a-z]+/)[0]).data;
 
       // A makes the link in settings.
-      await a.page.goto(ORIGIN + '/settings');
+      await a.page.goto(ORIGIN + '/settings/account');
       await openIfLocked(a.page, '別の端末でも使う');
       await a.page.getByText('別の端末でも使う').click();
       await waitText(a.page, 'まで使えます');
@@ -856,7 +869,7 @@ async function main() {
         },
         { peer: b.hex, at: oldAt },
       );
-      await a.page.goto(ORIGIN + '/settings');
+      await a.page.goto(ORIGIN + '/settings/account');
       await waitText(a.page, '別の端末でも使う');
       await a.page.getByText('別の端末でも使う').click();
       await waitText(a.page, 'まで使えます');
@@ -902,7 +915,7 @@ async function main() {
       const blockedOn = (p, hex) => p.waitForFunction((h) => JSON.parse(localStorage.getItem('tegami.blocked') || '[]').includes(h), hex, { timeout: 15000 });
       const notBlockedOn = (p, hex) => p.waitForFunction((h) => !JSON.parse(localStorage.getItem('tegami.blocked') || '[]').includes(h), hex, { timeout: 15000 });
       await blockedOn(a2.page, c.hex);
-      await a2.page.goto(ORIGIN + '/settings');
+      await a2.page.goto(ORIGIN + '/settings/privacy');
       await waitText(a2.page, 'ブロックリスト');
       await button(a2.page, 'ブロック解除').click();
       await notBlockedOn(a.page, c.hex);
@@ -959,7 +972,7 @@ async function main() {
       await waitOpen(u.page);
       assert(await u.page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration('/sw.js'))), 'the service worker is not registered');
       await openSettings(u.page);
-      const sw = u.page.getByRole('switch', { name: '新しいメッセージを知らせる' });
+      const sw = u.page.getByRole('switch', { name: '通知', exact: true });
       await sw.waitFor();
       assert(!(await sw.isChecked()), 'notifications are on before asking');
       await sw.click();
@@ -1557,7 +1570,7 @@ async function main() {
       const aHex = nip19.decode(aNpub).data;
 
       // Turn recovery on: the code is shown once.
-      await a.page.goto(ORIGIN + '/settings');
+      await a.page.goto(ORIGIN + '/settings/account');
       await openIfLocked(a.page, '復旧コードを作成');
       await button(a.page, '復旧コードを作成').click();
       await waitText(a.page, 'このコードは今だけ表示されます');
@@ -1590,7 +1603,7 @@ async function main() {
       // The relay cannot be reached: after 3 failed refreshes in a row, settings says so
       // in one line; the next successful refresh takes the line away.
       const BEHIND = '復旧コードの控えを更新できていません';
-      await a.page.goto(ORIGIN + '/settings');
+      await a.page.goto(ORIGIN + '/settings/account');
       await openIfLocked(a.page, '復旧コードを削除');
       await waitText(a.page, '復旧コードを削除');
       await a.page.waitForTimeout(2500); // the refresh every app start makes, before the relay goes away
@@ -1599,23 +1612,37 @@ async function main() {
         attempts++;
         return route.abort();
       });
+      // The warning shows on the top list; the name is one page below it (no reload in between).
+      await button(a.page, '戻る').click();
+      await a.page.getByRole('button', { name: 'プロフィール', exact: true }).last().click();
       const nameBox = a.page.getByPlaceholder('相手に表示される名前');
+      const setName = async (n) => {
+        await nameBox.fill(n);
+        await button(a.page, '戻る').click();
+        await a.page.getByTestId('ai-permissions-state').waitFor();
+      };
+      const toName = () => a.page.getByRole('button', { name: 'プロフィール', exact: true }).last().click();
+      await button(a.page, '戻る').click();
       for (const n of ['え1', 'え2']) {
         const before = attempts;
-        await nameBox.fill(n);
+        await toName();
+        await setName(n);
         await until(async () => attempts > before, 'no refresh was tried');
         assert(!(await text(a.page)).includes(BEHIND), `shown after ${attempts} failures`);
       }
-      await nameBox.fill('え3');
+      await toName();
+      await setName('え3');
       await waitText(a.page, BEHIND);
       await a.page.unroute('**/backup/**');
-      await nameBox.fill('えーさん');
+      await toName();
+      await setName('えーさん');
       await a.page.waitForFunction((t) => !document.body.innerText.includes(t), BEHIND, { timeout: 15000 }).catch(() => {
         throw new Error('the line stayed after the relay came back');
       });
       const [now] = await backups();
       assert((await decrypt(code1, now.data)).bundle.myName === 'えーさん', 'the backup after the relay came back');
-      await nameBox.fill('えー');
+      await toName();
+      await setName('えー');
       await until(async () => (await decrypt(code1, (await backups())[0].data)).bundle.myName === 'えー', 'name back');
 
       // A new device restores with the code (typed in lower case, with spaces).
@@ -1630,7 +1657,7 @@ async function main() {
       await waitText(r.u.page, 'マイQRコード');
       assert((await text(r.u.page)).includes(aNpub), 'not the same account');
       assert((await r.u.page.getByPlaceholder('自分の名前').inputValue()) === 'えー', 'name not restored');
-      await r.u.page.goto(ORIGIN + '/settings');
+      await r.u.page.goto(ORIGIN + '/settings/account');
       await waitText(r.u.page, '端末をすべて失っても、復旧コードで戻せます');
 
       // Wrong codes fail cleanly and leave the start screen as it was.
@@ -1640,7 +1667,7 @@ async function main() {
       }
 
       // A new code: the old one stops working, the new one works.
-      await a.page.goto(ORIGIN + '/settings');
+      await a.page.goto(ORIGIN + '/settings/account');
       await openIfLocked(a.page, 'コードを更新');
       await button(a.page, 'コードを更新').click();
       await waitText(a.page, 'このコードは今だけ表示されます');
@@ -1652,7 +1679,7 @@ async function main() {
 
       // The restored device still has the old code: its next refresh finds the backup gone
       // and turns recovery off there instead of bringing the old code back.
-      await r.u.page.goto(ORIGIN + '/settings');
+      await r.u.page.goto(ORIGIN + '/settings/account');
       await waitText(r.u.page, '復旧コードを作成');
       assert((await backups()).length === 1, 'the old code came back');
       assert((await tryCode(code1)).t.includes('コードが正しくありません'), 'the old code works again');
@@ -1704,7 +1731,7 @@ async function main() {
       await a.page.getByLabel('未読 1件').waitFor({ timeout: 15000 });
 
       // The switch hides the counts (and the tab number), and brings them back.
-      await openSettings(a.page);
+      await openSettings(a.page, 'トーク');
       const sw = a.page.getByRole('switch', { name: '未読数を表示' });
       await sw.waitFor();
       assert(await sw.isChecked(), 'unread counts are off by default');
@@ -1713,7 +1740,7 @@ async function main() {
       await a.page.goto(ORIGIN + '/');
       await waitText(a.page, 'さん');
       assert((await unreadBadges(a.page).count()) === 0, 'counts shown while turned off');
-      await a.page.goto(ORIGIN + '/settings');
+      await a.page.goto(ORIGIN + '/settings/talk');
       await a.page.getByRole('switch', { name: '未読数を表示' }).click();
       await a.page.goto(ORIGIN + '/');
       await a.page.getByLabel('未読 1件').waitFor({ timeout: 5000 });
@@ -1729,7 +1756,7 @@ async function main() {
       await a.page.waitForFunction(() => document.title === '(3) Tegami', null, { timeout: 5000 });
 
       // Moving to a new device: what was written before it was set up is not unread there.
-      await a.page.goto(ORIGIN + '/settings');
+      await a.page.goto(ORIGIN + '/settings/account');
       await a.page.getByText('別の端末でも使う').click();
       await waitText(a.page, 'まで使えます');
       const moveLink = (await text(a.page)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)[0];
@@ -2168,7 +2195,7 @@ async function main() {
       assert(!(await text(u.page)).includes('▾'), 'the title switches accounts with only one account');
 
       // Add a second account from settings; going back is offered while adding.
-      await openSettings(u.page);
+      await openSettings(u.page, 'アカウント');
       await waitText(u.page, '使用中');
       await button(u.page, 'アカウントを追加').click();
       await button(u.page, 'キャンセル').waitFor();
@@ -2201,7 +2228,7 @@ async function main() {
       await waitOpen(u.page);
       await waitText(u.page, 'あい ▾');
       // B still has its message after switching back from settings.
-      await openSettings(u.page);
+      await openSettings(u.page, 'アカウント');
       await u.page.getByRole('button', { name: 'びい', exact: true }).click();
       await waitOpen(u.page);
       await u.page.getByText('知らない人から').click();
@@ -2227,7 +2254,7 @@ async function main() {
       for (const k of ['tegami.device', 'tegami.messages', 'tegami.myName', 'tegami.setupAt'])
         assert(after[k] === before[k], `${k} changed when the account list was made`);
 
-      await openSettings(u.page);
+      await openSettings(u.page, 'アカウント');
       await button(u.page, 'アカウントを追加').click();
       await button(u.page, 'キャンセル').click();
       await waitOpen(u.page);
@@ -2236,7 +2263,7 @@ async function main() {
       assert(!Object.keys(left).some((k) => k.startsWith('tegami@')), `storage left behind: ${Object.keys(left)}`);
       assert(JSON.parse(left['tegami.accounts']).list.length === 1, `account list: ${left['tegami.accounts']}`);
       // Closing the app while adding: the empty account is gone next time, and the first one opens.
-      await u.page.goto(ORIGIN + '/settings');
+      await u.page.goto(ORIGIN + '/settings/account');
       await button(u.page, 'アカウントを追加').click();
       await button(u.page, 'はじめる').waitFor();
       await u.page.evaluate(() => {
@@ -2273,7 +2300,7 @@ async function main() {
         await waitOpen(u.page);
       };
       await begin();
-      const sw = () => u.page.getByRole('switch', { name: '新しいメッセージを知らせる' });
+      const sw = () => u.page.getByRole('switch', { name: '通知', exact: true });
       const devices = async () => (await (await fetch(`http://localhost:${RELAY_PORT}/_push`)).json()).filter((d) => d.endpoint.endsWith('/shared-device'));
       const until = async (n) => {
         let list = [];
@@ -2287,6 +2314,7 @@ async function main() {
       await openSettings(u.page);
       await sw().click();
       const [first] = await until(1);
+      await u.page.getByRole('button', { name: 'アカウント', exact: true }).last().click();
       await button(u.page, 'アカウントを追加').click();
       await begin();
       await openSettings(u.page);
@@ -2299,6 +2327,7 @@ async function main() {
       assert(kept.pubkey === first.pubkey, 'the wrong account was removed');
       assert((await u.page.evaluate(() => window.__unsubscribed)) === 0, 'the shared subscription was stopped while the first account uses it');
       // The first account (no name: shown by its short id) still has notifications on.
+      await u.page.getByRole('button', { name: 'アカウント', exact: true }).last().click();
       await (NARROW ? u.page : u.page.getByRole('main')).getByRole('button', { name: /^npub1[^（]*$/ }).click();
       await waitOpen(u.page);
       await openSettings(u.page);
@@ -2341,9 +2370,13 @@ async function main() {
         await button(u.page, 'はじめる').click();
         await button(u.page, 'パスキーを使わずに始める').click();
         await waitOpen(u.page);
-        await u.page.goto(ORIGIN + '/settings');
+        await u.page.goto(ORIGIN + '/settings/profile');
         await u.page.getByPlaceholder('相手に表示される名前').fill(name);
         await u.page.waitForTimeout(300);
+        // Up to the settings list, then the account page with the list of accounts.
+        await button(u.page, '戻る').click();
+        await u.page.getByRole('button', { name: 'アカウント', exact: true }).last().click();
+        await waitText(u.page, '使用中');
       };
       await begin('えー');
       const key = (name) => u.page.evaluate((n) => JSON.parse(localStorage.getItem('tegami.accounts')).list.find((a) => a.name === n)?.pubkey, name);
@@ -2418,10 +2451,10 @@ async function main() {
       await waitOpen(u.page);
       await waitText(u.page, 'えー ▾');
       // Seen: back on B, A is no longer marked.
-      await openSettings(u.page);
+      await openSettings(u.page, 'アカウント');
       await u.page.getByRole('button', { name: 'びー', exact: true }).click();
       await waitOpen(u.page);
-      await openSettings(u.page);
+      await openSettings(u.page, 'アカウント');
       await u.page.getByRole('button', { name: 'えー', exact: true }).waitFor();
       // Tapping it while the app is closed opens /?a=<key>: that account, and the address goes back to /.
       await push({ t: 'message', p: aKey });
@@ -2507,9 +2540,14 @@ async function main() {
       const perms = () => p.evaluate(() => JSON.parse(localStorage.getItem('tegami.ai.permissions') || 'null'));
       const sw = (name) => p.getByRole('switch', { name, exact: true });
 
-      // Settings → AIの権限: every switch starts off.
+      // Settings → AIの権限: every switch starts off, and the settings row says so.
       await p.goto(ORIGIN + '/settings');
-      await button(p, 'AIの権限').click();
+      await p.getByTestId('ai-permissions-state').waitFor();
+      assert((await p.getByTestId('ai-permissions-state').innerText()) === 'すべてオフ', 'the settings row does not say all off');
+      await shot(p, 'settings-top', '設定の一覧。分野ごとの行と、今の状態');
+      await p.getByRole('button', { name: 'AI', exact: true }).last().click();
+      await waitText(p, '相手のAI');
+      await shot(p, 'settings-ai', 'AIの画面の先頭。自分のAIの説明');
       await waitText(p, 'AIの使用');
       await waitText(p, 'AI友だち');
       await waitText(p, 'AIモデル');
@@ -2702,8 +2740,7 @@ async function main() {
       const sw = (name) => p.getByRole('switch', { name, exact: true });
 
       // All AI may read; for テストB too; the Anthropic Claude model may not.
-      await p.goto(ORIGIN + '/settings');
-      await button(p, 'AIの権限').click();
+      await p.goto(ORIGIN + '/ai');
       await waitText(p, 'AIの使用');
       await sw('トークを読む').click();
       await p.getByText('テストB', { exact: true }).click();
@@ -2719,7 +2756,7 @@ async function main() {
       await p.evaluate(() => localStorage.setItem('tegami.ai.log', JSON.stringify([{ at: 1, ai: 'x', action: 'read', allowed: false, stoppedBy: 'all' }])));
 
       // The 10-minute link brings the settings, not the log.
-      await p.goto(ORIGIN + '/settings');
+      await p.goto(ORIGIN + '/settings/account');
       await p.getByText('別の端末でも使う').click();
       await waitText(p, 'まで使えます');
       const moveLink = (await text(p)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)?.[0];
@@ -2738,7 +2775,7 @@ async function main() {
       await p.getByText('閉じる').click().catch(() => {});
 
       // The recovery backup carries them, and follows a change made after the code was made.
-      await p.goto(ORIGIN + '/settings');
+      await p.goto(ORIGIN + '/settings/account');
       await button(p, '復旧コードを作成').click();
       await waitText(p, 'このコードは今だけ表示されます');
       const code = (await p.getByTestId('recovery-code').innerText()).trim();
@@ -2767,7 +2804,7 @@ async function main() {
       await r.context.close();
 
       // Turn recovery off again so other tests see an empty relay.
-      await p.goto(ORIGIN + '/settings');
+      await p.goto(ORIGIN + '/settings/account');
       await button(p, '復旧コードを削除').click();
       await waitText(p, '復旧コードを作成');
       for (const u of [a, b]) await u.context.close();
@@ -2820,8 +2857,7 @@ async function main() {
         await plusShut();
 
         // "All AI" on for reading and drafting, but not yet for this friend: still nothing.
-        await p.goto(ORIGIN + '/settings');
-        await button(p, 'AIの権限').click();
+        await p.goto(ORIGIN + '/ai');
         const sw = (name) => p.getByRole('switch', { name, exact: true });
         await sw('トークを読む').click();
         await sw('返信の下書きを作る').click();
@@ -2829,8 +2865,7 @@ async function main() {
         await openPlus();
         assert((await button(p, ASK).count()) === 0, 'the ask button shows before the friend is picked');
         await plusShut();
-        await p.goto(ORIGIN + '/settings');
-        await button(p, 'AIの権限').click();
+        await p.goto(ORIGIN + '/ai');
         await p.getByText('テストB', { exact: true }).click();
         await waitText(p, 'テストBとのトークでAIができること');
         await sw('トークを読む').click();
@@ -3013,7 +3048,17 @@ async function main() {
         await shot(bp, 'noai-here', 'このトークで「AIに読ませない」をオンにした時。入力欄の上に出る');
         await button(bp, '送る').click();
         await bp.getByTestId('noai-mark').waitFor();
-        await button(bp, 'AIに読ませないをやめる').click();
+        // Settings lists the chat under「相手のAI」, and 解除 there turns the chat's switch off.
+        await bp.goto(ORIGIN + '/ai');
+        await waitText(bp, 'AIに読ませないトーク');
+        assert((await bp.getByTestId('noai-chat').count()) === 1, 'settings does not list the one chat');
+        await bp.getByTestId('noai-chat').scrollIntoViewIfNeeded();
+        await shot(bp, 'noai-chats', '設定の「相手のAI」。AIに読ませないトークの一覧');
+        await bp.getByTestId('noai-chat').getByRole('button', { name: /解除/ }).click();
+        assert((await bp.getByTestId('noai-chat').count()) === 0, 'the chat stays in the list after 解除');
+        await bp.goto(ORIGIN + `/chat/${a.hex}`);
+        await waitText(bp, 'ひみつの文');
+        assert((await bp.getByTestId('noai-here').count()) === 0, 'the chat is still marked after 解除 in settings');
         await bp.getByPlaceholder('メッセージ').fill('またふつう');
         await button(bp, '送る').click();
         await waitText(bp, 'またふつう');
@@ -3040,7 +3085,7 @@ async function main() {
         await p.getByPlaceholder('メッセージ').fill('');
 
         // テストB has a second device; turning the setting on reaches it and every friend.
-        await bp.goto(ORIGIN + '/settings');
+        await bp.goto(ORIGIN + '/settings/account');
         await bp.getByText('別の端末でも使う').click();
         await waitText(bp, 'まで使えます');
         const moveLink = (await text(bp)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)?.[0];
@@ -3050,12 +3095,12 @@ async function main() {
         await button(b2.page, 'この端末で使う').click();
         await button(b2.page, 'パスキーを使わずに始める').click();
         await waitOpen(b2.page);
-        await bp.goto(ORIGIN + '/settings');
+        await bp.goto(ORIGIN + '/ai');
         const mySwitch = (page) => page.getByRole('switch', { name: '自分の文を相手のAIに読ませない', exact: true });
         await mySwitch(bp).click();
         await shot(bp, 'noai-setting', '設定の「AI」。自分の文を相手のAIに読ませない');
         await b2.page.waitForFunction(() => localStorage.getItem('tegami.noai') === 'true', null, { timeout: 15000 });
-        await b2.page.goto(ORIGIN + '/settings');
+        await b2.page.goto(ORIGIN + '/ai');
         await mySwitch(b2.page).waitFor();
         assert((await mySwitch(b2.page).isChecked()) === true, 'the setting did not reach my other device');
         await p.waitForFunction(
@@ -3404,7 +3449,7 @@ async function main() {
       await befriend(b, a);
       await befriend(a, b);
       const ai = await fakeAi(a);
-      await a.page.goto(ORIGIN + '/settings');
+      await a.page.goto(ORIGIN + '/settings/account');
       await waitText(a.page, '別の端末でも使う');
       await a.page.getByText('別の端末でも使う').click();
       await waitText(a.page, 'まで使えます');
@@ -3642,13 +3687,15 @@ async function main() {
       await noText(a.page, 'ブロック中の手紙', 1000);
       assert(!(await text(a.page)).includes('びー'), 'blocked chat still in the list');
 
-      await openSettings(a.page);
+      await openSettings(a.page, 'プライバシー');
       await waitText(a.page, 'ブロックリスト');
       await waitText(a.page, 'びー');
       await a.page.getByText('ブロックリスト').scrollIntoViewIfNeeded();
       await shot(a.page, 'settings-blocklist', '設定の画面のブロックリスト');
 
       // Moving the account to another device brings the block list along.
+      await button(a.page, '戻る').click();
+      await a.page.getByRole('button', { name: 'アカウント', exact: true }).last().click();
       await a.page.getByText('別の端末でも使う').click();
       await waitText(a.page, 'まで使えます');
       const moveLink = (await text(a.page)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)?.[0];
@@ -3657,20 +3704,28 @@ async function main() {
       await a2.page.goto(moveLink);
       await button(a2.page, 'この端末で使う').click();
       await waitOpen(a2.page);
-      await a2.page.goto(ORIGIN + '/settings');
+      await a2.page.waitForFunction(() => JSON.parse(localStorage.getItem('tegami.blocked') || '[]').length > 0, null, { timeout: 15000 });
+      await a2.page.goto(ORIGIN + '/settings/privacy');
       await a2.page.waitForFunction(() => /ひらく|ブロックリスト/.test(document.body.innerText), null, { timeout: 15000 });
       if ((await text(a2.page)).includes('ひらく')) await button(a2.page, 'ひらく').click();
+      // Unlocking may land on the settings list: then open the privacy page from it.
+      await a2.page.waitForFunction(() => /ブロックリスト|プライバシー/.test(document.body.innerText), null, { timeout: 15000 });
+      if (!(await text(a2.page)).includes('ブロックリスト')) await a2.page.getByRole('button', { name: 'プライバシー', exact: true }).last().click();
       await waitText(a2.page, 'ブロックリスト');
       assert(!(await text(a2.page)).includes('ブロックしている人はいません'), 'the block list did not move');
       await waitText(a2.page, 'びー');
       await a2.context.close();
       await a.page.getByText('閉じる').click().catch(() => {});
 
+      await button(a.page, '戻る').click();
+      await a.page.getByRole('button', { name: 'プライバシー', exact: true }).last().click();
       await button(a.page, 'ブロック解除').click();
       await waitText(a.page, 'ブロックしている人はいません');
       await shot(a.page, 'settings-blocklist-empty', 'ブロックを解除した後の設定の画面');
 
-      await a.page.goBack();
+      await a.page.goto(ORIGIN + '/');
+      await a.page.waitForFunction(() => /ひらく|びー/.test(document.body.innerText), null, { timeout: 15000 });
+      if ((await text(a.page)).includes('ひらく')) await button(a.page, 'ひらく').click();
       await waitText(a.page, 'びー');
       await b.page.getByPlaceholder('メッセージ').fill('解除後の手紙');
       await button(b.page, '送る').click();
@@ -3759,7 +3814,7 @@ async function main() {
       }, null, { timeout: 15000 });
       const cOwn = (await envelopesFor(c.hex)).length;
 
-      await a.page.goto(ORIGIN + '/settings');
+      await a.page.goto(ORIGIN + '/settings/profile');
       await waitText(a.page, 'アイコンを変更');
       await shot(a.page, 'settings-avatar', '設定の画面のアイコン（まだ設定していない時）');
       const png = Buffer.from(
@@ -4191,7 +4246,7 @@ async function main() {
       await a.page.evaluate((list) => localStorage.setItem('tegami.stamps', JSON.stringify(list)), [old, ghost]);
 
       // Opening the app moves the old stamp into the stamp storage, so the new device can fetch it.
-      await a.page.goto(ORIGIN + '/settings');
+      await a.page.goto(ORIGIN + '/settings/account');
       await a.page.getByText('別の端末でも使う').click();
       await waitText(a.page, 'まで使えます');
       const moveLink = (await text(a.page)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)[0];
@@ -4225,7 +4280,7 @@ async function main() {
       await a2.context.close();
 
       // The recovery code: the backup holds the stamps, and a restored device gets them.
-      await a.page.goto(ORIGIN + '/settings');
+      await a.page.goto(ORIGIN + '/settings/account');
       await button(a.page, '復旧コードを作成').click();
       await waitText(a.page, 'このコードは今だけ表示されます');
       const code = (await a.page.getByTestId('recovery-code').innerText()).trim();
@@ -4321,7 +4376,7 @@ async function main() {
       };
 
       // A second device for A, through the link.
-      await a.page.goto(ORIGIN + '/settings');
+      await a.page.goto(ORIGIN + '/settings/account');
       await a.page.getByText('別の端末でも使う').click();
       await waitText(a.page, 'まで使えます');
       const moveLink = (await text(a.page)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)[0];
@@ -4795,7 +4850,7 @@ async function main() {
       await u.page.goto(ORIGIN + '/');
       await waitText(u.page, 'いちさんへの手紙');
       // With one account, the list offers no removing (settings has "この端末から削除").
-      await openSettings(u.page);
+      await openSettings(u.page, 'アカウント');
       await waitText(u.page, '使用中');
       assert((await u.page.getByRole('button', { name: /^この端末から削除（/ }).count()) === 0, 'removing offered in the list with one account');
       await button(u.page, 'アカウントを追加').click();
@@ -4805,7 +4860,7 @@ async function main() {
       await u.page.goto(ORIGIN + '/add');
       await waitText(u.page, 'マイQRコード');
       await u.page.getByPlaceholder('自分の名前').fill('に');
-      await u.page.goto(ORIGIN + '/settings');
+      await u.page.goto(ORIGIN + '/settings/account');
       await waitText(u.page, '使用中');
       await shot(u.page, 'account-list-remove', '設定のアカウントの一覧（2つある時は、それぞれに「削除」）');
       const before = await storage(u.page);
@@ -4862,13 +4917,17 @@ async function main() {
       for (let i = 0; i < 50 && !(await envelopesFor(hex)).length; i++) await new Promise((r) => setTimeout(r, 100));
       assert((await envelopesFor(hex)).length > 0, 'setup: no envelope waiting');
       // A recovery code (its backup is signed with a key from the code, not the account key).
-      await a.page.goto(ORIGIN + '/settings');
+      await a.page.goto(ORIGIN + '/settings/account');
       await button(a.page, '復旧コードを作成').click();
       await button(a.page, '保管しました').click();
       const backups = async () => (await (await fetch(`http://localhost:${RELAY_PORT}/_backups`)).json()).length;
       const backupsBefore = await backups();
       assert(backupsBefore >= 1, 'setup: no backup');
+      await button(a.page, '戻る').click();
+      await a.page.getByRole('button', { name: 'プロフィール', exact: true }).last().click();
       await a.page.getByPlaceholder('相手に表示される名前').fill('けすひと');
+      await button(a.page, '戻る').click();
+      await a.page.getByRole('button', { name: 'アカウント', exact: true }).last().click();
       await button(a.page, 'アカウントを削除').click();
       await waitText(a.page, 'けすひとのアカウントを削除しますか？');
       await shot(a.page, 'delete-account-dialog', '設定の「アカウントを削除」を押した時の確認（元に戻せない）');
