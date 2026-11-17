@@ -169,18 +169,23 @@ export function redact(text, keys) {
  * Makes the function that writes a reply.
  *   reply(prompt, { draft, peer }) -> Promise<string>
  * draft: a one-off reply draft for a friend's chat: no conversation, no tools, nothing kept.
+ * check: the AI check (check.mjs) with its own instructions (checkSystem): run like a draft.
  * peer: whose conversation this continues (API backends keep the last turns per person).
  * settings (lib.mjs loadSettings): tools (Claude Code may use its tools), remember (keep the
  * conversation), keepDays (how long a conversation is kept).
  */
-export function makeResponder({ dir, config, system, draftSystem, state, saveState, command, settings = {} }) {
+export function makeResponder({ dir, config, system, draftSystem, checkSystem = draftSystem, state, saveState, command, settings = {} }) {
   const { tools = false, remember = true, keepDays = 30 } = settings;
   if (command) return (prompt) => runCommand(command, prompt, dir);
   const b = BACKENDS[config.type] ?? BACKENDS['claude-code'];
   if (b.kind === 'claude-code')
-    return (prompt, opts = {}) => runClaude({ dir, prompt, system, draftSystem, state, saveState, draft: !!opts.draft, tools, remember, keepDays });
+    return (prompt, opts = {}) =>
+      opts.check
+        ? runClaude({ dir, prompt, system, draftSystem: checkSystem, state, saveState, draft: true, check: true, tools, remember, keepDays })
+        : runClaude({ dir, prompt, system, draftSystem, state, saveState, draft: !!opts.draft, tools, remember, keepDays });
   if (b.kind === 'command') throw new Error('The command backend needs --command "<program>" on watch.');
-  return async (prompt, { draft = false, peer = '' } = {}) => {
+  return async (prompt, { draft = false, check = false, peer = '' } = {}) => {
+    if (check) draft = true;
     const keys = loadKeys(dir);
     const key = keys[config.type] ?? '';
     if (b.key === true && !key) throw new Error(`No API key for ${config.type}. Run: tegami-agent key ${config.type}`);
@@ -192,11 +197,11 @@ export function makeResponder({ dir, config, system, draftSystem, state, saveSta
     const turns = [...history.map(({ role, text }) => ({ role, text })), { role: 'user', text: prompt }];
     let text;
     try {
-      text = await callApi(b.kind, { url: config.url, model: config.model, key, system: draft ? draftSystem : system, turns });
+      text = await callApi(b.kind, { url: config.url, model: config.model, key, system: check ? checkSystem : draft ? draftSystem : system, turns });
     } catch (e) {
       throw new Error(redact(e.message, keys));
     }
-    noteModel(dir, config.model);
+    if (!check) noteModel(dir, config.model);
     if (keep) {
       const all = readJson(dir, 'history.json', {});
       // Older than keepDays: gone, for everyone in the file (not only this person).
@@ -343,8 +348,8 @@ export function claudeLine({ system, tools = false, remember = true, draft = fal
  * draft: a reply draft for a friend's chat instead. It runs once on its own: no tools (the
  * friend's words must not make it act), no saved session, and not added to the conversation.
  */
-async function runClaude({ dir, prompt, system, draftSystem, state, saveState, draft, tools, remember, keepDays }) {
-  const work = join(dir, draft ? 'draft' : 'work');
+async function runClaude({ dir, prompt, system, draftSystem, state, saveState, draft, check = false, tools, remember, keepDays }) {
+  const work = join(dir, check ? 'check' : draft ? 'draft' : 'work');
   mkdirSync(work, { recursive: true });
   const now = Math.floor(Date.now() / 1000);
   if (!draft && state.claudeSession && (!remember || (state.claudeSessionAt ?? 0) < now - keepDays * DAY)) {
@@ -368,6 +373,6 @@ async function runClaude({ dir, prompt, system, draftSystem, state, saveState, d
   if (out.is_error) throw new Error(String(out.result ?? 'Claude returned an error'));
   // The model Claude Code really ran (its JSON names it under modelUsage), shown to friends.
   const used = Object.entries(out.modelUsage ?? {}).sort((x, y) => (y[1]?.outputTokens ?? 0) - (x[1]?.outputTokens ?? 0))[0]?.[0];
-  if (used) noteModel(dir, used);
+  if (used && !check) noteModel(dir, used);
   return String(out.result ?? '');
 }

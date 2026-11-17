@@ -6,15 +6,21 @@
 // --include-ai, --include-groups, or `tegami-agent setting`), and then each such message carries a
 // warning that someone else wrote it. Strangers are only counted. A message its writer kept from
 // AIs (the tag ["noai"], or their profile card) is never shown.
+//
+// AIの検査, stage 2 (check.mjs): what the AI sends here to anyone but its owner, and what it asks
+// the owner's app to send that the app could send unseen, is first checked by the same backend.
+// Anything but SAFE is not sent by tegami_send (the owner is told), and goes to the owner's app
+// as "show it to the owner first" from tegami_send_as_owner.
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
+import { heldNotice } from './check.mjs';
 import { OTHERS_WARNING, parseInvite, shortId } from './lib.mjs';
 
 const text = (value) => ({ content: [{ type: 'text', text: typeof value === 'string' ? value : JSON.stringify(value, null, 2) }] });
 
-export async function startMcp(agent) {
+export async function startMcp(agent, { check = async () => ({ verdict: 'ASK_OWNER', reason: 'no check was set up' }) } = {}) {
   const server = new McpServer({ name: 'tegami', version: '0.1.0' });
   const nameOf = (pubkey) =>
     pubkey === agent.pubkey
@@ -42,9 +48,19 @@ export async function startMcp(agent) {
   // read what anyone but the owner wrote, what it asks the owner's app to send waits for the owner.
   // A message this AI sent into a chat with others counts too: the chat around it is theirs.
   let readOthers = false;
+  // What this session was shown lately: the conversation the check reads with an outgoing text.
+  const shown = [];
   const view = (m) => {
     if (fromOthers(m) || (m.from === agent.pubkey && !agent.isTrusted(m.peer))) readOthers = true;
-    return viewOf(m);
+    const v = viewOf(m);
+    shown.push(`${v.from}: ${v.text}`);
+    if (shown.length > 30) shown.splice(0, shown.length - 30);
+    return v;
+  };
+  /** The chat with `room` as the check reads it: its latest readable messages, then what this session was shown. */
+  const contextFor = (room) => {
+    const chat = agent.messages.filter((m) => m.peer === room && readable(m)).slice(-15).map((m) => `${nameOf(m.from)}: ${m.text}`);
+    return [...chat, ...shown.filter((l) => !chat.includes(l))].join('\n');
   };
   const viewOf = (m) => ({
     from: nameOf(m.from),
@@ -108,6 +124,14 @@ export async function startMcp(agent) {
     async ({ to, text: body }) => {
       const c = target(to);
       if (!c) return text(`Unknown contact: ${to}`);
+      if (c.pubkey !== agent.owner?.pubkey) {
+        const kind = c.pubkey.includes(',') ? 'group' : agent.isTrusted(c.pubkey) ? 'trusted' : agent.contacts.some((x) => x.pubkey === c.pubkey) ? 'contact' : 'peerAi';
+        const v = await check({ text: body, context: contextFor(c.pubkey), to: kind });
+        if (v.verdict !== 'SAFE') {
+          if (agent.owner) await agent.send(agent.owner.pubkey, heldNotice(c.name, v.reason, body), { notice: true }).catch(() => {});
+          return text(`Not sent: the AI check (AIの検査) held it for your owner (${v.reason}). Your owner was told.`);
+        }
+      }
       try {
         await agent.send(c.pubkey, body);
       } catch (e) {
@@ -143,7 +167,9 @@ export async function startMcp(agent) {
     async ({ to, text: body }) => {
       const f = agent.ownerFriends.find((x) => x.name === to || x.pubkey === to);
       if (!f) return text(`Unknown friend: ${to}. Call tegami_owner_friends first.`);
-      const status = await agent.sendAsOwner(f.pubkey, body, 60_000, { readOthers }).catch((e) => e.message);
+      // The app shows it to the owner anyway after others' words were read; else the check decides.
+      const v = readOthers ? null : await check({ text: body, context: contextFor(agent.owner?.pubkey ?? ''), to: 'ownerFriend' });
+      const status = await agent.sendAsOwner(f.pubkey, body, 60_000, { readOthers, check: v }).catch((e) => e.message);
       const said = {
         sent: `Sent to ${f.name} in your owner's name.`,
         waiting: 'Waiting for your owner to press send.',

@@ -38,12 +38,14 @@
 //       flags also show other contacts, other people's AIs and groups, marked as others' words.
 //   tegami-agent setting [<name> <value>]
 //       Shows or changes this AI friend's settings (settings.json): tools, remember, keepDays,
-//       dailyReplies, mcpContacts, mcpPeerAis, mcpGroups.
+//       dailyReplies, mcpContacts, mcpPeerAis, mcpGroups,
+//       modelCheck (AIの検査: the backend checks what goes out unseen by the owner; on by default).
 //   tegami-agent stop | resume
 //       Stops the AI (no replies, nothing sent) until resume. The owner's app can do the same.
 //
 // Options: --agent <folder name> (default "claude") picks which AI friend to use.
-// --allow-tools (Claude Code may use its tools) and --no-memory (keep nothing) on watch, for one run.
+// --allow-tools (Claude Code may use its tools), --no-memory (keep nothing) and --no-model-check
+// (no AIの検査 by a model) on watch and mcp, for one run.
 
 import { spawn, execFileSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -54,6 +56,7 @@ import { autostartCommands, autostartFile, carriedEnv, keepArgs, launchdPlist, s
 import { BACKENDS, backendLabel, loadBackend, loadKeys, makeResponder, ownEnv, saveBackend, saveKey } from './backends.mjs';
 import { Agent, DRAFT_TTL, PAIR_TTL, loadSettings, needsInit, parseAsk, parseInvite, saveSettings, shortId } from './lib.mjs';
 import { qrHtml, qrTerminal } from './qr.mjs';
+import { CHECK_SYSTEM, heldNotice, modelCheck } from './check.mjs';
 import { cleanForAi } from './screen.mjs';
 
 export { ownEnv };
@@ -76,6 +79,7 @@ const agent = new Agent(agentName);
 const runFlags = {
   tools: flag('allow-tools') ? true : undefined,
   remember: flag('no-memory') ? false : undefined,
+  modelCheck: flag('no-model-check') ? false : undefined,
   mcpContacts: flag('include-contacts') ? true : undefined,
   mcpPeerAis: flag('include-ai') ? true : undefined,
   mcpGroups: flag('include-groups') ? true : undefined,
@@ -176,6 +180,7 @@ const commands = {
     const logTo = flag('log');
     if (typeof logTo === 'string') logFile = logTo;
     const reply = responder(typeof command === 'string' ? command : undefined);
+    const check = checker(() => reply);
     if (!takeLock()) {
       log('another watcher is already running for this AI friend');
       process.exit(3);
@@ -272,6 +277,15 @@ const commands = {
           // The daily limit is reached: do not even ask the AI (an API key costs money).
           if (!agent.canSendToday(peer)) throw Object.assign(new Error('daily limit'), { code: 'DAILY_LIMIT' });
           const text = await reply(prompt, { peer });
+          // AIの検査, stage 2: a reply to anyone but the owner is checked first; it waits otherwise.
+          if (text.trim() && peer !== agent.owner?.pubkey) {
+            const c = await check({ text: text.trim(), context: prompt, to: 'trusted' });
+            if (c.verdict !== 'SAFE') {
+              await holdForOwner(name, c.reason, text.trim());
+              markReplied(batch);
+              continue;
+            }
+          }
           // Stopped while the AI was writing: the reply is dropped (send checks again too).
           if (text.trim()) await agent.send(peer, text.trim());
           log(`replied to ${name}`);
@@ -282,6 +296,12 @@ const commands = {
         markReplied(batch);
       }
       busy = false;
+    }
+    /** The check held a reply: it is not sent, the log says so, and the owner is told. */
+    async function holdForOwner(name, reason, text) {
+      log(`AIの検査 held a reply to ${name}: ${reason}`);
+      if (!agent.owner) return;
+      await agent.send(agent.owner.pubkey, heldNotice(name, reason, text), { notice: true }).catch((e) => log(`could not tell the owner: ${e.message}`));
     }
     /** Once a day per chat: tells the owner that the daily limit stopped the replies. */
     async function tellOwnerLimit(peer, name) {
@@ -492,7 +512,7 @@ const commands = {
   async mcp() {
     needsInit(agent);
     const { startMcp } = await import('./mcp.mjs');
-    await startMcp(agent);
+    await startMcp(agent, { check: checker(() => responder()) });
   },
 };
 
@@ -599,7 +619,19 @@ function taskXml(logPath) {
 
 /** The function that writes replies, with the backend set for this AI friend (or --command). */
 function responder(command) {
-  return makeResponder({ dir: agent.dir, config: loadBackend(agent.dir), system: SYSTEM, draftSystem: DRAFT_SYSTEM, state: agent.state, saveState: () => agent.saveState(), command, settings: agent.settings });
+  return makeResponder({ dir: agent.dir, config: loadBackend(agent.dir), system: SYSTEM, draftSystem: DRAFT_SYSTEM, checkSystem: CHECK_SYSTEM, state: agent.state, saveState: () => agent.saveState(), command, settings: agent.settings });
+}
+
+/**
+ * AIの検査, stage 2 (check.mjs) with the backend that writes the replies. With modelCheck off
+ * (tegami-agent setting modelCheck off, or --no-model-check), everything counts as SAFE.
+ */
+function checker(getReply) {
+  return async (what) => {
+    if (!agent.settings.modelCheck) return { verdict: 'SAFE', reason: 'the model check is off', off: true };
+    // getReply may throw (no backend set up): modelCheck then answers ASK_OWNER.
+    return modelCheck((prompt) => getReply()(prompt, { check: true }), what);
+  };
 }
 
 /** Handles a pairing message: trusts the sender when the code is right, then registers. Returns whether it paired. */

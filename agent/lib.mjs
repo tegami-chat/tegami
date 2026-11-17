@@ -72,8 +72,10 @@ export const AI_CHAIN_MAX = 20;
  *   keepDays: days messages.json and history.json keep a message, and a Claude Code conversation lasts.
  *   dailyReplies: messages a day this AI sends to one person or group (at least 1: never unlimited).
  *   mcpContacts / mcpPeerAis / mcpGroups: what the MCP server shows besides trusted people.
+ *   modelCheck: AIの検査, stage 2 (check.mjs): before a message goes out that the owner will not
+ *   look at first, the same backend checks it; anything but SAFE waits for the owner. On by default.
  */
-export const DEFAULT_SETTINGS = { tools: false, remember: true, keepDays: 30, dailyReplies: 50, mcpContacts: false, mcpPeerAis: false, mcpGroups: false };
+export const DEFAULT_SETTINGS = { tools: false, remember: true, keepDays: 30, dailyReplies: 50, mcpContacts: false, mcpPeerAis: false, mcpGroups: false, modelCheck: true };
 const SETTING_RANGE = { keepDays: [1, 3650], dailyReplies: [1, 10000] };
 
 export function loadSettings(dir) {
@@ -854,11 +856,15 @@ export class Agent {
    * here, before asking), or null (no answer).
    * `readOthers`: whether this session read what anyone but the owner wrote (Meta's Agents Rule
    * of Two). The app then never sends it without the owner's look. Left out, the app counts it as read.
+   * `check`: the model check's answer (check.mjs). ASK_OWNER is sent as readOthers: true, so the app
+   * shows it to the owner (an app of any version does), and the reason goes along for the record.
    */
-  async sendAsOwner(to, text, ms, { readOthers = true } = {}) {
+  async sendAsOwner(to, text, ms, { readOthers = true, check = null } = {}) {
     const body = String(text).slice(0, DRAFT_TEXT_MAX);
     if (findSecret(body)) return 'secret';
-    const r = await this.askOwner(SEND_ASK_KIND, { to, text: body, readOthers: readOthers !== false }, ms);
+    const held = check?.verdict === 'ASK_OWNER';
+    const data = { to, text: body, readOthers: readOthers !== false || held, ...(held ? { check: { verdict: 'ASK_OWNER', reason: String(check.reason ?? '').slice(0, 200) } } : {}) };
+    const r = await this.askOwner(SEND_ASK_KIND, data, ms);
     return r?.status ?? null;
   }
 
