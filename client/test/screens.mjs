@@ -112,6 +112,17 @@ try {
   await a.page.goto(ORIGIN + '/settings');
   await waitText(a.page, 'アカウント');
   await shot(a.page, 'settings');
+  for (const [path, word, name] of [
+    ['/settings/profile', '自分の名前', 'settings-profile'],
+    ['/settings/account', 'アカウントの守り方', 'settings-account'],
+    ['/settings/privacy', 'ブロックリスト', 'settings-privacy'],
+    ['/settings/talk', '未読数を表示', 'settings-talk'],
+    ['/ai', '相手のAI', 'settings-ai'],
+  ]) {
+    await a.page.goto(ORIGIN + path);
+    await waitText(a.page, word);
+    await shot(a.page, name);
+  }
   await a.page.goto(ORIGIN + '/add');
   await waitText(a.page, 'マイQRコード');
   await shot(a.page, 'add');

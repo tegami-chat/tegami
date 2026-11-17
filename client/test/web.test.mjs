@@ -3723,9 +3723,12 @@ async function main() {
       await waitText(a.page, 'ブロックしている人はいません');
       await shot(a.page, 'settings-blocklist-empty', 'ブロックを解除した後の設定の画面');
 
-      await a.page.goto(ORIGIN + '/');
-      await a.page.waitForFunction(() => /ひらく|びー/.test(document.body.innerText), null, { timeout: 15000 });
-      if ((await text(a.page)).includes('ひらく')) await button(a.page, 'ひらく').click();
+      // Back to the chat list without reloading (a reload would fetch the dropped envelopes again).
+      if (NARROW) {
+        await button(a.page, '戻る').click();
+        await a.page.getByTestId('ai-permissions-state').waitFor();
+        await button(a.page, '戻る').click();
+      } else await button(a.page, 'トーク').first().click();
       await waitText(a.page, 'びー');
       await b.page.getByPlaceholder('メッセージ').fill('解除後の手紙');
       await button(b.page, '送る').click();
@@ -4071,7 +4074,7 @@ async function main() {
 
       // Tapping my own row opens settings.
       await a.page.getByText('あゆみ', { exact: true }).first().click();
-      await waitText(a.page, 'ブロックリスト');
+      await waitText(a.page, '名前とアイコン');
       await a.page.goBack();
       await waitText(a.page, '友だち（2）');
 
