@@ -2,7 +2,7 @@ import { FlatList, StyleSheet, Text, View } from 'react-native';
 
 import { AI_ACTION_LABEL } from '@/components/ai-switches';
 import { Palette, usePalette } from '@/constants/theme';
-import { useAiLog, type AiLogEntry, type AiRange, type Layer } from '@/lib/ai-permissions';
+import { useAiLog, type AiLogEntry, type AiRange, type GrantEnd, type Layer } from '@/lib/ai-permissions';
 import { personName, useTegami, type Contact } from '@/lib/tegami';
 
 const STOPPED_BY: Record<Layer, string> = {
@@ -22,8 +22,17 @@ const STOPPED_BY: Record<Layer, string> = {
   others: 'ほかの人の文を読んだ後の送信は確認',
 };
 
+/** Why a permission given for a while ended early (lib/ai-permissions.ts endAiGrants). */
+const ENDED: Record<GrantEnd, string> = {
+  unmarked: '「自分のAI」の印を外したため',
+  removed: '友だちから削除したため',
+  model: 'AIが名乗るモデルが変わったため',
+  owner: 'AIが持ち主をあなたと名乗らなくなったため',
+};
+
 function result(e: AiLogEntry) {
   if (e.expired) return '期間が終わったため、自動でオフに戻しました';
+  if (e.ended) return `${ENDED[e.ended]}、期間つきの許可を終えました`;
   if (e.answer) return `${STOPPED_BY[e.stoppedBy ?? 'ask']}：${e.answer === 'allowed' ? '許可しました' : '許可しませんでした'}`;
   return e.allowed ? '許可しました' : `止めました：${STOPPED_BY[e.stoppedBy ?? 'all']}`;
 }

@@ -24,8 +24,10 @@ import {
   logAiStop,
   overAiLimit,
   recordAiSent,
+  endAiGrants,
   removePeerAi,
   stopAllAi,
+  type GrantEnd,
 } from './ai-permissions';
 import {
   AI_ACTION_KINDS,
@@ -1438,6 +1440,27 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /**
+   * Ends the permissions one AI was given for a while (lib/ai-permissions.ts endAiGrants) and tells
+   * the AI which other AIs it may no longer talk to. Set below, once tellAi exists.
+   */
+  const endGrantsRef = useRef<(ai: string, why: GrantEnd) => void>(() => {});
+
+  // A permission given for a while holds only while the AI stays my AI and my friend. Watching the
+  // list (not only setMyAi and removeContact) also catches a change synced from my other devices.
+  // Kept per account: switching accounts or closing one is not removing friends.
+  const grantsSeenRef = useRef<{ me: string; contacts: Contact[] } | null>(null);
+  useEffect(() => {
+    const before = grantsSeenRef.current;
+    grantsSeenRef.current = me ? { me, contacts } : null;
+    if (!me || !before || before.me !== me) return;
+    for (const old of before.contacts) {
+      const now = contacts.find((c) => c.pubkey === old.pubkey);
+      if (!now) endGrantsRef.current(old.pubkey, 'removed');
+      else if (isMyAi(old) && !isMyAi(now)) endGrantsRef.current(old.pubkey, 'unmarked');
+    }
+  }, [me, contacts]);
+
+  /**
    * The owner a message from AI friend `ai` shows (lib/ai-owner.ts). Only a message newer than the
    * card kept here changes it, so the relay handing out older messages again changes nothing.
    */
@@ -1446,6 +1469,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     const c = contactsRef.current.find((x) => x.pubkey === ai);
     if (!c) return;
     const self = aiSelfOf(tags, ai, at);
+    // The AI now says it runs another model: what was allowed for a while was allowed to the old one.
+    if (self?.running && c.self?.running && at > c.self.at && self.running !== c.self.running) endGrantsRef.current(ai, 'model');
     if (self && at > (c.self?.at ?? 0) && (self.name !== c.self?.name || self.running !== c.self?.running)) {
       const next = contactsRef.current.map((x) => (x.pubkey === ai ? { ...x, self } : x));
       contactsRef.current = next;
@@ -1461,6 +1486,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     if (said === 'none' && (!cur.owner || !cur.owner.pubkey)) return;
     if (said !== 'none' && cur.owner?.pubkey === said.pubkey && cur.owner.until === said.until) return;
     const owner: OwnerMark = said === 'none' ? { pubkey: '', at, until: 0 } : said;
+    // The AI no longer says I am its owner: what I allowed it for a while ends here.
+    if (me && cur.owner?.pubkey === me && owner.pubkey !== me) endGrantsRef.current(ai, 'owner');
     const next = contactsRef.current.map((x) => (x.pubkey === ai ? { ...x, owner } : x));
     contactsRef.current = next;
     save(k('contacts'), next);
@@ -2281,6 +2308,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     },
     [secret],
   );
+  endGrantsRef.current = (ai, why) => {
+    for (const peer of endAiGrants(ai, why)) void tellAi(ai, AI_PEER_RESULT_KIND, { peer, until: 0, limit: 0 });
+  };
 
   /** Answers an AI's one-time pairing code (lib/ai-pair.ts): the code and my invite link, for the AI only. */
   const pairAi = useCallback(
