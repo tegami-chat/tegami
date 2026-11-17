@@ -12,6 +12,8 @@
 //   node scripts/admin.mjs trust <key>              treat the key as invited (official accounts, tests)
 //   node scripts/admin.mjs members                  how many keys registered, by how (numbers only)
 //   node scripts/admin.mjs stats                    the exact daily totals (the public /stats is weekly and rounded)
+//   node scripts/admin.mjs ais [owner]              owners of AI keys and how many each has, or one owner's AI keys
+//   node scripts/admin.mjs ai-limit <owner> <n>     envelopes a day all of one owner's AI keys may send
 //
 // <key> is an npub or 64 hex characters. The operator key lives in ~/.tegami/admin/key.json,
 // outside the repository. Its public key must be listed in the relay's ADMIN_PUBKEYS
@@ -101,11 +103,17 @@ try {
     case 'trust':
       console.log(JSON.stringify(await admin({ action: cmd, pubkey: toHex(args[0]), invitees: flag('--invitees') }), null, 2));
       break;
+    case 'ais':
+      console.log(JSON.stringify(await admin(args[0] ? { action: 'ais', pubkey: toHex(args[0]) } : { action: 'ais' }), null, 2));
+      break;
+    case 'ai-limit':
+      console.log(JSON.stringify(await admin({ action: 'ai-limit', pubkey: toHex(args[0]), per_day: Number(args[1]) }), null, 2));
+      break;
     case 'set-limit':
       console.log(JSON.stringify(await admin({ action: 'set-limit', pubkey: toHex(args[0]), per_day: Number(args[1]) }), null, 2));
       break;
     default:
-      console.log(readFileSync(new URL(import.meta.url), 'utf8').split('\n').slice(1, 16).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
+      console.log(readFileSync(new URL(import.meta.url), 'utf8').split('\n').slice(1, 18).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
       process.exitCode = cmd ? 1 : 0;
   }
 } catch (e) {
