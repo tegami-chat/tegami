@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Palette, usePalette } from '@/constants/theme';
-import { askAi, expireAiSwitches, gateAi, useAiAsk, type AiAction, type AiAnswer, type AiContent, type AiRequest } from '@/lib/ai-permissions';
+import { askAi, expireAiSwitches, gateAi, useAiAsk, type AiAction, type AiAnswer, type AiContent, type AiRequest, type Layer } from '@/lib/ai-permissions';
 import { personName, useTegami } from '@/lib/tegami';
 
 /** The title for each action, as a sentence (a label such as「トークを読む」cannot takeをしようとしています). */
@@ -26,6 +26,16 @@ const KIND_LABEL: Record<AiContent['kind'], string> = {
   file: 'ファイル',
   voice: '音声メッセージ',
   stamp: 'スタンプ',
+};
+
+/**
+ * Why the window came up although 確認なしで送る is on, so a window the user thought they had
+ * switched off is not a surprise (as SimpleX's card says the tool is approved and Claude Code
+ * still asks this time). Only these two reasons override a switch that is on.
+ */
+const WHY_STILL_ASKED: Partial<Record<Layer, string>> = {
+  always: '「確認なしで送る」はオンですが、写真、動画、ファイル、音声、リンク、お金の話に見える文は、毎回確かめてから送ります。',
+  others: '「確認なしで送る」はオンですが、ほかの人が書いた文を読んだ後は、毎回確かめてから送ります。',
 };
 
 export function AiConfirm() {
@@ -83,6 +93,11 @@ export function AiConfirm() {
     <View style={s.overlay} role="dialog" aria-modal testID="ai-confirm">
       <View style={s.card}>
         <Text style={s.title}>{title}</Text>
+        {r.action === 'autosend' && WHY_STILL_ASKED[ask.why] ? (
+          <Text style={s.why} testID="ai-confirm-why">
+            {WHY_STILL_ASKED[ask.why]}
+          </Text>
+        ) : null}
         {ask.why === 'firstPeer' && r.peer ? (
           <View style={s.box}>
             <Text style={s.big}>{r.peer.name || personName(r.peer.pubkey, contacts)}</Text>
@@ -138,6 +153,7 @@ const styles = (c: Palette) =>
     },
     card: { width: '100%', maxWidth: 380, backgroundColor: c.surface, borderRadius: 16, padding: 20, gap: 14, borderWidth: 1, borderColor: c.line },
     title: { fontSize: 16, fontWeight: '700', color: c.text, lineHeight: 23 },
+    why: { fontSize: 13, color: c.muted, lineHeight: 19, marginTop: -6 },
     line: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
     key: { fontSize: 13, color: c.muted },
     big: { fontSize: 22, fontWeight: '700', color: c.text, flexShrink: 1 },

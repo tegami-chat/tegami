@@ -2675,6 +2675,8 @@ async function main() {
       answer = await ask({ action: 'autosend', friend: b.hex, content: { kind: 'text', text: '明日の10時でどう？' } });
       await p.getByTestId('ai-confirm').waitFor();
       await waitText(p, 'クロードが送ろうとしています');
+      // The window says why it came up although 確認なしで送る is on.
+      await waitText(p, 'ほかの人が書いた文を読んだ後は、毎回確かめてから送ります');
       await shot(p, 'ai-confirm-others', 'ほかの人の文を読んだAIが確認なしで送ろうとした時の確認');
       await button(p, '送らない').click();
       assert((await answer()) === false, 'refusing after reading others still sent');
@@ -2682,6 +2684,7 @@ async function main() {
       await p.getByTestId('ai-confirm').waitFor();
       await waitText(p, 'クロードが送ろうとしています');
       await waitText(p, '宛先');
+      await waitText(p, '写真、動画、ファイル、音声、リンク、お金の話に見える文は、毎回確かめてから送ります');
       await shot(p, 'ai-confirm-photo', 'AI が写真を確認なしで送ろうとした時の確認（宛先と中身を大きく出す）');
       await button(p, '送る').click();
       assert((await answer()) === true, 'sending the photo was not allowed');

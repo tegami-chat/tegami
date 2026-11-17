@@ -114,7 +114,18 @@ export type AiLogEntry = {
   answer?: 'allowed' | 'denied';
   /** A switch ran out: which layer and id it was on. */
   expired?: { layer: 'all' | 'model' | 'ai' | 'friend'; id?: string };
+  /** A permission with a time limit ended early because something about the AI changed (endAiGrants). */
+  ended?: GrantEnd;
 };
+
+/**
+ * Why the time-limited permissions of one AI ended before their time (endAiGrants):
+ * unmarked: the mark「自分のAI」was taken away. removed: the AI friend was removed.
+ * model: the AI now says it runs another model. owner: the AI no longer says I am its owner.
+ * Like SimpleX's "approve for the rest of the session", a permission given for a while holds
+ * only for the AI it was given to; "ずっと" and "off" are the user's own choice and stay.
+ */
+export type GrantEnd = 'unmarked' | 'removed' | 'model' | 'owner';
 export type Layer =
   | 'all'
   | 'model'
@@ -639,6 +650,36 @@ export function stopAllAi(): [string, string][] {
   const taken = Object.keys(p.peerAis).map((key) => key.split('>') as [string, string]);
   put({ ...p, all: Object.fromEntries(AI_ACTIONS.map((a) => [a, false])), peerAis: {} });
   return taken;
+}
+
+/**
+ * Ends the permissions given to one AI for a while: its switches set to "1時間" or "今日だけ"
+ * on the AI layer, and its permissions to talk to other people's AIs. Each is written to the log
+ * with the reason. Returns the other AIs it may no longer talk to, so the app can tell the AI.
+ * Switches set to on (ずっと), off or 毎回確認 are left as the user set them, except when the AI
+ * friend was removed: then nothing set for it is kept, so adding it again starts from the defaults.
+ */
+export function endAiGrants(ai: string, why: GrantEnd, at = now()): string[] {
+  const p = getAiPermissions();
+  const sw = p.ais[ai] ?? {};
+  let changed = false;
+  let next: Switches = sw;
+  for (const a of AI_ACTIONS) {
+    const v = sw[a];
+    if (!v || typeof v !== 'object' || at >= v.until) continue;
+    next = { ...next, [a]: false };
+    changed = true;
+    writeLog({ at, ai, action: a, allowed: false, ended: why });
+  }
+  const prefix = `${ai}>`;
+  const peers = Object.keys(p.peerAis).filter((key) => key.startsWith(prefix));
+  for (const key of peers) writeLog({ at, ai, action: 'otherAi', friend: key.slice(prefix.length), allowed: false, ended: why });
+  if (!changed && !peers.length && !(why === 'removed' && p.ais[ai])) return [];
+  const ais = { ...p.ais };
+  if (why === 'removed') delete ais[ai];
+  else ais[ai] = next;
+  put({ ...p, ais, peerAis: Object.fromEntries(Object.entries(p.peerAis).filter(([key]) => !key.startsWith(prefix))) });
+  return peers.map((key) => key.slice(prefix.length));
 }
 
 /** Logs a request stopped outside decideAi (a limit on sending, AI in a group at this stage). */

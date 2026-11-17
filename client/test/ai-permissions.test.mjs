@@ -389,5 +389,36 @@ test('Rule of Two: what an AI sends after reading what others wrote always waits
   assert.equal(P.decideAi(getAiPermissions(), { ai: AI, action: 'send', friend: TEST_B, content: { kind: 'text', text: '了解です' }, readOthers: true }, isFriend, NOW, 3).verdict, 'allow');
 });
 
+test('permissions given for a while end when something about the AI changes (endAiGrants)', () => {
+  reset();
+  const later = Math.floor(Date.now() / 1000) + 3600;
+  const PEER = 'e'.repeat(64);
+  P.replaceAiPermissions({
+    all: { read: true, send: true, autosend: true },
+    ais: { [AI]: { read: { until: later }, send: true, autosend: 'ask' }, [AI2]: { read: { until: later } } },
+    peerAis: { [`${AI}>${PEER}`]: { until: later }, [`${AI2}>${PEER}`]: { until: later } },
+  });
+  const before = P.getAiPermissions;
+  const logBefore = JSON.parse(store.get([...store.keys()].find((k) => k.endsWith('ai.log')) ?? '[]') ?? '[]').length;
+  assert.deepEqual(P.endAiGrants(AI, 'unmarked'), [PEER]);
+  const p = before();
+  // The time-limited switch is off now; ずっと and 毎回確認 stay as the user set them.
+  assert.deepEqual(p.ais[AI], { read: false, send: true, autosend: 'ask' });
+  assert.equal(p.peerAis[`${AI}>${PEER}`], undefined);
+  // Another AI keeps what it was given.
+  assert.deepEqual(p.ais[AI2], { read: { until: later } });
+  assert.ok(p.peerAis[`${AI2}>${PEER}`]);
+  // Each ended permission is in the log with the reason.
+  const log = JSON.parse(store.get([...store.keys()].find((k) => k.endsWith('ai.log'))));
+  const ended = log.slice(logBefore).filter((e) => e.ended === 'unmarked');
+  assert.deepEqual(ended.map((e) => e.action).sort(), ['otherAi', 'read']);
+  // Nothing left to end: nothing changes and nothing is logged.
+  assert.deepEqual(P.endAiGrants(AI, 'model'), []);
+  // A removed AI friend keeps nothing, so adding it again starts from the defaults.
+  P.endAiGrants(AI2, 'removed');
+  assert.equal(P.getAiPermissions().ais[AI2], undefined);
+  assert.equal(P.getAiPermissions().peerAis[`${AI2}>${PEER}`], undefined);
+});
+
 await chain;
 console.log(`\n${n} passed`);
