@@ -2,6 +2,7 @@
 // envelopes it publishes count against AI limits, per AI key and per owner.
 // Usage (fresh relay: wrangler dev with DEV_LOCAL=1 and the test admin key in ADMIN_PUBKEYS):
 //   RELAY=ws://127.0.0.1:8787 HTTP=http://127.0.0.1:8787 node test/ai-limit.test.mjs
+import { createHash } from 'node:crypto';
 import * as nip42 from 'nostr-tools/nip42';
 import * as nip59 from 'nostr-tools/nip59';
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
@@ -133,6 +134,64 @@ const mine = await admin('ais', owner2Pub);
 check("the operator sees that owner's AI keys", Array.isArray(mine.json) && mine.json.length === 2);
 const bad = await admin('ai-limit', owner2Pub, { per_day: -1 });
 check('a negative limit is refused', bad.status === 400);
+
+// ---------- the AI follows its owner: stopped with the owner, let back with the owner ----------
+const HTTP = process.env.HTTP ?? RELAY.replace(/^ws/, 'http');
+async function deleteAccount(sk) {
+  const text = JSON.stringify({ delete: 'account' });
+  const ev = finalizeEvent(
+    { kind: 27235, created_at: now(), content: '', tags: [['u', `${HTTP}/account`], ['method', 'DELETE'], ['payload', createHash('sha256').update(text).digest('hex')]] },
+    sk,
+  );
+  const res = await fetch(`${HTTP}/account`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: 'Nostr ' + Buffer.from(JSON.stringify(ev)).toString('base64') }, body: text });
+  return { status: res.status, json: await res.json().catch(() => null) };
+}
+/** An owner (trusted) with `n` registered AI keys. */
+async function ownerWithAis(n) {
+  const o = generateSecretKey();
+  await trust(o);
+  const keys = [];
+  for (let i = 0; i < n; i++) {
+    const k = generateSecretKey();
+    await trust(k);
+    const r = await register(k, { ai_card: card(o, getPublicKey(k)) });
+    if (r.json?.ai !== true) throw new Error('AI registration failed');
+    keys.push(k);
+  }
+  return { o, oPub: getPublicKey(o), keys };
+}
+const sends = async (sk) => (await burst(sk, targetPub, 1))[0];
+const stopped = (r) => r[0] === false && String(r[1]).startsWith('blocked');
+
+const f = await ownerWithAis(2);
+const [fa, fb] = f.keys;
+check('before anything, the AI key can send', (await sends(fa))[0] === true);
+await admin('ban', getPublicKey(fb)); // the operator stops this AI by itself
+const fBan = await admin('ban', f.oPub);
+check('stopping the owner reports one AI key stopped with it', fBan.status === 200 && fBan.json?.ais === 1);
+check("…and the owner's AI key can no longer send", stopped(await sends(fa)));
+check('…nor register again', (await register(fa)).status === 403);
+const fUnban = await admin('unban', f.oPub);
+check('letting the owner back reports one AI key let back', fUnban.status === 200 && fUnban.json?.ais === 1);
+check("…and the owner's AI key sends again", (await sends(fa))[0] === true);
+check('an AI the operator stopped by itself stays stopped', stopped(await sends(fb)));
+
+const g = await ownerWithAis(1);
+const gBan = await admin('ban', g.oPub, { invitees: true });
+check('stopping the owner with --invitees stops its AI key too', gBan.json?.ais === 1 && stopped(await sends(g.keys[0])));
+
+const h = await ownerWithAis(1);
+const hDel = await deleteAccount(h.o);
+check("the owner's account deletion reports one AI key stopped", hDel.status === 200 && hDel.json?.ais === 1);
+check("…and the deleted owner's AI key can no longer send", stopped(await sends(h.keys[0])));
+await admin('unban', h.oPub);
+check('…and unbanning the deleted owner does not let the AI back', stopped(await sends(h.keys[0])));
+
+const i = await ownerWithAis(1);
+await admin('ban', i.oPub);
+await deleteAccount(i.o);
+await admin('unban', i.oPub);
+check('an owner stopped, then deleted, then unbanned: the AI stays stopped', stopped(await sends(i.keys[0])));
 
 console.log(failures ? `\n${failures} failed` : '\nall passed');
 process.exit(failures ? 1 : 0);

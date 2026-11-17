@@ -146,8 +146,13 @@ export class AiKeys {
    */
   holdAisOf(owner: string, why: number): number {
     let n = 0;
-    for (const r of this.sql.exec('SELECT pubkey FROM ai_keys WHERE owner = ?', owner).toArray()) {
+    for (const r of this.sql.exec('SELECT pubkey, held FROM ai_keys WHERE owner = ?', owner).toArray()) {
       const k = r.pubkey as string;
+      // Already held for the owner's ban and now the owner is gone: never let back.
+      if (why === HELD_OWNER_DELETED && r.held === HELD_OWNER_BANNED) {
+        this.sql.exec('UPDATE ai_keys SET held = ? WHERE pubkey = ?', why, k);
+        continue;
+      }
       if (!this.sql.exec('UPDATE members SET banned = 1 WHERE pubkey = ? AND banned = 0', k).rowsWritten) continue;
       this.sql.exec('UPDATE ai_keys SET held = ? WHERE pubkey = ?', why, k);
       n++;
@@ -160,7 +165,7 @@ export class AiKeys {
     let n = 0;
     for (const r of this.sql.exec('SELECT pubkey FROM ai_keys WHERE owner = ? AND held = ?', owner, HELD_OWNER_BANNED).toArray()) {
       const k = r.pubkey as string;
-      n += this.sql.exec('UPDATE members SET banned = 0 WHERE pubkey = ?', k).rowsWritten;
+      if (this.sql.exec('UPDATE members SET banned = 0 WHERE pubkey = ? AND banned = 1', k).rowsWritten) n++;
       this.sql.exec('UPDATE ai_keys SET held = 0 WHERE pubkey = ?', k);
     }
     return n;
