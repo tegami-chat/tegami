@@ -31,6 +31,8 @@
 // reports its state, and returns its own invite code when it may invite. Envelopes from keys
 // registered without an invite are marked (tegami_open) and ring no notifications.
 // POST /admin lets the operator (ADMIN_PUBKEYS) stop a key and those it invited.
+// An AI key may also send {ai_card} (its owner card): from then on it is an AI key, and the
+// envelopes it publishes are counted against AI limits per key and per owner (ai.ts).
 //
 // Reports (reports.ts): POST /report (NIP-98) lets a registered key tell the operator about
 // another key, with recent messages only if the reporter chose to attach them. Nothing is
@@ -48,6 +50,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { verifyEvent, type NostrEvent } from 'nostr-tools/pure';
 
+import { AI_PER_MINUTE, AiKeys, HELD_OWNER_BANNED, HELD_OWNER_DELETED, checkAiCard } from './ai';
 import { Members, turnstileOk, type Member } from './members';
 import { MAX_DEVICES, Vapid, allowedEndpoint, nip98, validKeys, type PushKeys } from './push';
 import { Reports, parseReport } from './reports';
@@ -148,6 +151,7 @@ const INFO = {
     backups:
       'Recovery backups: an id derived from the recovery code, the ciphertext, a signing key also derived from the code (not the account key) and when it was last uploaded. Kept until the person deletes it.',
     turn: 'Nothing. Short-lived call relay (TURN) credentials are made per request and not kept.',
+    ai: "AI keys that registered as an AI: the AI's key, its owner's key (from the owner's signed card) and when, and how many envelopes each AI key and each owner sent per day (kept two days).",
     deleted:
       'Deleted accounts: the key and when it was deleted, so it cannot register again. Everything else under the key is deleted at once.',
     reports:
@@ -301,6 +305,7 @@ export class Relay extends DurableObject<Env> {
       // Already there.
     }
     this.members = new Members(this.sql);
+    this.ai = new AiKeys(this.sql);
     this.reports = new Reports(this.sql);
     this.vapid = env.VAPID_JWK ? new Vapid(env.VAPID_JWK) : null;
     this.devPush = env.DEV_PUSH === '1';
@@ -343,6 +348,9 @@ export class Relay extends DurableObject<Env> {
   }
 
   members: Members;
+  ai: AiKeys;
+  // AI keys: envelopes a minute (memory only; the daily counts are in ai_counts).
+  aiMinute = new Buckets(AI_PER_MINUTE, AI_PER_MINUTE / 60);
   // Registering: per address. Without an invite 10 at once, then one every 10 minutes;
   // with one (or just asking) 60 at once, then one a second.
   openJoinRate = new Buckets(10, 1 / 600);
@@ -358,6 +366,9 @@ export class Relay extends DurableObject<Env> {
    * POST /register, signed (NIP-98) by the key itself. Body: {} to ask, {invite} or
    * {turnstile} to register. An open key sending an invite becomes an invite key.
    * Answers {member, via, trusted, code}; code is this key's own invite code, if it may invite.
+   * {ai_card}: the key is an AI and this is its owner card (kind 25070, signed by the owner, p =
+   * this key, not run out; the owner a registered key that is not stopped). The key must already
+   * be registered (or register in the same call). Then {ai: true}; a bad card answers 400.
    */
   async registerRoute(req: Request, ip: string): Promise<Response> {
     const fail = (status: number, error: string) => Response.json({ error }, { status, headers: CORS });
@@ -366,7 +377,7 @@ export class Relay extends DurableObject<Env> {
     if (body.length > 4096) return fail(413, 'too large');
     const pubkey = await nip98(req, body, this.signedFor('/register'));
     if (!pubkey) return fail(401, 'auth-required');
-    let ask: { invite?: unknown; turnstile?: unknown };
+    let ask: { invite?: unknown; turnstile?: unknown; ai_card?: unknown };
     try {
       ask = JSON.parse(body || '{}') ?? {};
     } catch {
@@ -392,6 +403,14 @@ export class Relay extends DurableObject<Env> {
       m = this.members.get(pubkey);
     }
     if (!m && inviteError) return fail(400, inviteError);
+    if (ask.ai_card !== undefined && ask.ai_card !== null) {
+      if (!m) return fail(403, 'restricted: register first (POST /register)');
+      const card = checkAiCard(ask.ai_card, pubkey);
+      if ('error' in card) return fail(400, card.error);
+      const owner = this.members.get(card.owner);
+      if (!owner || owner.banned || this.members.deleted(card.owner)) return fail(400, 'ai-card-owner-not-member');
+      if (!this.ai.declare(pubkey, card.owner)) return fail(409, 'ai-owner-differs');
+    }
     return Response.json(this.describe(m, inviteError), { headers: CORS });
   }
 
@@ -403,6 +422,7 @@ export class Relay extends DurableObject<Env> {
       trusted: this.members.trusted(m),
       banned: !!m.banned,
       code: this.members.code(m),
+      ai: !!this.ai.owner(m.pubkey),
       ...(inviteError ? { inviteError } : {}),
     };
   }
@@ -411,6 +431,8 @@ export class Relay extends DurableObject<Env> {
    * POST /admin, signed (NIP-98) by an operator key. Body: {action, pubkey, invitees?, per_day?}.
    * {action: 'reports'} lists the latest reports; with pubkey, the reports about that key.
    * {action: 'stats'} the exact daily totals; {action: 'members'} how many keys registered, by how.
+   * {action: 'ais'} owners of AI keys with how many each has; with pubkey (an owner), that owner's
+   * AI keys. {action: 'ai-limit', pubkey: <owner>, per_day} changes one owner's daily AI total.
    */
   async adminRoute(req: Request): Promise<Response> {
     const body = await req.text();
@@ -426,13 +448,27 @@ export class Relay extends DurableObject<Env> {
     if (a?.action === 'reports' && a.pubkey === undefined) return Response.json(this.reports.latest(), { headers: CORS });
     if (a?.action === 'stats') return Response.json(this.stats.recent(183), { headers: CORS });
     if (a?.action === 'members') return Response.json(this.members.counts(), { headers: CORS });
+    if (a?.action === 'ais' && a.pubkey === undefined) return Response.json(this.ai.list(), { headers: CORS });
     if (typeof a?.action !== 'string' || typeof a.pubkey !== 'string' || !/^[0-9a-f]{64}$/.test(a.pubkey)) {
       return new Response('invalid', { status: 400, headers: CORS });
     }
     if (a.action === 'reports') return Response.json(this.reports.about(a.pubkey), { headers: CORS });
+    if (a.action === 'ais') return Response.json(this.ai.ofOwner(a.pubkey), { headers: CORS });
+    if (a.action === 'ai-limit') {
+      if (this.ai.setOwnerLimit(a.pubkey, a.per_day) === null) return new Response('invalid', { status: 400, headers: CORS });
+      return Response.json({ changed: 1, per_day: this.ai.ownerLimit(a.pubkey) }, { headers: CORS });
+    }
+    // The keys this action stops or lets back by name (the key and, with invitees, those it invited).
+    const named = [a.pubkey];
+    if (a.invitees === true) for (const r of this.sql.exec('SELECT pubkey FROM members WHERE invited_by = ?', a.pubkey).toArray()) named.push(r.pubkey as string);
+    if (a.action === 'ban' || a.action === 'unban') for (const k of named) this.ai.clearHold(k);
     const changed = this.members.admin(a.action, a.pubkey, { invitees: a.invitees === true, per_day: a.per_day as number });
     if (changed === null) return new Response('invalid', { status: 400, headers: CORS });
-    return Response.json({ changed, member: this.describe(this.members.get(a.pubkey)) }, { headers: CORS });
+    // An AI is part of its owner, not an invitee: stopping an owner stops their AI keys too.
+    let ais = 0;
+    if (a.action === 'ban') for (const k of named) ais += this.ai.holdAisOf(k, HELD_OWNER_BANNED);
+    if (a.action === 'unban') for (const k of named) ais += this.ai.releaseAisOf(k);
+    return Response.json({ changed, ais, member: this.describe(this.members.get(a.pubkey)) }, { headers: CORS });
   }
 
   reports: Reports;
@@ -529,6 +565,9 @@ export class Relay extends DurableObject<Env> {
     const push = this.sql.exec('DELETE FROM push_devices WHERE pubkey = ?', pubkey).rowsWritten;
     this.pendingMessages.delete(pubkey);
     this.members.markDeleted(pubkey);
+    this.ai.forget(pubkey);
+    // Its AI keys cannot go on sending without an owner: stopped for good.
+    const ais = this.ai.holdAisOf(pubkey, HELD_OWNER_DELETED);
     for (const ws of this.ctx.getWebSockets()) {
       if ((ws.deserializeAttachment() as Attachment)?.pubkey !== pubkey) continue;
       try {
@@ -537,7 +576,7 @@ export class Relay extends DurableObject<Env> {
         // Already closed.
       }
     }
-    return Response.json({ deleted: true, already, envelopes, stamps: shas.length, push }, { headers: CORS });
+    return Response.json({ deleted: true, already, envelopes, stamps: shas.length, push, ais }, { headers: CORS });
   }
 
   ipBytes = new Buckets(FILE_RATE.ip.burst, FILE_RATE.ip.perSecond);
@@ -808,6 +847,7 @@ export class Relay extends DurableObject<Env> {
     this.sql.exec('DELETE FROM events WHERE received_at < ?', now() - RETENTION_SECONDS);
     this.members.forgetOldInvites();
     this.reports.forgetOld();
+    this.ai.forgetOld();
     await this.ctx.storage.setAlarm(Date.now() + 24 * 60 * 60 * 1000);
   }
 
@@ -879,6 +919,15 @@ export class Relay extends DurableObject<Env> {
     }
     if (!verifyEvent(ev)) return reply(false, 'invalid: bad signature');
     if (expired(ev)) return reply(false, 'invalid: expired');
+    // An AI key (it registered as one, ai.ts): its own limits, per key and per owner, counted in
+    // envelopes. Checked here, after the person limits, so only well-formed envelopes count.
+    const aiOwner = this.ai.owner(att.pubkey);
+    if (aiOwner) {
+      const full = this.ai.dayFull(att.pubkey, aiOwner);
+      if (full) return reply(false, full);
+      if (!this.aiMinute.take(att.pubkey)) return reply(false, 'rate-limited: ai-minute: this AI sends too fast');
+      this.ai.add(att.pubkey, aiOwner);
+    }
 
     const p = ps[0][1];
     // The recipient deleted their account: say OK (the sender learns nothing, and its app does

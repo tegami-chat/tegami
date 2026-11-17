@@ -216,6 +216,7 @@ const commands = {
       agent.saveState();
     };
     agent.stopListeners.add((stop) => log(stop ? 'stopped by the owner: no replies and nothing sent until resumed' : 'resumed by the owner'));
+    agent.aiLimitListeners.add((reason, until) => log(`the relay's AI limit (${reason}): nothing is sent until ${new Date(until * 1000).toISOString()}`));
     // Not registered: replies would be refused by the relay. Say so (the log) and keep going.
     agent
       .register()
@@ -256,6 +257,14 @@ const commands = {
     // Listen before connecting: the relay hands over waiting messages right after login.
     agent.listeners.add(consider);
     await agent.connect();
+    // With its owner's card, this AI is registered at the relay as an AI (relay/src/ai.ts).
+    agent
+      .declareAi()
+      .then((r) => {
+        if (r?.ai) log("registered with the relay as its owner's AI");
+        else if (r) log(`could not register with the relay as an AI: ${r.error ?? 'unknown'}`);
+      })
+      .catch(() => {});
     // Messages saved earlier (by `send` or the MCP server) but never answered.
     for (const m of agent.messages) consider(m);
     async function drain() {
@@ -269,6 +278,8 @@ const commands = {
         const prompt = batch.map((m) => `${name}: ${m.text}`).join('\n');
         try {
           if (agent.stopped) throw new Error('stopped by the owner');
+          // The relay's AI limit holds this AI back: do not ask the AI for a reply that cannot go.
+          if (agent.aiPaused()) throw new Error("held back by the relay's AI limit");
           // The daily limit is reached: do not even ask the AI (an API key costs money).
           if (!agent.canSendToday(peer)) throw Object.assign(new Error('daily limit'), { code: 'DAILY_LIMIT' });
           const text = await reply(prompt, { peer });
