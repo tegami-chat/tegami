@@ -292,7 +292,10 @@ export async function callApi(kind, { url, model, key, system, turns }) {
 function run(commandLine, input, cwd, env = process.env, { timeout = 0 } = {}) {
   return new Promise((resolve, reject) => {
     // One command line through the shell, so `claude` (claude.cmd on Windows) is found.
-    const p = spawn(commandLine, { cwd, env, shell: true, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
+    // With a timeout on macOS and Linux, the shell leads its own process group, so killTree can
+    // stop the group (the shell and `claude` under it), not only the shell.
+    const detached = timeout > 0 && process.platform !== 'win32';
+    const p = spawn(commandLine, { cwd, env, shell: true, windowsHide: true, detached, stdio: ['pipe', 'pipe', 'pipe'] });
     let out = '';
     let err = '';
     let timer;
