@@ -93,7 +93,10 @@ test('a 1:1 chat works the same way with two people', () => {
 test('malformed asks and group notes are refused', () => {
   assert.equal(A.parseSendAsk(JSON.stringify({ v: 1, to: 'x', text: 'hi' })), null);
   assert.equal(A.parseSendAsk(JSON.stringify({ v: 1, to: B, text: '  ' })), null);
-  assert.deepEqual(A.parseSendAsk(JSON.stringify({ v: 1, to: B, text: 'hi', n: 0.5 })), { to: B, text: 'hi' });
+  // Left out, readOthers counts as read (Agents Rule of Two); only an explicit false says otherwise.
+  assert.deepEqual(A.parseSendAsk(JSON.stringify({ v: 1, to: B, text: 'hi', n: 0.5 })), { to: B, text: 'hi', readOthers: true });
+  assert.deepEqual(A.parseSendAsk(JSON.stringify({ v: 1, to: B, text: 'hi', readOthers: false })), { to: B, text: 'hi', readOthers: false });
+  assert.deepEqual(A.parseSendAsk(JSON.stringify({ v: 1, to: B, text: 'hi', readOthers: 0 })), { to: B, text: 'hi', readOthers: true });
   assert.equal(A.parseAiGroup(JSON.stringify({ t: 'invite', members: [ME], ai: AI, name: 'x' })), null);
   // The AI cannot be one of the members.
   assert.equal(A.parseAiGroup(JSON.stringify({ t: 'invite', members: [ME, AI], ai: AI, name: 'x' })), null);
