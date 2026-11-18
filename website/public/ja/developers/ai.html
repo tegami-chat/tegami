@@ -53,13 +53,13 @@
 <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dp.ai.t">自分のAIがどうつながり、何を読めて、何がAIの会社に渡るか。</p>
 <ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">「これから」の札の意味：</li><li data-i18n="dv.lg.built"><span class="tag built">公開待ち</span>コードを書き終えて、本番に出す前のもの</li><li data-i18n="dv.lg.decided"><span class="tag decided">決定済み</span>方針を決めて、コードはまだのもの</li><li data-i18n="dv.lg.idea"><span class="tag idea">検討中</span>まだ決めていないもの</li></ul>
 <details><summary data-i18n="d.137">AIはどうつながりますか？ Tegamiのサーバーで動いているのですか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.138">Tegamiのサーバーでは動きません。自分のPCで<code>tegami-agent</code>（Node.js）を動かすと、AIが固有のNostrの鍵を持ち、人間のユーザーと同じリレーと同じ暗号化方式で話します。返事は、既定ではPC上のClaude Code（<code>claude -p</code>）が書きます（<code>--command</code>で、標準入力を読んで返事を出す別のプログラムに替えられます）。AIの契約やログイン情報はPCの中に留まってTegamiには渡りません。さらにMCPサーバーとしても動作するため、Claude Codeから「Tegamiで送って」と頼めます。</p></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.139">つなぐにはコマンドを打つ必要があります。そのまま使えるAIはClaude Codeだけで、ほかのAIは自分で<code>--command</code>に渡すプログラムを用意する必要があります。</p></div>
+<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.138">Tegamiのサーバーでは動きません。自分のパソコンで<code>tegami-agent</code>（Node.js）を動かすと、AIが固有のNostrの鍵を持ち、人間のユーザーと同じリレーと同じ暗号化方式で話します。返事は、既定ではパソコン上のClaude Code（<code>claude -p</code>）が書きます（<code class="whitespace-nowrap">--command</code>で、標準入力を読んで返事を出す別のプログラムに替えられます）。AIの契約やログイン情報はパソコンの中に留まってTegamiには渡りません。さらにMCPサーバーとしても動作するため、Claude Codeから「Tegamiで送って」と頼めます。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.139">つなぐにはコマンドを打つ必要があります。そのまま使えるAIはClaude Codeだけで、ほかのAIは自分で<code class="whitespace-nowrap">--command</code>に渡すプログラムを用意する必要があります。</p></div>
 <div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.140"><span class="tag built">公開待ち</span>PCに出るQRコードをアプリで読むだけで、AIを友だちに追加できるようにしました。</li>
+<li data-i18n="d.140"><span class="tag built">公開待ち</span>パソコンに出るQRコードをアプリで読むだけで、AIを友だちに追加できるようにしました。</li>
 <li data-i18n="d.141"><span class="tag built">公開待ち</span>手元で動くモデル（Ollamaなど）や、ユーザー自身のAPIキー（Anthropic、OpenAI、Gemini、OpenRouter）でも返事を書けます。</li>
-<li data-i18n="d.142"><span class="tag built">公開待ち</span>AIが持ち主の名前でメッセージを送れるようにしました。最初の設定では、送る前に持ち主が確かめる形だけが使えます。</li>
-<li data-i18n="d.143"><span class="tag built">公開待ち</span>全員が同意したグループや1対1のトークにAIを招く仕組みも作りました。最初の設定では使えず、使う人が自分で有効にします。</li>
+<li data-i18n="d.142"><span class="tag built">公開待ち</span>AIが持ち主の名前でメッセージを送れるようにしました。この版では、送る前に持ち主が確かめる形だけが使えます。持ち主に聞かずに送る形は、後の版で使えるようにします。</li>
+<li data-i18n="d.143"><span class="tag built">公開待ち</span>全員が同意したグループや1対1のトークにAIを招く仕組みも作りました。この版では使えません。後の版で使えるようにします。</li>
 <li data-i18n="d.144"><span class="tag decided">決定済み</span>Tegamiの公式AIは置きません。</li>
 </ul></div>
 </div></details>
@@ -69,13 +69,14 @@
 <ul>
 <li data-i18n="d.147">AIが自動で返事をするのは、持ち主が許可した相手（<code>--trust</code>）だけです。友だちでない人のメッセージは、中身をAIに見せず、何人から新しいメッセージが来ているかだけをAIに伝えます。</li>
 <li data-i18n="d.148">友だちとのトークをAIに読ませる場合も、アプリ内のスイッチで許したときに限り、その1対1のトークの最新30通までを10分で消える封筒でAIに渡します。その際AIは下書きを作るだけで、送るのは本人です。</li>
-<li data-i18n="d.149">そのスイッチは、持ち主の鍵を持つアプリ側に置いています。AIが動くPCにスイッチを置くと、AI自身が設定を書き換えてしまうおそれがあるためです。</li>
+<li data-i18n="d.149">そのスイッチは、持ち主の鍵を持つアプリ側に置いています。AIが動くパソコンにスイッチを置くと、AI自身が設定を書き換えてしまうおそれがあるためです。</li>
 </ul></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.150">AIの秘密鍵は無人稼働を続けるためにPC上に暗号化せず保存しています（SSH鍵と同じ扱い）。また、AIに読ませた内容はAIの提供会社にも渡ります。トークの相手が「自分の文を相手のAIに読ませない」と断る仕組みもまだありません。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.150">AIの秘密鍵は無人稼働を続けるためにパソコン上に暗号化せず保存しています（SSH鍵と同じ扱い）。また、AIに読ませた内容はAIの提供会社にも渡ります。トークの相手が「自分の文を相手のAIに読ませない」と断る仕組みもまだありません。</p></div>
 <div class="ph next"><b data-i18n="dv.next">これから</b><ul>
 <li data-i18n="d.151"><span class="tag built">公開待ち</span>相手が「自分の文を相手のAIに読ませない」を選べ、1通ずつ「AIに読ませない」の印も付けられるようにしました。消えるメッセージもAIには渡しません。公式のアプリがその印を見てAIに渡さない仕組みなので、改造したアプリや手でのコピーまでは止められません。</li>
 <li data-i18n="d.152"><span class="tag built">公開待ち</span>AIの秘密鍵とAPIキーを、OSの保管庫で暗号化して保存するようにしました（Windowsで確かめ済み。MacとLinuxは未確認）。</li>
 <li data-i18n="d.153"><span class="tag built">公開待ち</span>AIが送る量に上限を置き、リンクを含む文は必ず持ち主が確認するようにしました。「すべてオフにする」操作で、自分のAIをスマートフォンから一度に止められます。</li>
+<li data-i18n="d.414"><span class="tag built">公開待ち</span>AIが送る量の上限：アプリは、AIが聞かずに送れる数を、初期設定で1分に5通、1つのトークで続けて20通、1日100通にしています（変えられますが、1分60通、1つのトークで200通、1日1000通までです）。リレーは、AIの鍵1つにつき1分30通、1日600通の封筒まで受け付け、持ち主のAIをすべて合わせても1日600通までです。5人のグループへの1通は封筒6通になります。</li>
 </ul></div>
 </div></details>
 

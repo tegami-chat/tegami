@@ -62,7 +62,7 @@
 <tr><td data-i18n="d.175">前方秘匿性</td><td data-i18n="d.176">Letter Sealingは非対応</td><td data-i18n="d.177">あり（Signal Protocolを使用）</td><td data-i18n="d.178">あり（Double Ratchet、PQXDH）</td><td data-i18n="d.179">シークレットチャットのみ</td><td data-i18n="d.180">なし</td></tr>
 <tr><td data-i18n="d.181">運営に見えるメタデータ</td><td data-i18n="d.182">やり取りの相手や日時をサーバーに記録する旨を記載</td><td data-i18n="d.183">接続情報と使い方の情報を収集する旨を記載</td><td data-i18n="d.184">運営に必要な最小限のみ。送り主を隠す仕組み（Sealed Sender）がある</td><td data-i18n="d.185">IPアドレスなどを最大12か月持つことがある旨を記載</td><td data-i18n="d.186">宛先、時刻、大きさ、接続している鍵、IPアドレス。受け付ける時は送り主の鍵も分かるが保存しない</td></tr>
 <tr><td data-i18n="d.187">広告</td><td data-i18n="d.188">トーク一覧の最上部に出る</td><td data-i18n="d.189">アップデートの画面（ステータスとチャンネル）に出る。個人のチャットは広告に使わない旨を記載</td><td data-i18n="d.190">なし。寄付で運営</td><td data-i18n="d.191">登録者1000人を超える公開チャンネルに出る</td><td data-i18n="d.192">なし</td></tr>
-<tr><td data-i18n="d.193">AI</td><td data-i18n="d.194">運営のAI（Agent i）。使うとそのトークの最大300通をLINEヤフーが取得する</td><td data-i18n="d.195">運営のAI（Meta AI）</td><td data-i18n="d.196">公式の文書では見つけていない</td><td data-i18n="d.197">運営のAIの要約と、誰でも作れるボット</td><td data-i18n="d.198">運営のAIは置かない。自分のPCのAIを友だちとして並べる</td></tr>
+<tr><td data-i18n="d.193">AI</td><td data-i18n="d.194">運営のAI（Agent i）。使うとそのトークの最大300通をLINEヤフーが取得する</td><td data-i18n="d.195">運営のAI（Meta AI）</td><td data-i18n="d.196">公式の文書では見つけていない</td><td data-i18n="d.197">運営のAIの要約と、誰でも作れるボット</td><td data-i18n="d.198">運営のAIは置かない。自分のパソコンのAIを友だちとして並べる</td></tr>
 <tr><td data-i18n="d.199">運営</td><td data-i18n="d.200">LINEヤフー（ソフトバンクとNAVERが半分ずつ持つ会社が議決権の62.4%を保有）</td><td data-i18n="d.201">Meta</td><td data-i18n="d.202">アメリカの非営利団体</td><td data-i18n="d.203">Telegram Messenger Inc.</td><td data-i18n="d.204">日本の個人</td></tr>
 <tr><td data-i18n="d.205">コードの公開</td><td data-i18n="d.206">アプリもサーバーも見つからなかった</td><td data-i18n="d.207">未確認</td><td data-i18n="d.208">アプリもサーバーもAGPL-3.0</td><td data-i18n="d.209">アプリは公開。サーバーは非公開</td><td data-i18n="d.210">アプリもリレーもAGPL-3.0</td></tr>
 </table></div>
@@ -77,7 +77,7 @@
 
 <details><summary data-i18n="d.216">0xchatとは何が違いますか？</summary><div>
 <div class="ph now"><b data-i18n="dv.now">いま</b>
-<p data-i18n="d.217">0xchatは、Nostrのチャット機能をほぼ全部備えたアプリであり、Tegamiとは向いている方向が異なります。以下は2026-11-16に0xchatの公開リポジトリ（<code>0xchat-app/0xchat-app-main</code>）のコードで確かめた範囲での比較です。</p>
+<p data-i18n="d.217">0xchatは、Nostrのチャット機能をほぼ全部備えたアプリであり、Tegamiとは向いている方向が異なります。以下は2026-11-16に0xchatの公開リポジトリ（<code class="whitespace-nowrap">0xchat-app/0xchat-app-main</code>）のコードで確かめた範囲での比較です。</p>
 <div class="wrap"><table>
 <tr><th data-i18n="d.218"></th><th data-i18n="d.219">0xchat</th><th data-i18n="d.220">Tegami</th></tr>
 <tr><td data-i18n="d.221">つながる相手</td><td data-i18n="d.222">Nostrの誰とでも。公開リレー（damus、nos.lolなど）を使い、運営のリレーは閉鎖済み</td><td data-i18n="d.223">Tegamiに登録した人のみ。専用のリレー</td></tr>
@@ -85,8 +85,8 @@
 <tr><td data-i18n="d.227">外部の署名機能</td><td data-i18n="d.228">NIP-46とNIP-55（Amberなど）に対応</td><td data-i18n="d.229">対応していない</td></tr>
 <tr><td data-i18n="d.230">鍵の書き出し</td><td data-i18n="d.231">設定でnsecを表示してコピーできる</td><td data-i18n="d.232">できない</td></tr>
 <tr><td data-i18n="d.233">鍵をなくした時</td><td data-i18n="d.234">控えを預ける仕組みは見つからなかった。nsecを自分で保管する前提</td><td data-i18n="d.235">復旧コードで戻せる</td></tr>
-<tr><td data-i18n="d.236">AI</td><td data-i18n="d.237">翻訳（端末内またはLibreTranslate）のみ。AIのボットやMCPはコードに見つからなかった</td><td data-i18n="d.238">自分のPCのAIが友だちとして並ぶ。MCP対応。AIに許す範囲をアプリで決める</td></tr>
-<tr><td data-i18n="d.239">グループ</td><td data-i18n="d.240">NIP-17のグループ、NIP-28のチャンネル、NIP-29のリレーのグループ。MLSは姉妹アプリのXChatで対応</td><td data-i18n="d.241">NIP-17のグループのみ</td></tr>
+<tr><td data-i18n="d.236">AI</td><td data-i18n="d.237">翻訳（端末内またはLibreTranslate）のみ。AIのボットやMCPはコードに見つからなかった</td><td data-i18n="d.238">自分のパソコンのAIが友だちとして並ぶ。MCP対応。AIに許す範囲をアプリで決める</td></tr>
+<tr><td data-i18n="d.239">グループ</td><td data-i18n="d.240">NIP-17のグループ、<span class="whitespace-nowrap">NIP-28</span>のチャンネル、NIP-29のリレーのグループ。MLSは姉妹アプリのXChatで対応</td><td data-i18n="d.241">NIP-17のグループのみ</td></tr>
 <tr><td data-i18n="d.242">通話</td><td data-i18n="d.243">NIP-100のWebRTC。中継サーバーは利用者が設定する</td><td data-i18n="d.244">暗号化した封筒で合図を送るWebRTC。中継サーバーはまだ無い</td></tr>
 <tr><td data-i18n="d.245">端末</td><td data-i18n="d.246">iPhone、Android、Windows、Mac、Linuxのアプリ。ブラウザ版は見つからなかった</td><td data-i18n="d.247">いまはブラウザ版のみ。アプリは準備中</td></tr>
 <tr><td data-i18n="d.248">そのほか</td><td data-i18n="d.249">Tor、Cashuのウォレット、Zap、翻訳を内蔵</td><td data-i18n="d.250">招待券と人間の確認による登録、運営による鍵の停止</td></tr>

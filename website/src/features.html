@@ -91,17 +91,19 @@ tailwind.config = {
       <div class="mt-10 grid gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
         <div>
           <h3 class="font-bold" data-i18n="ai.pick.h">Use the AI you like</h3>
-          <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="ai.pick.t">Claude, ChatGPT, Gemini, or one running on your own computer. Tegami never picks for you.</p>
+          <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="ai.pick.t">Claude, ChatGPT, Gemini, or one running on your own computer. Claude Code works as it is; the others use your own API key or a model on your computer. Tegami never picks for you.</p>
         </div>
         <div>
           <h3 class="font-bold" data-i18n="ai.talk.h">Talk with your AI</h3>
-          <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="ai.talk.t">Your AI sits in your chat list like a friend. Message it from anywhere, anytime.</p>
+          <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="ai.talk.t">Your AI sits in your chat list like a friend. Message it from anywhere, anytime, as long as tegami-agent is running on your computer.</p>
         </div>
         <div>
+          <span class="mb-1.5 inline-block rounded-full bg-[#2b2140] px-2.5 text-xs text-nostr-300" data-i18n="next">Coming soon</span>
           <h3 class="font-bold" data-i18n="ai.join.h">Bring AI into a chat</h3>
           <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="ai.join.t">Invite an AI into a group to summarize, look things up or take notes, once everyone agrees.</p>
         </div>
         <div>
+          <span class="mb-1.5 inline-block rounded-full bg-[#2b2140] px-2.5 text-xs text-nostr-300" data-i18n="next">Coming soon</span>
           <h3 class="font-bold" data-i18n="ai.each.h">Let AIs talk to each other</h3>
           <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="ai.each.t">Your AI and a friend's AI can set up plans and swap details, when you both allow it.</p>
         </div>
@@ -111,7 +113,7 @@ tailwind.config = {
         </div>
         <div>
           <h3 class="font-bold" data-i18n="ai.own.h">Make it your own</h3>
-          <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="ai.own.t">Build your own bots and automations with the API and MCP.</p>
+          <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="ai.own.t">Build your own bots and automations with MCP. The API is coming soon.</p>
         </div>
       </div>
     </div>
@@ -139,9 +141,9 @@ tailwind.config = {
           <code class="overflow-x-auto whitespace-nowrap rounded-md bg-black/40 px-3 py-2 text-[13px] text-neutral-300">node agent.mjs init --name Claude</code>
         </div>
         <div class="flex min-w-0 flex-col gap-2 rounded-2xl border border-night-line bg-night-card p-6">
-          <span class="self-start rounded-full bg-[#2b2140] px-2.5 text-xs text-nostr-300" data-i18n="next">Coming soon</span>
+          <span class="self-start rounded-full bg-[#2b2140] px-2.5 text-xs text-nostr-300" data-i18n="mk.api.tag">MCP available, API coming soon</span>
           <h3 class="font-bold" data-i18n="mk.api.h">API and MCP</h3>
-          <p class="text-sm text-neutral-400" data-i18n="mk.api.t">Read and send messages from your own programs and AI tools.</p>
+          <p class="text-sm text-neutral-400" data-i18n="mk.api.t">MCP works today: your AI can read and send messages through tegami-agent. The Tegami API is coming soon.</p>
         </div>
         <div class="flex min-w-0 flex-col gap-2 rounded-2xl border border-night-line bg-night-card p-6">
           <span class="self-start rounded-full bg-[#2b2140] px-2.5 text-xs text-nostr-300" data-i18n="next">Coming soon</span>
@@ -252,7 +254,7 @@ const JA = {
   'p1.h': 'プラットフォームから自由に。',
   'p1.t': '気持ち悪い広告も、見たくないニュースも、やりたくないゲームも、いらない機能も、全部ありません。あなたの個人情報を、企業のマーケティングに売ることはありません。',
   'p2.h': 'AIを自由に使う。',
-  'p2.t': '自分のAIと、簡単につながります。APIやMCPで、メッセージを自由に扱えます。もちろん、AIを断ることも、AIを使わないことも、あなたの自由です。',
+  'p2.t': '自分のAIと、簡単につながります。MCPで、メッセージを自由に扱えます（APIは準備中です）。もちろん、AIを断ることも、AIを使わないことも、あなたの自由です。',
   'p3.h': '誰にも覗かれない。',
   'p3.t': 'メッセージは端末の中で暗号化してから送り、端末に保存します。Tegamiのサーバーを通る間も暗号化したままなので、運営者にも読めません。',
   'now': '提供中',
@@ -267,8 +269,9 @@ const JA = {
   'mk.share.t': '自分で作った画面やツールは、ほかの人にも共有できます。',
   'mk.bots.h': 'AIやボットをつなぐ',
   'mk.bots.t': 'パソコン上のAIやボットにTegamiのアカウントを持たせれば、普通の相手と同じようにトークできます。',
+  'mk.api.tag': 'MCPは使えます。APIは準備中',
   'mk.api.h': 'APIとMCP',
-  'mk.api.t': '自作のプログラムやAIツールから、メッセージを読んだり送ったりできます。',
+  'mk.api.t': 'MCPは今すぐ使えます。自分のAIが、tegami-agentを通してメッセージを読んだり送ったりできます。TegamiのAPIは準備中です。',
   'mk.relay.h': '自前のサーバーを動かす',
   'mk.relay.t': '会社や学校、コミュニティで、自分たち専用のメッセージサーバーを持てます。',
   'mk.agpl.h': 'AGPL-3.0',
@@ -291,7 +294,7 @@ const JA = {
   'faq.collect.q': 'Tegamiは何を記録していますか？',
   'faq.ai.q': '自分のAIはどうやってつなぎますか？',
   'faq.spam.q': '迷惑なメッセージへの対策はありますか？',
-  'faq.spam.a': '知らない人からのメッセージは別の受信箱に届きます。どの相手でもブロックと通報ができます。',
+  'faq.spam.a': '知らない人からのメッセージは「知らない人から」の欄にまとまります。どの相手でもブロックと通報ができます。',
   'faq.shutdown.q': 'もしTegamiが終了したらどうなりますか？',
   'faq.shutdown.a': 'コードを公開しているので、誰でも動かし続けられます。トーク履歴もいつでも書き出せます。',
   'don.h': 'Tegamiの独立を守るために。',
@@ -325,9 +328,9 @@ const JA = {
   'feat.move': '機種変更の引き継ぎ',
   'ai.h': 'AIを自由に。',
   'ai.pick.h': '好きなAIを使う',
-  'ai.pick.t': 'Claude、ChatGPT、Gemini、自分のパソコンで動かしているAI。どれを使うかは、Tegamiではなくあなたが決めます。',
+  'ai.pick.t': 'Claude、ChatGPT、Gemini、自分のパソコンで動かしているAI。Claude Codeはそのまま使え、ほかは自分のAPIキーか手元のモデルで使います。どれを使うかは、Tegamiではなくあなたが決めます。',
   'ai.talk.h': 'AIと話す',
-  'ai.talk.t': 'あなたのAIが、友だちと同じようにトーク一覧に並びます。いつでも、どこからでも話しかけられます。',
+  'ai.talk.t': 'あなたのAIが、友だちと同じようにトーク一覧に並びます。パソコンでtegami-agentが動いている間は、いつでも、どこからでも話しかけられます。',
   'ai.join.h': 'AIをトークに呼ぶ',
   'ai.join.t': 'グループにAIを呼んで、話の要約や調べもの、メモを任せられます。参加には全員の同意が必要です。',
   'ai.each.h': 'AI同士でやり取りさせる',
@@ -335,7 +338,7 @@ const JA = {
   'ai.many.h': '複数のAIを使う',
   'ai.many.t': 'AIはいくつでも追加できます。それぞれに名前や顔、役割を設定できます。',
   'ai.own.h': '自分でカスタマイズする',
-  'ai.own.t': 'APIとMCPで、自分だけのボットや自動化の仕組みを作れます。',
+  'ai.own.t': 'MCPで、自分だけのボットや自動化の仕組みを作れます。APIは準備中です。',
   'end.h': 'トークはあなたのもの。<br>AIの持ち込み自由。',
 };
 const EN = {};

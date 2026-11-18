@@ -58,7 +58,7 @@
 <tr><td data-i18n="d.316">アプリ</td><td data-i18n="d.317">Expo（React Native、SDK 57）。いまはブラウザ版を<code>app.tegami.chat</code>（Cloudflare Workers）で配信中。iPhone版とAndroid版も同じコードから作る予定</td><td data-i18n="d.318"><code>client/</code></td></tr>
 <tr><td data-i18n="d.319">リレー</td><td data-i18n="d.320">Cloudflare Workersと1つのDurable Object（SQLite）。<code>wss://relay.tegami.chat</code></td><td data-i18n="d.321"><code>relay/</code></td></tr>
 <tr><td data-i18n="d.322">ファイルの置き場</td><td data-i18n="d.323">Cloudflare R2。写真とファイルは30日で削除。スタンプは別の置き場で、本人が消すまで保持</td><td data-i18n="d.324"><code>relay/</code></td></tr>
-<tr><td data-i18n="d.325">AIの友だち</td><td data-i18n="d.326"><code>tegami-agent</code>（Node.js）。自分のPC上で動き、Claude Codeを呼び出す。MCPサーバーとしても動作</td><td data-i18n="d.327"><code>agent/</code></td></tr>
+<tr><td data-i18n="d.325">AIの友だち</td><td data-i18n="d.326"><code>tegami-agent</code>（Node.js）。自分のパソコン上で動き、Claude Codeを呼び出す。MCPサーバーとしても動作</td><td data-i18n="d.327"><code>agent/</code></td></tr>
 <tr><td data-i18n="d.328">サイト</td><td data-i18n="d.329"><code>tegami.chat</code>（Cloudflare Workers）</td><td data-i18n="d.330"><code>website/</code></td></tr>
 </table></div>
 </div></details>
@@ -66,10 +66,10 @@
 <details><summary data-i18n="d.331">暗号仕様</summary><div>
 <div class="wrap"><table>
 <tr><th data-i18n="d.332">使う場所</th><th data-i18n="d.333">方式</th></tr>
-<tr><td data-i18n="d.334">メッセージ</td><td data-i18n="d.335"><span class="whitespace-nowrap">NIP-44</span> v2（secp256k1のECDH、HKDF、ChaCha20、HMAC-SHA256）。NIP-59でsealとgift wrapの二重に包む</td></tr>
-<tr><td data-i18n="d.336">秘密鍵の保管</td><td data-i18n="d.337">パスキーのPRF拡張（<code>userVerification: required</code>）で32バイトを取り、HKDF-SHA256でAES-GCM 256ビットの鍵にして暗号化。PRFが無い環境では、取り出せない設定のAES-GCMの鍵をIndexedDBに置く</td></tr>
+<tr><td data-i18n="d.334">メッセージ</td><td data-i18n="d.335"><span class="whitespace-nowrap">NIP-44</span> v2（secp256k1のECDH、HKDF、ChaCha20、<span class="whitespace-nowrap">HMAC-SHA256</span>）。NIP-59でsealとgift wrapの二重に包む</td></tr>
+<tr><td data-i18n="d.336">秘密鍵の保管</td><td data-i18n="d.337">パスキーのPRF拡張（<code>userVerification: required</code>）で32バイトを取り、<span class="whitespace-nowrap">HKDF-SHA256</span>でAES-GCM 256ビットの鍵にして暗号化。PRFが無い環境では、取り出せない設定のAES-GCMの鍵をIndexedDBに置く</td></tr>
 <tr><td data-i18n="d.338">写真とファイル</td><td data-i18n="d.339">ファイルごとに新しいAES-GCM 256ビットの鍵を生成。鍵と、暗号化した後のデータのsha256は、暗号化したメッセージ（<span class="whitespace-nowrap">kind 15</span>）の中で送信。スタンプは画像とアカウントの秘密鍵から鍵を導出</td></tr>
-<tr><td data-i18n="d.340">復旧コード</td><td data-i18n="d.341">28文字（140ビット）からHKDF-SHA256でバックアップ用の番号、AES-GCMの鍵、署名用のNostrの鍵の3つを作成</td></tr>
+<tr><td data-i18n="d.340">復旧コード</td><td data-i18n="d.341">28文字（140ビット）から<span class="whitespace-nowrap">HKDF-SHA256</span>でバックアップ用の番号、AES-GCMの鍵、署名用のNostrの鍵の3つを作成</td></tr>
 <tr><td data-i18n="d.342">端末の引き継ぎ</td><td data-i18n="d.343">使い捨ての鍵宛てにNIP-44で暗号化し、NIP-40で10分の期限を付けた封筒を使用。使い捨ての秘密鍵はリンクの<code>#</code>より後ろにのみ含める</td></tr>
 <tr><td data-i18n="d.344">通知</td><td data-i18n="d.345">Web Push（VAPID）。中身は端末ごとにRFC 8291（aes128gcm）で暗号化</td></tr>
 <tr><td data-i18n="d.346">通話</td><td data-i18n="d.347">WebRTC（DTLS-SRTP）。合図はNIP-17の封筒（独自のkind 25050、期限1分）</td></tr>
@@ -95,6 +95,9 @@
 <tr><td data-i18n="d.368"><code>GET /stats</code></td><td data-i18n="d.369">週ごとの利用統計（公開）</td></tr>
 <tr><td data-i18n="d.370"><code>POST /crash</code></td><td data-i18n="d.371">ユーザーが許した時のみのエラー報告（保存しない）</td></tr>
 <tr><td data-i18n="d.372"><code>POST /admin</code></td><td data-i18n="d.373">運営の鍵でのみ使える、鍵の停止などの管理操作</td></tr>
+<tr><td data-i18n="d.408"><code>POST /register</code>（AIの登録）</td><td data-i18n="d.409"><span class="tag built">公開待ち</span>AIの鍵の登録。本文に持ち主の署名（kind 25070）を付けて送ると、リレーはその鍵をAIとして覚え、1日の上限を数える</td></tr>
+<tr><td data-i18n="d.410"><code>POST /turn</code></td><td data-i18n="d.411"><span class="tag built">公開待ち</span>通話の中継（TURN）の短い期限の認証情報。登録済みの鍵だけが使える。リクエストの内容は保存しない</td></tr>
+<tr><td data-i18n="d.412"><code>DELETE /account</code></td><td data-i18n="d.413"><span class="tag built">公開待ち</span>アカウントの削除。リレーはその鍵の封筒、スタンプ、通知の宛先、登録を消す</td></tr>
 </table></div>
 </div></details>
 
@@ -106,6 +109,15 @@
 <tr><td data-i18n="d.380">10101</td><td data-i18n="d.381">スタンプ一覧。自分の端末どうしで同期する</td></tr>
 <tr><td data-i18n="d.382">25050</td><td data-i18n="d.383">通話の合図（呼び出し、応答、終了、WebRTCの接続情報）</td></tr>
 <tr><td data-i18n="d.384">25060、25061</td><td data-i18n="d.385">AIへの下書き依頼と、AIからの下書き</td></tr>
+<tr><td data-i18n="d.390">10102</td><td data-i18n="d.391"><span class="tag built">公開待ち</span>友だち、グループ、ブロック、AIの設定の控え。自分の端末どうしで同期する</td></tr>
+<tr><td data-i18n="d.392">10103</td><td data-i18n="d.393"><span class="tag built">公開待ち</span>グループの状態（メンバー、名前、絵、管理者）。変更のたびに全体を送る</td></tr>
+<tr><td data-i18n="d.394">10104</td><td data-i18n="d.395"><span class="tag built">公開待ち</span>AIをトークに招く誘いと、メンバー1人ずつの答え</td></tr>
+<tr><td data-i18n="d.396">25062、25063</td><td data-i18n="d.397"><span class="tag built">公開待ち</span>AIが持ち主の名前でメッセージを送りたいという依頼と、持ち主のアプリの答え</td></tr>
+<tr><td data-i18n="d.398">25064、25065</td><td data-i18n="d.399"><span class="tag built">公開待ち</span>AIが友だち一覧を求める依頼と、アプリが返す一覧</td></tr>
+<tr><td data-i18n="d.400">25066、25067</td><td data-i18n="d.401"><span class="tag built">公開待ち</span>AIがほかの人のAIと話したいという依頼と、答え</td></tr>
+<tr><td data-i18n="d.402">25068</td><td data-i18n="d.403"><span class="tag built">公開待ち</span>AIの1回限りのコードへの答え（QRコードでAIを友だちに追加する時）</td></tr>
+<tr><td data-i18n="d.404">25069</td><td data-i18n="d.405"><span class="tag built">公開待ち</span>「すべてオフにする」。AIに止まるよう伝える</td></tr>
+<tr><td data-i18n="d.406">25070</td><td data-i18n="d.407"><span class="tag built">公開待ち</span>持ち主がAIの鍵に付ける署名（持ち主の証明）。アプリがAIへ渡す</td></tr>
 </table></div>
 </div></details>
 

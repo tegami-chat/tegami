@@ -62,7 +62,7 @@ tailwind.config = {
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.read.q">Who can read my messages?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.read.a">Only you and the people you send them to. Messages are encrypted on your device, so not even Tegami can read them.</p>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.read.a">Only you and the people you send them to. Messages are encrypted on your device, so not even Tegami can read them. There are two exceptions. If you allow your own AI to read a chat, that AI can read it. If you attach messages to a report, the operator can read the ones you attached.</p>
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.phone.q">Do I need a phone number or email?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
@@ -196,7 +196,7 @@ const JA = {
   'p1.h': 'プラットフォームから自由に。',
   'p1.t': '気持ち悪い広告も、見たくないニュースも、やりたくないゲームも、いらない機能も、全部ありません。あなたの個人情報を、企業のマーケティングに売ることはありません。',
   'p2.h': 'AIを自由に使う。',
-  'p2.t': '自分のAIと、簡単につながります。APIやMCPで、メッセージを自由に扱えます。もちろん、AIを断ることも、AIを使わないことも、あなたの自由です。',
+  'p2.t': '自分のAIと、簡単につながります。MCPで、メッセージを自由に扱えます（APIは準備中です）。もちろん、AIを断ることも、AIを使わないことも、あなたの自由です。',
   'p3.h': '誰にも覗かれない。',
   'p3.t': 'メッセージは端末の中で暗号化してから送り、端末に保存します。Tegamiのサーバーを通る間も暗号化したままなので、運営者にも読めません。',
   'now': '提供中',
@@ -212,7 +212,7 @@ const JA = {
   'mk.bots.h': 'AIやボットをつなぐ',
   'mk.bots.t': 'パソコン上のAIやボットにTegamiのアカウントを持たせれば、普通の相手と同じようにトークできます。',
   'mk.api.h': 'APIとMCP',
-  'mk.api.t': '自作のプログラムやAIツールから、メッセージを読んだり送ったりできます。',
+  'mk.api.t': 'MCPは今すぐ使えます。自分のAIが、tegami-agentを通してメッセージを読んだり送ったりできます。TegamiのAPIは準備中です。',
   'mk.relay.h': '自前のサーバーを動かす',
   'mk.relay.t': '会社や学校、コミュニティで、自分たち専用のメッセージサーバーを持てます。',
   'mk.agpl.h': 'AGPL-3.0',
@@ -221,7 +221,7 @@ const JA = {
   'faq.free.q': '無料ですか？ 費用は誰が出しているのですか？',
   'faq.free.a': 'はい、無料です。Tegamiは日本の個人開発者が作っており、投資家も広告もありません。現在は開発者が費用を負担していますが、今後は使う人からの支援でまかなう予定です。',
   'faq.read.q': 'メッセージを読めるのは誰ですか？',
-  'faq.read.a': 'あなたと、送った相手だけです。メッセージは端末の中で暗号化されるので、Tegamiにも読めません。',
+  'faq.read.a': 'あなたと、送った相手だけです。メッセージは端末の中で暗号化されるので、Tegamiにも読めません。例外は2つあります。自分のAIに読ませる許可を出したトークは、そのAIが読めます。通報にメッセージを添えたときは、添えたメッセージを運営者が読めます。',
   'faq.phone.q': '電話番号やメールアドレスは必要ですか？',
   'faq.phone.a': 'いりません。名前を決めるだけで始められます。',
   'faq.devices.q': 'どの端末で使えますか？',
@@ -235,7 +235,7 @@ const JA = {
   'faq.collect.q': 'Tegamiは何を記録していますか？',
   'faq.ai.q': '自分のAIはどうやってつなぎますか？',
   'faq.spam.q': '迷惑なメッセージへの対策はありますか？',
-  'faq.spam.a': '知らない人からのメッセージは別の受信箱に届きます。どの相手でもブロックと通報ができます。',
+  'faq.spam.a': '知らない人からのメッセージは「知らない人から」の欄にまとまります。どの相手でもブロックと通報ができます。',
   'faq.shutdown.q': 'もしTegamiが終了したらどうなりますか？',
   'faq.shutdown.a': 'コードを公開しているので、誰でも動かし続けられます。トーク履歴もいつでも書き出せます。',
   'don.h': 'Tegamiの独立を守るために。',
@@ -269,9 +269,9 @@ const JA = {
   'feat.move': '機種変更の引き継ぎ',
   'ai.h': 'AIを自由に。',
   'ai.pick.h': '好きなAIを使う',
-  'ai.pick.t': 'Claude、ChatGPT、Gemini、自分のパソコンで動かしているAI。どれを使うかは、Tegamiではなくあなたが決めます。',
+  'ai.pick.t': 'Claude、ChatGPT、Gemini、自分のパソコンで動かしているAI。Claude Codeはそのまま使え、ほかは自分のAPIキーか手元のモデルで使います。どれを使うかは、Tegamiではなくあなたが決めます。',
   'ai.talk.h': 'AIと話す',
-  'ai.talk.t': 'あなたのAIが、友だちと同じようにトーク一覧に並びます。いつでも、どこからでも話しかけられます。',
+  'ai.talk.t': 'あなたのAIが、友だちと同じようにトーク一覧に並びます。パソコンでtegami-agentが動いている間は、いつでも、どこからでも話しかけられます。',
   'ai.join.h': 'AIをトークに呼ぶ',
   'ai.join.t': 'グループにAIを呼んで、話の要約や調べもの、メモを任せられます。参加には全員の同意が必要です。',
   'ai.each.h': 'AI同士でやり取りさせる',
@@ -279,7 +279,7 @@ const JA = {
   'ai.many.h': '複数のAIを使う',
   'ai.many.t': 'AIはいくつでも追加できます。それぞれに名前や顔、役割を設定できます。',
   'ai.own.h': '自分でカスタマイズする',
-  'ai.own.t': 'APIとMCPで、自分だけのボットや自動化の仕組みを作れます。',
+  'ai.own.t': 'MCPで、自分だけのボットや自動化の仕組みを作れます。APIは準備中です。',
   'end.h': 'トークはあなたのもの。<br>AIの持ち込み自由。',
 };
 const EN = {};

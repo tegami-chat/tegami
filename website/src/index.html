@@ -81,7 +81,7 @@ tailwind.config = {
     </div>
     <div>
       <h3 class="text-lg font-bold" data-i18n="p2.h">Use AI your way.</h3>
-      <p class="mt-1.5 text-neutral-500 dark:text-neutral-400" data-i18n="p2.t">Connect your own AI in a few taps and work with your messages freely via API and MCP. Of course, you're just as free to say no to AI, or not use it at all.</p>
+      <p class="mt-1.5 text-neutral-500 dark:text-neutral-400" data-i18n="p2.t">Connect your own AI in a few taps and work with your messages freely via MCP (the API is coming soon). Of course, you're just as free to say no to AI, or not use it at all.</p>
       <a href="Tegamiの機能_2026-11-16.html#ai" class="mt-2 inline-block text-sm font-semibold text-forest-600 hover:underline dark:text-forest-300" data-i18n="more.ai">What your AI can do →</a>
     </div>
     <div>
@@ -283,7 +283,7 @@ const JA = {
   'p1.h': 'プラットフォームから自由に。',
   'p1.t': '気持ち悪い広告も、見たくないニュースも、やりたくないゲームも、いらない機能も、全部ありません。あなたの個人情報を、企業のマーケティングに売ることはありません。',
   'p2.h': 'AIを自由に使う。',
-  'p2.t': '自分のAIと、簡単につながります。APIやMCPで、メッセージを自由に扱えます。もちろん、AIを断ることも、AIを使わないことも、あなたの自由です。',
+  'p2.t': '自分のAIと、簡単につながります。MCPで、メッセージを自由に扱えます（APIは準備中です）。もちろん、AIを断ることも、AIを使わないことも、あなたの自由です。',
   'p3.h': '誰にも覗かれない。',
   'p3.t': 'メッセージは端末の中で暗号化してから送り、端末に保存します。Tegamiのサーバーを通る間も暗号化したままなので、運営者にも読めません。',
   'now': '提供中',
@@ -299,7 +299,7 @@ const JA = {
   'mk.bots.h': 'AIやボットをつなぐ',
   'mk.bots.t': 'パソコン上のAIやボットにTegamiのアカウントを持たせれば、普通の相手と同じようにトークできます。',
   'mk.api.h': 'APIとMCP',
-  'mk.api.t': '自作のプログラムやAIツールから、メッセージを読んだり送ったりできます。',
+  'mk.api.t': 'MCPは今すぐ使えます。自分のAIが、tegami-agentを通してメッセージを読んだり送ったりできます。TegamiのAPIは準備中です。',
   'mk.relay.h': '自前のサーバーを動かす',
   'mk.relay.t': '会社や学校、コミュニティで、自分たち専用のメッセージサーバーを持てます。',
   'mk.agpl.h': 'AGPL-3.0',
@@ -322,7 +322,7 @@ const JA = {
   'faq.collect.q': 'Tegamiは何を記録していますか？',
   'faq.ai.q': '自分のAIはどうやってつなぎますか？',
   'faq.spam.q': '迷惑なメッセージへの対策はありますか？',
-  'faq.spam.a': '知らない人からのメッセージは別の受信箱に届きます。どの相手でもブロックと通報ができます。',
+  'faq.spam.a': '知らない人からのメッセージは「知らない人から」の欄にまとまります。どの相手でもブロックと通報ができます。',
   'faq.shutdown.q': 'もしTegamiが終了したらどうなりますか？',
   'faq.shutdown.a': 'コードを公開しているので、誰でも動かし続けられます。トーク履歴もいつでも書き出せます。',
   'don.h': 'Tegamiの独立を守るために。',
@@ -356,9 +356,9 @@ const JA = {
   'feat.move': '機種変更の引き継ぎ',
   'ai.h': 'AIを自由に。',
   'ai.pick.h': '好きなAIを使う',
-  'ai.pick.t': 'Claude、ChatGPT、Gemini、自分のパソコンで動かしているAI。どれを使うかは、Tegamiではなくあなたが決めます。',
+  'ai.pick.t': 'Claude、ChatGPT、Gemini、自分のパソコンで動かしているAI。Claude Codeはそのまま使え、ほかは自分のAPIキーか手元のモデルで使います。どれを使うかは、Tegamiではなくあなたが決めます。',
   'ai.talk.h': 'AIと話す',
-  'ai.talk.t': 'あなたのAIが、友だちと同じようにトーク一覧に並びます。いつでも、どこからでも話しかけられます。',
+  'ai.talk.t': 'あなたのAIが、友だちと同じようにトーク一覧に並びます。パソコンでtegami-agentが動いている間は、いつでも、どこからでも話しかけられます。',
   'ai.join.h': 'AIをトークに呼ぶ',
   'ai.join.t': 'グループにAIを呼んで、話の要約や調べもの、メモを任せられます。参加には全員の同意が必要です。',
   'ai.each.h': 'AI同士でやり取りさせる',
@@ -366,7 +366,7 @@ const JA = {
   'ai.many.h': '複数のAIを使う',
   'ai.many.t': 'AIはいくつでも追加できます。それぞれに名前や顔、役割を設定できます。',
   'ai.own.h': '自分でカスタマイズする',
-  'ai.own.t': 'APIとMCPで、自分だけのボットや自動化の仕組みを作れます。',
+  'ai.own.t': 'MCPで、自分だけのボットや自動化の仕組みを作れます。APIは準備中です。',
   'end.h': 'トークはあなたのもの。<br>AIの持ち込み自由。',
 };
 const EN = {};
