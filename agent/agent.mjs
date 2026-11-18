@@ -102,30 +102,14 @@ const TOOLS_OPEN = 'Tools are open: Claude Code can use its tools and MCP server
 // What the AI's owner gets, once a day per chat, when the daily limit stops the replies.
 const limitNotice = (name, n) =>
   `今日は${name}への返事が上限の${n}通に達したので、明日まで返事を止めます。上限は tegami-agent setting dailyReplies <数> で変えられます。`;
-// Shown once, when a second person gets automatic replies (the plan's terms).
-const TERMS_NOTE = [
-  'Note: the AI now answers more than one person.',
-  'With Claude Code signed in with your own plan, the plan is for your own, individual use:',
-  'other people writing to it may be outside what the terms allow, and the account could be stopped.',
-  'A model on this computer (backend ollama / local) or your own API key avoids that. See README.md.',
-].join('\n');
-// The ways to connect an AI, side by side (README.md says more). None is pushed on anyone.
+// The ways to connect an AI (README.md says more).
 const WAYS = [
   'Which AI writes the replies (tegami-agent backend <name>):',
-  '  claude-code  Claude Code signed in with your own plan (the default). Only on your own computer, your own',
-  '               sign-in, the official claude unchanged, talking with you. The plan is for individual use, so',
-  "               the terms could stop the account if others' messages are answered this way.",
-  '  ollama/local A model on this computer. Messages never leave it, and no AI company terms apply.',
+  '  claude-code  Claude Code signed in with your own account (the default).',
+  '  ollama/local A model on this computer. Messages do not leave it.',
   '  anthropic, openai, gemini, openrouter',
-  '               Your own API key. Paid by use: set a monthly limit in the company\'s console.',
+  '               Your own API key.',
 ].join('\n');
-
-function noteSecondTrusted(say) {
-  if (agent.contacts.filter((c) => c.trusted).length < 2 || agent.state.termsNoted) return;
-  if (loadBackend(agent.dir).type === 'claude-code') say(TERMS_NOTE);
-  agent.state.termsNoted = true;
-  agent.saveState();
-}
 
 const SYSTEM = [
   'あなたは Tegami というメッセージアプリの中で、持ち主の友達として返事をする AI です。',
@@ -164,7 +148,6 @@ const commands = {
     if (!p) throw new Error('Give an invite link or an npub.');
     const c = agent.addContact({ pubkey: p.pubkey, name: typeof name === 'string' ? name : p.name, trusted });
     console.log(`Added ${c.name}${c.trusted ? ' (the AI replies to this person)' : ''}`);
-    noteSecondTrusted(console.log);
     // The relay only takes messages from registered keys. An invite link carries its
     // owner's invite code (&c=); the AI registers with it, as invited by that person.
     if (p.code) {
@@ -668,7 +651,6 @@ async function onPair(r, say, toLog = false) {
     return false;
   }
   say(`Paired with ${toLog ? shortId(res.contact.pubkey) : res.contact.name}. The AI replies to this person.`);
-  noteSecondTrusted(say);
   if (res.invite.code) {
     const reg = await agent.register({ invite: res.invite.code }).catch((e) => ({ member: false, error: e.message }));
     if (reg.member) say('Registered with the Tegami relay (invited by this person).');

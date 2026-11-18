@@ -39,9 +39,6 @@ A monthly plan such as Claude Pro or Max.
 - **Anthropic**: through Claude Code. The default provider. If you are signed in to Claude
   Code with your own account, there is nothing to set up.
 
-A Claude Code subscription is meant for your own, individual use. Let the AI answer only
-you. The gateway warns you once when you trust a second person.
-
 ### API key
 
 A key issued by the AI company.
