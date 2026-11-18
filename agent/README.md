@@ -30,18 +30,14 @@ differ by provider: check them before you start.
 The gateway decrypts the messages it receives and sends them to the AI provider. Only with
 a local model do the messages stay on your computer.
 
-Only Claude Code has been confirmed to work. The other providers have not been run against
-the real service yet. Each provider's model is chosen with `--model`.
+Only Claude Code has been confirmed against the real service. Each provider's model is chosen with `--model`.
 
 ### Subscription
 
-A monthly plan such as Claude Pro or ChatGPT Plus.
+A monthly plan such as Claude Pro or Max.
 
 - **Anthropic**: through Claude Code. The default provider. If you are signed in to Claude
   Code with your own account, there is nothing to set up.
-- **OpenAI**: ChatGPT subscriptions cannot be connected yet.
-- **Google**: Antigravity (`agy`) is not connected: its terms forbid using it from
-  third-party software.
 
 A Claude Code subscription is meant for your own, individual use. Let the AI answer only
 you. The gateway warns you once when you trust a second person.
