@@ -28,6 +28,8 @@ const PAGES = {
   'dev-ai': page('dev-ai', '/developers/ai', ''),
   'dev-compare': page('dev-compare', '/developers/compare', ''),
   'dev-spec': page('dev-spec', '/developers/spec', ''),
+  'dev-faq': page('dev-faq', '/developers/faq', ''),
+  compare: page('compare', '/compare', ''),
   roadmap: page('roadmap', '/roadmap', ''),
   faq: page('faq', '/faq', 'nav.faq'),
   privacy: page('privacy', '/privacy', ''),
@@ -44,6 +46,8 @@ const DRAFT_LINKS = {
   'Tegamiの開発者向け_AI.html': 'dev-ai',
   'Tegamiの開発者向け_比較.html': 'dev-compare',
   'Tegamiの開発者向け_技術仕様.html': 'dev-spec',
+  'Tegamiの開発者向け_よくある質問.html': 'dev-faq',
+  'Tegamiの比較.html': 'compare',
   'Tegamiのロードマップ案_2026-11-14.html': 'roadmap',
   'Tegamiのよくある質問_2026-11-16.html': 'faq',
   'Tegamiのプライバシーポリシー案_2026-11-14.html': 'privacy',
@@ -74,6 +78,14 @@ const META = {
   'dev-spec': {
     en: { title: 'Technical spec | Tegami for developers', desc: 'Crypto building blocks, relay limits, HTTP endpoints and Tegami event kinds.' },
     ja: { title: '技術仕様 | 開発者向けのTegamiの説明', desc: '暗号の部品、リレーの上限、HTTPの口、Tegami独自のkind。' },
+  },
+  'dev-faq': {
+    en: { title: 'FAQ | Tegami for developers', desc: 'Questions developers ask about Tegami.' },
+    ja: { title: 'よくある質問 | 開発者向けのTegamiの説明', desc: '開発者からよく聞かれること。' },
+  },
+  compare: {
+    en: { title: 'Compare apps | Tegami', desc: 'Tegami next to other messaging apps.' },
+    ja: { title: '他アプリとの比較 | Tegami', desc: 'Tegamiとほかのメッセージアプリの比較。' },
   },
   index: {
     en: { title: 'Tegami: your chats belong to you', desc: 'An open-source messaging app built on Nostr. No ads, no tracking, and bring your own AI.' },
@@ -116,6 +128,7 @@ const LAYOUT_JA = jaTable(LAYOUT);
 // The current page's menu item changes colour only, never weight, so the menu does not shift between pages.
 const NAV_ON = ' text-neutral-900 dark:text-white';
 
+const EXT_ICON = '<svg viewBox="0 0 24 24" class="ml-1 inline-block h-[0.85em] w-[0.85em] align-[-0.1em]" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>';
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
 // Replace the inner HTML of every element carrying data-i18n="key" with dict[key].
@@ -189,6 +202,16 @@ function build(name, lang) {
   // the pages' own scripts
   html = html.replace('<script src="status.js"></script>', '<script src="/status.js"></script>');
   html = html.replace('<script src="diff.js"></script>', '<script src="/diff.js"></script>');
+  // text that differs by language and sits in attributes, where data-i18n cannot reach
+  const TOK = lang === 'ja'
+    ? { soon: '準備中', browser: 'ブラウザで始める', avail: '使える場所' }
+    : { soon: 'Coming soon', browser: 'Open in your browser', avail: 'Where Tegami runs' };
+  html = html.replace(/@(soon|browser|avail)@/g, (_, k) => TOK[k]);
+  // every link that opens in a new tab gets the external-link icon and a hidden note for screen readers
+  html = html.replace(/(<a\b[^>]*\btarget="_blank"[^>]*>)([\s\S]*?)(<\/a>)/g, (_, open, inner, close) => {
+    const icon = /\bdata-noext\b/.test(open) ? '' : EXT_ICON;
+    return open + inner + icon + `<span class="sr-only">${lang === 'ja' ? '（新しいタブで開きます）' : ' (opens in a new tab)'}</span>` + close;
+  });
   // anchors on the home page from other pages already point to /#x; on the home page keep #x
   writeFileSync(page.out[lang], html);
 }

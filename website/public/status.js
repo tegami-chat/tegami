@@ -62,7 +62,7 @@
 
   function setCommit(c) {
     const el = $('commit');
-    if (c && /^[0-9a-f]{7,40}$/.test(c)) el.innerHTML = `<a class="font-mono underline" href="${REPO}/commit/${c}" target="_blank" rel="noopener">${c.slice(0, 7)}</a>`;
+    if (c && /^[0-9a-f]{7,40}$/.test(c)) el.innerHTML = `<a class="font-mono underline" href="${REPO}/commit/${c}" target="_blank" rel="noopener">${c.slice(0, 7)}<svg viewBox="0 0 24 24" class="ml-1 inline-block h-[0.85em] w-[0.85em] align-[-0.1em]" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg><span class="sr-only">${lang === 'ja' ? '（新しいタブで開きます）' : ' (opens in a new tab)'}</span></a>`;
     else el.textContent = S.none;
   }
 
@@ -90,7 +90,6 @@
   }
 
   let weeks = [];
-  let metric = 'envelopes';
   let all = false;
   // Sample numbers are for drafts only, never on the real site.
   const sample = location.hostname !== 'tegami.chat' && new URLSearchParams(location.search).get('sample');
@@ -121,7 +120,6 @@
     $('empty').hidden = has;
     $('empty').textContent = S.empty.replace('{date}', longDate(nextMonday()));
     $('chart-box').hidden = !has;
-    $('metric').style.display = has ? '' : 'none'; // hidden alone loses to the flex classes
     $('table-wide').classList.toggle('sm:block', has);
     $('period').textContent = has ? S.period.replace('{from}', longDate(weeks[0].week)).replace('{to}', longDate(plusDays(weeks[weeks.length - 1].week, 6))) : '';
     const list = weeks.slice().reverse();
@@ -134,14 +132,18 @@
       <dl class="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1 tabular-nums">${keys.map((k) => `<div><dt class="text-xs text-neutral-600 dark:text-neutral-400">${S.cols[k]}</dt><dd class="font-semibold">${show(w[k])}</dd></div>`).join('')}</dl></li>`).join('');
     $('more').hidden = list.length <= 8;
     $('more').textContent = all ? S.less : S.more;
-    $('metric').innerHTML = Object.entries(S.tabs).map(([m, label]) => `<button type="button" role="tab" data-m="${m}" aria-selected="${m === metric}" class="flex-1 whitespace-nowrap rounded-full px-4 py-2.5 sm:flex-none ${m === metric ? 'bg-white font-semibold shadow-sm dark:bg-night-card' : 'text-neutral-600 dark:text-neutral-400'}">${label}</button>`).join('');
+    if (has && !$('charts').children.length) {
+      $('charts').innerHTML = Object.entries(S.tabs).map(([m, label]) => `<section class="rounded-xl border border-neutral-200 p-4 dark:border-night-line"><h3 class="text-base font-bold">${label}</h3><svg data-chart="${m}" class="mt-2 w-full" viewBox="0 0 600 200" role="img" aria-label="${S.cols[m]}"></svg></section>`).join('');
+    }
     if (has) draw();
   }
 
   // Bars with the top value. A week under 10 is a short, faint bar that stays visible
   // (at least 6 px high) even when other weeks are much larger.
   function draw() {
-    const svg = $('chart');
+    document.querySelectorAll('[data-chart]').forEach((svg) => drawOne(svg, svg.dataset.chart));
+  }
+  function drawOne(svg, metric) {
     // Drawn at the real width, so the labels keep their size on a phone.
     const W = Math.max(280, Math.round(svg.getBoundingClientRect().width) || 600), H = 200, top = 18, bottom = 24;
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
@@ -165,15 +167,8 @@
       if (i % step === 0) out += `<text x="${Math.min(W - 24, Math.max(24, x + bw * 0.32))}" y="${H - 6}" text-anchor="middle" font-size="13" fill="${label}">${short(w.week)}</text>`;
     });
     svg.innerHTML = out;
-    svg.setAttribute('aria-label', S.cols[metric]);
   }
 
-  $('metric').addEventListener('click', (e) => {
-    const b = e.target.closest('[data-m]');
-    if (!b) return;
-    metric = b.dataset.m;
-    render();
-  });
   $('more').addEventListener('click', () => { all = !all; render(); });
   // Redraw the chart in the new colors when the light/dark switch is used.
   new MutationObserver(() => { if (weeks.length) draw(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
@@ -182,7 +177,7 @@
   new ResizeObserver(([e]) => {
     const w = Math.round(e.contentRect.width);
     if (w && w !== lastWidth && weeks.length) { lastWidth = w; draw(); }
-  }).observe($('chart'));
+  }).observe($('charts'));
 
   $('state').textContent = S.checking;
   ping();

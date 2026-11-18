@@ -495,6 +495,15 @@ document.getElementById('scenes').innerHTML = S.map((sc) => `
     ${dev ? `<p class="mx-auto mt-6 max-w-3xl rounded-xl bg-neutral-50 px-4 py-3 text-sm text-neutral-600 dark:bg-white/5 dark:text-neutral-300">${t(sc.id + '.spec')}</p>` : ''}
     ${dev && terms(sc.id).length ? `<div class="mx-auto mt-4 max-w-3xl px-1"><h4 class="text-sm font-bold text-neutral-700 dark:text-neutral-200">${t('terms.h')}</h4><dl class="mt-2 grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[max-content_1fr]">${terms(sc.id).map(([w, d]) => `<dt class="font-semibold text-forest-700 dark:text-forest-300">${w}</dt><dd class="text-neutral-600 dark:text-neutral-300">${d}</dd>`).join('')}</dl></div>` : ''}
   </article>`).join('');
+// 動画の再生の窓のような枠。絵の全体を囲み、下の端に、いまの場面の再生の位置を示す棒を出す。
+const scenesEl = document.getElementById('scenes');
+scenesEl.className = 'p-5 sm:p-8';
+const frame = document.createElement('div');
+frame.id = 'frame';
+frame.className = 'mt-8 overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-lg ring-1 ring-black/5 dark:border-night-line dark:bg-night dark:ring-white/10';
+frame.innerHTML = '<div class="h-1.5 w-full bg-neutral-200 dark:bg-night-line" aria-hidden="true"><div id="pbar" class="h-full w-full origin-left scale-x-0 bg-forest-600 dark:bg-forest-300"></div></div>';
+scenesEl.parentNode.insertBefore(frame, scenesEl);
+frame.insertBefore(scenesEl, frame.firstChild);
 document.getElementById('chips').innerHTML = S.map((sc) => `<button type="button" role="tab" data-sc="${sc.id}" class="chip rounded-full border px-4 py-2 text-sm font-medium">${t(sc.id + '.chip')}</button>`).join('');
 
 // ─── 再生 ───────────────────────────────────────────
@@ -544,6 +553,7 @@ function play(id) {
     const on = [[0, .3], [.3, .62], [.62, 1]][n - 1];
     anims.push(li.animate(K([[0, { opacity: on[0] === 0 ? 1 : .45 }], [Math.max(on[0] - .001, 0), { opacity: on[0] === 0 ? 1 : .45 }], [on[0], { opacity: 1 }], [on[1] - .001, { opacity: 1 }], [on[1], { opacity: on[1] === 1 ? 1 : .45 }], [1, { opacity: on[1] === 1 ? 1 : .45 }]]), { duration: DUR, iterations: Infinity }));
   });
+  anims.push(document.getElementById('pbar').animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: DUR, iterations: Infinity, easing: 'linear' }));
   // 止まっている間は、3つの手順がそろった、最後の近くの絵を見せる。
   if (paused) { anims.forEach((x) => { x.currentTime = DUR * .9; }); fresh = true; }
   run();

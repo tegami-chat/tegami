@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tegamiの他アプリとの比較</title>
+<script>
+(function () {
+  var t; try { t = localStorage.getItem('tegami.theme'); } catch (e) {}
+  var dark = t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.classList.toggle('dark', dark);
+})();
+</script>
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: { extend: {
+    colors: {
+      forest: { 50: '#e3f0e8', 300: '#7fd7a8', 600: '#106c4a', 700: '#0b5a3d', 950: '#0b1a12' },
+      nostr: { 300: '#c9a2ff', 600: '#7c2eda' },
+      paper: { DEFAULT: '#f4f1e8', dark: '#171b18' },
+      night: { DEFAULT: '#121614', card: '#1c221f', line: '#2c3430' },
+    },
+    fontFamily: { sans: ['-apple-system', 'BlinkMacSystemFont', '"Hiragino Sans"', '"Yu Gothic UI"', '"Noto Sans JP"', 'sans-serif'] },
+  } },
+}
+</script>
+<style>
+  :lang(ja) h1, :lang(ja) h2, :lang(ja) h3, :lang(ja) th, :lang(ja) td, :lang(ja) summary, :lang(ja) li { word-break: auto-phrase; }
+  :lang(ja) p { word-break: auto-phrase; text-wrap: pretty; }
+  h1, h2, h3 { text-wrap: balance; }
+</style>
+</head>
+<body class="bg-white text-neutral-900 antialiased dark:bg-[#101311] dark:text-neutral-100">
+
+<header></header>
+
+<main>
+  <section id="compare" class="mx-auto max-w-3xl px-4 py-14 md:py-20">
+    <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="cmp.h">Compare apps</h1>
+    <!-- CONTENT -->
+  </section>
+</main>
+
+<footer></footer>
+
+<script>
+// 言葉の切り替え。HTMLに書いた英語が元で、日本語はここに置く。
+// 下書きでは ?lang=jaで日本語にする。ブラウザの言葉で勝手に切り替えない（Googleの多言語サイトの指針）。
+// 公開する時は、英語をtegami.chat/、日本語をtegami.chat/ja/ の別のページに書き出し、hreflangで結ぶ。
+const JA = {
+  'cmp.h': '他アプリとの比較',
+};
+const EN = {};
+document.querySelectorAll('[data-i18n]').forEach((el) => { EN[el.dataset.i18n] ??= el.innerHTML; });
+
+function pick() {
+  return new URLSearchParams(location.search).get('lang') === 'ja' ? 'ja' : 'en';
+}
+function apply(lang) {
+  const dict = lang === 'ja' ? JA : EN;
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    const v = dict[el.dataset.i18n] ?? EN[el.dataset.i18n];
+    if (v != null) el.innerHTML = v;
+  });
+  document.documentElement.lang = lang;
+
+  document.querySelectorAll('a[href]').forEach((a) => {
+    const h = a.getAttribute('href');
+    if (!h || /^(https?:|mailto:|#|\?)/.test(h) || a.dataset.lang) return;
+    a.dataset.base ??= h;
+    const [path, hash] = a.dataset.base.split('#');
+    a.setAttribute('href', path + (lang === 'ja' ? '?lang=ja' : '') + (hash ? '#' + hash : ''));
+  });
+  document.querySelectorAll('[data-lang]').forEach((a) => {
+    const on = a.dataset.lang === lang;
+    a.className = 'block px-4 py-2 text-sm ' + (on
+      ? 'font-semibold text-forest-600 dark:text-forest-300'
+      : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-white/5');
+    if (on) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
+  });
+}
+apply(pick());
+document.addEventListener('click', (e) => {
+  document.querySelectorAll('[data-lang-menu][open]').forEach((d) => { if (!d.contains(e.target)) d.removeAttribute('open'); });
+});
+
+document.querySelectorAll('[data-theme-set]').forEach((b) => {
+  b.onclick = () => {
+    const dark = b.dataset.themeSet === 'dark';
+    document.documentElement.classList.toggle('dark', dark);
+    try { localStorage.setItem('tegami.theme', b.dataset.themeSet); } catch {}
+  };
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+  let t; try { t = localStorage.getItem('tegami.theme'); } catch {}
+  if (!t) document.documentElement.classList.toggle('dark', e.matches);
+});
+</script>
+</body>
+</html>
