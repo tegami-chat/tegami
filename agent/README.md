@@ -23,55 +23,62 @@ messages and notices say `tegami-agent <command>`, it means the same as `node ag
 
 ## AI providers
 
-An AI provider is where the AI that writes the replies runs. These are the providers the
-gateway can connect, and how far each has been checked:
+An AI provider is where the AI that writes the replies runs. The gateway connects to AI
+providers in three ways: a subscription, a local model, or an API key. Prices and terms
+differ by provider: check them before you start.
 
-| AI provider | Kind | Checked |
-|---|---|---|
-| Claude Code | Subscription | works |
-| Ollama | Local model | not yet run against the real thing |
-| llama.cpp, LM Studio, vLLM | Local model | not yet run against the real thing |
-| Anthropic | API key | not yet run against the real thing |
-| OpenAI | API key | not yet run against the real thing |
-| Gemini | API key | not yet run against the real thing |
-| OpenRouter | API key | not yet run against the real thing |
-| ChatGPT | Subscription | no way to connect yet, terms not checked |
-| Antigravity | Subscription | not allowed by its terms |
+The gateway decrypts the messages it receives and sends them to the AI provider. Only with
+a local model do the messages stay on your computer.
 
-- The providers not yet run against the real thing are tested only against a test server
-  that answers in the same format as each API.
+Only Claude Code has been confirmed to work. The other providers have not been run against
+the real service yet.
 
-- A subscription is a monthly plan such as Claude Pro or Max. A local model runs on your
-  own computer. An API key is a key issued by the AI company.
-- Claude Code is the default. If you are signed in to Claude Code with your own account,
-  there is nothing to set up.
-- The gateway decrypts the messages it receives and sends them to the AI provider. Only
-  with a local model do the messages stay on your computer.
-- Prices and terms differ by provider. Check them before you start.
-- A Claude Code subscription is meant for your own, individual use. Let the AI answer only
-  you. The gateway warns you once when you trust a second person.
-- Antigravity (`agy`): its terms forbid using it from third-party software.
+### Subscription
 
-To connect another provider:
+A monthly plan such as Claude Pro or Max. Claude Code is the only one for now, and the
+default. If you are signed in to Claude Code with your own account, there is nothing to set up.
+
+A Claude Code subscription is meant for your own, individual use. Let the AI answer only
+you. The gateway warns you once when you trust a second person.
+
+ChatGPT subscriptions cannot be connected yet. Antigravity (`agy`) is not connected: its
+terms forbid using it from third-party software.
+
+### Local model
+
+A model run on your own computer, with Ollama, llama.cpp, LM Studio or vLLM.
 
 ```bash
-node agent.mjs backend ollama --model llama3.2                          # Ollama on this computer
+node agent.mjs backend ollama --model llama3.2                          # Ollama
 node agent.mjs backend local --model qwen --url http://localhost:8080/v1  # llama.cpp, LM Studio, vLLM
-node agent.mjs backend anthropic --model <model>                        # your Anthropic API key
-node agent.mjs backend openai --model <model>                           # your OpenAI API key
-node agent.mjs backend gemini --model <model>                           # your Gemini API key
-node agent.mjs backend openrouter --model <vendor/model>                # your OpenRouter API key
-node agent.mjs key <backend>      # asks for the API key (hidden), or reads it from stdin
+```
+
+### API key
+
+A key issued by the AI company: Anthropic, OpenAI, Gemini or OpenRouter.
+
+```bash
+node agent.mjs backend anthropic --model <model>
+node agent.mjs backend openai --model <model>
+node agent.mjs backend gemini --model <model>
+node agent.mjs backend openrouter --model <vendor/model>
+node agent.mjs key <backend>   # asks for the API key (hidden), or reads it from stdin
+```
+
+- API keys are kept in `~/.tegami/agents/<name>/keys.json`, encrypted (see "What stays
+  on this computer"), and only sent to that company's API, over HTTPS. They are never
+  taken on the command line, so they do not end up in your shell history, and never
+  written to the log. `key <backend> --remove` deletes a saved key.
+
+### Check after connecting
+
+```bash
 node agent.mjs backend            # shows the current backend
 node agent.mjs try "hello"        # asks the AI once, to check that it answers
 ```
 
 - `backend` creates the AI friend (its own key). `try` works once the AI friend exists,
   made by `backend`, `pair` or `init`.
-- API keys are kept in `~/.tegami/agents/<name>/keys.json`, encrypted (see "What stays
-  on this computer"), and only sent to that API, over HTTPS (or to this computer). They
-  are never taken on the command line, so they do not end up in your shell history, and
-  never written to the log. `key <backend> --remove` deletes a saved key.
 - The invite link's model (`m=`) follows the backend, for example `OpenAI gpt-…` or
   `llama3.2 (Ollama)`: Tegami always shows which model an AI friend is.
   `backend ... --label` sets it yourself. People who added the AI before see the new model

@@ -17,46 +17,52 @@ AIは自分専用のTegamiの鍵を持ちます。人と同じリレー（メッ
 
 ## AIプロバイダー
 
-AIプロバイダーは、返事を書くAIを動かす先です。ゲートウェイがつなげるAIプロバイダーと、いまの確かめ具合は次のとおりです。
+AIプロバイダーは、返事を書くAIを動かす先です。ゲートウェイは、サブスクリプション、ローカルモデル、APIキーの3つの方法でAIプロバイダーにつなげます。料金と規約はAIプロバイダーごとに違うので、使う前に各社の料金と規約を確かめてください。
 
-| AIプロバイダー | 種類 | 確かめ具合 |
-|---|---|---|
-| Claude Code | サブスクリプション | 動くことを確かめた |
-| Ollama | ローカルモデル | まだ本物で動かしていない |
-| llama.cpp、LM Studio、vLLM | ローカルモデル | まだ本物で動かしていない |
-| Anthropic | APIキー | まだ本物で動かしていない |
-| OpenAI | APIキー | まだ本物で動かしていない |
-| Gemini | APIキー | まだ本物で動かしていない |
-| OpenRouter | APIキー | まだ本物で動かしていない |
-| ChatGPT | サブスクリプション | つなぐ仕組みが無く、規約もまだ確かめていない |
-| Antigravity | サブスクリプション | 規約で使えない |
+ゲートウェイは、届いたメッセージを復号してAIプロバイダーに送ります。ローカルモデルの時だけ、メッセージはパソコンの外に出ません。
 
-- 「まだ本物で動かしていない」AIプロバイダーは、各社のAPIと同じ形で答える試験用のサーバーで、送り方と受け取り方だけを確かめています。
+動作を確認したのはClaude Codeだけです。ほかのAIプロバイダーは、まだ本物のサービスで動かしていません。
 
-- サブスクリプションは、Claude ProやMaxのような月額のプランで使う方法です。ローカルモデルは、自分のパソコンでモデルを動かす方法です。APIキーは、AIの会社が発行したキーで使う方法です。
-- 既定はClaude Codeです。Claude Codeに自分のアカウントでログインしてあれば、設定は要りません。
-- ゲートウェイは、届いたメッセージを復号してAIプロバイダーに送ります。ローカルモデルの時だけ、メッセージはパソコンの外に出ません。
-- 料金と規約は、AIプロバイダーごとに違います。使う前に各社の料金と規約を確かめてください。
-- Claude Codeのサブスクリプションは、本人の個人利用が前提です。AIに返事をさせる相手は、自分だけにしてください。2人目を信頼した時は、ゲートウェイが一度だけ注意を表示します。
-- Antigravity（`agy`）は、規約が第三者のソフトウェアから使うことを禁じています。
+### サブスクリプション
 
-ほかのAIプロバイダーを使う時は、次のコマンドでつなぎます。
+Claude ProやMaxのような、月額のプランで使う方法です。いまつなげるのはClaude Codeだけで、既定はClaude Codeです。Claude Codeに自分のアカウントでログインしてあれば、設定は要りません。
+
+Claude Codeのサブスクリプションは、本人の個人利用が前提です。AIに返事をさせる相手は、自分だけにしてください。2人目を信頼した時は、ゲートウェイが一度だけ注意を表示します。
+
+ChatGPTのサブスクリプションには、まだつなげません。Antigravity（`agy`）は、規約が第三者のソフトウェアから使うことを禁じているので、つなぎません。
+
+### ローカルモデル
+
+自分のパソコンでモデルを動かす方法です。Ollama、llama.cpp、LM Studio、vLLMにつなげます。
 
 ```bash
-node agent.mjs backend ollama --model llama3.2                          # 自分のパソコンのOllama
+node agent.mjs backend ollama --model llama3.2                          # Ollama
 node agent.mjs backend local --model qwen --url http://localhost:8080/v1  # llama.cpp、LM Studio、vLLM
-node agent.mjs backend anthropic --model <モデル>                        # 自分のAnthropicのAPIキー
-node agent.mjs backend openai --model <モデル>                           # 自分のOpenAIのAPIキー
-node agent.mjs backend gemini --model <モデル>                           # 自分のGeminiのAPIキー
-node agent.mjs backend openrouter --model <会社/モデル>                  # 自分のOpenRouterのAPIキー
-node agent.mjs key <名前>        # APIキーの入力を求める（画面には出ない）。標準入力からも読める
+```
+
+### APIキー
+
+AIの会社が発行したAPIキーで使う方法です。Anthropic、OpenAI、Gemini、OpenRouterにつなげます。
+
+```bash
+node agent.mjs backend anthropic --model <モデル>
+node agent.mjs backend openai --model <モデル>
+node agent.mjs backend gemini --model <モデル>
+node agent.mjs backend openrouter --model <会社/モデル>
+node agent.mjs key <名前>   # APIキーの入力を求める（画面には出ない）。標準入力からも読める
+```
+
+- APIキーは`~/.tegami/agents/<名前>/keys.json`に暗号化して保存します（詳しくは「自分のパソコンに残るもの」を参照してください）。APIキーを送る先は、そのAPIキーを発行した会社のAPIだけです。送る時はHTTPSを使います。
+- APIキーはコマンドの引数では受け取りません。このため、シェルの履歴にも、ログにも残りません。`key <名前> --remove`で保存したAPIキーを消せます。
+
+### つないだ後に確かめる
+
+```bash
 node agent.mjs backend           # 現在の設定を表示する
 node agent.mjs try "こんにちは"  # AIに一度だけ送信し、返事が来るか確かめる
 ```
 
 - `backend`を実行すると、AIの友だち（自分専用の鍵）が作られます。`try`は、`backend`、`pair`、`init`のどれかでAIの友だちを作った後に使えます。
-- APIキーは`~/.tegami/agents/<名前>/keys.json`に暗号化して保存します（詳しくは「自分のパソコンに残るもの」を参照してください）。APIキーを送る先は、そのAPIキーを発行した会社のAPIだけです。送る時はHTTPSを使います。
-- APIキーはコマンドの引数では受け取りません。このため、シェルの履歴にも、ログにも残りません。`key <名前> --remove`で保存したAPIキーを消せます。
 - 招待リンクに含まれるモデルの名前（`m=`）は、つないだAIプロバイダーに合わせて`OpenAI gpt-…`や`llama3.2 (Ollama)`などに変わります。TegamiはAIの友だちがどのモデルかを必ず表示します。`backend`に`--label`を付けると、表示する名前を自分で決められます。
 - 前にこのAIを友だちに追加した人には、新しいQRコードを読み取った後で新しいモデルの名前を表示します。つなぐAIプロバイダーを変えた時は、あらためて`pair`を実行してください。
 - `watch --command "<コマンド>"`を使うと、どんなプログラムでも返事を書けます。標準入力から依頼の文を読み取り、返事を出力するプログラムを用意してください。ただし、このプログラムは「AIの検査」の答えも書く必要があります。詳しくは「AIにできることと安全の仕組み」の「AIの検査」を参照してください。
