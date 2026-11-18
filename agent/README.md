@@ -23,36 +23,31 @@ messages and notices say `tegami-agent <command>`, it means the same as `node ag
 
 ## AI providers
 
-An AI provider is where the AI that writes the replies runs. The gateway can connect three kinds. Use whichever you like; Tegami does not push one
-on you. They differ in where your messages go, what it costs, and whose terms apply.
+An AI provider is where the AI that writes the replies runs. The gateway can connect these:
 
-| | Subscription | Local model | API key |
-|---|---|---|---|
-| What you can use | Claude Code (only Claude Code for now) | models run with Ollama, llama.cpp, LM Studio or vLLM (Llama, Qwen, DeepSeek, gpt-oss and more) | Anthropic, OpenAI, Gemini, OpenRouter (many more models such as DeepSeek, Qwen and Mistral through OpenRouter) |
-| Backend | `claude-code` (the default) | `ollama`, `local` | `anthropic`, `openai`, `gemini`, `openrouter` |
-| Messages go to | Anthropic | nowhere: they stay on this computer | the company of that key |
-| Cost | your plan | your computer's power | paid by use |
-| Terms | the plan is for your own, individual use | none from an AI company | the API terms, meant for programs |
+| AI provider | Kind |
+|---|---|
+| Claude Code | Subscription |
+| Ollama | Local model |
+| llama.cpp, LM Studio, vLLM | Local model |
+| Anthropic | API key |
+| OpenAI | API key |
+| Gemini | API key |
+| OpenRouter | API key |
 
-- **Subscription.** A monthly plan such as Claude Pro or Max. Only Claude Code for now;
-  subscriptions from other companies, such as ChatGPT, are not supported yet. Use Claude Code only on your own computer, signed in with
-  your own account, with the official `claude` unchanged, and for talking with you.
-  Anthropic does not stop you from using its unchanged Claude Code with your own plan,
-  but the plan is meant for ordinary individual use, and nothing from Anthropic names an
-  always-on program that answers messages as allowed. If you let the AI answer other
-  people (a second trusted contact), that may be outside the terms, and the account
-  could be stopped. tegami-agent says this once when you trust a second person.
-- **Local model** (Ollama, llama.cpp, LM Studio, vLLM): a model run on this computer. Nothing leaves your
-  computer and no AI company's terms are involved. The answers depend on your computer.
-- **API key.** The way AI companies offer for programs. Each reply costs money:
-  set a monthly spending limit for the key in the company's console. Some companies may
-  use what you send on a free tier to improve their models; check their terms.
+- A subscription is a monthly plan such as Claude Pro or Max. A local model runs on your
+  own computer. An API key is a key issued by the AI company.
+- Claude Code is the default. If you are signed in to Claude Code with your own account,
+  there is nothing to set up.
+- The gateway decrypts the messages it receives and sends them to the AI provider. Only
+  with a local model do the messages stay on your computer.
+- Prices and terms differ by provider. Check them before you start.
+- A Claude Code subscription is meant for your own, individual use. Let the AI answer only
+  you. The gateway warns you once when you trust a second person.
+- ChatGPT subscriptions and Antigravity (`agy`) are not supported. Antigravity's terms
+  forbid using it from third-party software.
 
-Not supported: Antigravity (`agy`). Its terms say that reaching it through third-party
-software breaks the agreement and can get the account stopped. Tegami never holds your
-sign-in to any AI service: Claude Code signs in by itself, the others take a key or none.
-
-With the default Claude Code you can skip this step. To connect another one:
+To connect another provider:
 
 ```bash
 node agent.mjs backend ollama --model llama3.2                          # Ollama on this computer
