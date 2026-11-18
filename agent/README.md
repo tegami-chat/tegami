@@ -23,17 +23,23 @@ messages and notices say `tegami-agent <command>`, it means the same as `node ag
 
 ## AI providers
 
-An AI provider is where the AI that writes the replies runs. The gateway can connect these:
+An AI provider is where the AI that writes the replies runs. These are the providers the
+gateway can connect, and how far each has been checked:
 
-| AI provider | Kind |
-|---|---|
-| Claude Code | Subscription |
-| Ollama | Local model |
-| llama.cpp, LM Studio, vLLM | Local model |
-| Anthropic | API key |
-| OpenAI | API key |
-| Gemini | API key |
-| OpenRouter | API key |
+| AI provider | Kind | Checked |
+|---|---|---|
+| Claude Code | Subscription | works |
+| Ollama | Local model | not yet run against the real thing |
+| llama.cpp, LM Studio, vLLM | Local model | not yet run against the real thing |
+| Anthropic | API key | not yet run against the real thing |
+| OpenAI | API key | not yet run against the real thing |
+| Gemini | API key | not yet run against the real thing |
+| OpenRouter | API key | not yet run against the real thing |
+| ChatGPT | Subscription | no way to connect yet, terms not checked |
+| Antigravity | Subscription | not allowed by its terms |
+
+- The providers not yet run against the real thing are tested only against a test server
+  that answers in the same format as each API.
 
 - A subscription is a monthly plan such as Claude Pro or Max. A local model runs on your
   own computer. An API key is a key issued by the AI company.
@@ -44,8 +50,7 @@ An AI provider is where the AI that writes the replies runs. The gateway can con
 - Prices and terms differ by provider. Check them before you start.
 - A Claude Code subscription is meant for your own, individual use. Let the AI answer only
   you. The gateway warns you once when you trust a second person.
-- ChatGPT subscriptions and Antigravity (`agy`) are not supported. Antigravity's terms
-  forbid using it from third-party software.
+- Antigravity (`agy`): its terms forbid using it from third-party software.
 
 To connect another provider:
 
