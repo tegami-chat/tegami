@@ -8,6 +8,7 @@
 // - Envelopes are deleted after 30 days. Messages live on people's devices.
 // - An envelope with an expiration tag (NIP-40) is refused once expired and never handed
 //   out after that time (used to move an account to another device: a 10-minute envelope).
+//   It is deleted when the next envelope arrives or at the daily clean-up, whichever is first.
 //
 // - Limits: each network address and each key can send only so fast, each address can
 //   hold only so many connections, and each mailbox holds at most MAX_MAILBOX envelopes.
@@ -304,6 +305,14 @@ export class Relay extends DurableObject<Env> {
     } catch {
       // Already there.
     }
+    // When an envelope with an expiration tag (NIP-40) may be deleted: call signals, moving an
+    // account, AI requests. The privacy policy promises these are gone after their time.
+    try {
+      this.sql.exec('ALTER TABLE events ADD COLUMN expires_at INTEGER');
+    } catch {
+      // Already there.
+    }
+    this.sql.exec('CREATE INDEX IF NOT EXISTS events_expires ON events (expires_at) WHERE expires_at IS NOT NULL');
     this.members = new Members(this.sql);
     this.ai = new AiKeys(this.sql);
     this.reports = new Reports(this.sql);
@@ -842,9 +851,14 @@ export class Relay extends DurableObject<Env> {
     );
   }
 
+  deleteExpired() {
+    this.sql.exec('DELETE FROM events WHERE expires_at IS NOT NULL AND expires_at <= ?', now());
+  }
+
   async alarm() {
     // received_at, not created_at: NIP-59 wraps carry a randomized past created_at.
     this.sql.exec('DELETE FROM events WHERE received_at < ?', now() - RETENTION_SECONDS);
+    this.deleteExpired();
     this.members.forgetOldInvites();
     this.reports.forgetOld();
     this.ai.forgetOld();
@@ -930,6 +944,9 @@ export class Relay extends DurableObject<Env> {
     }
 
     const p = ps[0][1];
+    // Delete expired envelopes before counting the mailbox (cheap: the index holds only the few
+    // envelopes that expire).
+    this.deleteExpired();
     // The recipient deleted their account: say OK (the sender learns nothing, and its app does
     // not try again and again) but keep nothing.
     if (this.members.deleted(p)) return reply(true, '');
@@ -939,8 +956,9 @@ export class Relay extends DurableObject<Env> {
       const fromOpen = this.sql.exec('SELECT COUNT(*) AS n FROM events WHERE p = ? AND open = 1', p).one().n as number;
       if (fromOpen >= MAX_OPEN_MAILBOX) return reply(false, 'rate-limited: the recipient has too many waiting messages');
     }
+    const exp = Number(ev.tags.find((t) => t[0] === 'expiration')?.[1]);
     const res = this.sql.exec(
-      'INSERT OR IGNORE INTO events (id, kind, created_at, received_at, p, raw, open) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      'INSERT OR IGNORE INTO events (id, kind, created_at, received_at, p, raw, open, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       ev.id,
       ev.kind,
       ev.created_at,
@@ -948,6 +966,7 @@ export class Relay extends DurableObject<Env> {
       p,
       JSON.stringify(ev),
       open ? 1 : 0,
+      Number.isFinite(exp) ? exp : null,
     );
     reply(true, res.rowsWritten === 0 ? 'duplicate: already have this event' : '');
     if (res.rowsWritten === 0) return;
