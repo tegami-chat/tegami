@@ -26,14 +26,16 @@ messages and notices say `tegami-agent <command>`, it means the same as `node ag
 An AI provider is where the AI that writes the replies runs. The gateway can connect three kinds. Use whichever you like; Tegami does not push one
 on you. They differ in where your messages go, what it costs, and whose terms apply.
 
-| | Claude Code with your own plan | A model on this computer | Your own API key |
+| | Your own subscription plan | A model on this computer | Your own API key |
 |---|---|---|---|
+| What you can use | Claude Code (only Claude Code for now) | models run with Ollama, llama.cpp, LM Studio or vLLM (Llama, Qwen, DeepSeek, gpt-oss and more) | Anthropic, OpenAI, Gemini, OpenRouter (many more models such as DeepSeek, Qwen and Mistral through OpenRouter) |
 | Backend | `claude-code` (the default) | `ollama`, `local` | `anthropic`, `openai`, `gemini`, `openrouter` |
 | Messages go to | Anthropic | nowhere: they stay on this computer | the company of that key |
 | Cost | your plan | your computer's power | paid by use |
 | Terms | the plan is for your own, individual use | none from an AI company | the API terms, meant for programs |
 
-- **Claude Code with your own plan.** Use it only on your own computer, signed in with
+- **Your own subscription plan.** Only Claude Code for now; plans from other companies,
+  such as ChatGPT, are not supported yet. Use Claude Code only on your own computer, signed in with
   your own account, with the official `claude` unchanged, and for talking with you.
   Anthropic does not stop you from using its unchanged Claude Code with your own plan,
   but the plan is meant for ordinary individual use, and nothing from Anthropic names an
