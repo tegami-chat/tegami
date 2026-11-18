@@ -21,24 +21,22 @@ const page = (name, path, nav) => ({
 });
 const PAGES = {
   index: page('index', '/', ''),
-  features: page('features', '/features', 'nav.features'),
   how: page('how', '/how', 'nav.how'),
-  developers: page('developers', '/developers', 'nav.dev'),
-  'dev-protocol': page('dev-protocol', '/developers/protocol', 'nav.dev'),
-  'dev-relay': page('dev-relay', '/developers/relay', 'nav.dev'),
-  'dev-ai': page('dev-ai', '/developers/ai', 'nav.dev'),
-  'dev-compare': page('dev-compare', '/developers/compare', 'nav.dev'),
-  'dev-spec': page('dev-spec', '/developers/spec', 'nav.dev'),
-  roadmap: page('roadmap', '/roadmap', 'roadmap'),
+  developers: page('developers', '/developers', ''),
+  'dev-protocol': page('dev-protocol', '/developers/protocol', ''),
+  'dev-relay': page('dev-relay', '/developers/relay', ''),
+  'dev-ai': page('dev-ai', '/developers/ai', ''),
+  'dev-compare': page('dev-compare', '/developers/compare', ''),
+  'dev-spec': page('dev-spec', '/developers/spec', ''),
+  roadmap: page('roadmap', '/roadmap', ''),
   faq: page('faq', '/faq', 'nav.faq'),
   privacy: page('privacy', '/privacy', ''),
   about: page('about', '/about', ''),
-  status: page('status', '/status', ''),
+  status: page('status', '/status', 'nav.status'),
 };
 // The draft file names the sources link to, and which page each one is.
 const DRAFT_LINKS = {
   'TegamiのLP案_2026-11-14.html': 'index',
-  'Tegamiの機能_2026-11-16.html': 'features',
   'Tegamiの仕組み案_2026-11-14.html': 'how',
   'Tegamiの開発者向け_2026-11-16.html': 'developers',
   'Tegamiの開発者向け_Nostrと暗号.html': 'dev-protocol',
@@ -53,10 +51,6 @@ const DRAFT_LINKS = {
   'Tegamiの稼働状況と利用統計案_2026-11-15.html': 'status',
 };
 const META = {
-  features: {
-    en: { title: 'Tegami features', desc: 'Everyday messaging, your own AI, and a Tegami you can make your own.' },
-    ja: { title: 'Tegamiの機能', desc: '毎日のメッセージの機能、自分のAI、自分仕様にできるTegami。' },
-  },
   faq: {
     en: { title: 'Tegami FAQ', desc: 'Questions people ask first about Tegami.' },
     ja: { title: 'Tegamiのよくある質問', desc: 'Tegamiについて、よく聞かれること。' },
@@ -119,7 +113,8 @@ const HEADER = LAYOUT.slice(LAYOUT.indexOf('<header'), LAYOUT.indexOf('</header>
 const FOOTER = LAYOUT.slice(LAYOUT.indexOf('<footer'), LAYOUT.indexOf('</footer>') + 9);
 const jaTable = (html) => Object.fromEntries([...html.matchAll(/^ {2}'([\w.]+)': '([^\n]*)',$/gm)].map((x) => [x[1], x[2]]));
 const LAYOUT_JA = jaTable(LAYOUT);
-const NAV_ON = ' font-semibold text-neutral-900 dark:text-white';
+// The current page's menu item changes colour only, never weight, so the menu does not shift between pages.
+const NAV_ON = ' text-neutral-900 dark:text-white';
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 

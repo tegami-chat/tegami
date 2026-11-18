@@ -3,7 +3,7 @@
 // ─── 言葉 ───────────────────────────────────────────
 const JA = {
   'ctl.pause': '一時停止', 'ctl.play': '再生',
-  'for.general': '一般向け', 'for.dev': '技術者向け', 'diff.h': 'よくあるアプリとの違い', 'diff.more': 'サーバーに見えることと見えないこと →',
+  'for.general': '一般向け', 'for.dev': '技術者向け', 'diff.h': 'よくあるアプリとの違い',
   'ty': 'よくあるアプリ', 'you': 'あなた', 'friend': '相手',
   'srv.ty': '運営会社のサーバー', 'srv.tg': 'Tegamiのサーバー',
 
@@ -53,7 +53,7 @@ const JA = {
 };
 const ENS = {
   'ctl.pause': 'Pause', 'ctl.play': 'Play',
-  'for.general': 'General', 'for.dev': 'Developers', 'diff.h': 'How Tegami is different', 'diff.more': "What the server can and can't see →",
+  'for.general': 'General', 'for.dev': 'Developers', 'diff.h': 'How Tegami is different',
   'ty': 'Typical apps', 'you': 'You', 'friend': 'Friend',
   'srv.ty': 'Company server', 'srv.tg': 'Tegami server',
 
@@ -498,35 +498,32 @@ document.getElementById('scenes').innerHTML = S.map((sc) => `
 document.getElementById('chips').innerHTML = S.map((sc) => `<button type="button" role="tab" data-sc="${sc.id}" class="chip rounded-full border px-4 py-2 text-sm font-medium">${t(sc.id + '.chip')}</button>`).join('');
 
 // ─── 再生 ───────────────────────────────────────────
-// 選ばれていない間は1周ごとに次の場面へ進む。一時停止ボタンで、動きも次の場面への移動も止まる。
-// 動きを減らす設定の人には、最後の近くで止めた絵を見せ、再生ボタンを押した時だけ動かす。
+// 最初は止まった絵を見せる。場面は勝手に切り替わらない。動かすのは、絵をクリックした時（Enter と Space でも）だけ。
+// もう一度クリックすると止まる。動きを減らす設定の人も同じ（最初から止まっている）。
 const DUR = 14000;
-const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-let cur = null, anims = [], userPicked = false, visible = false, paused = reduce, timer = null;
-const btn = document.getElementById('diff-play');
-const bar = document.getElementById('diff-bar');
+let cur = null, anims = [], visible = false, paused = true, fresh = true;
 const ICON = {
-  pause: '<svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>',
-  play: '<svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>',
+  play: '<svg viewBox="0 0 24 24" class="h-7 w-7" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>',
 };
+// 場面ごとの、絵の上にかぶせるボタン。止まっている間だけ、再生の印を出す。
+document.querySelectorAll('#diff .scene > .grid').forEach((g) => {
+  g.classList.add('relative');
+  g.insertAdjacentHTML('beforeend', '<button type="button" class="playhit absolute inset-0 z-10 flex cursor-pointer items-center justify-center rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-600 dark:focus-visible:outline-forest-300"><span class="playmark flex h-16 w-16 items-center justify-center rounded-full bg-forest-600 pl-1 text-white shadow-xl ring-4 ring-white/70 dark:bg-forest-300 dark:text-forest-950 dark:ring-black/40">' + ICON.play + '</span></button>');
+});
 function showButton() {
-  const k = paused ? 'play' : 'pause';
-  btn.innerHTML = ICON[k] + `<span>${t('ctl.' + k)}</span>`;
-  btn.setAttribute('aria-pressed', String(paused));
-}
-function left() {
-  const a0 = anims[0];
-  return a0 ? DUR - (a0.currentTime % DUR) : DUR;
-}
-function schedule() {
-  clearTimeout(timer);
-  if (userPicked || paused || !visible) return;
-  timer = setTimeout(() => play(S[(S.indexOf(cur) + 1) % S.length].id), left());
+  document.querySelectorAll('#diff .playhit').forEach((b) => {
+    b.setAttribute('aria-label', t(paused ? 'ctl.play' : 'ctl.pause'));
+    b.querySelector('.playmark').style.display = paused ? '' : 'none';
+  });
 }
 function run() {
   const go = visible && !paused;
   anims.forEach((x) => (go ? x.play() : x.pause()));
-  schedule();
+}
+function toggle() {
+  paused = !paused;
+  if (!paused && fresh) { anims.forEach((x) => { x.currentTime = 0; }); fresh = false; }
+  showButton(); run();
 }
 function play(id) {
   anims.forEach((x) => x.cancel()); anims = [];
@@ -547,16 +544,16 @@ function play(id) {
     const on = [[0, .3], [.3, .62], [.62, 1]][n - 1];
     anims.push(li.animate(K([[0, { opacity: on[0] === 0 ? 1 : .45 }], [Math.max(on[0] - .001, 0), { opacity: on[0] === 0 ? 1 : .45 }], [on[0], { opacity: 1 }], [on[1] - .001, { opacity: 1 }], [on[1], { opacity: on[1] === 1 ? 1 : .45 }], [1, { opacity: on[1] === 1 ? 1 : .45 }]]), { duration: DUR, iterations: Infinity }));
   });
-  anims.push(bar.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: DUR, iterations: Infinity }));
-  if (reduce && paused) anims.forEach((x) => { x.currentTime = DUR * .9; });
+  // 止まっている間は、3つの手順がそろった、最後の近くの絵を見せる。
+  if (paused) { anims.forEach((x) => { x.currentTime = DUR * .9; }); fresh = true; }
   run();
 }
 document.getElementById('chips').addEventListener('click', (e) => {
   const b = e.target.closest('.chip'); if (!b) return;
-  userPicked = true; paused = false; showButton(); play(b.dataset.sc);
+  play(b.dataset.sc);
 });
-btn.addEventListener('click', () => { paused = !paused; showButton(); run(); });
+document.getElementById('scenes').addEventListener('click', (e) => { if (e.target.closest('.playhit')) toggle(); });
 new IntersectionObserver(([e]) => { visible = e.isIntersecting; run(); }, { threshold: 0.3 }).observe(root);
-showButton();
 play(new URLSearchParams(location.search).get('scene') || S[0].id);
-window.tegamiFreeze = (p) => { paused = true; showButton(); anims.forEach((x) => { x.pause(); x.currentTime = DUR * p; }); clearTimeout(timer); };
+showButton();
+window.tegamiFreeze = (p) => { paused = true; fresh = true; showButton(); anims.forEach((x) => { x.pause(); x.currentTime = DUR * p; }); };

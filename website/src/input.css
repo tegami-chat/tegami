@@ -6,6 +6,13 @@
 :lang(ja) p { word-break: auto-phrase; text-wrap: pretty; }
 h1, h2, h3 { text-wrap: balance; }
 
+/* Moving between pages must not shift or flash. Keep the scrollbar's room even on a short page,
+   paint the page colour on the root before the body, and let the browser cross-fade the page change
+   (the header and footer are identical on every page, so only the content changes). */
+html { scrollbar-gutter: stable; background-color: #fff; }
+html.dark { background-color: #101311; color-scheme: dark; }
+@view-transition { navigation: auto; }
+
 /* The animated comparison (diff.js). */
 .flow text { font-family: inherit; }
 .flow [data-a] { opacity: 0; }
