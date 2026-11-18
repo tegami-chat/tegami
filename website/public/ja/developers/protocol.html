@@ -62,7 +62,7 @@
 <div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.14">できません。Tegamiのアプリが接続するのは専用のリレー（<code>wss://relay.tegami.chat</code>）のみで、そのリレーもTegamiに登録された鍵でログインした接続からの封筒しか受け付けないためです。このように閉じた構成にしているのは、迷惑メッセージやなりすましを入口で止めるためであり、リレー側には登録制御、送信量の上限、通報、運営による鍵の停止機能を備えています。</p></div>
 <div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.15">「どのアプリでも同じ鍵で使える」というNostr本来の良さは、いまのTegamiにはありません。</p></div>
 <div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.16"><span class="tag idea">検討中</span>受信先として会社のリレーを追加できる形、ほかのNostrアプリからのメッセージを表示できる形、Tegamiの定めるルールに同意したリレーだけを公式一覧に載せる形を比較しています。どれを採用するかはまだ決めていません。</li>
+<li data-i18n="d.16"><span class="tag idea">検討中</span>受信先として会社や学校などの独自のリレーを追加できる形、ほかのNostrアプリからのメッセージを表示できる形、Tegamiの定めるルールに同意したリレーだけを公式一覧に載せる形を比較しています。どれを採用するかはまだ決めていません。</li>
 </ul></div>
 </div></details>
 
@@ -126,7 +126,7 @@
 <li data-i18n="d.71">封筒のほかに、登録で誰が誰を招待したか（90日で消す）、スタンプを預けた鍵と大きさ、通報の中身（90日で消す）</li>
 </ul>
 <p data-i18n="d.72">gift wrap自体は送り主を隠しますが、Tegamiのリレーは書き込みにもログインを求めるため、受け付ける瞬間には「どの鍵がどの鍵宛てに送ったか」が分かります。ただし、リレーのコードは送信者の鍵を保存していません（<code>relay/src/index.ts</code>の<code>events</code>テーブルに送信者の列はありません）。例外として、招待券なしで登録した人が送った封筒については、「知らない人から」の欄に出さないための印を付けて保存します。</p></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.73">稼働中のリレーが公開コードと同じものであることを、外部から確かめる方法がありません。リレーは稼働しているコミットを<code>/stats</code>と<span class="whitespace-nowrap">NIP-11</span>の<code>version</code>に出していますが、運営者による申告にとどまります。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.73">稼働中のリレーが公開コードと同じものであることを、外部から確かめる方法がありません。リレーは稼働しているコミットを<code>/stats</code>と<span class="whitespace-nowrap">NIP-11</span>の<code>version</code>に記載していますが、運営者による申告にとどまります。</p></div>
 <div class="ph next"><b data-i18n="dv.next">これから</b><ul>
 <li data-i18n="d.74"><span class="tag idea">検討中</span>稼働中のリレーと公開コードの同一性を外部から確かめる方法は、まだ決めていません。</li>
 </ul></div>
@@ -144,7 +144,7 @@
 <div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.80">NIP-17の仕様どおり、メンバー1人ずつに別の封筒を作って送ります。たとえば自分のほかに5人いるグループへの1通は、自分用の写しを含めて封筒6通になります。リレーからは誰が同じグループに属しているかは見えません。なお、グループのメンバーは後から変更できず、変更すると別のグループ扱いになります。</p></div>
 <div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.81">人数が増えるほど送る封筒が増えるため、大人数のグループには向きません。MLSは使っていません。</p></div>
 <div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.82"><span class="tag built">公開待ち</span>グループに変わらない識別子を持たせ、メンバーの追加、削除、退会、名前とアイコン、管理者の変更を、操作した人の署名（seal）付きで全員に伝えるようにしました。管理者がいるグループと、中立なグループを選べます。</li>
+<li data-i18n="d.82"><span class="tag built">公開待ち</span>グループに変わらない識別子を持たせ、メンバーの追加、削除、退会、名前とアイコン、管理者の変更を、操作した人の署名（seal）付きで全員に伝えるようにしました。管理者がいるグループと、管理者がいない（誰でも変更できる）グループを選べます。</li>
 <li data-i18n="d.83"><span class="tag idea">検討中</span>Discordのサーバーのように大勢が集まれる場所も作りたいと考えています。</li>
 </ul></div>
 </div></details>
@@ -153,7 +153,7 @@
 <div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.85">そのとおりです。ブラウザで動く暗号化アプリに共通する弱点であり、配信元（Cloudflare上の<code>app.tegami.chat</code>）が書き換えられると、鍵を盗むコードを配信できてしまいます。そのためTegamiでは、読み込み元を絞る厳しいCSPを設定し、外部の解析スクリプトも一切入れていません。</p></div>
 <div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.86">配信しているファイルが公開リポジトリからビルドされたものと同じかを確かめる仕組み（再現可能ビルドと照合）がありません。</p></div>
 <div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.87"><span class="tag decided">決定済み</span>iPhone、Android、Windows、Mac、Linux向けのアプリを出します。ストアが配信する版は固定されるため、この弱点は小さくなります。</li>
+<li data-i18n="d.87"><span class="tag decided">決定済み</span>iPhone、Android、Windows、Mac、Linux向けのアプリを提供します。ストアが配信する版は固定されるため、この弱点は小さくなります。</li>
 <li data-i18n="d.88"><span class="tag built">公開待ち</span>Androidアプリは、試験用の端末（エミュレーター）上でトーク一覧の表示まで動作しました。</li>
 </ul></div>
 </div></details>

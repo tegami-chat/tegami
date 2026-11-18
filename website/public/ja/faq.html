@@ -57,11 +57,11 @@
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.read.q">メッセージを読めるのは誰ですか？</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.read.a">あなたと、送った相手だけです。メッセージは端末の中で暗号化されるので、Tegamiにも読めません。例外は2つあります。自分のAIに読ませる許可を出したトークは、そのAIが読めます。通報にメッセージを添えたときは、添えたメッセージを運営者が読めます。</p>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.read.a">あなたと、トークの相手だけです。メッセージは端末の中で暗号化されるので、Tegamiにも読めません。例外は2つあります。AIに読ませる許可を出したトークは、そのAIが読めます。AIに読ませたものは、そのAIの会社にも渡ります。自分の文を相手のAIに読ませない設定もあります。通報にメッセージを添えたときは、添えたメッセージを運営者が読めます。</p>
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.phone.q">電話番号やメールアドレスは必要ですか？</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.phone.a">いりません。名前を決めるだけで始められます。</p>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.phone.a">必要ありません。名前を決めるだけで始められます。</p>
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.devices.q">どの端末で使えますか？</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
@@ -73,7 +73,7 @@
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.lost.q">スマホをなくしたらどうなりますか？</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.lost.a">設定で復旧コードを作っておけば、新しい端末でアカウントを戻せます。復旧コードがないと、Tegamiの運営者でも戻せません。</p>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.lost.a">設定で復旧コードを作っておけば、新しい端末でアカウント、友だち、グループを戻せます。会話の履歴は戻りません。復旧コードがないと、Tegamiの運営者でも戻せません。</p>
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.multi.q">スマホとパソコンで同時に使えますか？</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
@@ -81,7 +81,7 @@
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.collect.q">Tegamiは何を記録していますか？</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.collect.a">数えているのは、1週間に届いたメッセージの数など、全体の合計だけです。誰が何をしたかは記録しません。週ごとの数は<a href="/ja/status" class="underline">稼働状況のページ</a>で公開しています。</p>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.collect.a">統計として数えているのは、1週間に届いたメッセージの数など、全体の合計だけです。誰が何をしたかは統計に入れません。週ごとの数は<a href="/ja/status" class="underline">稼働状況のページ</a>で公開しています。このほか、登録、招待、通報の記録を、決めた期間だけ預かります。種類と期間は<a href="/ja/privacy" class="underline">プライバシーポリシー</a>に書いています。</p>
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.ai.q">自分のAIはどうやってつなぎますか？</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
@@ -93,7 +93,7 @@
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.shutdown.q">もしTegamiが終了したらどうなりますか？</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.shutdown.a">コードを公開しているので、誰でも動かし続けられます。トーク履歴もいつでも書き出せます。</p>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.shutdown.a">コードを公開しているので、技術のある人は自分でサーバーを立てて、Tegamiを動かし続けられます。ただし、いまのアプリを別のサーバーにつなぐ機能や、ほかのNostrアプリへアカウントを移す機能は、まだありません。トーク履歴は、いつでも書き出せます。</p>
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.dev.q">技術的な説明はどこにありますか？</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>

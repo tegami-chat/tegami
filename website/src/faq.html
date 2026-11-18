@@ -62,7 +62,7 @@ tailwind.config = {
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.read.q">Who can read my messages?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.read.a">Only you and the people you send them to. Messages are encrypted on your device, so not even Tegami can read them. There are two exceptions. If you allow your own AI to read a chat, that AI can read it. If you attach messages to a report, the operator can read the ones you attached.</p>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.read.a">Only you and the people you send them to. Messages are encrypted on your device, so not even Tegami can read them. There are two exceptions. If you allow an AI to read a chat, that AI can read it, and what it reads also goes to the company behind it. You can choose not to let other people’s AIs read your messages. If you attach messages to a report, the operator can read the ones you attached.</p>
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.phone.q">Do I need a phone number or email?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
@@ -78,7 +78,7 @@ tailwind.config = {
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.lost.q">What if I lose my phone?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.lost.a">Make a recovery code in Settings, and you can bring your account back on a new device. Without it, no one, not even Tegami, can restore it.</p>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.lost.a">Make a recovery code in Settings, and you can bring your account, friends and groups back on a new device. Your chat history does not come back. Without it, no one, not even Tegami, can restore it.</p>
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.multi.q">Can I use it on my phone and computer at the same time?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
@@ -86,7 +86,7 @@ tailwind.config = {
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.collect.q">What does Tegami collect?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.collect.a">Only totals, like how many messages were delivered in a week. No one's activity is tracked, and the weekly numbers are public on the <a href="Tegamiの稼働状況と利用統計案_2026-11-15.html" class="underline">status page</a>.</p>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.collect.a">The statistics count only totals, like how many messages were delivered in a week, and never anyone's activity. The weekly numbers are public on the <a href="Tegamiの稼働状況と利用統計案_2026-11-15.html" class="underline">status page</a>. We also keep records of sign-ups, invites and reports for a set time. The kinds and periods are in the <a href="Tegamiのプライバシーポリシー案_2026-11-14.html" class="underline">privacy policy</a>.</p>
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.ai.q">How do I connect my AI?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
@@ -98,7 +98,7 @@ tailwind.config = {
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.shutdown.q">What if Tegami shuts down?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.shutdown.a">The code is public, so anyone can keep it running. You can also export your chats anytime.</p>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="faq.shutdown.a">The code is public, so someone with the skills can run their own server and keep Tegami going. But the app cannot yet connect to a different server, and you cannot yet move your account to another Nostr app. You can export your chats anytime.</p>
       </details>
       <details class="group py-4">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span data-i18n="faq.dev.q">Where are the technical details?</span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
@@ -166,7 +166,7 @@ const JA = {
   'diff.more': 'サーバーに見えることと見えないこと →',
   'diff.dev': '同じ場面を開発者向けに見る →',
   'mk.dev': '開発者向けの説明を読む →',
-  'faq.collect.a': '数えているのは、1週間に届いたメッセージの数など、全体の合計だけです。誰が何をしたかは記録しません。週ごとの数は<a href="Tegamiの稼働状況と利用統計案_2026-11-15.html" class="underline">稼働状況のページ</a>で公開しています。',
+  'faq.collect.a': '統計として数えているのは、1週間に届いたメッセージの数など、全体の合計だけです。誰が何をしたかは統計に入れません。週ごとの数は<a href="Tegamiの稼働状況と利用統計案_2026-11-15.html" class="underline">稼働状況のページ</a>で公開しています。このほか、登録、招待、通報の記録を、決めた期間だけ預かります。種類と期間は<a href="Tegamiのプライバシーポリシー案_2026-11-14.html" class="underline">プライバシーポリシー</a>に書いています。',
   'faq.ai.a': 'いまは、パソコンで小さなプログラム（tegami-agent）を動かし、その招待リンクで友だちに追加します。追加すると、あなたのAIがトーク一覧に並びます。QRコードを読むだけでつながる形も準備しています。',
   'faq.dev.q': '技術的な説明はどこにありますか？',
   'faq.dev.a': '<a href="Tegamiの開発者向け_2026-11-16.html" class="underline">開発者向けのページ</a>に、TegamiがNostrのどこを使っているか、リレーに何が見えるか、鍵をどう守るか、技術仕様までをまとめています。コードは<a href="https://github.com/tegami-chat/tegami" class="underline" target="_blank" rel="noopener">GitHub</a>で公開しています。',
@@ -194,9 +194,9 @@ const JA = {
   'cta.browser': 'ブラウザで始める',
   'soon': '準備中',
   'p1.h': 'プラットフォームから自由に。',
-  'p1.t': '気持ち悪い広告も、見たくないニュースも、やりたくないゲームも、いらない機能も、全部ありません。あなたの個人情報を、企業のマーケティングに売ることはありません。',
+  'p1.t': '気持ち悪い広告も、見たくないニュースも、やりたくないゲームも、いらない機能も、全部ありません。あなたの個人情報を企業のマーケティングに売ることはありません。',
   'p2.h': 'AIを自由に使う。',
-  'p2.t': '自分のAIと、簡単につながります。MCPで、メッセージを自由に扱えます（APIは準備中です）。もちろん、AIを断ることも、AIを使わないことも、あなたの自由です。',
+  'p2.t': '自分のAIを、友だちとしてつなげられます。MCP（AIとツールをつなぐ仕組み）で、メッセージを自由に扱えます（APIは準備中です）。AIを使わないことも、相手のAIに自分の文を読ませないことも、あなたの自由です。',
   'p3.h': '誰にも覗かれない。',
   'p3.t': 'メッセージは端末の中で暗号化してから送り、端末に保存します。Tegamiのサーバーを通る間も暗号化したままなので、運営者にも読めません。',
   'now': '提供中',
@@ -204,7 +204,7 @@ const JA = {
   'open': 'オープンソース',
   'roadmap': 'ロードマップ',
   'mk.h': 'Tegamiを自分仕様に。',
-  'mk.t': '画面も使い方も、自分の好みに合わせられます。見た目や使い勝手を変えたり、手持ちのツールとつないだりできます。アプリを作り変えても、Tegamiのみんなとそのまま話せます。',
+  'mk.t': '画面も使い方も、自分の好みに合わせられるようにしていきます。見た目や使い勝手を変える機能は準備中で、手持ちのAIやボットをつなぐ機能はいま使えます。アプリを作り変えても、Tegamiのみんなとそのまま話せます。',
   'mk.ui.h': '画面を作り替える',
   'mk.ui.t': 'Tegamiの見た目や動きを変えたり、AIに自分専用の画面を作ってもらったりできます。',
   'mk.share.h': '作ったものを共有する',
@@ -212,7 +212,7 @@ const JA = {
   'mk.bots.h': 'AIやボットをつなぐ',
   'mk.bots.t': 'パソコン上のAIやボットにTegamiのアカウントを持たせれば、普通の相手と同じようにトークできます。',
   'mk.api.h': 'APIとMCP',
-  'mk.api.t': 'MCPは今すぐ使えます。自分のAIが、tegami-agentを通してメッセージを読んだり送ったりできます。TegamiのAPIは準備中です。',
+  'mk.api.t': 'MCP（AIとツールをつなぐ仕組み）は今すぐ使えます。自分のAIが、tegami-agentを通してメッセージを読んだり送ったりできます。TegamiのAPI（プログラムから直接つなぐ窓口）は準備中です。',
   'mk.relay.h': '自前のサーバーを動かす',
   'mk.relay.t': '会社や学校、コミュニティで、自分たち専用のメッセージサーバーを持てます。',
   'mk.agpl.h': 'AGPL-3.0',
@@ -221,15 +221,15 @@ const JA = {
   'faq.free.q': '無料ですか？ 費用は誰が出しているのですか？',
   'faq.free.a': 'はい、無料です。Tegamiは日本の個人開発者が作っており、投資家も広告もありません。現在は開発者が費用を負担していますが、今後は使う人からの支援でまかなう予定です。',
   'faq.read.q': 'メッセージを読めるのは誰ですか？',
-  'faq.read.a': 'あなたと、送った相手だけです。メッセージは端末の中で暗号化されるので、Tegamiにも読めません。例外は2つあります。自分のAIに読ませる許可を出したトークは、そのAIが読めます。通報にメッセージを添えたときは、添えたメッセージを運営者が読めます。',
+  'faq.read.a': 'あなたと、トークの相手だけです。メッセージは端末の中で暗号化されるので、Tegamiにも読めません。例外は2つあります。AIに読ませる許可を出したトークは、そのAIが読めます。AIに読ませたものは、そのAIの会社にも渡ります。自分の文を相手のAIに読ませない設定もあります。通報にメッセージを添えたときは、添えたメッセージを運営者が読めます。',
   'faq.phone.q': '電話番号やメールアドレスは必要ですか？',
-  'faq.phone.a': 'いりません。名前を決めるだけで始められます。',
+  'faq.phone.a': '必要ありません。名前を決めるだけで始められます。',
   'faq.devices.q': 'どの端末で使えますか？',
   'faq.devices.a': '現在はスマホやパソコンのブラウザからすぐに使えます。iPhone、Android、Windows、Mac、Linux向けのアプリも準備中です。',
   'faq.friends.q': '友だちはどうやって追加しますか？',
   'faq.friends.a': '招待リンクを送るか、QRコードを見せるだけです。友だちにもTegamiを入れてもらう必要があります。',
   'faq.lost.q': 'スマホをなくしたらどうなりますか？',
-  'faq.lost.a': '設定で復旧コードを作っておけば、新しい端末でアカウントを戻せます。復旧コードがないと、Tegamiの運営者でも戻せません。',
+  'faq.lost.a': '設定で復旧コードを作っておけば、新しい端末でアカウント、友だち、グループを戻せます。会話の履歴は戻りません。復旧コードがないと、Tegamiの運営者でも戻せません。',
   'faq.multi.q': 'スマホとパソコンで同時に使えますか？',
   'faq.multi.a': 'はい。設定の引き継ぎ用のリンクで、別の端末でも同じアカウントを同時に使えます。それまでの会話は移らず、新しい端末はサーバーに残っている直近30日分のメッセージを受け取り直します。',
   'faq.collect.q': 'Tegamiは何を記録していますか？',
@@ -237,7 +237,7 @@ const JA = {
   'faq.spam.q': '迷惑なメッセージへの対策はありますか？',
   'faq.spam.a': '知らない人からのメッセージは「知らない人から」の欄にまとまります。どの相手でもブロックと通報ができます。',
   'faq.shutdown.q': 'もしTegamiが終了したらどうなりますか？',
-  'faq.shutdown.a': 'コードを公開しているので、誰でも動かし続けられます。トーク履歴もいつでも書き出せます。',
+  'faq.shutdown.a': 'コードを公開しているので、技術のある人は自分でサーバーを立てて、Tegamiを動かし続けられます。ただし、いまのアプリを別のサーバーにつなぐ機能や、ほかのNostrアプリへアカウントを移す機能は、まだありません。トーク履歴は、いつでも書き出せます。',
   'don.h': 'Tegamiの独立を守るために。',
   'don.t': 'Tegamiは、日本の個人開発者が作っています。投資家も広告もなく、あなたの情報を売ることもありません。だからこそ、費用は使う人たちの支えでまかないます。',
   'don.server.h': 'サーバー',
@@ -269,15 +269,15 @@ const JA = {
   'feat.move': '機種変更の引き継ぎ',
   'ai.h': 'AIを自由に。',
   'ai.pick.h': '好きなAIを使う',
-  'ai.pick.t': 'Claude、ChatGPT、Gemini、自分のパソコンで動かしているAI。Claude Codeはそのまま使え、ほかは自分のAPIキーか手元のモデルで使います。どれを使うかは、Tegamiではなくあなたが決めます。',
+  'ai.pick.t': 'Claude、ChatGPT、Gemini、自分のパソコンで動かすAIから選べます。そのまま使えるのはClaude Codeです。ほかは、AIの会社から受け取った自分のAPIキー（利用のための鍵）か、自分のパソコンで動かすモデルで使います。どれを使うかは、あなたが決めます。',
   'ai.talk.h': 'AIと話す',
-  'ai.talk.t': 'あなたのAIが、友だちと同じようにトーク一覧に並びます。パソコンでtegami-agentが動いている間は、いつでも、どこからでも話しかけられます。',
+  'ai.talk.t': 'あなたのAIが、友だちと同じようにトーク一覧に並びます。パソコンでAIをつなぐ小さなプログラム（tegami-agent）を動かしている間は、いつでも、どこからでも話しかけられます。',
   'ai.join.h': 'AIをトークに呼ぶ',
   'ai.join.t': 'グループにAIを呼んで、話の要約や調べもの、メモを任せられます。参加には全員の同意が必要です。',
   'ai.each.h': 'AI同士でやり取りさせる',
   'ai.each.t': 'お互いが許可すれば、あなたのAIと友だちのAIが、予定の調整や情報のやり取りをしてくれます。',
   'ai.many.h': '複数のAIを使う',
-  'ai.many.t': 'AIはいくつでも追加できます。それぞれに名前や顔、役割を設定できます。',
+  'ai.many.t': 'AIはいくつでも追加できます。それぞれに名前やアイコン、役割を設定できます。',
   'ai.own.h': '自分でカスタマイズする',
   'ai.own.t': 'MCPで、自分だけのボットや自動化の仕組みを作れます。APIは準備中です。',
   'end.h': 'トークはあなたのもの。<br>AIの持ち込み自由。',
