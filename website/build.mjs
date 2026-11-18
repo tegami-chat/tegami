@@ -7,8 +7,11 @@
 //   public/ja/index.html, public/ja/how.html, ...  Japanese, at /ja/, /ja/how, ...
 // Then it compiles Tailwind into public/tegami.css (no CDN, so the CSP stays strict).
 //
-// Run: node build.mjs   (in this folder)
-import { readFileSync, writeFileSync, mkdirSync, copyFileSync } from 'node:fs';
+// The developer pages (/developers/..., /ja/developers/...) are not built here. They are an Astro Starlight
+// site in docs/ (see docs/README.md). This script builds it too and copies the result into public/.
+//
+// Run: node build.mjs   (in this folder; the one command that rebuilds the whole site)
+import { readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync, rmSync, cpSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 
 const SITE = 'https://tegami.chat';
@@ -19,16 +22,18 @@ const page = (name, path, nav) => ({
   out: { en: `public${path === '/' ? '/index' : path}.html`, ja: `public/ja${path === '/' ? '/index' : path}.html` },
   nav,
 });
+const docPage = (path) => ({ path: { en: path, ja: '/ja' + path } });
 const PAGES = {
   index: page('index', '/', ''),
   how: page('how', '/how', 'nav.how'),
-  developers: page('developers', '/developers', ''),
-  'dev-protocol': page('dev-protocol', '/developers/protocol', ''),
-  'dev-relay': page('dev-relay', '/developers/relay', ''),
-  'dev-ai': page('dev-ai', '/developers/ai', ''),
-  'dev-compare': page('dev-compare', '/developers/compare', ''),
-  'dev-spec': page('dev-spec', '/developers/spec', ''),
-  'dev-faq': page('dev-faq', '/developers/faq', ''),
+  // Pages of the Starlight docs in docs/: address only, no source here.
+  developers: docPage('/developers'),
+  'dev-protocol': docPage('/developers/protocol'),
+  'dev-relay': docPage('/developers/relay'),
+  'dev-ai': docPage('/developers/ai'),
+  'dev-compare': docPage('/developers/compare'),
+  'dev-spec': docPage('/developers/spec'),
+  'dev-faq': docPage('/developers/faq'),
   compare: page('compare', '/compare', ''),
   roadmap: page('roadmap', '/roadmap', ''),
   faq: page('faq', '/faq', 'nav.faq'),
@@ -59,30 +64,6 @@ const META = {
     en: { title: 'FAQ | Tegami', desc: 'Questions people ask first about Tegami.' },
     ja: { title: 'よくある質問 | Tegami', desc: 'Tegamiについて、よく聞かれること。' },
   },
-  'dev-protocol': {
-    en: { title: 'Nostr, encryption and keys | Tegami', desc: 'Which parts of Nostr Tegami uses, how messages are sealed, what the relay can see, and how keys are kept.' },
-    ja: { title: 'Nostrと暗号と鍵 | Tegami', desc: 'TegamiがNostrのどこを使うか、メッセージをどう封じるか、リレーに何が見えるか、鍵をどう守るか。' },
-  },
-  'dev-relay': {
-    en: { title: 'Relay, notifications and calls | Tegami', desc: 'The rules of the Tegami relay, and how notifications, calls and photos work.' },
-    ja: { title: 'リレーと通知と通話 | Tegami', desc: 'Tegamiのリレーの決まりと、通知、通話、写真の仕組み。' },
-  },
-  'dev-ai': {
-    en: { title: 'AI | Tegami', desc: 'How your own AI joins Tegami, what it can read, and what goes to the AI provider.' },
-    ja: { title: 'AI | Tegami', desc: '自分のAIがどうつながり、何を読めて、何がAIの会社に渡るか。' },
-  },
-  'dev-compare': {
-    en: { title: 'Developer comparison | Tegami', desc: 'Tegami next to LINE, WhatsApp, Signal, Telegram and other Nostr apps.' },
-    ja: { title: '開発者向けの比較 | Tegami', desc: 'LINE、WhatsApp、Signal、Telegram、ほかのNostrアプリとの比較。' },
-  },
-  'dev-spec': {
-    en: { title: 'Technical spec | Tegami', desc: 'Crypto building blocks, relay limits, HTTP endpoints and Tegami event kinds.' },
-    ja: { title: '技術仕様 | Tegami', desc: '暗号の部品、リレーの上限、HTTPの口、Tegami独自のkind。' },
-  },
-  'dev-faq': {
-    en: { title: 'Developer FAQ | Tegami', desc: 'Questions developers ask about Tegami.' },
-    ja: { title: '開発者向けのよくある質問 | Tegami', desc: '開発者からよく聞かれること。' },
-  },
   compare: {
     en: { title: 'Compare apps | Tegami', desc: 'Tegami next to LINE, WhatsApp, Signal and Telegram.' },
     ja: { title: 'ほかのアプリとの比較 | Tegami', desc: 'LINE、WhatsApp、Signal、Telegramと並べた、Tegamiの比較。' },
@@ -106,10 +87,6 @@ const META = {
   about: {
     en: { title: 'About us | Tegami', desc: 'Who runs Tegami, and how to contact us.' },
     ja: { title: '運営者情報 | Tegami', desc: 'Tegamiの運営者と連絡先。' },
-  },
-  developers: {
-    en: { title: 'For developers | Tegami', desc: 'How Tegami uses Nostr, what the relay can see, keys, AI, and the full technical spec.' },
-    ja: { title: '開発者向けの説明 | Tegami', desc: 'TegamiがNostrのどこを使うか、リレーに見えるもの、鍵、AI、技術仕様。' },
   },
   status: {
     en: { title: 'Status and stats | Tegami', desc: 'Whether the Tegami relay is responding, and weekly usage statistics.' },
@@ -220,10 +197,16 @@ function build(name, lang) {
   writeFileSync(page.out[lang], html);
 }
 
-mkdirSync('public/ja/developers', { recursive: true });
-mkdirSync('public/developers', { recursive: true });
-for (const name of Object.keys(PAGES)) for (const lang of ['en', 'ja']) build(name, lang);
+for (const name of Object.keys(PAGES)) if (PAGES[name].src) for (const lang of ['en', 'ja']) build(name, lang);
 copyFileSync('src/icon.svg', 'public/icon.svg');
 for (const f of ['status.js', 'diff.js', 'site.js', 'theme.js']) copyFileSync('src/' + f, 'public/' + f);
 execSync('npx --yes tailwindcss@3.4.16 -c tailwind.config.cjs -i src/input.css -o public/tegami.css --minify', { stdio: 'inherit' });
+
+// The developer docs (Astro Starlight in docs/): build, then replace the docs' files in public/.
+if (!existsSync('docs/node_modules')) execSync('npm ci', { cwd: 'docs', stdio: 'inherit' });
+execSync('npm run build', { cwd: 'docs', stdio: 'inherit' });
+for (const d of ['developers', 'ja/developers', '_astro', 'pagefind']) {
+  rmSync('public/' + d, { recursive: true, force: true });
+  cpSync('docs/dist/' + d, 'public/' + d, { recursive: true });
+}
 console.log('built');

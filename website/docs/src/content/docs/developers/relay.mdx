@@ -1,0 +1,151 @@
+---
+title: "Relay, push and calls"
+description: "The rules of the Tegami relay, and how notifications, calls and photos work."
+---
+
+import { Aside, Badge } from '@astrojs/starlight/components';
+
+The rules of the Tegami relay, and how notifications, calls and photos work.
+
+Status labels such as "Available" are explained in the [overview](/developers/#what-the-status-labels-mean-1).
+
+## Relay
+
+### What does the relay run on?
+
+<Aside type="tip" title="Now">
+
+It runs on Cloudflare Workers and a Durable Object (SQLite), and the code is in `relay/`. It only accepts gift wraps (kind 1059) with a single recipient, and you can only read envelopes addressed to you. Stored envelopes are deleted after 30 days, and sending limits apply per IP address and per key.
+
+</Aside>
+
+<Aside type="caution" title="Not yet">
+
+There is only one relay, run by Tegami.
+
+</Aside>
+
+<Aside type="note" title="Next">
+
+-   <Badge text="Decided" variant="note" />  We start with a 30-day retention for envelopes, watch how it is used, and shorten it if almost nobody goes a long time without opening the app.
+
+</Aside>
+
+### How does registration work? Can anyone use Tegami?
+
+<Aside type="tip" title="Now">
+
+Yes, anyone can register. Registration is a `POST /register` signed with NIP-98, and requires either an invite code or a human check (Cloudflare Turnstile). Unregistered keys cannot write. Messages from people who registered without an invite code are not shown anywhere, including the strangers box, until you add them as a friend, and they do not trigger notifications. Messages sent after the other person adds them as a friend, via QR code or invite link, are shown. A modified app can still use the relay if its key passed registration, so what we protect is the registration gate, not the app.
+
+</Aside>
+
+<Aside type="caution" title="Not yet">
+
+There is no identity verification badge (a mark of authenticity).
+
+</Aside>
+
+<Aside type="note" title="Next">
+
+-   <Badge text="Decided" variant="note" />  We will prevent impersonation by combining several methods. Family and friends scan each other's QR codes in person, companies and shops are verified by domain, and people who want a mark of authenticity can get one for a fee through a third-party identity verification company. Even then, Tegami only receives the result that verification happened, and holds no personal information such as addresses.
+
+</Aside>
+
+### Can I run my own relay?
+
+<Aside type="tip" title="Now">
+
+The relay code is public, so you can set it up and run it yourself.
+
+</Aside>
+
+<Aside type="caution" title="Not yet">
+
+However, the Tegami app currently connects only to the official relay, so you would need to modify the app to use your own.
+
+</Aside>
+
+<Aside type="note" title="Next">
+
+-   <Badge text="Decided" variant="note" />  Companies and schools will be able to run their own relays. Whoever runs a relay sets its registration rules, choosing from "anyone," "invite code only," or "approved keys only."
+
+</Aside>
+
+### What usage do you count?
+
+<Aside type="tip" title="Now">
+
+The relay keeps daily totals (envelopes received, number and size of files stored, number of logins, and an approximate count of keys that logged in that day) for 183 days. On [Status and usage statistics](/status) we publish only totals for completed weeks, for the last 24 weeks. Only we can see the daily numbers. The count of keys that logged in is estimated with HyperLogLog, mixing in a value that changes every day (a salt) before counting, and that value is deleted when the day ends. The published key count is a daily average. Published numbers are 0 for 0 to 9, and rounded up to a multiple of 10 for 10 and above. Neither the app nor the website has any analytics.
+
+</Aside>
+
+<Aside type="note" title="Next">
+
+-   <Badge text="Decided" variant="note" />  We will never add analytics that track what people do.
+
+</Aside>
+
+## Notifications, calls, photos
+
+### How are notifications delivered?
+
+<Aside type="tip" title="Now">
+
+We use Web Push. Your device signs its notification endpoint and notification keys with your key and leaves them with the relay. When an envelope arrives, the relay sends a payload encrypted per device (RFC 8291). It contains only the type (message or call), the recipient account, and a count; never the sender or message text. However, to tell calls apart, only envelopes that ring the other person carry a `t=call` tag, so the relay knows that an envelope was a call.
+
+</Aside>
+
+<Aside type="caution" title="Not yet">
+
+You cannot mute notifications per chat. Neither the relay nor the part of the device that receives notifications knows which chat an envelope belongs to. Also, in the iPhone browser version, incoming calls do not show full screen like a regular phone call.
+
+</Aside>
+
+<Aside type="note" title="Next">
+
+-   <Badge text="Decided" variant="note" />  When we build the iPhone app, we will add full-screen incoming calls (Apple's CallKit).
+
+</Aside>
+
+### How do calls work?
+
+<Aside type="tip" title="Now">
+
+One-to-one voice and video calls over WebRTC. Signaling such as ringing and answering goes through the relay in encrypted envelopes that expire after 1 minute, and STUN (`stun.cloudflare.com`) is used to find a connection path. When a direct path is not possible, or when you choose "Always relay calls," the call goes through a TURN relay server. Audio and video stay encrypted.
+
+</Aside>
+
+<Aside type="caution" title="Not yet">
+
+Calls that connect directly show the other person your IP address, unless you choose "Always relay calls." There are no group calls.
+
+</Aside>
+
+<Aside type="note" title="Next">
+
+-   <Badge text="Available" variant="success" />  Calls can now use Cloudflare's TURN server.
+-   <Badge text="Available" variant="success" />  If you choose "Always relay calls," the other person can no longer see your IP address.
+-   <Badge text="Available" variant="success" />  You can also set up your own TURN server.
+
+</Aside>
+
+### How are photos and files handled?
+
+<Aside type="tip" title="Now">
+
+Each one is encrypted with a new AES-GCM key and then stored in the relay's storage (Cloudflare R2). The key goes inside the encrypted message, so only the recipient gets it. Data in storage is deleted after 30 days, but stays on the recipient's device. Photos are shrunk to 1600px on the long side before sending, and the file size limit is 10MB after encryption. Stickers are different: their key is derived from the image and your account's secret key (so your own devices produce the same ciphertext), and they stay in separate storage until you delete them.
+
+</Aside>
+
+<Aside type="caution" title="Not yet">
+
+There is no option to send at original quality.
+
+</Aside>
+
+<Aside type="note" title="Next">
+
+-   <Badge text="Decided" variant="note" />  Senders will be able to choose between sending a smaller version or the original quality.
+-   <Badge text="Under discussion" variant="caution" />  We have not decided whether sending at original quality will be a paid feature.
+
+</Aside>

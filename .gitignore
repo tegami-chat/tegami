@@ -5,3 +5,6 @@ node_modules/
 client/dist/
 client/.expo/
 client/expo-env.d.ts
+website/docs/node_modules/
+website/docs/dist/
+website/docs/.astro/

@@ -1,0 +1,364 @@
+---
+title: "Overview"
+description: "How Tegami uses Nostr, what the relay can see, keys, AI, and the full technical spec."
+---
+
+import { Aside, Badge, Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+import ArchMap from '../../../components/ArchMap.astro';
+
+How Tegami is built, for people who want to check it. Every answer is split into what runs in production today, what is still missing, and what comes next.
+
+Describes production as of November 18, 2026, in [tegami-chat/tegami](https://github.com/tegami-chat/tegami).
+
+## What the status labels mean
+
+**Features:**
+
+- <Badge text="Available" variant="success" />  in production since November 18, 2026
+- <Badge text="Coming soon" variant="tip" />  the code is written but not in production yet
+- <Badge text="In development" variant="caution" />  being built now, not finished yet
+- <Badge text="Planned" variant="default" />  we intend to build it, work has not started
+
+**Decisions:**
+
+- <Badge text="Decided" variant="note" />  the direction is set, the code isn't written yet
+- <Badge text="Under discussion" variant="caution" />  not decided yet
+
+## Topics
+
+<CardGrid>
+<LinkCard title="Nostr, encryption and keys" description="Which parts of Nostr Tegami uses, how messages are sealed, what the relay can see, and how keys are kept." href="/developers/protocol/" />
+<LinkCard title="Relay, push and calls" description="The rules of the Tegami relay, and how notifications, calls and photos work." href="/developers/relay/" />
+<LinkCard title="AI" description="How your own AI joins Tegami, what it can read, and what goes to the AI provider." href="/developers/ai/" />
+<LinkCard title="Comparison for developers" description="Tegami next to LINE, WhatsApp, Signal and Telegram, and next to other Nostr apps." href="/developers/compare/" />
+<LinkCard title="Technical spec" description="Crypto building blocks, relay limits, HTTP endpoints and Tegami's own event kinds." href="/developers/spec/" />
+</CardGrid>
+
+## How Tegami is different
+
+Seven everyday worries, typical apps on the left and Tegami on the right. Under each scene, the technical terms it uses are explained.
+
+### No trackers. No ad SDK.
+
+The web app limits scripts by CSP to its own origin and Cloudflare Turnstile (the human check at sign-up). No ad or analytics scripts.
+
+<CardGrid>
+<Card title="Typical stack">
+
+1. Remote config injects an ad slot into the chat list.
+2. Tabs funnel you to news and commerce.
+3. Even a mistap is measured as a click.
+
+</Card>
+<Card title="Tegami">
+
+1. The chat list is drawn only from chats stored on the device.
+2. Only Chats and Friends switchers. No remote config to inject ads or extra tabs.
+3. Taps and screen views are not sent as telemetry.
+
+</Card>
+</CardGrid>
+
+<Aside>
+
+CSP: script-src 'self' https://challenges.cloudflare.com. connect-src is limited to its own origin and the relay. Cloudflare Web Analytics (RUM) is off. Other outbound traffic: file storage via the relay (R2), STUN for calls (stun.cloudflare.com), and Web Push services.
+
+</Aside>
+
+<details>
+<summary>Terms</summary>
+
+- **tracker**: Scripts or code that monitor user actions and views across a site or app and report them externally.
+- **ad SDK**: A third-party software development kit embedded in apps to render ads and measure impressions or clicks.
+- **CSP**: Content Security Policy, a browser security mechanism that restricts allowed origins for scripts and network requests.
+- **origin**: A web security boundary defined by scheme, host, and port.
+- **Cloudflare Turnstile**: Cloudflare's human-verification widget that blocks automated bot sign-ups without conventional puzzles.
+- **remote config**: A mechanism that fetches server-side flags to modify app UI, features, or ad placements without releasing an update.
+- **telemetry**: Automated interaction data such as taps and screen views sent from a client to an analytics server.
+- **script-src 'self'**: A CSP directive restricting executable JavaScript to resources served from the app's own origin ('self').
+- **connect-src**: A CSP directive that restricts which URLs scripts can connect to via fetch or WebSocket.
+- **Cloudflare Web Analytics (RUM)**: Cloudflare's Real User Monitoring analytics service that runs browser beacons to track page views and performance.
+- **R2**: Cloudflare's S3-compatible object storage service.
+- **STUN**: Session Traversal Utilities for NAT, a protocol used to discover a device's public IP address and port across NATs.
+- **Web Push**: A web standard allowing push notifications to reach browsers even when the web app is closed.
+
+</details>
+
+### A secp256k1 key, not a phone number.
+
+An account is a Nostr key pair generated on the device. The secret key is encrypted with an AES-GCM key derived from the WebAuthn PRF extension and stored on the device.
+
+<CardGrid>
+<Card title="Typical stack">
+
+1. An SMS code verifies your phone number.
+2. Your number goes into the server's user table.
+3. Your phone number is linked to your account.
+
+</Card>
+<Card title="Tegami">
+
+1. The device generates a key pair.
+2. The secret key is encrypted with an AES-GCM key from PRF.
+3. A NIP-98 signed request registers the public key with the relay.
+
+</Card>
+</CardGrid>
+
+<Aside>
+
+Specs: Nostr keys (secp256k1, Schnorr), WebAuthn PRF, HKDF, AES-GCM, NIP-98. Registration uses an invite code or Cloudflare Turnstile; who invited whom is deleted after 90 days. When the authenticator does not support PRF, a non-extractable AES key is kept in IndexedDB.
+
+</Aside>
+
+<details>
+<summary>Terms</summary>
+
+- **secp256k1**: The elliptic curve parameter specification used by Bitcoin and Nostr.
+- **Nostr**: An open messaging protocol built on public-key signatures and independent relays rather than central user databases.
+- **key pair**: A mathematically linked pair of a public key and a secret key.
+- **secret key**: The private half of an asymmetric key pair used for signing events and decrypting incoming messages.
+- **WebAuthn**: A web standard (Web Authentication API) for passwordless authentication via platform biometrics or hardware keys.
+- **PRF extension**: The Pseudo-Random Function extension to WebAuthn, which returns a deterministic, origin-bound secret output during passkey authentication.
+- **AES-GCM**: Advanced Encryption Standard in Galois/Counter Mode, an authenticated encryption algorithm ensuring both confidentiality and integrity.
+- **npub**: The Bech32-encoded string representation of a Nostr public key (starting with npub1).
+- **NIP-98**: A Nostr specification for HTTP authentication that attaches a signed Nostr event to an HTTP request.
+- **Schnorr**: The Schnorr digital signature algorithm over secp256k1 used in Nostr to prove event authenticity.
+- **HKDF**: HMAC-based Key Derivation Function, a standard method for deriving cryptographically strong keys from a secret input.
+- **authenticator**: The hardware security key or platform/browser component in WebAuthn that stores credentials and responds to biometric or PIN checks.
+- **non-extractable AES key**: A Web Crypto AES key created with extractable set to false so scripts can perform encryption and decryption without reading its raw bytes.
+- **IndexedDB**: A persistent, origin-scoped database API built into web browsers capable of storing Web Crypto key objects.
+
+</details>
+
+### Gift-wrapped with NIP-17.
+
+A typical server stores sender, recipient and timestamp in its database. Tegami encrypts the rumor (kind 14 or 15) with NIP-44 into a seal (kind 13) signed by the sender, then encrypts and signs that with a one-time key into a gift wrap (kind 1059). For a 1:1 chat, two copies go out: one for the recipient and one for the sender.
+
+<CardGrid>
+<Card title="Typical stack">
+
+1. The message reaches the API server over TLS (E2EE in some apps).
+2. The server stores sender, recipient and time in its database.
+3. Event logs feed ad delivery.
+
+</Card>
+<Card title="Tegami">
+
+1. The device encrypts with NIP-44 and wraps it twice: seal, then gift wrap.
+2. The relay serves kind 1059 only to a NIP-42 authenticated key that matches its p tag.
+3. The relay deletes the envelope after 30 days. History stays on your devices.
+
+</Card>
+</CardGrid>
+
+<Aside>
+
+Specs: NIP-17, NIP-44, NIP-59, NIP-42. created\_at of the seal and gift wrap is shifted up to two days back (nostr-tools' NIP-59). Limits: writing also requires NIP-42 AUTH and registration, so the relay can link the writer's pubkey, the recipient pubkey, arrival time and IP. NIP-44 uses static keys, so there is no forward secrecy.
+
+</Aside>
+
+<details>
+<summary>Terms</summary>
+
+- **API server**: A central server that handles application requests, stores user data, and relays messages.
+- **relay**: A Nostr server that accepts events from clients, stores them, and delivers them to matching clients.
+- **NIP-17**: A Nostr specification for private direct messages.
+- **rumor**: An unsigned Nostr event containing the raw message payload (kind 14 for chat or kind 15 for files).
+- **kind**: An integer field in a Nostr event that identifies the event type.
+- **NIP-44**: Nostr's versioned authenticated encryption specification that derives a shared secret from sender and recipient keys.
+- **seal**: An inner Nostr event (kind 13) holding a NIP-44-encrypted rumor signed by the sender's secret key.
+- **one-time key**: An ephemeral Nostr key pair generated for a single encryption and signing operation and then discarded.
+- **gift wrap**: An outer Nostr event (kind 1059) that NIP-44-encrypts and signs a seal with a one-time key.
+- **TLS**: Transport Layer Security, the standard protocol that encrypts network traffic between client and server.
+- **E2EE**: End-to-End Encryption, where data is encrypted on the sender's device and decrypted only on the recipient's device so servers cannot read it.
+- **event logs**: Time-stamped records of user actions or messaging activity stored by a server.
+- **NIP-42**: A Nostr specification for authenticating a client's public key to a relay using a signed challenge.
+- **p tag**: A Nostr event tag referencing a target public key in hexadecimal form.
+- **NIP-59**: A Nostr specification defining the rumor, seal, and gift wrap layering to hide sender and timestamp metadata.
+- **created\_at**: The UNIX timestamp field on a Nostr event indicating when it was created.
+- **nostr-tools**: A widely used open-source JavaScript/TypeScript library for Nostr keys, signing, encryption, and relay interaction.
+- **public key**: The shareable half of an asymmetric key pair used for encryption, signature verification, and identity.
+- **IP**: An Internet Protocol address that identifies a client's network endpoint.
+- **forward secrecy**: A property ensuring that past encrypted messages cannot be decrypted even if long-term secret keys are later compromised.
+
+</details>
+
+### Dumped, but chats stay encrypted.
+
+The relay database holds gift-wrap ciphertext. Photos and files are encrypted with a per-file AES-GCM key before upload.
+
+<CardGrid>
+<Card title="Typical stack">
+
+1. Personal data sits together in one database.
+2. The database is exfiltrated.
+3. Phone numbers and profiles are readable as is.
+
+</Card>
+<Card title="Tegami">
+
+1. Messages in the database are kind 1059 ciphertext.
+2. The database is exfiltrated.
+3. Even if stolen, nothing decrypts without the recipient's secret key.
+
+</Card>
+</CardGrid>
+
+<Aside>
+
+Could leak: recipient pubkeys (p tags), arrival times, registered pubkeys and invite links between keys (kept 90 days), Web Push endpoints and keys, encrypted recovery backups, encrypted R2 files and stamps (with sizes, SHA-256, and stamp keepers), and abuse reports (reporter and reported pubkeys, reason, and plaintext recent messages for 90 days if attached by the reporter). Cannot be read: plaintext of normal messages, photos, files, stamps and backups.
+
+</Aside>
+
+<details>
+<summary>Terms</summary>
+
+- **dump**: Exporting the entire contents of a database into a file, often occurring during a breach.
+- **ciphertext**: Data transformed by an encryption algorithm so it cannot be read without the matching decryption key.
+- **plaintext**: Unencrypted data in readable form.
+- **endpoint**: A unique delivery URL assigned by a browser's push service to receive Web Push notifications.
+- **SHA-256**: A cryptographic hash function that computes a fixed 256-bit digest from data.
+
+</details>
+
+### There is no login password at all.
+
+The secret key (nsec) is generated on the device, encrypted with a key derived from the WebAuthn PRF extension, and stored in the origin's storage. Passkeys are origin-bound, so a fake domain gets no PRF output and cannot decrypt the nsec.
+
+<CardGrid>
+<Card title="Typical stack">
+
+1. You log in with a password and an SMS one-time code.
+2. An adversary-in-the-middle page relays both.
+3. The attacker gets your session.
+
+</Card>
+<Card title="Tegami">
+
+1. A passkey decrypts the nsec stored on the device.
+2. On a fake domain there is no PRF output, so the nsec stays encrypted.
+3. The nsec is never sent to the server.
+
+</Card>
+</CardGrid>
+
+<Aside>
+
+Specs: WebAuthn PRF, HKDF, AES-GCM. Limits: the decrypted secret key is used for signing in browser memory, so XSS or tampered JavaScript would expose it. Without PRF support, a non-extractable AES key in IndexedDB is used. A recovery code can be phished by a fake page.
+
+</Aside>
+
+<details>
+<summary>Terms</summary>
+
+- **nsec**: The Bech32-encoded string representation of a Nostr secret key (starting with nsec1).
+- **passkey**: An origin-bound FIDO2/WebAuthn credential unlocked by biometrics or a device PIN instead of a password.
+- **one-time code**: A temporary single-use verification code often sent via SMS. Typical apps pair it with a password, which remains vulnerable to adversary-in-the-middle phishing, whereas Tegami does not use login codes or passwords.
+- **adversary-in-the-middle phishing**: A phishing attack where a proxy site relays credentials and one-time codes to the real service in real time to hijack the session.
+- **session hijacking**: Stealing the session token or cookie issued after login and acting as the user.
+- **XSS**: Cross-Site Scripting, an attack that injects malicious JavaScript into a web page's context.
+- **recovery code**: A 28-character code (140 bits) for getting an account back after losing every device.
+
+</details>
+
+### No event tracking.
+
+The app has no analytics SDK. The relay keeps daily overall aggregates for 183 days for the operator, and publishes only completed weekly totals for the last 24 weeks (https://relay.tegami.chat/stats, https://tegami.chat/status).
+
+<CardGrid>
+<Card title="Typical stack">
+
+1. An analytics SDK sends taps and views as events.
+2. Events are stored per user ID.
+3. Interest segments are built from events.
+
+</Card>
+<Card title="Tegami">
+
+1. The client sends no interaction events.
+2. The relay counts only daily aggregates internally, estimating active keys with HyperLogLog and a per-day secret discarded when the day ends.
+3. Only completed weekly totals (0–9 as 0, rounded up to multiples of 10) and daily-average key counts are published.
+
+</Card>
+</CardGrid>
+
+<Aside>
+
+Workers invocation logs are off. Opt-in crash reports and error output (console.log) stay in Workers Logs for a few days. Daily aggregates are deleted after 183 days and are visible only to the operator. Public /stats and https://tegami.chat/status show only the last 24 completed weeks (Monday-start UTC).
+
+</Aside>
+
+<details>
+<summary>Terms</summary>
+
+- **analytics SDK**: A third-party software development kit embedded in apps to log screen views, taps, and dwell time for analytics backends.
+- **event**: In app analytics, a telemetry record capturing an individual user interaction such as a tap or view (distinct from Nostr events).
+- **segments**: Groups of users categorized by shared interests or behaviors derived from tracking logs.
+- **client**: The user-facing application or browser code that communicates with relays or servers.
+- **per-day secret**: A temporary secret generated for a single day and discarded when the day ends.
+- **HyperLogLog**: A probabilistic cardinality-estimation algorithm that approximates distinct counts with minimal memory without storing individual items.
+- **Workers**: Cloudflare Workers, a serverless runtime executing server-side code across Cloudflare's edge network.
+- **invocation logs**: Automatic per-request execution logs recorded by Cloudflare Workers.
+- **console.log**: The standard JavaScript logging function for emitting runtime output or errors.
+- **Workers Logs**: Cloudflare's log storage and inspection service for output emitted by Workers.
+- **UTC**: Coordinated Universal Time, the timezone-independent global time standard.
+
+</details>
+
+### AI is a peer with its own key.
+
+tegami-agent holds its own Nostr key on your PC and talks over NIP-17 like any person. Your AI subscription and API keys are never handed to Tegami. Whatever the AI reads is sent to the AI provider by your local claude -p or similar. It also runs as an MCP server.
+
+<CardGrid>
+<Card title="Typical stack">
+
+1. You use the AI built into the app.
+2. Chat history, including your friend's messages, goes to the vendor's API.
+3. Your friend's consent isn't asked.
+
+</Card>
+<Card title="Tegami">
+
+1. tegami-agent runs on your PC and calls local tools such as Claude Code.
+2. Before AI joins a chat, everyone is asked for consent (built, not yet released).
+3. AI permissions have four layers (AI use, AI model, AI friend, friend), and every decision is logged on the device.
+
+</Card>
+</CardGrid>
+
+<Aside>
+
+Chats with AI are NIP-17 gift wraps too. Asking everyone in the chat for consent and letting a partner opt out of having their messages read by the other side's AI are built, but not yet released to production (off by default). Cryptography can't stop a recipient from passing messages they decrypted to their own AI.
+
+</Aside>
+
+<details>
+<summary>Terms</summary>
+
+- **tegami-agent**: Tegami's local agent program running on the user's PC with its own Nostr key, exchanging NIP-17 gift wraps like any human peer.
+- **API key**: A secret token used to authenticate requests and bill usage to an external API provider.
+- **claude -p**: Running the Claude Code CLI in non-interactive print mode (-p) to pass a prompt and read the response from stdout.
+- **MCP server**: A server implementing the Model Context Protocol so AI clients can access external tools and context through a standard interface.
+- **Claude Code**: Anthropic's command-line AI tool that runs locally in a user's terminal.
+- **API**: Application Programming Interface, the defined protocol through which software exchanges data and requests.
+
+</details>
+
+## How the parts fit together
+
+<ArchMap lang="en" />
+
+The sending device seals each message with the recipient's key before leaving it with the relay, so the relay, the file storage, and the push services never open it. Only the recipient's devices and your own other devices can open it.
+
+For AI friends, `tegami-agent` runs on your PC with its own Nostr key and talks to the relay using the same envelope format as human friends. The only thing the AI company receives is the text `tegami-agent` passes to the AI.
+
+For calls, only the signaling goes through relay envelopes; audio and video flow over a direct connection between devices. `stun.cloudflare.com` is used to find a connection path.
+
+## Open source
+
+### What is the license, and how can I contribute?
+
+The license is AGPL-3.0. Anyone who offers an app built from Tegami's code over a network must also publish their code.
+
+For now, we accept bug reports and feature requests as GitHub Issues. We do not accept code contributions (pull requests).

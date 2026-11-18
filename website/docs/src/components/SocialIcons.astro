@@ -1,0 +1,20 @@
+---
+// Top menu: links back to the main site, then Starlight's own social icons.
+import Default from '@astrojs/starlight/components/SocialIcons.astro';
+const ja = Astro.currentLocale === 'ja';
+const base = ja ? '/ja' : '';
+const links = [
+  { href: `${base}/`, label: ja ? 'ホーム' : 'Home' },
+  { href: `${base}/how`, label: ja ? '安全の仕組み' : 'How it works' },
+  { href: `${base}/faq`, label: ja ? 'よくある質問' : 'FAQ' },
+];
+---
+<nav class="site-links" aria-label="Tegami">
+  {links.map((l) => <a href={l.href}>{l.label}</a>)}
+</nav>
+<Default {...Astro.props}><slot /></Default>
+<style>
+  .site-links { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; align-items: center; }
+  .site-links a { color: var(--sl-color-gray-2); font-size: var(--sl-text-sm); text-decoration: none; }
+  .site-links a:hover { color: var(--sl-color-white); }
+</style>

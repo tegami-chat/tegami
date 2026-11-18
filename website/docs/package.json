@@ -1,0 +1,13 @@
+{
+  "name": "tegami-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "astro build && node scripts/inline-hashes.mjs",
+    "dev": "astro dev"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "0.42.8",
+    "astro": "7.4.3"
+  }
+}

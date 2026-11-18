@@ -1,0 +1,38 @@
+/* Colour of the Tegami brand (forest green) for Starlight's accent. */
+:root {
+  --sl-color-accent-low: #0b2a1d;
+  --sl-color-accent: #106c4a;
+  --sl-color-accent-high: #7fd7a8;
+}
+:root[data-theme='light'] {
+  --sl-color-accent-low: #e3f0e8;
+  --sl-color-accent: #106c4a;
+  --sl-color-accent-high: #0b5a3d;
+}
+
+/* Architecture diagram (src/diagrams/arch.*.svg): maps its colours onto Starlight's. */
+.arch-map { overflow-x: auto; margin-block: 1rem; }
+.arch-map svg.map {
+  --bg: var(--sl-color-gray-6); --card: var(--sl-color-black); --ink: var(--sl-color-white);
+  --sub: var(--sl-color-gray-3); --line: var(--sl-color-gray-5); --accent: var(--sl-color-accent-high);
+  display: block; width: 100%; min-width: 720px; height: auto; font-family: inherit;
+}
+svg.map .bx { fill:var(--bg); stroke:var(--line); stroke-width:1.5; }
+svg.map .em { stroke:var(--accent); }
+svg.map .t { fill:var(--ink); font-size:15px; font-weight:700; }
+svg.map .s { fill:var(--sub); font-size:12.5px; }
+svg.map .xs { fill:var(--sub); font-size:12px; text-anchor:middle; }
+svg.map text.t, svg.map text.s { text-anchor:start; }
+svg.map .st { text-anchor:start; }
+svg.map .en { text-anchor:end; }
+svg.map .mid { text-anchor:middle; }
+svg.map .sg { fill:var(--accent); font-size:12.5px; }
+svg.map .cd { fill:var(--card); stroke:var(--line); stroke-width:1.5; }
+svg.map .cd.em { stroke:var(--accent); stroke-width:2; }
+svg.map .gp { fill:none; stroke:var(--sub); stroke-width:1.5; stroke-dasharray:7 5; }
+svg.map .g { fill:var(--ink); font-size:15px; font-weight:700; }
+svg.map .badge { fill:#fff; font-size:12px; font-weight:700; text-anchor:middle; }
+svg.map .ln { fill:none; stroke:var(--sub); stroke-width:1.5; }
+svg.map .ok { fill:none; stroke:var(--accent); stroke-width:2.5; }
+svg.map .call { fill:none; stroke:var(--accent); stroke-width:2; stroke-dasharray:6 5; }
+svg.map .fi { fill:var(--ink); } svg.map .fa { fill:var(--accent); } svg.map .fs { fill:var(--sub); }

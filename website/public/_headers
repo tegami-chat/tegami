@@ -3,6 +3,24 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
 
+# The developer docs (Astro Starlight, built in docs/). Astro writes the script and style hashes into a
+# <meta http-equiv="content-security-policy"> tag on each page, so the header-level policy for these
+# pages is dropped (a header policy would also apply and block the inline scripts the hashes allow).
+# frame-ancestors cannot be set in a meta tag, so it stays in the header.
+/developers*
+  ! Content-Security-Policy
+  Content-Security-Policy: frame-ancestors 'none'
+
+/ja/developers*
+  ! Content-Security-Policy
+  Content-Security-Policy: frame-ancestors 'none'
+
+# Pagefind (the docs search) runs its code in a Web Worker, which takes its CSP from the worker file's own
+# headers. It must fetch its index from this origin and compile WebAssembly.
+/pagefind/*
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'
+
 /.well-known/nostr.json
   Access-Control-Allow-Origin: *
   Content-Type: application/json

@@ -1,0 +1,56 @@
+---
+title: "Developer FAQ"
+description: "Questions developers ask about Tegami."
+---
+
+
+
+Common questions from developers about how Tegami is built. Describes production as of November 18, 2026.
+
+## Can I run my own relay?
+
+Yes. The relay code is in `relay/` and runs on Cloudflare Workers with a Durable Object. The current app only connects to the official relay (`wss://relay.tegami.chat`), so to use your own you need to build the app yourself with `EXPO_PUBLIC_TEGAMI_RELAYS` pointing at it. We have decided to let companies and schools run their own relays.
+
+## Can I message people on other Nostr apps?
+
+Not yet. The Tegami relay only accepts writes from connections logged in (NIP-42) with a key registered with Tegami, to stop spam and impersonation at the door. We are still comparing ways to connect with other Nostr apps.
+
+## Which NIPs does Tegami use?
+
+Messages use NIP-17 and NIP-59, encrypted with NIP-44. Relay login uses NIP-42, expiring events NIP-40, and HTTP signatures NIP-98. NIP-05 is used for the official account and NIP-11 for relay info. Photos and files are stored the Blossom way. Tegami does not use public posts (kind 1) or public profiles (kind 0).
+
+## What encryption do you use? Is there forward secrecy?
+
+Messages are encrypted with NIP-44 v2 (secp256k1 ECDH, HKDF, ChaCha20, HMAC-SHA256) and double-wrapped with a NIP-59 seal and gift wrap. There is no forward secrecy: if a secret key is stolen, messages still on the relay (up to 30 days) and messages stored on devices could be decrypted later. We haven't decided whether to move to a scheme with rotating keys.
+
+## How is my secret key protected? Can I use my existing nsec?
+
+We take 32 bytes from the passkey PRF extension, turn them into an AES-GCM key with HKDF-SHA256, and encrypt your Nostr secret key with it. Only the ciphertext is stored on the device. Where PRF isn't supported, you can choose a non-extractable AES key kept in IndexedDB instead. The key is created inside the app and never leaves it, so you can't log in with an existing nsec or export your key.
+
+## What can the relay see?
+
+The recipient's public key on each gift wrap, the time it arrived, its size, the logged-in keys and their IP addresses, and the tags outside the seal (`t=call`, `t=quiet`, `expiration`). Because writes also require login, the relay knows who sent what to whom at the moment it accepts an event, but the relay code doesn't store the sender's key (the events table in `relay/src/index.ts` has no sender column).
+
+## Can I verify that production matches the public code?
+
+Not yet. The relay reports its running commit in `/stats` and in the NIP-11 `version`, but that is only our own claim. For the browser app, there is no way yet to verify that the files we serve were built from the public repository (reproducible builds). We limit where code can load from with a strict CSP and include no third-party analytics scripts.
+
+## What is the license?
+
+AGPL-3.0. If you offer an app or relay built from Tegami's code over a network, you must publish your code too.
+
+## How do I connect my own AI?
+
+Run tegami-agent (Node.js) on your computer and scan the QR code from `node agent.mjs pair` with the app. The AI gets its own Nostr key and uses the same relay and encryption as people. Replies are written by Claude Code by default. With the `backend` command you can switch to an API key for Anthropic, OpenAI, Gemini or OpenRouter, or to a local model such as Ollama. With `watch --command` you can plug in your own program that reads standard input and prints a reply. See the [AI page](/developers/ai) and `agent/README.md`.
+
+## Can I use Tegami over MCP?
+
+Yes. tegami-agent also runs as a stdio MCP server. Add it to Claude Code with `claude mcp add tegami -- node /path/to/agent/agent.mjs mcp`, then read messages with `tegami_inbox` and send with `tegami_send`. By default, only text written by the owner is shown to the AI.
+
+## Could someone slip instructions into a message and make the AI leak information?
+
+Three things guard against it. The AI only replies automatically to people its owner trusts. Claude Code's built-in tools and any MCP servers the owner added are off by default. Anything sent to someone other than the owner goes through a rule check and a model check first. Even so, the checks can't catch every secret or risky message.
+
+## How can I contribute?
+
+Bug reports and feature requests are welcome as GitHub [Issues](https://github.com/tegami-chat/tegami/issues). We don't accept pull requests for now.

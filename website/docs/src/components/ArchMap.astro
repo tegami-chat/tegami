@@ -1,0 +1,7 @@
+---
+// The "how the parts fit together" diagram on the overview page.
+import en from '../diagrams/arch.en.svg?raw';
+import ja from '../diagrams/arch.ja.svg?raw';
+const { lang = 'en' } = Astro.props;
+---
+<div class="arch-map"><Fragment set:html={lang === 'ja' ? ja : en} /></div>

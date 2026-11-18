@@ -1,0 +1,113 @@
+---
+title: "Comparison for developers"
+description: "Tegami next to LINE, WhatsApp, Signal, Telegram and other Nostr apps."
+---
+
+import { Aside, Badge } from '@astrojs/starlight/components';
+
+Tegami next to LINE, WhatsApp, Signal and Telegram, and next to other Nostr apps.
+
+Status labels such as "Available" are explained in the [overview](/developers/#what-the-status-labels-mean-4).
+
+## How is Tegami different from LINE, WhatsApp, Signal, and Telegram?
+
+<Aside type="tip" title="Now">
+
+This comparison is based on each company's official documentation as checked on November 16, 2026. The Tegami column reflects what is running in production now.
+
+|  | LINE | WhatsApp | Signal | Telegram | Tegami |
+| --- | --- | --- | --- | --- | --- |
+| Needed to sign up | Phone number | Phone number | Phone number (usernames exist to keep your number hidden from others) | Phone number (you can also buy a Telegram-only number) | None. A key is created on your device |
+| End-to-end encryption | On by default for one-to-one and groups (Letter Sealing). Group calls are encrypted in transit only | On by default | On by default | Regular chats can be opened on the operator's servers. End-to-end encryption only in one-to-one "Secret Chats" | On by default for one-to-one and groups (NIP-17) |
+| Forward secrecy | Not supported in Letter Sealing | Yes (uses the Signal Protocol) | Yes (Double Ratchet, PQXDH) | Secret Chats only | No |
+| Metadata visible to the operator | States that it records who you talk to and when on its servers | States that it collects connection and usage information | Only the minimum needed to operate. Has a way to hide the sender (Sealed Sender) | States that it may keep IP addresses and similar data for up to 12 months | Recipient, time, size, connected keys, IP addresses. The sender's key is known when an envelope is accepted, but not stored |
+| Ads | Shown at the top of the chat list | Shown in the Updates tab (Status and Channels). States that personal chats are not used for ads | None. Funded by donations | Shown in public channels with more than 1000 subscribers | None |
+| AI | Operator's AI (Agent i). Using it lets LY Corporation collect up to 300 messages from that chat | Operator's AI (Meta AI) | Not found in official documentation | Operator's AI summaries, and bots anyone can build | No operator AI. Your own PC's AI shows up as a friend |
+| Operator | LY Corporation (62.4% of voting rights held by a company owned 50/50 by SoftBank and NAVER) | Meta | A US nonprofit | Telegram Messenger Inc. | An individual in Japan |
+| Source code | Found for neither the app nor the server | Not verified | App and server both AGPL-3.0 | App is open. Server is closed | App and relay both AGPL-3.0 |
+
+On encryption strength alone, Signal's design is stronger than Tegami's. Where Tegami differs: no phone number needed, no ads or operator AI, your own AI can appear as a friend, and the server-side code is public too (of the four apps, only Signal also publishes its server code).
+
+</Aside>
+
+<Aside type="caution" title="Not yet">
+
+Tegami is browser-only for now, with no app-store apps. It also has no forward secrecy.
+
+Among the apps compared, we could not open the official help pages to fully verify WhatsApp's encryption details and source code status, or Signal's AI features.
+
+</Aside>
+
+<Aside type="note" title="Next">
+
+-   <Badge text="Decided" variant="note" />  We will never make money from users' data. There will be no ads, news, or shopping tabs.
+-   <Badge text="Under discussion" variant="caution" />  Tegami is run by its developer as an individual today. We are also working out how conversations can survive if the developer can no longer continue, and how the project could move to a separate organization later.
+
+</Aside>
+
+## How is Tegami different from 0xchat?
+
+<Aside type="tip" title="Now">
+
+0xchat is an app with nearly every Nostr chat feature, and it heads in a different direction from Tegami. The comparison below is based on what we checked in 0xchat's public repository (`0xchat-app/0xchat-app-main`) code on November 16, 2026.
+
+|  | 0xchat | Tegami |
+| --- | --- | --- |
+| Who you can reach | Anyone on Nostr. Uses public relays (damus, nos.lol, etc.); its own relay was shut down | Only people registered with Tegami. Dedicated relay |
+| Secret key storage | Encrypted with an app-generated password, which is stored in the same database row and opened automatically at launch. A separate app lock (biometrics, PIN) exists | Encrypted with passkey PRF; passkey authentication required on every open (where PRF is unsupported, encrypted with an on-device key) |
+| External signers | Supports NIP-46 and NIP-55 (Amber, etc.) | Not supported |
+| Key export | You can show and copy your nsec in Settings | Not possible |
+| If you lose your key | No backup mechanism found. Assumes you store your nsec yourself | Restore with a recovery code |
+| AI | Translation only (on-device or LibreTranslate). No AI bots or MCP found in the code | Your own PC's AI appears as a friend. MCP support. The app controls what the AI is allowed to do |
+| Groups | NIP-17 groups, NIP-28 channels, NIP-29 relay-based groups. MLS supported in the sister app XChat | NIP-17 groups only |
+| Calls | WebRTC via NIP-100. Users configure their own TURN server | WebRTC with signaling in encrypted envelopes. Cloudflare's TURN server is available, and you can set your own |
+| Platforms | Apps for iPhone, Android, Windows, Mac, Linux. No browser version found | Browser only for now. Apps in development |
+| Other | Built-in Tor, Cashu wallet, zaps, translation | Registration via invite codes and human checks; key suspension by the operator |
+
+0xchat is an app for people who already use Nostr, while Tegami is for people who want to leave LINE without knowing anything about Nostr. 0xchat is further ahead in openness to the Nostr world and in fine-grained settings.
+
+</Aside>
+
+<Aside type="caution" title="Not yet">
+
+Tegami has no external signers, no key export, and no app-store apps.
+
+We could not fully verify whether 0xchat's entire database is encrypted (there is a screen for entering a database passphrase).
+
+</Aside>
+
+<Aside type="note" title="Next">
+
+-   <Badge text="Coming soon" variant="tip" />  Android app prototype (runs on an emulator as far as the chat list).
+-   <Badge text="Decided" variant="note" />  We will ship apps for iPhone, Android, Windows, and Mac.
+-   <Badge text="Under discussion" variant="caution" />  External signers (NIP-46), and how to connect with other Nostr apps.
+
+</Aside>
+
+## How is Tegami different from White Noise?
+
+<Aside type="tip" title="Now">
+
+White Noise is a messaging app that uses MLS on Nostr. It can also let you talk to an AI running on your own machine as a contact, and supports multiple profiles. As encryption goes, it has forward secrecy, so it is stronger than Tegami's NIP-17. Where Tegami differs: it protects keys with passkeys, has calls, runs a dedicated relay with registration and reports, and lets you decide in detail, inside the app, what an AI is allowed to do. (White Noise's official docs as of November 13, 2026 did not mention passkeys, calls, or MCP.)
+
+</Aside>
+
+<Aside type="caution" title="Not yet">
+
+On encryption strength, Tegami falls short of White Noise.
+
+</Aside>
+
+## So what does only Tegami have?
+
+<Aside type="tip" title="Now">
+
+Taken one at a time, every feature exists in some other app. What Tegami aims for is the combination: someone who wants to leave LINE but has never heard of Nostr can start with just a passkey and no password, see family and their own AI in the same chat list, and use it in a place protected from spam.
+
+</Aside>
+
+<Aside type="note" title="Next">
+
+-   <Badge text="Decided" variant="note" />  We want Tegami to be the app people simply use for messaging by default, not one they pick for a single feature.
+
+</Aside>
