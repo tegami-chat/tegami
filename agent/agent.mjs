@@ -98,7 +98,7 @@ const runFlags = {
 for (const [k, v] of Object.entries(runFlags)) if (v !== undefined) agent.settings[k] = v;
 const cmd = argv.shift();
 
-const TOOLS_OPEN = 'Tools are open: Claude Code can use its tools and MCP servers while it replies (道具を使える状態で動いています).';
+const TOOLS_OPEN = 'Tools are open: Claude Code can use its tools and MCP servers while it replies (ツールを使える状態で動いています).';
 // What the AI's owner gets, once a day per chat, when the daily limit stops the replies.
 const limitNotice = (name, n) =>
   `今日は${name}への返事が上限の${n}通に達したので、明日まで返事を止めます。上限は tegami-agent setting dailyReplies <数> で変えられます。`;

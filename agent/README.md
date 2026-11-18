@@ -69,7 +69,7 @@ node agent.mjs try "hello"        # asks the AI once, to check that it answers
 - `backend` creates the AI friend (its own key). `try` works once the AI friend exists,
   made by `backend`, `pair` or `init`.
 - API keys are kept in `~/.tegami/agents/<name>/keys.json`, encrypted (see "What stays
-  on this computer"), and only sent to that API, over https (or to this computer). They
+  on this computer"), and only sent to that API, over HTTPS (or to this computer). They
   are never taken on the command line, so they do not end up in your shell history, and
   never written to the log. `key <backend> --remove` deletes a saved key.
 - The invite link's model (`m=`) follows the backend, for example `OpenAI gpt-…` or
@@ -167,7 +167,7 @@ instructions into a message, so by default the AI can only write a reply:
 What the AI sends to anyone but its owner goes through the "AIの検査" (the AI check) first.
 Replies to the owner are not checked. There are two checks:
 
-- **Fixed rules.** A text that looks like a secret key, a recovery code, an API key or a
+- **Rule-based check.** A text that looks like a secret key, a recovery code, an API key or a
   card number is never sent. Money talk (accounts, payment apps, crypto, gift cards, words
   that move money) is left to the model check below in the gateway; the app stops money talk
   that the AI would send without asking, with rules that match the ones in `screen.mjs`. This check uses no model,
@@ -180,15 +180,15 @@ Replies to the owner are not checked. There are two checks:
   to the owner to decide. The owner gets a notice that the AIの検査 stopped the message.
   Each message that goes out costs one more call to the AI for the check.
 
-Tegami's operators do not change the check's rules or its model from afar. The check does
-not promise to catch every secret or risky text: it adds to the fixed rules and the app's
+Tegami's operators do not update the check's rules or its model remotely. The check does
+not promise to catch every secret or risky text: it adds to the rule-based check and the app's
 permissions.
 
 If you connect your own program (`--command`), or a small model that cannot answer in the
 one fixed line, the check can never read the answer. Every reply to anyone but the owner
 is then held for the owner. In that case turn the model check off:
 `node agent.mjs setting modelCheck off` (for one run, add `--no-model-check` to `watch` or
-`mcp`). The fixed rules stay on.
+`mcp`). The rule-based check stays on.
 
 ## What stays on this computer
 

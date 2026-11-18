@@ -252,7 +252,7 @@ try {
   watch.stdout.on('data', (d) => (out += d));
   while (!out.includes('is listening')) await sleep(100);
   check('the watcher says where its records are kept', /Records: .*keep 30 days/.test(out));
-  check('the watcher does not say tools are open when they are not', !out.includes('道具を使える状態'));
+  check('the watcher does not say tools are open when they are not', !out.includes('ツールを使える状態'));
 
   await owner.send('1通目');
   check('the watcher answers the owner', await owner.waitFor((t) => t === 'fake: テストA: 1通目'));
@@ -361,7 +361,7 @@ try {
   procs.push(watch4);
   watch4.stdout.on('data', (d) => (out += d));
   while (!out.includes('is listening')) await sleep(100);
-  check('with tools opened, the watcher says so', out.includes('道具を使える状態で動いています'));
+  check('with tools opened, the watcher says so', out.includes('ツールを使える状態で動いています'));
   watch4.kill();
 
   for (const u of [owner, friend]) u.pool.destroy();
