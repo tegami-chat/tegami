@@ -24,38 +24,36 @@ messages and notices say `tegami-agent <command>`, it means the same as `node ag
 ## AI providers
 
 An AI provider is where the AI that writes the replies runs. The gateway connects to AI
-providers in three ways: a subscription, a local model, or an API key. Prices and terms
+providers in three ways: a subscription, an API key, or a local model. Prices and terms
 differ by provider: check them before you start.
 
 The gateway decrypts the messages it receives and sends them to the AI provider. Only with
 a local model do the messages stay on your computer.
 
 Only Claude Code has been confirmed to work. The other providers have not been run against
-the real service yet.
+the real service yet. Each provider's model is chosen with `--model`.
 
 ### Subscription
 
-A monthly plan such as Claude Pro or Max. Claude Code is the only one for now, and the
-default. If you are signed in to Claude Code with your own account, there is nothing to set up.
+A monthly plan such as Claude Pro or ChatGPT Plus.
+
+- **Anthropic**: through Claude Code. The default provider. If you are signed in to Claude
+  Code with your own account, there is nothing to set up.
+- **OpenAI**: ChatGPT subscriptions cannot be connected yet.
+- **Google**: Antigravity (`agy`) is not connected: its terms forbid using it from
+  third-party software.
 
 A Claude Code subscription is meant for your own, individual use. Let the AI answer only
 you. The gateway warns you once when you trust a second person.
 
-ChatGPT subscriptions cannot be connected yet. Antigravity (`agy`) is not connected: its
-terms forbid using it from third-party software.
-
-### Local model
-
-A model run on your own computer, with Ollama, llama.cpp, LM Studio or vLLM.
-
-```bash
-node agent.mjs backend ollama --model llama3.2                          # Ollama
-node agent.mjs backend local --model qwen --url http://localhost:8080/v1  # llama.cpp, LM Studio, vLLM
-```
-
 ### API key
 
-A key issued by the AI company: Anthropic, OpenAI, Gemini or OpenRouter.
+A key issued by the AI company.
+
+- **Anthropic**
+- **OpenAI**
+- **Google**: Gemini
+- **OpenRouter**: one key for models from many companies.
 
 ```bash
 node agent.mjs backend anthropic --model <model>
@@ -69,6 +67,18 @@ node agent.mjs key <backend>   # asks for the API key (hidden), or reads it from
   on this computer"), and only sent to that company's API, over HTTPS. They are never
   taken on the command line, so they do not end up in your shell history, and never
   written to the log. `key <backend> --remove` deletes a saved key.
+
+### Local model
+
+A model run on your own computer.
+
+- **Ollama**
+- **llama.cpp, LM Studio, vLLM**
+
+```bash
+node agent.mjs backend ollama --model llama3.2                          # Ollama
+node agent.mjs backend local --model qwen --url http://localhost:8080/v1  # llama.cpp, LM Studio, vLLM
+```
 
 ### Check after connecting
 

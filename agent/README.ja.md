@@ -17,32 +17,30 @@ AIは自分専用のTegamiの鍵を持ちます。人と同じリレー（メッ
 
 ## AIプロバイダー
 
-AIプロバイダーは、返事を書くAIを動かす先です。ゲートウェイは、サブスクリプション、ローカルモデル、APIキーの3つの方法でAIプロバイダーにつなげます。料金と規約はAIプロバイダーごとに違うので、使う前に各社の料金と規約を確かめてください。
+AIプロバイダーは、返事を書くAIを動かす先です。ゲートウェイは、サブスクリプション、APIキー、ローカルモデルの3つの方法でAIプロバイダーにつなげます。料金と規約はAIプロバイダーごとに違うので、使う前に各社の料金と規約を確かめてください。
 
 ゲートウェイは、届いたメッセージを復号してAIプロバイダーに送ります。ローカルモデルの時だけ、メッセージはパソコンの外に出ません。
 
-動作を確認したのはClaude Codeだけです。ほかのAIプロバイダーは、まだ本物のサービスで動かしていません。
+動作を確認したのはClaude Codeだけです。ほかのAIプロバイダーは、まだ本物のサービスで動かしていません。モデルは、AIプロバイダーごとに`--model`で選びます。
 
 ### サブスクリプション
 
-Claude ProやMaxのような、月額のプランで使う方法です。いまつなげるのはClaude Codeだけで、既定はClaude Codeです。Claude Codeに自分のアカウントでログインしてあれば、設定は要りません。
+Claude ProやChatGPT Plusのような、月額のプランで使う方法です。
+
+- **Anthropic**：Claude Codeを通して使います。既定のAIプロバイダーです。Claude Codeに自分のアカウントでログインしてあれば、設定は要りません。
+- **OpenAI**：ChatGPTのサブスクリプションには、まだつなげません。
+- **Google**：Antigravity（`agy`）は、規約が第三者のソフトウェアから使うことを禁じているので、つなぎません。
 
 Claude Codeのサブスクリプションは、本人の個人利用が前提です。AIに返事をさせる相手は、自分だけにしてください。2人目を信頼した時は、ゲートウェイが一度だけ注意を表示します。
 
-ChatGPTのサブスクリプションには、まだつなげません。Antigravity（`agy`）は、規約が第三者のソフトウェアから使うことを禁じているので、つなぎません。
-
-### ローカルモデル
-
-自分のパソコンでモデルを動かす方法です。Ollama、llama.cpp、LM Studio、vLLMにつなげます。
-
-```bash
-node agent.mjs backend ollama --model llama3.2                          # Ollama
-node agent.mjs backend local --model qwen --url http://localhost:8080/v1  # llama.cpp、LM Studio、vLLM
-```
-
 ### APIキー
 
-AIの会社が発行したAPIキーで使う方法です。Anthropic、OpenAI、Gemini、OpenRouterにつなげます。
+AIの会社が発行したAPIキーで使う方法です。
+
+- **Anthropic**
+- **OpenAI**
+- **Google**：Gemini
+- **OpenRouter**：1つのAPIキーで、多くの会社のモデルを使えます。
 
 ```bash
 node agent.mjs backend anthropic --model <モデル>
@@ -54,6 +52,18 @@ node agent.mjs key <名前>   # APIキーの入力を求める（画面には出
 
 - APIキーは`~/.tegami/agents/<名前>/keys.json`に暗号化して保存します（詳しくは「自分のパソコンに残るもの」を参照してください）。APIキーを送る先は、そのAPIキーを発行した会社のAPIだけです。送る時はHTTPSを使います。
 - APIキーはコマンドの引数では受け取りません。このため、シェルの履歴にも、ログにも残りません。`key <名前> --remove`で保存したAPIキーを消せます。
+
+### ローカルモデル
+
+自分のパソコンでモデルを動かす方法です。
+
+- **Ollama**
+- **llama.cpp、LM Studio、vLLM**
+
+```bash
+node agent.mjs backend ollama --model llama3.2                          # Ollama
+node agent.mjs backend local --model qwen --url http://localhost:8080/v1  # llama.cpp、LM Studio、vLLM
+```
 
 ### つないだ後に確かめる
 
