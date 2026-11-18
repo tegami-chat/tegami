@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>よくある質問 | 開発者向けのTegamiの説明</title>
+<title>開発者向けのよくある質問 | Tegami</title>
 <meta name="description" content="開発者からよく聞かれること。">
-<meta property="og:title" content="よくある質問 | 開発者向けのTegamiの説明">
+<meta property="og:title" content="開発者向けのよくある質問 | Tegami">
 <meta property="og:description" content="開発者からよく聞かれること。">
 <meta property="og:url" content="https://tegami.chat/ja/developers/faq">
 <link rel="canonical" href="https://tegami.chat/ja/developers/faq">
@@ -43,8 +43,46 @@
 <div class="mx-auto max-w-6xl px-4 py-10 md:py-14 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10">
   <aside class="lg:sticky lg:top-20 lg:self-start"><nav class="devside mb-8 lg:mb-0" aria-label="Developer docs"><p class="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 lg:block" data-i18n="dv.side">Developer docs</p><ul class="flex flex-wrap gap-1 text-sm lg:block lg:space-y-0.5"><li class="shrink-0"><a href="/ja/developers" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dv.ov">Overview</a></li><li class="shrink-0"><a href="/ja/developers/protocol" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.protocol">Nostrと暗号と鍵</a></li><li class="shrink-0"><a href="/ja/developers/relay" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.relay">リレー、通知、通話</a></li><li class="shrink-0"><a href="/ja/developers/ai" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.ai">AI</a></li><li class="shrink-0"><a href="/ja/developers/compare" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.compare">ほかのアプリとの比較</a></li><li class="shrink-0"><a href="/ja/developers/spec" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.spec">技術仕様</a></li><li class="shrink-0"><a href="/ja/developers/faq" class="block rounded-lg px-3 py-2 bg-forest-50 font-semibold text-forest-700 dark:bg-forest-950 dark:text-forest-300" aria-current="page" data-i18n="dp.faq">よくある質問</a></li></ul></nav></aside>
   <main class="devdoc min-w-0 max-w-3xl">
-<h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dp.faq">よくある質問</h1>
-<!-- CONTENT -->
+<h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dfaq.h">開発者向けのよくある質問</h1>
+<p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dfaq.t">Tegamiの作りについて、開発者からよく聞かれることをまとめました。2026年11月18日の本番の状態を書いています。</p>
+<div class="mt-8">
+<details open><summary data-i18n="dfaq.relay.q">自分でリレーを立てられますか？</summary><div>
+<p data-i18n="dfaq.relay.a">はい。リレーのコードは<code>relay/</code>で公開していて、Cloudflare WorkersとDurable Objectの上で動きます。ただし、いまのアプリは公式のリレー<code>wss://relay.tegami.chat</code>にしかつながりません。自分のリレーを使うには、接続先を環境変数<code>EXPO_PUBLIC_TEGAMI_RELAYS</code>で変えて、アプリを自分でビルドする必要があります。会社や学校が自分のリレーを動かせるようにする予定です。</p>
+</div></details>
+<details><summary data-i18n="dfaq.interop.q">ほかのNostrアプリの人と話せますか？</summary><div>
+<p data-i18n="dfaq.interop.a">いまは話せません。Tegamiのリレーは、Tegamiに登録した鍵でNIP-42のログインをした接続からしか書き込みを受け付けません。迷惑なメッセージとなりすましを入口で止めるためです。ほかのNostrアプリとつなぐ方法は、いくつかの案を比べている途中です。</p>
+</div></details>
+<details><summary data-i18n="dfaq.nips.q">どのNIPを使っていますか？</summary><div>
+<p data-i18n="dfaq.nips.a">メッセージはNIP-17とNIP-59で送り、NIP-44で暗号化します。リレーへのログインはNIP-42、期限つきのイベントはNIP-40、HTTPの署名はNIP-98です。公式アカウントの識別子にNIP-05、リレーの情報にNIP-11を使います。写真とファイルの保管にはBlossomを使います。公開の投稿のkind 1と、公開のプロフィールのkind 0は使いません。</p>
+</div></details>
+<details><summary data-i18n="dfaq.crypto.q">暗号は何を使っていますか？前方秘匿性はありますか？</summary><div>
+<p data-i18n="dfaq.crypto.a">メッセージはNIP-44 v2で暗号化します。使う部品はsecp256k1のECDH、HKDF、ChaCha20、HMAC-SHA256です。暗号化したものは、NIP-59のsealとgift wrapで二重に包みます。前方秘匿性はありません。秘密鍵を盗まれると、リレーに残っている30日以内のメッセージと、端末に保存したメッセージを後から復号されるおそれがあります。鍵を次々に新しくする方式に移るかは、まだ決めていません。</p>
+</div></details>
+<details><summary data-i18n="dfaq.key.q">秘密鍵はどう守っていますか？手持ちのnsecは使えますか？</summary><div>
+<p data-i18n="dfaq.key.a">パスキーのPRF拡張から32バイトを取り出し、HKDF-SHA256でAES-GCMの鍵にして、Nostrの秘密鍵を暗号化します。端末に置くのは暗号文だけです。PRFに対応しないパスキーの保管先では、取り出せないAES鍵をIndexedDBに置いて暗号化する方法も選べます。鍵はアプリの中で作り、外に出しません。手持ちのnsecでのログインも、鍵の書き出しもできません。</p>
+</div></details>
+<details><summary data-i18n="dfaq.see.q">リレーには何が見えますか？</summary><div>
+<p data-i18n="dfaq.see.a">gift wrapの宛先の公開鍵、届いた時刻、大きさ、ログインしている鍵と接続元のIPアドレスが見えます。gift wrapの外側のタグ<code>t=call</code>、<code>t=quiet</code>、<code>expiration</code>も見えます。書き込みにもログインが要るので、受け取る時点では誰から誰へのイベントかが分かります。ただし、リレーのコードは送った人の鍵を保存しません。<code>relay/src/index.ts</code>の<code>events</code>テーブルに、送信者のカラムはありません。</p>
+</div></details>
+<details><summary data-i18n="dfaq.verify.q">本番で動いているリレーとアプリが、公開しているコードと同じか確かめられますか？</summary><div>
+<p data-i18n="dfaq.verify.a">いまは確かめられません。リレーは動いているコミットを<code>/stats</code>とNIP-11の<code>version</code>で名乗りますが、運営者の自己申告です。ブラウザ版のアプリは再現可能なビルドに対応しておらず、配信中のファイルが公開のリポジトリから作られたかは確かめられません。なお、厳しいCSPで読み込み元を絞り、外部のアクセス解析のスクリプトも入れていません。</p>
+</div></details>
+<details><summary data-i18n="dfaq.license.q">ライセンスは何ですか？</summary><div>
+<p data-i18n="dfaq.license.a">AGPL-3.0です。Tegamiのコードを使ったアプリやリレーをネットワークで提供する人は、自分のコードも公開する必要があります。</p>
+</div></details>
+<details><summary data-i18n="dfaq.ai.q">自分のAIをつなぐにはどうしますか？</summary><div>
+<p data-i18n="dfaq.ai.a">自分のパソコンでNode.jsのtegami-agentを動かし、<code>node agent.mjs pair</code>で出るQRコードをアプリで読み取ります。AIは自分専用のNostrの鍵を持ち、人と同じリレーと暗号でやり取りします。返事を書くのは既定でClaude Codeです。<code>backend</code>コマンドで、Anthropic、OpenAI、Gemini、OpenRouterのAPIキーか、Ollamaなどのローカルモデルに切り替えられます。<code>watch --command</code>を使えば、標準入力を読んで返事を出力する自作のプログラムもつなげます。手順は<a href="/ja/developers/ai">AIのページ</a>と<code>agent/README.md</code>にあります。</p>
+</div></details>
+<details><summary data-i18n="dfaq.mcp.q">MCPでTegamiを使えますか？</summary><div>
+<p data-i18n="dfaq.mcp.a">はい。tegami-agentはstdioのMCPサーバーとしても動きます。<code>claude mcp add tegami -- node /path/to/agent/agent.mjs mcp</code>でClaude Codeに追加すると、<code>tegami_inbox</code>でメッセージを読み、<code>tegami_send</code>で送れます。初期設定では、持ち主が書いた文だけをAIに見せます。</p>
+</div></details>
+<details><summary data-i18n="dfaq.inject.q">メッセージに指示を紛れ込ませて、AIに情報を漏らさせることはできませんか？</summary><div>
+<p data-i18n="dfaq.inject.a">3つの仕組みで防いでいます。AIが自動で返事をするのは、持ち主が信頼した相手だけです。Claude Codeの組み込みのツールと、持ち主が追加したMCPサーバーは、初期設定で使えません。持ち主以外に送る文は、事前にルールとAIによる2つの検査を通ります。それでも、すべての秘密や危ない文を見つけられるわけではありません。</p>
+</div></details>
+<details><summary data-i18n="dfaq.contrib.q">開発に参加するにはどうすればいいですか？</summary><div>
+<p data-i18n="dfaq.contrib.a">不具合の報告と要望は、GitHubの<a href="https://github.com/tegami-chat/tegami/issues" target="_blank" rel="noopener">Issue<svg viewBox="0 0 24 24" class="ml-1 inline-block h-[0.85em] w-[0.85em] align-[-0.1em]" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg><span class="sr-only">（新しいタブで開きます）</span></a>で受け付けています。プルリクエストは、いまは受け付けていません。</p>
+</div></details>
+</div>
   </main>
 </div>
 

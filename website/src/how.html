@@ -38,15 +38,15 @@ tailwind.config = {
 
 <main class="mx-auto max-w-3xl px-4 py-14 md:py-20">
   <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="sec.h">How Tegami keeps you safe</h1>
-  <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="sec.t">What protects your messages, what we can and can't see, and what isn't done yet. In plain words.</p>
+  <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="sec.t">How we protect your messages, what we can and can't see, and what isn't done yet.</p>
   <nav class="mt-8 rounded-2xl bg-paper p-5 dark:bg-paper-dark" aria-label="On this page"><ol class="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
-    <li><a href="#seal" class="hover:underline"><span class="mr-1.5 text-neutral-600 dark:text-neutral-400">1</span><span data-i18n="sec.seal.h">Only your friend can open your messages</span></a></li>
+    <li><a href="#seal" class="hover:underline"><span class="mr-1.5 text-neutral-600 dark:text-neutral-400">1</span><span data-i18n="sec.seal.h">Only you and your friend can read your messages</span></a></li>
     <li><a href="#server" class="hover:underline"><span class="mr-1.5 text-neutral-600 dark:text-neutral-400">2</span><span data-i18n="sec.server.h">What our server can and can't see</span></a></li>
     <li><a href="#account" class="hover:underline"><span class="mr-1.5 text-neutral-600 dark:text-neutral-400">3</span><span data-i18n="sec.account.h">No phone number, no password</span></a></li>
     <li><a href="#lost" class="hover:underline"><span class="mr-1.5 text-neutral-600 dark:text-neutral-400">4</span><span data-i18n="sec.lost.h">If you lose your phone</span></a></li>
     <li><a href="#photos" class="hover:underline"><span class="mr-1.5 text-neutral-600 dark:text-neutral-400">5</span><span data-i18n="sec.photos.h">Photos and files</span></a></li>
     <li><a href="#calls" class="hover:underline"><span class="mr-1.5 text-neutral-600 dark:text-neutral-400">6</span><span data-i18n="sec.calls.h">Calls</span></a></li>
-    <li><a href="#strangers" class="hover:underline"><span class="mr-1.5 text-neutral-600 dark:text-neutral-400">7</span><span data-i18n="sec.strangers.h">Strangers and unwanted messages</span></a></li>
+    <li><a href="#strangers" class="hover:underline"><span class="mr-1.5 text-neutral-600 dark:text-neutral-400">7</span><span data-i18n="sec.strangers.h">Messages from strangers</span></a></li>
     <li><a href="#ai" class="hover:underline"><span class="mr-1.5 text-neutral-600 dark:text-neutral-400">8</span><span data-i18n="sec.ai.h">Your AI</span></a></li>
     <li><a href="#count" class="hover:underline"><span class="mr-1.5 text-neutral-600 dark:text-neutral-400">9</span><span data-i18n="sec.count.h">No tracking</span></a></li>
     <li><a href="#notyet" class="hover:underline"><span class="mr-1.5 text-neutral-600 dark:text-neutral-400">10</span><span data-i18n="sec.notyet.h">What isn't done yet</span></a></li>
@@ -54,8 +54,8 @@ tailwind.config = {
   </ol></nav>
   <div class="mt-6">
     <section id="seal" class="scroll-mt-16 border-t border-neutral-200 py-8 dark:border-night-line">
-      <h2 class="text-xl font-bold" data-i18n="sec.seal.h">Only your friend can open your messages</h2>
-      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.seal.1">Before a message leaves your phone or computer, Tegami locks it and seals it in an envelope. Only your friend's devices, and your own, can open it. Not even the people who run Tegami can read it.</p>
+      <h2 class="text-xl font-bold" data-i18n="sec.seal.h">Only you and your friend can read your messages</h2>
+      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.seal.1">Every message is encrypted before it leaves your phone or computer. Only your friend's devices and your own can read it. Not even the people who run Tegami can.</p>
     </section>
     <section id="server" class="scroll-mt-16 border-t border-neutral-200 py-8 dark:border-night-line">
       <h2 class="text-xl font-bold" data-i18n="sec.server.h">What our server can and can't see</h2>
@@ -68,37 +68,37 @@ tailwind.config = {
       </ul>
       <h3 class="mt-4 font-semibold" data-i18n="sec.server.3">It can see</h3>
       <ul class="mt-2 list-disc space-y-1 pl-5 text-neutral-600 dark:text-neutral-400">
-        <li data-i18n="sec.server.4.1">Which account an envelope is for, when it arrived and how big it is</li>
-        <li data-i18n="sec.server.4.2">Which account is connected, and the network address (IP address) it connects from</li>
+        <li data-i18n="sec.server.4.1">Which account a message is for, when it arrived and how big it is</li>
+        <li data-i18n="sec.server.4.2">Which account is connected, and the IP address it connects from</li>
       </ul>
-      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.server.5">The server needs these to deliver messages. It deletes envelopes after 30 days and doesn't keep who sent them.</p>
+      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.server.5">The server needs these to deliver messages. It deletes messages after 30 days and doesn't keep a record of who sent them.</p>
     </section>
     <section id="account" class="scroll-mt-16 border-t border-neutral-200 py-8 dark:border-night-line">
       <h2 class="text-xl font-bold" data-i18n="sec.account.h">No phone number, no password</h2>
       <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.account.1">Your account is a key made on your own device. We don't ask for a phone number or an email address.</p>
-      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.account.2">The key is protected by a passkey, your device's built-in way of checking it's you, so you unlock Tegami with Face ID, a fingerprint or Windows Hello. There is no password to steal or leak.</p>
+      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.account.2">Your key is protected by a passkey, so you open Tegami with Face ID, a fingerprint or Windows Hello. There is no password to steal or leak.</p>
     </section>
     <section id="lost" class="scroll-mt-16 border-t border-neutral-200 py-8 dark:border-night-line">
       <h2 class="text-xl font-bold" data-i18n="sec.lost.h">If you lose your phone</h2>
-      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.lost.1">Make a recovery code in Settings and keep it somewhere safe. With it you can bring your account, friends and groups back on a new device. Without it, no one can bring your account back, not even us. Your chat history doesn't come back with the recovery code.</p>
+      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.lost.1">Make a recovery code in Settings and keep it somewhere safe. With it, you can bring back your account, friends and groups on a new device. Your chat history doesn't come back. Without the code, no one can bring your account back, not even us.</p>
       <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.lost.2">Still have your old phone? Use the transfer link in Settings to move to the new one. Your chat history moves with it.</p>
     </section>
     <section id="photos" class="scroll-mt-16 border-t border-neutral-200 py-8 dark:border-night-line">
       <h2 class="text-xl font-bold" data-i18n="sec.photos.h">Photos and files</h2>
-      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.photos.1">Each photo or file is locked with its own key before it's uploaded, so our storage only holds scrambled data. Uploads are deleted after 30 days. Your friend keeps their copy on their device.</p>
+      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.photos.1">Each photo or file is encrypted with its own key before it's uploaded, so we can't see what's in it. Uploads are deleted from our server after 30 days. Your friend keeps their copy on their device.</p>
     </section>
     <section id="calls" class="scroll-mt-16 border-t border-neutral-200 py-8 dark:border-night-line">
       <h2 class="text-xl font-bold" data-i18n="sec.calls.h">Calls</h2>
-      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.calls.1">Voice and video go straight between your devices, encrypted. Because the two devices connect directly, the person you call can see your network address (IP address), which can show roughly where you are.</p>
+      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.calls.1">Voice and video calls go straight between your devices, encrypted. Because the devices connect directly, the person you call can see your IP address, which can show roughly where you are. Turn on "Always relay calls" under "Call relay" in Settings, and the other person won't see your IP address.</p>
     </section>
     <section id="strangers" class="scroll-mt-16 border-t border-neutral-200 py-8 dark:border-night-line">
-      <h2 class="text-xl font-bold" data-i18n="sec.strangers.h">Strangers and unwanted messages</h2>
-      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.strangers.1">Messages from people you don't know land in a separate box. You can block and report anyone. If you attach messages to a report, we can read the ones you attached.</p>
+      <h2 class="text-xl font-bold" data-i18n="sec.strangers.h">Messages from strangers</h2>
+      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.strangers.1">Messages from people you don't know go to a separate box. You can block and report anyone. If you attach messages to a report, we can read only the ones you attached.</p>
     </section>
     <section id="ai" class="scroll-mt-16 border-t border-neutral-200 py-8 dark:border-night-line">
       <h2 class="text-xl font-bold" data-i18n="sec.ai.h">Your AI</h2>
-      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.ai.1">Your AI runs on your own computer, not on our servers. Everything you let it read also goes to the company behind that AI. Everything AI can do starts switched off, and only what you allow will work.</p>
-      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.ai.2">People you chat with can also choose not to let other people's AIs read what they write.</p>
+      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.ai.1">Your AI runs on your own computer, not on our servers. If you use an AI company's service, whatever you let your AI read also goes to that company. Everything an AI can do starts switched off, and it only does what you allow.</p>
+      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.ai.2">The people you chat with can also choose not to let other people's AIs read what they write.</p>
       <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.ai.3">The official Tegami app marks messages written by an AI. The model name shown next to an AI is what that AI says about itself. Apps modified from Tegami's code may leave out the mark.</p>
     </section>
     <section id="count" class="scroll-mt-16 border-t border-neutral-200 py-8 dark:border-night-line">
@@ -108,7 +108,7 @@ tailwind.config = {
     <section id="notyet" class="scroll-mt-16 border-t border-neutral-200 py-8 dark:border-night-line">
       <h2 class="text-xl font-bold" data-i18n="sec.notyet.h">What isn't done yet</h2>
       <ul class="mt-2 list-disc space-y-1 pl-5 text-neutral-600 dark:text-neutral-400">
-        <li data-i18n="sec.notyet.1.1">If someone steals your key, they could also read past messages still on the server or your device. That's why the key is locked with a passkey.</li>
+        <li data-i18n="sec.notyet.1.1">If someone steals your key, they could also read past messages still on the server or on your device. That's why your key is locked with a passkey.</li>
         <li data-i18n="sec.notyet.1.2">No outside security audit yet.</li>
         <li data-i18n="sec.notyet.1.3">The browser version loads its code each time you open it, so whoever serves it could swap in different code without you noticing.</li>
         <li data-i18n="sec.notyet.1.4">You can't talk with people on other Nostr apps yet.</li>
@@ -116,7 +116,7 @@ tailwind.config = {
     </section>
     <section id="check" class="scroll-mt-16 border-t border-neutral-200 py-8 dark:border-night-line">
       <h2 class="text-xl font-bold" data-i18n="sec.check.h">Check it yourself</h2>
-      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.check.1">All of Tegami's code is public under AGPL-3.0, so you don't have to take our word for any of this. The details are on the <a href="Tegamiの開発者向け_2026-11-16.html" class="underline">developer pages</a>, and what we keep and for how long is in the <a href="Tegamiのプライバシーポリシー案_2026-11-14.html" class="underline">privacy policy</a>.</p>
+      <p class="mt-2 text-neutral-600 dark:text-neutral-400" data-i18n="sec.check.1">All of Tegami's code is public under AGPL-3.0, so anyone can check what this page says. The details are on the <a href="Tegamiの開発者向け_2026-11-16.html" class="underline">developer pages</a>, and what we keep and for how long is in the <a href="Tegamiのプライバシーポリシー案_2026-11-14.html" class="underline">privacy policy</a>.</p>
     </section>
   </div>
 </main>
@@ -129,44 +129,44 @@ tailwind.config = {
 // 公開する時は、英語をtegami.chat/、日本語をtegami.chat/ja/ の別のページに書き出し、hreflangで結ぶ。
 const JA = {
   'sec.h': '安全の仕組み',
-  'sec.t': 'メッセージを守る仕組みと、運営者に見えるものと見えないもの、まだ足りないことを、専門用語を使わずに説明します。',
-  'sec.seal.h': '開けられるのは相手だけ',
-  'sec.seal.1': 'メッセージは、あなたの端末を出る前に鍵をかけ、封筒に入れて送ります。開けられるのは、相手の端末とあなた自身の端末だけです。Tegamiの運営者にも読めません。',
+  'sec.t': 'あなたのメッセージをどう守っているか、運営者に何が見えるか、まだ足りないところはどこかを説明します。',
+  'sec.seal.h': 'メッセージを読めるのはあなたと相手だけ',
+  'sec.seal.1': 'メッセージは、あなたの端末から送り出す前に暗号化します。読めるのは、相手の端末とあなた自身の端末だけです。Tegamiの運営者にも読めません。',
   'sec.server.h': 'サーバーに見えるものと見えないもの',
   'sec.server.1': '見えないもの',
   'sec.server.2.1': 'メッセージの中身',
-  'sec.server.2.2': '写真とファイルの中身',
+  'sec.server.2.2': '写真やファイルの中身',
   'sec.server.2.3': 'あなたの名前とアイコン',
-  'sec.server.2.4': '友だちの一覧',
+  'sec.server.2.4': 'あなたの友だちが誰か',
   'sec.server.3': '見えるもの',
-  'sec.server.4.1': '封筒の宛先のアカウント、届いた時刻、大きさ',
-  'sec.server.4.2': 'つないでいるアカウントと、つないでいる場所の住所（IPアドレス）',
-  'sec.server.5': 'サーバーがメッセージを届けるには、これらが要ります。封筒は30日で消し、誰が送ったかは残しません。',
-  'sec.account.h': '電話番号もパスワードも必要ありません',
-  'sec.account.1': 'あなたのアカウントは、あなたの端末の中で作る鍵です。電話番号もメールアドレスも集めません。',
-  'sec.account.2': '鍵はパスキーで守ります。パスキーは端末に備わった本人確認の仕組みで、Tegamiを開く時に顔認証（Face IDなど）や指紋認証、Windows Helloで本人かどうかを確かめます。パスワード自体が無いので、パスワードが盗まれたり漏れたりする心配もありません。',
+  'sec.server.4.1': 'メッセージの宛先のアカウント、届いた時刻、データの大きさ',
+  'sec.server.4.2': 'サーバーにつないでいるアカウントと、接続元のIPアドレス',
+  'sec.server.5': 'メッセージを届けるのに、サーバーにはこれらの情報が必要です。サーバーで預かったメッセージは30日で消します。誰が送ったかは記録に残しません。',
+  'sec.account.h': '電話番号もパスワードもいりません',
+  'sec.account.1': 'Tegamiのアカウントは、あなたの端末の中で作る暗号の鍵です。電話番号もメールアドレスも聞きません。',
+  'sec.account.2': '鍵はパスキーという本人確認の仕組みで守ります。Tegamiを開く時は、Face IDや指紋認証、Windows Helloを使います。パスワードが無いので、盗まれたり漏れたりする心配もありません。',
   'sec.lost.h': '端末をなくした時',
-  'sec.lost.1': '設定で復旧コードを作り、なくさない場所にしまっておいてください。復旧コードがあれば、新しい端末でアカウント、友だち、グループを戻せます。復旧コードが無いと、Tegamiの運営者でも戻せません。会話の履歴は、復旧コードでは戻りません。',
-  'sec.lost.2': '古い端末が手元にあるまま新しい端末へ移る時は、設定にある引き継ぎ用のリンクを使います。会話の履歴も一緒に移ります。',
+  'sec.lost.1': 'もしもの時のために、設定で復旧コードを作り、安全な場所に控えておいてください。復旧コードがあれば、新しい端末でアカウントと友だち、グループを元に戻せます。トークの履歴は戻りません。復旧コードが無いと、Tegamiの運営者にも戻せません。',
+  'sec.lost.2': '古い端末がまだ手元にあるなら、設定の引き継ぎ用のリンクで新しい端末に移れます。この方法なら、トークの履歴も一緒に移ります。',
   'sec.photos.h': '写真とファイル',
-  'sec.photos.1': '写真とファイルは、1つずつ別の鍵をかけてから預けるので、運営者のサーバーには読めないデータしかありません。預かった分は30日で消します。受け取った人の端末には残ります。',
+  'sec.photos.1': '写真とファイルは、1つずつ別の鍵で暗号化してからサーバーに預けます。運営者には中身が見えません。サーバーで預かったデータは30日で消しますが、受け取った人の端末には残ります。',
   'sec.calls.h': '通話',
-  'sec.calls.1': '声と映像は、暗号化したまま端末どうしで直接やり取りします。端末どうしが直接つながるので、通話の相手にはあなたのIPアドレス（インターネット上の住所）が見え、おおよその地域が分かることがあります。',
-  'sec.strangers.h': '知らない人と迷惑なメッセージ',
-  'sec.strangers.1': '知らない人からのメッセージは、「知らない人から」の欄にまとまります。誰でもブロックと通報ができます。通報にメッセージを添えると、添えたメッセージは運営者が読めます。',
+  'sec.calls.1': '音声通話とビデオ通話では、暗号化したまま端末どうしを直接つなぎます。直接つなぐため、通話の相手にあなたのIPアドレスが伝わり、おおよその地域が分かることがあります。設定の『通話の中継』で『通話を常に中継する』をオンにすると、相手にIPアドレスは伝わりません。',
+  'sec.strangers.h': '知らない人からのメッセージ',
+  'sec.strangers.1': '知らない人からのメッセージは、「知らない人から」の欄に分けて届きます。どの相手もブロックや通報ができます。通報にメッセージを添えた時は、添えたメッセージだけを運営者が読みます。',
   'sec.ai.h': 'AI',
-  'sec.ai.1': 'AIはあなたのパソコンで動き、Tegamiのサーバーでは動きません。AIに読ませたものは、そのAIの会社にも渡ります。AIにできることは最初はすべてオフで、あなたが許したものだけが動きます。',
-  'sec.ai.2': 'トークをする人はそれぞれ、自分の文を相手のAIに読ませないことを選べます。',
-  'sec.ai.3': '公式のアプリは、AIが書いた文に印を付けます。AIの横に出るモデルの名前は、そのAIが自分で名乗った値です。Tegamiのコードを改造したアプリは、印を付けないことがあります。',
-  'sec.count.h': '追跡しません',
-  'sec.count.1': 'アプリにもこのサイトにも、アクセス解析や追跡の仕組みはありません。数えるのは合計だけで、週ごとの数を<a href="Tegamiの稼働状況と利用統計案_2026-11-15.html" class="underline">稼働状況のページ</a>で公開しています。',
-  'sec.notyet.h': 'まだ足りないこと',
-  'sec.notyet.1.1': '鍵を盗まれると、サーバーや端末に残っている過去のメッセージも読まれるおそれがあります。そのため、鍵をパスキーで守っています。',
-  'sec.notyet.1.2': '外部の専門家による安全の監査は、まだ受けていません。',
-  'sec.notyet.1.3': 'ブラウザ版は、開くたびにサーバーからプログラムを受け取って動きます。そのため、配る側がプログラムを差し替えても、使う人は気づけません。',
-  'sec.notyet.1.4': 'ほかのNostrアプリ（同じ仕組みを使う別のアプリ）の人とは、まだやり取りできません。',
+  'sec.ai.1': 'AIは、Tegamiのサーバーではなく、あなたのパソコンで動きます。AIの会社のサービスを使う時は、AIに読ませたメッセージがその会社にも送られます。AIにできることは最初はすべてオフで、あなたが許可した機能だけが動きます。',
+  'sec.ai.2': 'あなたもトークの相手も、自分のメッセージをほかの人のAIに読ませないように設定できます。',
+  'sec.ai.3': '公式のアプリでは、AIが書いたメッセージに印が付きます。AIの横に出るモデルの名前は、AI自身が名乗っているものです。Tegamiのコードを改造したアプリでは、印が付かないことがあります。',
+  'sec.count.h': 'あなたの行動を追跡しません',
+  'sec.count.1': 'アプリにもこのサイトにも、アクセス解析や追跡の仕組みは入れていません。数えるのは全体の合計だけで、毎週の数を<a href="Tegamiの稼働状況と利用統計案_2026-11-15.html" class="underline">稼働状況のページ</a>で公開しています。',
+  'sec.notyet.h': 'まだ足りないところ',
+  'sec.notyet.1.1': '鍵を盗まれると、サーバーや端末に残っている過去のメッセージまで読まれるおそれがあります。鍵が盗まれにくいように、パスキーで守っています。',
+  'sec.notyet.1.2': '外部の専門家による安全性の監査は、まだ受けていません。',
+  'sec.notyet.1.3': 'ブラウザ版は、開くたびにサーバーからプログラムを読み込みます。配る側がプログラムを差し替えても、使う人には分かりません。',
+  'sec.notyet.1.4': 'TegamiはNostrという共通の仕組みで動いています。ただし、Nostrを使うほかのアプリの人とは、まだやり取りできません。',
   'sec.check.h': '自分で確かめられます',
-  'sec.check.1': 'Tegamiのコード（プログラムの中身）は、すべて誰でも読める形で公開しています（ライセンスはAGPL-3.0です）。ここに書いたことを、そのまま信じる必要はありません。詳しい作りは<a href="Tegamiの開発者向け_2026-11-16.html" class="underline">開発者向けの説明</a>に、預かる情報と期間は<a href="Tegamiのプライバシーポリシー案_2026-11-14.html" class="underline">プライバシーポリシー</a>に書いています。',
+  'sec.check.1': 'Tegamiのコードは、AGPL-3.0というライセンスで、すべて公開しています。このページに書いたことは、誰でもコードを読んで確かめられます。詳しい作りは<a href="Tegamiの開発者向け_2026-11-16.html" class="underline">開発者向けの説明</a>に、預かる情報と期間は<a href="Tegamiのプライバシーポリシー案_2026-11-14.html" class="underline">プライバシーポリシー</a>に書いています。',
 };
 const EN = {};
 document.querySelectorAll('[data-i18n]').forEach((el) => { EN[el.dataset.i18n] ??= el.innerHTML; });

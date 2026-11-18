@@ -80,12 +80,12 @@ const META = {
     ja: { title: '技術仕様 | 開発者向けのTegamiの説明', desc: '暗号の部品、リレーの上限、HTTPの口、Tegami独自のkind。' },
   },
   'dev-faq': {
-    en: { title: 'FAQ | Tegami for developers', desc: 'Questions developers ask about Tegami.' },
-    ja: { title: 'よくある質問 | 開発者向けのTegamiの説明', desc: '開発者からよく聞かれること。' },
+    en: { title: 'Developer FAQ | Tegami', desc: 'Questions developers ask about Tegami.' },
+    ja: { title: '開発者向けのよくある質問 | Tegami', desc: '開発者からよく聞かれること。' },
   },
   compare: {
-    en: { title: 'Compare apps | Tegami', desc: 'Tegami next to other messaging apps.' },
-    ja: { title: '他アプリとの比較 | Tegami', desc: 'Tegamiとほかのメッセージアプリの比較。' },
+    en: { title: 'Tegami compared with other apps', desc: 'Tegami next to LINE, WhatsApp, Signal and Telegram.' },
+    ja: { title: 'ほかのアプリとの比較 | Tegami', desc: 'LINE、WhatsApp、Signal、Telegramと並べた、Tegamiの比較。' },
   },
   index: {
     en: { title: 'Tegami: your chats belong to you', desc: 'An open-source messaging app built on Nostr. No ads, no tracking, and bring your own AI.' },
