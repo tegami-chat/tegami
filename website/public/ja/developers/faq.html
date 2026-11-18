@@ -41,7 +41,7 @@
 </header>
 
 <div class="mx-auto max-w-6xl px-4 py-10 md:py-14 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10">
-  <aside class="lg:sticky lg:top-20 lg:self-start"><nav class="devside mb-8 lg:mb-0" aria-label="Developer docs"><p class="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 lg:block" data-i18n="dv.side">Developer docs</p><ul class="flex flex-wrap gap-1 text-sm lg:block lg:space-y-0.5"><li class="shrink-0"><a href="/ja/developers" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dv.ov">Overview</a></li><li class="shrink-0"><a href="/ja/developers/protocol" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.protocol">Nostrと暗号と鍵</a></li><li class="shrink-0"><a href="/ja/developers/relay" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.relay">リレー、通知、通話</a></li><li class="shrink-0"><a href="/ja/developers/ai" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.ai">AI</a></li><li class="shrink-0"><a href="/ja/developers/compare" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.compare">ほかのアプリとの比較</a></li><li class="shrink-0"><a href="/ja/developers/spec" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.spec">技術仕様</a></li><li class="shrink-0"><a href="/ja/developers/faq" class="block rounded-lg px-3 py-2 bg-forest-50 font-semibold text-forest-700 dark:bg-forest-950 dark:text-forest-300" aria-current="page" data-i18n="dp.faq">よくある質問</a></li></ul></nav></aside>
+  <aside class="lg:sticky lg:top-20 lg:self-start"><nav class="devside mb-8 lg:mb-0" aria-label="Developer docs"><p class="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 lg:block" data-i18n="dv.side">Developer docs</p><ul class="flex flex-wrap gap-1 text-sm lg:block lg:space-y-0.5"><li class="shrink-0"><a href="Tegamiの開発者向け_November 16, 2026.html" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dv.ov">Overview</a></li><li class="shrink-0"><a href="/ja/developers/protocol" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.protocol">Nostrと暗号と鍵</a></li><li class="shrink-0"><a href="/ja/developers/relay" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.relay">リレーと通知と通話</a></li><li class="shrink-0"><a href="/ja/developers/ai" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.ai">AI</a></li><li class="shrink-0"><a href="/ja/developers/compare" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.compare">ほかのアプリとの比較</a></li><li class="shrink-0"><a href="/ja/developers/spec" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.spec">技術仕様</a></li><li class="shrink-0"><a href="/ja/developers/faq" class="block rounded-lg px-3 py-2 bg-forest-50 font-semibold text-forest-700 dark:bg-forest-950 dark:text-forest-300" aria-current="page" data-i18n="dp.faq">よくある質問</a></li></ul></nav></aside>
   <main class="devdoc min-w-0 max-w-3xl">
 <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dfaq.h">開発者向けのよくある質問</h1>
 <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dfaq.t">Tegamiの作りについて、開発者からよく聞かれることをまとめました。2026年11月18日の本番の状態を書いています。</p>
@@ -56,13 +56,13 @@
 <p data-i18n="dfaq.nips.a">メッセージはNIP-17とNIP-59で送り、NIP-44で暗号化します。リレーへのログインはNIP-42、期限つきのイベントはNIP-40、HTTPの署名はNIP-98です。公式アカウントの識別子にNIP-05、リレーの情報にNIP-11を使います。写真とファイルの保管にはBlossomを使います。公開の投稿のkind 1と、公開のプロフィールのkind 0は使いません。</p>
 </div></details>
 <details><summary data-i18n="dfaq.crypto.q">暗号は何を使っていますか？前方秘匿性はありますか？</summary><div>
-<p data-i18n="dfaq.crypto.a">メッセージはNIP-44 v2で暗号化します。使う部品はsecp256k1のECDH、HKDF、ChaCha20、HMAC-SHA256です。暗号化したものは、NIP-59のsealとgift wrapで二重に包みます。前方秘匿性はありません。秘密鍵を盗まれると、リレーに残っている30日以内のメッセージと、端末に保存したメッセージを後から復号されるおそれがあります。鍵を次々に新しくする方式に移るかは、まだ決めていません。</p>
+<p data-i18n="dfaq.crypto.a">メッセージはNIP-44 v2で暗号化します。使う部品はsecp256k1のECDH、HKDF、ChaCha20、HMAC-SHA256です。暗号化したものは、NIP-59の方式で二重に包み、封筒（NIP-59 の gift wrap。暗号化したメッセージを入れた入れ物）にします。前方秘匿性はありません。秘密鍵を盗まれると、リレーに残っている30日以内のメッセージと、端末に保存したメッセージを後から復号されるおそれがあります。鍵を次々に新しくする方式に移るかは、まだ決めていません。</p>
 </div></details>
 <details><summary data-i18n="dfaq.key.q">秘密鍵はどう守っていますか？手持ちのnsecは使えますか？</summary><div>
 <p data-i18n="dfaq.key.a">パスキーのPRF拡張から32バイトを取り出し、HKDF-SHA256でAES-GCMの鍵にして、Nostrの秘密鍵を暗号化します。端末に置くのは暗号文だけです。PRFに対応しないパスキーの保管先では、取り出せないAES鍵をIndexedDBに置いて暗号化する方法も選べます。鍵はアプリの中で作り、外に出しません。手持ちのnsecでのログインも、鍵の書き出しもできません。</p>
 </div></details>
 <details><summary data-i18n="dfaq.see.q">リレーには何が見えますか？</summary><div>
-<p data-i18n="dfaq.see.a">gift wrapの宛先の公開鍵、届いた時刻、大きさ、ログインしている鍵と接続元のIPアドレスが見えます。gift wrapの外側のタグ<code>t=call</code>、<code>t=quiet</code>、<code>expiration</code>も見えます。書き込みにもログインが要るので、受け取る時点では誰から誰へのイベントかが分かります。ただし、リレーのコードは送った人の鍵を保存しません。<code>relay/src/index.ts</code>の<code>events</code>テーブルに、送信者のカラムはありません。</p>
+<p data-i18n="dfaq.see.a">封筒の宛先の公開鍵、届いた時刻、大きさ、ログインしている鍵と接続元のIPアドレスが見えます。封筒の外側のタグ<code>t=call</code>、<code>t=quiet</code>、<code>expiration</code>も見えます。書き込みにもログインが要るので、受け取る時点では誰から誰へのイベントかが分かります。ただし、リレーのコードは送った人の鍵を保存しません。<code>relay/src/index.ts</code>の<code>events</code>テーブルに、送信者のカラムはありません。</p>
 </div></details>
 <details><summary data-i18n="dfaq.verify.q">本番で動いているリレーとアプリが、公開しているコードと同じか確かめられますか？</summary><div>
 <p data-i18n="dfaq.verify.a">いまは確かめられません。リレーは動いているコミットを<code>/stats</code>とNIP-11の<code>version</code>で名乗りますが、運営者の自己申告です。ブラウザ版のアプリは再現可能なビルドに対応しておらず、配信中のファイルが公開のリポジトリから作られたかは確かめられません。なお、厳しいCSPで読み込み元を絞り、外部のアクセス解析のスクリプトも入れていません。</p>
@@ -106,9 +106,12 @@
       <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.devs">開発者の方へ</h3>
       <ul class="mt-3 space-y-2">
         <li><a href="/ja/developers" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.ov">Tegamiの概要</a></li>
+        <li><a href="/ja/developers/protocol" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.protocol">Nostrと暗号と鍵</a></li>
+        <li><a href="/ja/developers/relay" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.relay">リレーと通知と通話</a></li>
+        <li><a href="/ja/developers/ai" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.ai">AI</a></li>
         <li><a href="/ja/developers/spec" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.spec">技術仕様</a></li>
-        <li><a href="/ja/developers/compare" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.compare">他アプリとの比較</a></li>
-        <li><a href="/ja/developers/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.faq">よくある質問</a></li>
+        <li><a href="/ja/developers/compare" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.devcompare">開発者向けの比較</a></li>
+        <li><a href="/ja/developers/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.devfaq">開発者向けのよくある質問</a></li>
       </ul>
     </div>
     <div>

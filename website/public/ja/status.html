@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tegamiの稼働状況と利用統計</title>
+<title>稼働状況と利用統計 | Tegami</title>
 <meta name="description" content="Tegamiのリレーの稼働状況と、週ごとの利用統計。">
-<meta property="og:title" content="Tegamiの稼働状況と利用統計">
+<meta property="og:title" content="稼働状況と利用統計 | Tegami">
 <meta property="og:description" content="Tegamiのリレーの稼働状況と、週ごとの利用統計。">
 <meta property="og:url" content="https://tegami.chat/ja/status">
 <link rel="canonical" href="https://tegami.chat/ja/status">
@@ -56,7 +56,7 @@
 
   <div class="mt-12">
     <section class="border-t border-neutral-200 py-8 dark:border-night-line">
-      <h2 class="text-xl font-bold" data-i18n="st.use.h">週ごとの利用統計</h2>
+      <h2 class="text-2xl font-bold" data-i18n="st.use.h">週ごとの利用統計</h2>
       <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-400 tabular-nums" id="period"></p>
       <p class="mt-3 text-sm text-neutral-600 dark:text-neutral-400" data-i18n="st.use.env">封筒は、暗号化したメッセージを届けるための入れ物です。メッセージ1通につき、受信者ごとに1つと、送信者の控えに1つ作られます。そのため、1対1のメッセージ1通は封筒2つになります。</p>
       <p class="mt-2 text-sm text-neutral-600 dark:text-neutral-400" data-i18n="st.use.note">集計が終わった週だけを表示しています。週は協定世界時（UTC）の月曜0時、日本時間の月曜9時に始まります。利用が少ない週の数値から個人を推測されないよう、数値はすべて10の倍数に切り上げ、0から9は、この画面では「10未満」と表示します（公開している統計のデータでは0です）。</p>
@@ -85,14 +85,14 @@
     </section>
 
     <section class="border-t border-neutral-200 py-8 dark:border-night-line">
-      <h2 class="text-xl font-bold" data-i18n="st.how.h">集計の方法</h2>
+      <h2 class="text-2xl font-bold" data-i18n="st.how.h">集計の方法</h2>
       <p class="mt-3 text-neutral-600 dark:text-neutral-400" data-i18n="st.how.t0">リレーは1日ごとに、受け付けた封筒の数、ファイルの数と容量、ログインの回数、ログインしたアカウントの推定数を集計しています。</p>
       <p class="mt-3 text-neutral-600 dark:text-neutral-400" data-i18n="st.how.t1">アカウントの数は、毎日作り直して捨てる乱数を使って推定するため、統計からはどのアカウントが利用したかは分かりません（HyperLogLogという手法です）。同じ理由で、アカウントの数だけは、週の合計ではなく1日あたりの平均です。封筒、ファイル、ログインは1週間の合計です。メッセージの内容や、アプリでどの画面を開いたかは集計していません。</p>
       <p class="mt-3 text-neutral-600 dark:text-neutral-400" data-i18n="st.how.t2">リレーが保存している情報の種類と保存期間は、<a href="/ja/privacy" class="font-semibold text-forest-700 underline dark:text-forest-300">プライバシーポリシー</a>の「リレーが保存する情報」をご覧ください。</p>
     </section>
 
     <section class="border-t border-neutral-200 py-8 dark:border-night-line">
-      <h2 class="text-xl font-bold" data-i18n="st.links.h">関連リンク</h2>
+      <h2 class="text-2xl font-bold" data-i18n="st.links.h">関連リンク</h2>
       <ul class="mt-3 space-y-2">
         <li><a href="https://relay.tegami.chat/stats" target="_blank" rel="noopener" class="font-semibold text-forest-700 underline dark:text-forest-300" data-i18n="st.links.json">公開している統計データ（JSON）<svg viewBox="0 0 24 24" class="ml-1 inline-block h-[0.85em] w-[0.85em] align-[-0.1em]" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg><span class="sr-only">（新しいタブで開きます）</span></a></li>
         <li><a href="https://github.com/tegami-chat/tegami/blob/main/relay/src/stats.ts" target="_blank" rel="noopener" class="font-semibold text-forest-700 underline dark:text-forest-300" data-i18n="st.links.code">集計のソースコード（GitHub）<svg viewBox="0 0 24 24" class="ml-1 inline-block h-[0.85em] w-[0.85em] align-[-0.1em]" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg><span class="sr-only">（新しいタブで開きます）</span></a></li>
@@ -123,9 +123,12 @@
       <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.devs">開発者の方へ</h3>
       <ul class="mt-3 space-y-2">
         <li><a href="/ja/developers" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.ov">Tegamiの概要</a></li>
+        <li><a href="/ja/developers/protocol" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.protocol">Nostrと暗号と鍵</a></li>
+        <li><a href="/ja/developers/relay" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.relay">リレーと通知と通話</a></li>
+        <li><a href="/ja/developers/ai" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.ai">AI</a></li>
         <li><a href="/ja/developers/spec" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.spec">技術仕様</a></li>
-        <li><a href="/ja/developers/compare" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.compare">他アプリとの比較</a></li>
-        <li><a href="/ja/developers/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.faq">よくある質問</a></li>
+        <li><a href="/ja/developers/compare" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.devcompare">開発者向けの比較</a></li>
+        <li><a href="/ja/developers/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.devfaq">開発者向けのよくある質問</a></li>
       </ul>
     </div>
     <div>

@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>リレー、通知、通話 | 開発者向けのTegamiの説明</title>
+<title>リレーと通知と通話 | Tegami</title>
 <meta name="description" content="Tegamiのリレーの決まりと、通知、通話、写真の仕組み。">
-<meta property="og:title" content="リレー、通知、通話 | 開発者向けのTegamiの説明">
+<meta property="og:title" content="リレーと通知と通話 | Tegami">
 <meta property="og:description" content="Tegamiのリレーの決まりと、通知、通話、写真の仕組み。">
 <meta property="og:url" content="https://tegami.chat/ja/developers/relay">
 <link rel="canonical" href="https://tegami.chat/ja/developers/relay">
@@ -41,41 +41,41 @@
 </header>
 
 <div class="mx-auto max-w-6xl px-4 py-10 md:py-14 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10">
-  <aside class="lg:sticky lg:top-20 lg:self-start"><nav class="devside mb-8 lg:mb-0" aria-label="Developer docs"><p class="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 lg:block" data-i18n="dv.side">開発者向けの目次</p><ul class="flex flex-wrap gap-1 text-sm lg:block lg:space-y-0.5"><li class="shrink-0"><a href="/ja/developers" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dv.ov">概要</a></li><li class="shrink-0"><a href="/ja/developers/protocol" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.protocol">Nostrと暗号と鍵</a></li><li class="shrink-0"><a href="/ja/developers/relay" class="block rounded-lg px-3 py-2 bg-forest-50 font-semibold text-forest-700 dark:bg-forest-950 dark:text-forest-300" aria-current="page" data-i18n="dp.relay">リレー、通知、通話</a></li><li class="shrink-0"><a href="/ja/developers/ai" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.ai">AI</a></li><li class="shrink-0"><a href="/ja/developers/compare" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.compare">ほかのアプリとの比較</a></li><li class="shrink-0"><a href="/ja/developers/spec" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.spec">技術仕様</a></li><li class="shrink-0"><a href="/ja/developers/faq" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.faq">よくある質問</a></li></ul></nav></aside>
+  <aside class="lg:sticky lg:top-20 lg:self-start"><nav class="devside mb-8 lg:mb-0" aria-label="Developer docs"><p class="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 lg:block" data-i18n="dv.side">開発者向けの目次</p><ul class="flex flex-wrap gap-1 text-sm lg:block lg:space-y-0.5"><li class="shrink-0"><a href="Tegamiの開発者向け_November 16, 2026.html" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dv.ov">概要</a></li><li class="shrink-0"><a href="/ja/developers/protocol" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.protocol">Nostrと暗号と鍵</a></li><li class="shrink-0"><a href="/ja/developers/relay" class="block rounded-lg px-3 py-2 bg-forest-50 font-semibold text-forest-700 dark:bg-forest-950 dark:text-forest-300" aria-current="page" data-i18n="dp.relay">リレーと通知と通話</a></li><li class="shrink-0"><a href="/ja/developers/ai" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.ai">AI</a></li><li class="shrink-0"><a href="/ja/developers/compare" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.compare">ほかのアプリとの比較</a></li><li class="shrink-0"><a href="/ja/developers/spec" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.spec">技術仕様</a></li><li class="shrink-0"><a href="/ja/developers/faq" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.faq">よくある質問</a></li></ul></nav></aside>
   <main class="devdoc min-w-0 max-w-3xl">
-<h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dp.relay">リレー、通知、通話</h1>
+<h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dp.relay">リレーと通知と通話</h1>
 <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dp.relay.t">Tegamiのリレーの決まりと、通知、通話、写真の仕組み。</p>
-<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">「これから」の札の意味：</li><li data-i18n="dv.lg.rel"><span class="tag released">公開済み</span>2026年11月18日から本番で動いているもの</li><li data-i18n="dv.lg.built"><span class="tag built">公開待ち</span>コードを書き終えて、本番に出す前のもの</li><li data-i18n="dv.lg.decided"><span class="tag decided">決定済み</span>方針を決めて、コードはまだのもの</li><li data-i18n="dv.lg.idea"><span class="tag idea">検討中</span>まだ決めていないもの</li></ul>
+<p class="mt-4 text-sm text-neutral-600 dark:text-neutral-400" data-i18n="dv.legend.link">「提供中」などの状態の表示の意味は、<a href="Tegamiの開発者向け_2026年11月16日.html#legend">概要</a>にあります。</p>
 <h2 data-i18n="d.104" id="relay">リレー</h2>
 
 <details><summary data-i18n="d.105">リレーは何で動いていますか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.106">Cloudflare WorkersとDurable Object（SQLite）上で動作しており、コードは<code>relay/</code>にあります。受け付けるのは宛先が1人のgift wrap（<span class="whitespace-nowrap">kind 1059</span>）のみで、読み出せるのは自分宛ての封筒だけです。預かった封筒は30日で削除され、送る量の上限はIPアドレス単位と鍵単位で設けています。</p></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.107">リレーはTegamiが動かす1つのみです。</p></div>
-<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.108"><span class="tag decided">決定済み</span>封筒を預かる期間は30日から始め、使われ方を見て、長く開かない人がほとんどいなければ短縮します。</li>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span><p data-i18n="d.106">Cloudflare WorkersとDurable Object（SQLite）上で動作しており、コードは<code>relay/</code>にあります。受け付けるのは宛先が1人の封筒（NIP-59 の gift wrap。暗号化したメッセージを入れた入れ物。<span class="whitespace-nowrap">kind 1059</span>）のみで、読み出せるのは自分宛ての封筒だけです。預かった封筒は30日で削除され、送る量の上限はIPアドレス単位と鍵単位で設けています。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><span class="sr-only">：</span><p data-i18n="d.107">リレーはTegamiが動かす1つのみです。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><span class="sr-only">：</span><ul>
+<li data-i18n="d.108"><span class="tag decided">決定済み</span><span class="sr-only">：</span>封筒を預かる期間は30日から始め、使われ方を見て、長く開かない人がほとんどいなければ短縮します。</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.109">登録はどうなっていますか？ 誰でも使えますか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.110">はい、誰でも登録できます。登録はNIP-98で署名した<code>POST /register</code>で行い、招待券または人間かどうかの確認（Cloudflare Turnstile）のどちらかを通します。登録していない鍵は書き込めません。なお、招待券なしで登録した人のメッセージは「知らない人から」の欄には出ませんが、相手がQRコードや招待リンクで友だちに追加すればやり取りできます。ただし、その人からのメッセージでは相手の端末に通知が鳴りません。アプリを改造しても、登録を通った鍵ならリレーを使えるため、守っているのはアプリではなく登録の入口です。</p></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.111">本人確認の認証バッジ（本物の印）はまだありません。</p></div>
-<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.112"><span class="tag decided">決定済み</span>なりすましは複数の方法を組み合わせて防ぎます。家族と友だちは会ってQRコードを読み合い、会社とお店はドメインで確かめ、本物の印が欲しい人は外部の本人確認サービスを通して有料で付けられるようにします。その際もTegamiが受け取るのは「確かめた」という結果のみで、住所などの個人情報は持ちません。</li>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span><p data-i18n="d.110">はい、誰でも登録できます。登録はNIP-98で署名した<code>POST /register</code>で行い、招待券または人間かどうかの確認（Cloudflare Turnstile）のどちらかを通します。登録していない鍵は書き込めません。なお、招待券なしで登録した人からのメッセージは、友だちに追加するまで「知らない人から」の欄を含めてどこにも表示されず、通知も鳴りません。相手がQRコードや招待リンクで友だちに追加したあとに届くメッセージから表示されます。アプリを改造しても、登録を通った鍵ならリレーを使えるため、守っているのはアプリではなく登録の入口です。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><span class="sr-only">：</span><p data-i18n="d.111">本人確認の認証バッジ（本物の印）はありません。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><span class="sr-only">：</span><ul>
+<li data-i18n="d.112"><span class="tag decided">決定済み</span><span class="sr-only">：</span>なりすましは複数の方法を組み合わせて防ぎます。家族と友だちは会ってQRコードを読み合い、会社とお店はドメインで確かめ、本物の印が欲しい人は外部の本人確認サービスを通して有料で付けられるようにします。その際もTegamiが受け取るのは「確かめた」という結果のみで、住所などの個人情報は持ちません。</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.113">自分のリレーを立てられますか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.114">リレーのコードは公開しているため、自分で立ち上げて動かせます。</p></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.115">ただし、現在のTegamiのアプリは公式リレーにしかつながらないため、立てたリレーを使うにはアプリを改造する必要があります。</p></div>
-<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.116"><span class="tag decided">決定済み</span>会社や学校が独自のリレーを置けるようにします。登録のルールは置いた側が決められ、「誰でも」「招待券だけ」「許可した鍵だけ」から選べるようにします。</li>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span><p data-i18n="d.114">リレーのコードは公開しているため、自分で立ち上げて動かせます。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><span class="sr-only">：</span><p data-i18n="d.115">ただし、現在のTegamiのアプリは公式リレーにしかつながらないため、立てたリレーを使うにはアプリを改造する必要があります。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><span class="sr-only">：</span><ul>
+<li data-i18n="d.116"><span class="tag decided">決定済み</span><span class="sr-only">：</span>会社や学校が独自のリレーを置けるようにします。登録のルールは置いた側が決められ、「誰でも」「招待券だけ」「許可した鍵だけ」から選べるようにします。</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.117">利用状況は何を数えていますか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.118">リレーは日ごとの合計（届いた封筒、預かったファイルの数と大きさ、ログインの回数、その日にログインした鍵のおおよその数）を183日間持ち、<a href="/ja/status">稼働状況と利用統計</a>には、終わった週の合計だけを直近24週分公開しています。日ごとの数は運営者だけが見られます。ログインした鍵の数はHyperLogLogで推定し、日ごとに変わる値（ソルト）を混ぜてから数え、その値は日が変わると消します。公開する鍵の数は1日あたりの平均です。公開する数は、0から9は0、10以上は10の倍数に切り上げます。アプリにもサイトにもアクセス解析の仕組みはありません。</p></div>
-<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.119"><span class="tag decided">決定済み</span>使う人の動きを追う解析は、これからも入れません。</li>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span><p data-i18n="d.118">リレーは日ごとの合計（届いた封筒、預かったファイルの数と大きさ、ログインの回数、その日にログインした鍵のおおよその数）を183日間持ち、<a href="Tegamiの稼働状況と利用統計案_2026年11月15日.html">稼働状況と利用統計</a>には、終わった週の合計だけを直近24週分公開しています。日ごとの数は運営者だけが見られます。ログインした鍵の数はHyperLogLogで推定し、日ごとに変わる値（ソルト）を混ぜてから数え、その値は日が変わると消します。公開する鍵の数は1日あたりの平均です。公開する数は、0から9は0、10以上は10の倍数に切り上げます。アプリにもサイトにもアクセス解析の仕組みはありません。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><span class="sr-only">：</span><ul>
+<li data-i18n="d.119"><span class="tag decided">決定済み</span><span class="sr-only">：</span>使う人の動きを追う解析は、これからも入れません。</li>
 </ul></div>
 </div></details>
 
@@ -83,29 +83,29 @@
 <h2 data-i18n="d.120" id="features">通知、通話、写真</h2>
 
 <details><summary data-i18n="d.121">通知はどう届きますか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.122">Web Pushを使っています。端末は通知の宛先と通知用の鍵を自分の鍵で署名してリレーに預けておき、封筒が届くと、リレーが端末ごとに暗号化したペイロード（RFC 8291）を送る仕組みです。中身には「メッセージか着信か」の種別、宛先のアカウント、件数のみが入り、送り主や本文は含まれません。ただし、着信を出し分けるために相手を呼び出す封筒にだけ<code>t=call</code>のタグが付くため、リレーには「この封筒が呼び出しだったこと」が分かります。</p></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.123">トークごとに通知を切ることはできません。リレーも端末側の通知を受け取る仕組みも、届いた封筒がどのトーク宛てかを知らないためです。また、iPhoneのブラウザ版では、着信が通常の電話のような全画面になりません。</p></div>
-<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.124"><span class="tag decided">決定済み</span>iPhoneアプリを作る際に、全画面の着信表示（AppleのCallKit）を入れます。</li>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span><p data-i18n="d.122">Web Pushを使っています。端末は通知の宛先と通知用の鍵を自分の鍵で署名してリレーに預けておき、封筒が届くと、リレーが端末ごとに暗号化したペイロード（RFC 8291）を送る仕組みです。中身には「メッセージか着信か」の種別、宛先のアカウント、件数のみが入り、送り主や本文は含まれません。ただし、着信を出し分けるために相手を呼び出す封筒にだけ<code>t=call</code>のタグが付くため、リレーには「この封筒が呼び出しだったこと」が分かります。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><span class="sr-only">：</span><p data-i18n="d.123">トークごとに通知を切ることはできません。リレーも端末側の通知を受け取る仕組みも、届いた封筒がどのトーク宛てかを知らないためです。また、iPhoneのブラウザ版では、着信が通常の電話のような全画面になりません。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><span class="sr-only">：</span><ul>
+<li data-i18n="d.124"><span class="tag decided">決定済み</span><span class="sr-only">：</span>iPhoneアプリを作る際に、全画面の着信表示（AppleのCallKit）を入れます。</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.125">通話はどのように動きますか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.126">WebRTCによる1対1の音声通話とビデオ通話です。呼び出しや応答などのシグナリングは1分で期限が切れる暗号化した封筒でリレーを通し、接続経路を探す際にはSTUN（<code>stun.cloudflare.com</code>）を使います。直接つながらない時や、「通話を常に中継する」を選んだ時は、中継サーバー（TURN）を通します。音声と映像は暗号化されたままです。</p></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.127">直接つながる通話では、通話の相手に自分のIPアドレスが見えます。「通話を常に中継する」を選ぶと見えなくなります。グループ通話はありません。</p></div>
-<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.128"><span class="tag released">公開済み</span>Cloudflareの中継サーバー（TURN）を使えるようにしました。</li>
-<li data-i18n="d.129"><span class="tag released">公開済み</span>「通話を常に中継する」を選ぶと、相手に自分のIPアドレスが見えなくなります。</li>
-<li data-i18n="d.130"><span class="tag released">公開済み</span>自分で用意した中継サーバーを設定できるようにもなっています。</li>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span><p data-i18n="d.126">WebRTCによる1対1の音声通話とビデオ通話です。呼び出しや応答などのシグナリングは1分で期限が切れる暗号化した封筒でリレーを通し、接続経路を探す際にはSTUN（<code>stun.cloudflare.com</code>）を使います。直接つながらない時や、「通話を常に中継する」を選んだ時は、中継サーバー（TURN）を通します。音声と映像は暗号化されたままです。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><span class="sr-only">：</span><p data-i18n="d.127">直接つながる通話では、通話の相手に自分のIPアドレスが見えます。「通話を常に中継する」を選ぶと見えなくなります。グループ通話はありません。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><span class="sr-only">：</span><ul>
+<li data-i18n="d.128"><span class="tag released">提供中</span><span class="sr-only">：</span>Cloudflareの中継サーバー（TURN）を使えるようにしました。</li>
+<li data-i18n="d.129"><span class="tag released">提供中</span><span class="sr-only">：</span>「通話を常に中継する」を選ぶと、相手に自分のIPアドレスが見えなくなります。</li>
+<li data-i18n="d.130"><span class="tag released">提供中</span><span class="sr-only">：</span>自分で用意した中継サーバーを設定できるようにもなっています。</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.131">写真とファイルはどう扱われますか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.132">1つずつ新しいAES-GCMの鍵で暗号化してから、リレー側のストレージ（Cloudflare R2）に預けます。その鍵は暗号化したメッセージの中に入れて相手にだけ届けます。ストレージ上のデータは30日で消去されますが、受け取った人の端末には残ります。なお、写真は送る前に長辺1600pxへ縮められ、ファイルサイズの上限は暗号化した後で10MBです。スタンプだけは扱いが違い、自分のどの端末でも同じ暗号文になるように、画像とアカウントの秘密鍵から鍵を作り、本人が消すまで別の置き場に残します。</p></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.133">元の画質のまま送る選択肢はありません。</p></div>
-<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.134"><span class="tag decided">決定済み</span>小さくして送るか、元の画質で送るかを、送る人が選べるようにします。</li>
-<li data-i18n="d.135"><span class="tag idea">検討中</span>元の画質で送ることを有料にするかは、まだ決めていません。</li>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span><p data-i18n="d.132">1つずつ新しいAES-GCMの鍵で暗号化してから、リレー側のストレージ（Cloudflare R2）に預けます。その鍵は暗号化したメッセージの中に入れて相手にだけ届けます。ストレージ上のデータは30日で消去されますが、受け取った人の端末には残ります。なお、写真は送る前に長辺1600pxへ縮められ、ファイルサイズの上限は暗号化した後で10MBです。スタンプだけは扱いが違い、自分のどの端末でも同じ暗号文になるように、画像とアカウントの秘密鍵から鍵を作り、本人が消すまで別の置き場に残します。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><span class="sr-only">：</span><p data-i18n="d.133">元の画質のまま送る選択肢はありません。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><span class="sr-only">：</span><ul>
+<li data-i18n="d.134"><span class="tag decided">決定済み</span><span class="sr-only">：</span>小さくして送るか、元の画質で送るかを、送る人が選べるようにします。</li>
+<li data-i18n="d.135"><span class="tag idea">検討中</span><span class="sr-only">：</span>元の画質で送ることを有料にするかは、まだ決めていません。</li>
 </ul></div>
 </div></details>
 
@@ -133,9 +133,12 @@
       <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.devs">開発者の方へ</h3>
       <ul class="mt-3 space-y-2">
         <li><a href="/ja/developers" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.ov">Tegamiの概要</a></li>
+        <li><a href="/ja/developers/protocol" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.protocol">Nostrと暗号と鍵</a></li>
+        <li><a href="/ja/developers/relay" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.relay">リレーと通知と通話</a></li>
+        <li><a href="/ja/developers/ai" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.ai">AI</a></li>
         <li><a href="/ja/developers/spec" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.spec">技術仕様</a></li>
-        <li><a href="/ja/developers/compare" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.compare">他アプリとの比較</a></li>
-        <li><a href="/ja/developers/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.faq">よくある質問</a></li>
+        <li><a href="/ja/developers/compare" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.devcompare">開発者向けの比較</a></li>
+        <li><a href="/ja/developers/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.devfaq">開発者向けのよくある質問</a></li>
       </ul>
     </div>
     <div>

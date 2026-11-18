@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Technical spec | Tegami for developers</title>
+<title>Technical spec | Tegami</title>
 <meta name="description" content="Crypto building blocks, relay limits, HTTP endpoints and Tegami event kinds.">
-<meta property="og:title" content="Technical spec | Tegami for developers">
+<meta property="og:title" content="Technical spec | Tegami">
 <meta property="og:description" content="Crypto building blocks, relay limits, HTTP endpoints and Tegami event kinds.">
 <meta property="og:url" content="https://tegami.chat/developers/spec">
 <link rel="canonical" href="https://tegami.chat/developers/spec">
@@ -41,11 +41,11 @@
 </header>
 
 <div class="mx-auto max-w-6xl px-4 py-10 md:py-14 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10">
-  <aside class="lg:sticky lg:top-20 lg:self-start"><nav class="devside mb-8 lg:mb-0" aria-label="Developer docs"><p class="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 lg:block" data-i18n="dv.side">Developer docs</p><ul class="flex flex-wrap gap-1 text-sm lg:block lg:space-y-0.5"><li class="shrink-0"><a href="/developers" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dv.ov">Overview</a></li><li class="shrink-0"><a href="/developers/protocol" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.protocol">Nostr, encryption and keys</a></li><li class="shrink-0"><a href="/developers/relay" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.relay">Relay, notifications and calls</a></li><li class="shrink-0"><a href="/developers/ai" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.ai">AI</a></li><li class="shrink-0"><a href="/developers/compare" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.compare">Compared with other apps</a></li><li class="shrink-0"><a href="/developers/spec" class="block rounded-lg px-3 py-2 bg-forest-50 font-semibold text-forest-700 dark:bg-forest-950 dark:text-forest-300" aria-current="page" data-i18n="dp.spec">Technical spec</a></li><li class="shrink-0"><a href="/developers/faq" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.faq">FAQ</a></li></ul></nav></aside>
+  <aside class="lg:sticky lg:top-20 lg:self-start"><nav class="devside mb-8 lg:mb-0" aria-label="Developer docs"><p class="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 lg:block" data-i18n="dv.side">Developer docs</p><ul class="flex flex-wrap gap-1 text-sm lg:block lg:space-y-0.5"><li class="shrink-0"><a href="Tegamiの開発者向け_November 16, 2026.html" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dv.ov">Overview</a></li><li class="shrink-0"><a href="/developers/protocol" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.protocol">Nostr, encryption and keys</a></li><li class="shrink-0"><a href="/developers/relay" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.relay">Relay, notifications and calls</a></li><li class="shrink-0"><a href="/developers/ai" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.ai">AI</a></li><li class="shrink-0"><a href="/developers/compare" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.compare">Compared with other apps</a></li><li class="shrink-0"><a href="/developers/spec" class="block rounded-lg px-3 py-2 bg-forest-50 font-semibold text-forest-700 dark:bg-forest-950 dark:text-forest-300" aria-current="page" data-i18n="dp.spec">Technical spec</a></li><li class="shrink-0"><a href="/developers/faq" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.faq">FAQ</a></li></ul></nav></aside>
   <main class="devdoc min-w-0 max-w-3xl">
 <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dp.spec">Technical spec</h1>
 <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dp.spec.t">Crypto building blocks, relay limits, HTTP endpoints and Tegami's own event kinds.</p>
-<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">Labels on the "Next" items:</li><li data-i18n="dv.lg.rel"><span class="tag released">Released</span>in production since November 18, 2026</li><li data-i18n="dv.lg.built"><span class="tag built">Built, not released</span>the code is written but not in production yet</li><li data-i18n="dv.lg.decided"><span class="tag decided">Decided</span>the direction is set, the code isn't written yet</li><li data-i18n="dv.lg.idea"><span class="tag idea">Considering</span>not decided yet</li></ul>
+<p class="mt-4 text-sm text-neutral-600 dark:text-neutral-400" data-i18n="dv.legend.link">Status labels such as "Available" are explained in the <a href="Tegamiの開発者向け_November 16, 2026.html#legend">overview</a>.</p>
 <details open><summary data-i18n="d.312">Overall architecture</summary><div>
 <div class="wrap"><table>
 <tr><th data-i18n="d.313">Component</th><th data-i18n="d.314">Overview</th><th data-i18n="d.315">Code</th></tr>
@@ -79,39 +79,39 @@
 </ul>
 <p data-i18n="d.353">HTTP endpoints (photo, file, and sticker operations require a <span class="whitespace-nowrap">kind 24242</span> signature; other writes require a <span class="whitespace-nowrap">NIP-98</span> signature; only <code>/crash</code> needs no signature):</p>
 <div class="wrap"><table>
-<tr><th data-i18n="d.354">Endpoint</th><th data-i18n="d.355">Purpose</th></tr>
-<tr><td data-i18n="d.356"><code>POST /register</code></td><td data-i18n="d.357">Register a key (invite code or Turnstile)</td></tr>
-<tr><td data-i18n="d.358"><code>PUT /upload</code>, <code>GET</code> and <code>HEAD /&lt;sha256&gt;</code></td><td data-i18n="d.359">Store and fetch photos and files. Up to 10MB</td></tr>
-<tr><td data-i18n="d.360"><code>PUT /stamp</code>, <code>GET</code>, <code>HEAD</code> and <code>DELETE /stamp/&lt;sha256&gt;</code></td><td data-i18n="d.361">Stickers. 512KB each, up to 200 per person</td></tr>
-<tr><td data-i18n="d.362"><code>PUT</code>, <code>GET</code>, <code>DELETE /backup/&lt;id&gt;</code></td><td data-i18n="d.363">Recovery code backup. Up to 64KB</td></tr>
-<tr><td data-i18n="d.364"><code>POST</code>, <code>DELETE /push</code>, <code>GET /push/key</code></td><td data-i18n="d.365">Register notification endpoints, and the notification public key</td></tr>
-<tr><td data-i18n="d.366"><code>POST /report</code></td><td data-i18n="d.367">Reports</td></tr>
-<tr><td data-i18n="d.368"><code>GET /stats</code></td><td data-i18n="d.369">Weekly usage statistics (public)</td></tr>
-<tr><td data-i18n="d.370"><code>POST /crash</code></td><td data-i18n="d.371">Error reports, only when the user allows (not stored)</td></tr>
-<tr><td data-i18n="d.372"><code>POST /admin</code></td><td data-i18n="d.373">Admin operations such as suspending keys, usable only with the operator's key</td></tr>
-<tr><td data-i18n="d.408"><code>POST /register</code> (AI)</td><td data-i18n="d.409"><span class="tag released">Released</span>Register an AI key. The body carries the owner card (kind 25070); the relay remembers the key as an AI and counts its daily limits</td></tr>
-<tr><td data-i18n="d.410"><code>POST /turn</code></td><td data-i18n="d.411"><span class="tag released">Released</span>Short-lived TURN credentials for calls, for registered keys only. Nothing about the request is kept</td></tr>
-<tr><td data-i18n="d.412"><code>DELETE /account</code></td><td data-i18n="d.413"><span class="tag released">Released</span>Delete the account. The relay removes the envelopes, stamps, notification endpoints and registration it holds for the key</td></tr>
+<tr><th data-i18n="d.354">Endpoint</th><th data-i18n="d.355">Purpose</th><th data-i18n="sp.status">Status</th></tr>
+<tr><td data-i18n="d.356"><code>POST /register</code></td><td data-i18n="d.357">Register a key (invite code or Turnstile)</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.358"><code>PUT /upload</code>, <code>GET</code> and <code>HEAD /&lt;sha256&gt;</code></td><td data-i18n="d.359">Store and fetch photos and files. Up to 10MB</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.360"><code>PUT /stamp</code>, <code>GET</code>, <code>HEAD</code> and <code>DELETE /stamp/&lt;sha256&gt;</code></td><td data-i18n="d.361">Stickers. 512KB each, up to 200 per person</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.362"><code>PUT</code>, <code>GET</code>, <code>DELETE /backup/&lt;id&gt;</code></td><td data-i18n="d.363">Recovery code backup. Up to 64KB</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.364"><code>POST</code>, <code>DELETE /push</code>, <code>GET /push/key</code></td><td data-i18n="d.365">Register notification endpoints, and the notification public key</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.366"><code>POST /report</code></td><td data-i18n="d.367">Reports</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.368"><code>GET /stats</code></td><td data-i18n="d.369">Weekly usage statistics (public)</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.370"><code>POST /crash</code></td><td data-i18n="d.371">Error reports, only when the user allows (not stored)</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.372"><code>POST /admin</code></td><td data-i18n="d.373">Admin operations such as suspending keys, usable only with the operator's key</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.408"><code>POST /register</code> (AI)</td><td data-i18n="d.409">Register an AI key. The body carries the owner card (kind 25070); the relay remembers the key as an AI and counts its daily limits</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.410"><code>POST /turn</code></td><td data-i18n="d.411">Short-lived TURN credentials for calls, for registered keys only. Nothing about the request is kept</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.412"><code>DELETE /account</code></td><td data-i18n="d.413">Delete the account. The relay removes the envelopes, stamps, notification endpoints and registration it holds for the key</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
 </table></div>
 </div></details>
 
 <details><summary data-i18n="d.374">Tegami's custom kinds</summary><div>
 <p data-i18n="d.375">All are used only in the encrypted part inside a gift wrap. The relay only sees <span class="whitespace-nowrap">kind 1059</span>.</p>
 <div class="wrap"><table>
-<tr><th data-i18n="d.376">kind</th><th data-i18n="d.377">Contents</th></tr>
-<tr><td data-i18n="d.378">10100</td><td data-i18n="d.379">Icon. Delivered to friends only</td></tr>
-<tr><td data-i18n="d.380">10101</td><td data-i18n="d.381">Sticker list. Synced between your own devices</td></tr>
-<tr><td data-i18n="d.382">25050</td><td data-i18n="d.383">Call signaling (ring, answer, hang up, WebRTC connection info)</td></tr>
-<tr><td data-i18n="d.384">25060, 25061</td><td data-i18n="d.385">Draft requests to AI, and drafts from AI</td></tr>
-<tr><td data-i18n="d.390">10102</td><td data-i18n="d.391"><span class="tag released">Released</span>Friends, groups, blocks and AI settings. Synced between your own devices</td></tr>
-<tr><td data-i18n="d.392">10103</td><td data-i18n="d.393"><span class="tag released">Released</span>A group's whole state (members, name, picture, admins), sent with every change</td></tr>
-<tr><td data-i18n="d.394">10104</td><td data-i18n="d.395"><span class="tag built">Built, not released</span>An invitation of an AI into a chat, and each member's answer</td></tr>
-<tr><td data-i18n="d.396">25062, 25063</td><td data-i18n="d.397"><span class="tag released">Released</span>An AI's request to send a message in its owner's name, and the owner app's answer</td></tr>
-<tr><td data-i18n="d.398">25064, 25065</td><td data-i18n="d.399"><span class="tag released">Released</span>An AI's request for the friend list, and the list</td></tr>
-<tr><td data-i18n="d.400">25066, 25067</td><td data-i18n="d.401"><span class="tag built">Built, not released</span>An AI's request to talk to another person's AI, and the answer</td></tr>
-<tr><td data-i18n="d.402">25068</td><td data-i18n="d.403"><span class="tag released">Released</span>The answer to an AI's one-time pairing code (adding an AI by QR code)</td></tr>
-<tr><td data-i18n="d.404">25069</td><td data-i18n="d.405"><span class="tag released">Released</span>"Turn all off": tells an AI to stop</td></tr>
-<tr><td data-i18n="d.406">25070</td><td data-i18n="d.407"><span class="tag released">Released</span>The owner's signature on an AI's key (owner card), handed to the AI by the app</td></tr>
+<tr><th data-i18n="d.376">kind</th><th data-i18n="d.377">Contents</th><th data-i18n="sp.status">Status</th></tr>
+<tr><td data-i18n="d.378">10100</td><td data-i18n="d.379">Icon. Delivered to friends only</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.380">10101</td><td data-i18n="d.381">Sticker list. Synced between your own devices</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.382">25050</td><td data-i18n="d.383">Call signaling (ring, answer, hang up, WebRTC connection info)</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.384">25060, 25061</td><td data-i18n="d.385">Draft requests to AI, and drafts from AI</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.390">10102</td><td data-i18n="d.391">Friends, groups, blocks and AI settings. Synced between your own devices</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.392">10103</td><td data-i18n="d.393">A group's whole state (members, name, picture, admins), sent with every change</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.394">10104</td><td data-i18n="d.395">An invitation of an AI into a chat, and each member's answer</td><td><span class="tag built" data-i18n="sp.st.built">Coming soon</span></td></tr>
+<tr><td data-i18n="d.396">25062, 25063</td><td data-i18n="d.397">An AI's request to send a message in its owner's name, and the owner app's answer</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.398">25064, 25065</td><td data-i18n="d.399">An AI's request for the friend list, and the list</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.400">25066, 25067</td><td data-i18n="d.401">An AI's request to talk to another person's AI, and the answer</td><td><span class="tag built" data-i18n="sp.st.built">Coming soon</span></td></tr>
+<tr><td data-i18n="d.402">25068</td><td data-i18n="d.403">The answer to an AI's one-time pairing code (adding an AI by QR code)</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.404">25069</td><td data-i18n="d.405">"Turn all off": tells an AI to stop</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
+<tr><td data-i18n="d.406">25070</td><td data-i18n="d.407">The owner's signature on an AI's key (owner card), handed to the AI by the app</td><td><span class="tag released" data-i18n="sp.st.rel">Available</span></td></tr>
 </table></div>
 </div></details>
 
@@ -139,9 +139,12 @@
       <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.devs">For developers</h3>
       <ul class="mt-3 space-y-2">
         <li><a href="/developers" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.ov">Overview</a></li>
+        <li><a href="/developers/protocol" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.protocol">Nostr, encryption and keys</a></li>
+        <li><a href="/developers/relay" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.relay">Relay, notifications and calls</a></li>
+        <li><a href="/developers/ai" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.ai">AI</a></li>
         <li><a href="/developers/spec" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.spec">Technical spec</a></li>
-        <li><a href="/developers/compare" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.compare">Compare apps</a></li>
-        <li><a href="/developers/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.faq">FAQ</a></li>
+        <li><a href="/developers/compare" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.devcompare">Developer comparison</a></li>
+        <li><a href="/developers/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.devfaq">Developer FAQ</a></li>
       </ul>
     </div>
     <div>

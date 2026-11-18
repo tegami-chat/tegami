@@ -74,7 +74,7 @@ tailwind.config = {
 
   <div class="mt-6 divide-y divide-neutral-200 rounded-xl border border-neutral-200 dark:divide-night-line dark:border-night-line">
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.1.t">Registered accounts</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.1.1">Public key, whether the account was registered with an invite, registration date and time, and whether the account is suspended</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.1.2">To allow only registered accounts to send messages, and to suspend abusive accounts</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.1.3">Until the account is deleted</p></div></div>
-    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.2.t">Message envelopes</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.2.1">The encrypted message (an "envelope": each message makes one for every recipient and one copy for the sender), the recipient's public key, the arrival time, and the data size. Envelopes sent by an account that registered without an invite also get a mark that keeps them out of the strangers box (the sender's public key is not stored)</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.2.2">To deliver messages later when a device is off or offline</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.2.3">30 days. Envelopes with an expiry (moving an account to a new device, requests to and answers from your AI for reply drafts, the friend list, and call signals) are handed out only until they expire. After that, the relay deletes them when the next envelope arrives or in its daily cleanup, whichever comes first, so they are gone within a day at the latest</p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.2.t">Message envelopes</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.2.1">The encrypted message (an "envelope": each message makes one for every recipient and one copy for the sender), the recipient's public key, the arrival time, and the data size. Envelopes sent by an account that registered without an invite also get a mark so that the app shows them only when the sender is already a friend (the sender's public key is not stored)</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.2.2">To deliver messages later when a device is off or offline</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.2.3">30 days. Envelopes with an expiry (moving an account to a new device, requests to and answers from your AI for reply drafts, the friend list, and call signals) are handed out only until they expire. After that, the relay deletes them when the next envelope arrives or in its daily cleanup, whichever comes first, so they are gone within a day at the latest</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.3.t">Photos, videos, files, voice messages, and chat history transferred to a new device</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.3.1">Encrypted data. The uploader is not recorded</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.3.2">To deliver them to recipients, or to the device you move to</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.3.3">30 days. After deletion, copies may remain in the browser cache of a device that received them, for up to 30 days</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.st.t">Stamps</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.st.1">The encrypted stamp image, the public key of the account that keeps it, its size, and when it was stored</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.st.2">So you can send the same stamp again and use it on all your devices, and so only the account that keeps a stamp can delete it</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.st.3">Until you delete the stamp. After deletion, copies may remain in caches for up to one day</p></div></div>
     <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100" data-i18n="pv.k.4.t">Invite records</p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l1">What</span><p data-i18n="pv.k.4.1">Who invited whom</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l2">Purpose</span><p data-i18n="pv.k.4.2">To suspend accounts that engage in abuse, along with the accounts they invited</p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400" data-i18n="pv.k.l3">How long</span><p data-i18n="pv.k.4.3">90 days</p></div></div>
@@ -242,7 +242,7 @@ tailwind.config = {
     <dt class="font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="pv.op.3.k">Contact</dt><dd data-i18n="pv.op.3.v"><a href="mailto:hello@tegami.chat">hello@tegami.chat</a></dd>
   </dl>
 
-  <p class="!mt-10 text-sm !text-neutral-500" data-i18n="pv.date">Established: November 15, 2026<br>Revised: November 15, 2026<br>Revised: November 18, 2026</p>
+  <p class="!mt-10 text-sm !text-neutral-500" data-i18n="pv.date">Established: November 15, 2026<br>Last revised: November 18, 2026</p>
 </main>
 
 <footer></footer>
@@ -259,7 +259,7 @@ const JA = {
   'pv.scope.2': 'app.tegami.chat（ブラウザ版のアプリ）',
   'pv.scope.3': 'relay.tegami.chat（リレー）',
   'pv.scope.4': '今後公開するiPhone版とAndroid版のアプリ',
-  'pv.scope.p': '本サービスのオープンソースのコードを使って第三者が運営するリレーやアプリは、本ポリシーの対象外です。利用者が自分のパソコンで動かすAIの友だちと、AIの友だちが利用するAIサービスでの情報の取扱いも、本ポリシーの対象外です。本サービスの公式のアプリがAIの友だちへ渡す情報については、7で定めます。',
+  'pv.scope.p': '本サービスのオープンソースのコードを使って第三者が運営するリレーやアプリは、本ポリシーの対象外です。利用者が自分のパソコンで動かすAIの友だちと、AIの友だちが利用するAIサービスでの情報の取扱いも、本ポリシーの対象外です。本サービスの公式のアプリがAIの友だちへ渡す情報については、第7節で定めます。',
   'pv.cant.h': '2. 運営者が閲覧できない情報',
   'pv.cant.p': 'メッセージは利用者の端末で暗号化されてから送信されます。復号に必要な鍵は、送信者と受信者の端末にのみ保存されます。そのため、運営者は次の情報を閲覧できません。',
   'pv.cant.1': 'メッセージの本文',
@@ -280,7 +280,7 @@ const JA = {
   'pv.k.l3': '保存期間',
   'pv.k.1.3': 'アカウントの削除まで',
   'pv.k.2.t': 'メッセージの封筒',
-  'pv.k.2.1': '暗号化されたメッセージ（以下「封筒」といいます。メッセージ1通につき、受信者ごとに1つと、送信者の控えに1つ作られます）、宛先の公開鍵、受信日時、データサイズ。招待券なしで登録したアカウントが送った封筒には、「知らない人から」の欄に出さないための印も付けて保存します（送信者の公開鍵は保存しません）',
+  'pv.k.2.1': '暗号化されたメッセージ（以下「封筒」といいます。メッセージ1通につき、受信者ごとに1つと、送信者の控えに1つ作られます）、宛先の公開鍵、受信日時、データサイズ。招待券なしで登録したアカウントが送った封筒には、友だち以外のときは表示しないための印も付けて保存します（送信者の公開鍵は保存しません）',
   'pv.k.2.2': '端末の電源が切れている時やオフラインの時に、後からメッセージを配信するため',
   'pv.k.2.3': '30日間。期限つきの封筒（新しい端末への移行、AIへの下書きの依頼と返事、友だちの一覧、通話の合図）は、期限までだけ配ります。期限を過ぎた封筒は、遅くとも1日以内に削除します',
   'pv.k.3.t': '写真、動画、ファイル、音声メッセージ、新しい端末へ移す会話の履歴',
@@ -431,7 +431,7 @@ const JA = {
   'pv.op.2.v': '求めがあれば遅滞なく回答します。',
   'pv.op.3.k': '連絡先',
   'pv.op.3.v': '<a href="mailto:hello@tegami.chat">hello@tegami.chat</a>',
-  'pv.date': '制定日：2026年11月15日<br>改定日：2026年11月15日<br>改定日：2026年11月18日',
+  'pv.date': '制定日：2026年11月15日<br>最終改定日：2026年11月18日',
   'ft.privacy': 'プライバシーポリシー',
   'ft.how': '仕組み',
   'ft.status': '稼働状況',

@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Nostr, encryption and keys | Tegami for developers</title>
+<title>Nostr, encryption and keys | Tegami</title>
 <meta name="description" content="Which parts of Nostr Tegami uses, how messages are sealed, what the relay can see, and how keys are kept.">
-<meta property="og:title" content="Nostr, encryption and keys | Tegami for developers">
+<meta property="og:title" content="Nostr, encryption and keys | Tegami">
 <meta property="og:description" content="Which parts of Nostr Tegami uses, how messages are sealed, what the relay can see, and how keys are kept.">
 <meta property="og:url" content="https://tegami.chat/developers/protocol">
 <link rel="canonical" href="https://tegami.chat/developers/protocol">
@@ -41,36 +41,36 @@
 </header>
 
 <div class="mx-auto max-w-6xl px-4 py-10 md:py-14 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10">
-  <aside class="lg:sticky lg:top-20 lg:self-start"><nav class="devside mb-8 lg:mb-0" aria-label="Developer docs"><p class="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 lg:block" data-i18n="dv.side">Developer docs</p><ul class="flex flex-wrap gap-1 text-sm lg:block lg:space-y-0.5"><li class="shrink-0"><a href="/developers" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dv.ov">Overview</a></li><li class="shrink-0"><a href="/developers/protocol" class="block rounded-lg px-3 py-2 bg-forest-50 font-semibold text-forest-700 dark:bg-forest-950 dark:text-forest-300" aria-current="page" data-i18n="dp.protocol">Nostr, encryption and keys</a></li><li class="shrink-0"><a href="/developers/relay" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.relay">Relay, notifications and calls</a></li><li class="shrink-0"><a href="/developers/ai" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.ai">AI</a></li><li class="shrink-0"><a href="/developers/compare" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.compare">Compared with other apps</a></li><li class="shrink-0"><a href="/developers/spec" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.spec">Technical spec</a></li><li class="shrink-0"><a href="/developers/faq" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.faq">FAQ</a></li></ul></nav></aside>
+  <aside class="lg:sticky lg:top-20 lg:self-start"><nav class="devside mb-8 lg:mb-0" aria-label="Developer docs"><p class="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 lg:block" data-i18n="dv.side">Developer docs</p><ul class="flex flex-wrap gap-1 text-sm lg:block lg:space-y-0.5"><li class="shrink-0"><a href="Tegamiの開発者向け_November 16, 2026.html" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dv.ov">Overview</a></li><li class="shrink-0"><a href="/developers/protocol" class="block rounded-lg px-3 py-2 bg-forest-50 font-semibold text-forest-700 dark:bg-forest-950 dark:text-forest-300" aria-current="page" data-i18n="dp.protocol">Nostr, encryption and keys</a></li><li class="shrink-0"><a href="/developers/relay" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.relay">Relay, notifications and calls</a></li><li class="shrink-0"><a href="/developers/ai" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.ai">AI</a></li><li class="shrink-0"><a href="/developers/compare" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.compare">Compared with other apps</a></li><li class="shrink-0"><a href="/developers/spec" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.spec">Technical spec</a></li><li class="shrink-0"><a href="/developers/faq" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.faq">FAQ</a></li></ul></nav></aside>
   <main class="devdoc min-w-0 max-w-3xl">
 <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dp.protocol">Nostr, encryption and keys</h1>
 <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dp.protocol.t">Which parts of Nostr Tegami uses, how messages are sealed, what the relay can see, and how keys are kept.</p>
-<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">Labels on the "Next" items:</li><li data-i18n="dv.lg.rel"><span class="tag released">Released</span>in production since November 18, 2026</li><li data-i18n="dv.lg.built"><span class="tag built">Built, not released</span>the code is written but not in production yet</li><li data-i18n="dv.lg.decided"><span class="tag decided">Decided</span>the direction is set, the code isn't written yet</li><li data-i18n="dv.lg.idea"><span class="tag idea">Considering</span>not decided yet</li></ul>
+<p class="mt-4 text-sm text-neutral-600 dark:text-neutral-400" data-i18n="dv.legend.link">Status labels such as "Available" are explained in the <a href="Tegamiの開発者向け_November 16, 2026.html#legend">overview</a>.</p>
 <h2 data-i18n="d.10" id="nostr">Relationship to Nostr</h2>
 
 <details open><summary data-i18n="d.11">Is Tegami a Nostr client?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.12">Tegami is a messaging app built on the Nostr protocol, but it is not a Nostr client in the social-network sense. Accounts use Nostr keys (secp256k1) and messages are sent and received in the <span class="whitespace-nowrap">NIP-17</span> format, but Tegami never publishes public posts (<span class="whitespace-nowrap">kind 1</span>) or a public profile (<span class="whitespace-nowrap">kind 0</span>).</p></div>
+<div class="ph now"><b data-i18n="dv.now">Now</b><span class="sr-only">: </span><p data-i18n="d.12">Tegami is a messaging app built on the Nostr protocol, but it is not a Nostr client in the social-network sense. Accounts use Nostr keys (secp256k1) and messages are sent and received in the <span class="whitespace-nowrap">NIP-17</span> format, but Tegami never publishes public posts (<span class="whitespace-nowrap">kind 1</span>) or a public profile (<span class="whitespace-nowrap">kind 0</span>).</p></div>
 </div></details>
 
 <details><summary data-i18n="d.13">Can I message people who use other Nostr apps?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.14">No. The Tegami app connects only to its own relay (<code>wss://relay.tegami.chat</code>), and that relay only accepts envelopes from connections logged in with a key registered with Tegami. We keep it closed so spam and impersonation are stopped at the door. On the relay side we have registration control, sending limits, reports, and the ability for us to suspend keys.</p></div>
-<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.15">Tegami does not currently offer one of Nostr's core strengths: using the same key in any app.</p></div>
-<div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.16"><span class="tag idea">Considering</span>We are comparing a few options: letting you add a company relay as an inbox, showing messages from other Nostr apps, and listing in an official directory only relays that agree to Tegami's rules. We have not picked one yet.</li>
+<div class="ph now"><b data-i18n="dv.now">Now</b><span class="sr-only">: </span><p data-i18n="d.14">No. The Tegami app connects only to its own relay (<code>wss://relay.tegami.chat</code>), and that relay only accepts envelopes from connections logged in with a key registered with Tegami. We keep it closed so spam and impersonation are stopped at the door. On the relay side we have registration control, sending limits, reports, and the ability for us to suspend keys.</p></div>
+<div class="ph not"><b data-i18n="dv.not">Not yet</b><span class="sr-only">: </span><p data-i18n="d.15">Tegami does not offer one of Nostr's core strengths: using the same key in any app.</p></div>
+<div class="ph next"><b data-i18n="dv.next">Next</b><span class="sr-only">: </span><ul>
+<li data-i18n="d.16"><span class="tag idea">Under discussion</span><span class="sr-only">: </span>We are comparing a few options: letting you add a company relay as an inbox, showing messages from other Nostr apps, and listing in an official directory only relays that agree to Tegami's rules. We have not picked one yet.</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.17">Can I log in with my existing nsec? Can I export my Tegami key?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.18">No to both. Tegami generates your key inside the app and never lets it leave.</p></div>
-<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.19">If Tegami goes away, there is no way to move to another app with the same key.</p></div>
-<div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.20"><span class="tag idea">Considering</span>As an escape hatch in case Tegami goes away, we are considering letting you export your key. Exporting would let you move to another app, but if an exported key is stolen your account can be taken over, and publishing a profile in another app would link your public key to your identity.</li>
-<li data-i18n="d.21"><span class="tag idea">Considering</span>For people who want to use other Nostr apps with the same key while still using Tegami, we are also considering having the Tegami app sign on their behalf without handing over the secret key (<span class="whitespace-nowrap">NIP-46</span>). <span class="whitespace-nowrap">NIP-46</span> only works while the Tegami app is running, though, so it is not an escape hatch.</li>
+<div class="ph now"><b data-i18n="dv.now">Now</b><span class="sr-only">: </span><p data-i18n="d.18">No to both. Tegami generates your key inside the app and never lets it leave.</p></div>
+<div class="ph not"><b data-i18n="dv.not">Not yet</b><span class="sr-only">: </span><p data-i18n="d.19">If Tegami goes away, there is no way to move to another app with the same key.</p></div>
+<div class="ph next"><b data-i18n="dv.next">Next</b><span class="sr-only">: </span><ul>
+<li data-i18n="d.20"><span class="tag idea">Under discussion</span><span class="sr-only">: </span>As an escape hatch in case Tegami goes away, we are considering letting you export your key. Exporting would let you move to another app, but if an exported key is stolen your account can be taken over, and publishing a profile in another app would link your public key to your identity.</li>
+<li data-i18n="d.21"><span class="tag idea">Under discussion</span><span class="sr-only">: </span>For people who want to use other Nostr apps with the same key while still using Tegami, we are also considering having the Tegami app sign on their behalf without handing over the secret key (<span class="whitespace-nowrap">NIP-46</span>). <span class="whitespace-nowrap">NIP-46</span> only works while the Tegami app is running, though, so it is not an escape hatch.</li>
 </ul></div>
 </div></details>
 
 <details open><summary data-i18n="d.22">Which parts of Nostr does Tegami use, and which does it not?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b>
+<div class="ph now"><b data-i18n="dv.now">Now</b><span class="sr-only">: </span>
 <div class="wrap"><table>
 <tr><th data-i18n="d.23">Nostr feature</th><th data-i18n="d.24">In Tegami</th></tr>
 <tr><td data-i18n="d.25">Account = secp256k1 key pair (npub and nsec)</td><td data-i18n="d.26">Used. No phone number or email address</td></tr>
@@ -84,13 +84,13 @@
 <tr><td data-i18n="d.41">Legacy DMs (<span class="whitespace-nowrap">NIP-04</span>)</td><td data-i18n="d.42">Not used. They expose sender and recipient to the relay</td></tr>
 </table></div>
 <p data-i18n="d.43">In short, Tegami uses Nostr as a way to "prove identity with a key and leave signed envelopes with a relay," and leaves out the social-network parts.</p></div>
-<div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.44"><span class="tag idea">Considering</span>We want people to be able to send money freely with Bitcoin. We have not decided whether to build Zaps into the app.</li>
+<div class="ph next"><b data-i18n="dv.next">Next</b><span class="sr-only">: </span><ul>
+<li data-i18n="d.44"><span class="tag idea">Under discussion</span><span class="sr-only">: </span>We want people to be able to send money freely with Bitcoin. We have not decided whether to build Zaps into the app.</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.45">Which NIPs does Tegami use?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b>
+<div class="ph now"><b data-i18n="dv.now">Now</b><span class="sr-only">: </span>
 <div class="wrap"><table>
 <tr><th data-i18n="d.46">NIP</th><th data-i18n="d.47">Usage</th></tr>
 <tr><td data-i18n="d.48"><span class="whitespace-nowrap">NIP-17</span>, <span class="whitespace-nowrap">NIP-59</span></td><td data-i18n="d.49">One-to-one and group messages. Text uses <span class="whitespace-nowrap">kind 14</span>, photos and files use <span class="whitespace-nowrap">kind 15</span>, wrapped in a seal (<span class="whitespace-nowrap">kind 13</span>) and gift wrap (<span class="whitespace-nowrap">kind 1059</span>)</td></tr>
@@ -102,9 +102,9 @@
 <tr><td data-i18n="d.60">Blossom (<span class="whitespace-nowrap">kind 24242</span> signatures)</td><td data-i18n="d.61">Storage for photos and files (<code>/upload</code> and <code>/&lt;sha256&gt;</code>). Data is stored and fetched by the sha256 of the encrypted bytes. <code>/stamp</code> for stickers is a Tegami-specific extension</td></tr>
 </table></div>
 <p data-i18n="d.62">Where no NIP covers what we need, we use our own kinds, only inside encrypted envelopes: icon (10100), sticker list (10101), call signaling (25050), and AI draft requests and replies (25060, 25061).</p></div>
-<div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.63"><span class="tag released">Released</span>We added more custom kinds: sync between your own devices (10102), group member changes (10103), consent to invite an AI into a chat (10104), and exchanges with AI (25062 to 25070). In this version the app does not use 10104 or the AI-to-AI messages (25066, 25067) yet.</li>
-<li data-i18n="d.64"><span class="tag idea">Considering</span>If the proposals for key rotation and protecting keys with passkeys (NIP pull requests #2137 and #2519) are merged, we will consider adopting them.</li>
+<div class="ph next"><b data-i18n="dv.next">Next</b><span class="sr-only">: </span><ul>
+<li data-i18n="d.63"><span class="tag released">Available</span><span class="sr-only">: </span>We added more custom kinds: sync between your own devices (10102), group member changes (10103), consent to invite an AI into a chat (10104), and exchanges with AI (25062 to 25070). In this version the app does not use 10104 or the AI-to-AI messages (25066, 25067) yet.</li>
+<li data-i18n="d.64"><span class="tag idea">Under discussion</span><span class="sr-only">: </span>If the proposals for key rotation and protecting keys with passkeys (NIP pull requests #2137 and #2519) are merged, we will consider adopting them.</li>
 </ul></div>
 </div></details>
 
@@ -112,43 +112,43 @@
 <h2 data-i18n="d.65" id="crypto">Encryption and what the server can see</h2>
 
 <details><summary data-i18n="d.66">What can the server see?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.67">The relay cannot read message contents. All the relay can see is:</p>
+<div class="ph now"><b data-i18n="dv.now">Now</b><span class="sr-only">: </span><p data-i18n="d.67">The relay cannot read message contents. All the relay can see is:</p>
 <ul>
 <li data-i18n="d.68">The recipient's public key on each envelope (the gift wrap's <code>p</code> tag), the time it arrived, and its size</li>
 <li data-i18n="d.69">The keys logged in and connected, and the IP address they connect from</li>
 <li data-i18n="d.70">Tags on the outside of the envelope: whether it is a call (<code>t=call</code>), whether it should not trigger a notification (<code>t=quiet</code>), and its expiry (<code>expiration</code>)</li>
 <li data-i18n="d.71">Beyond envelopes: who invited whom at registration (deleted after 90 days), the keys that stored stickers and their sizes, and the contents of reports (deleted after 90 days)</li>
 </ul>
-<p data-i18n="d.72">A gift wrap hides the sender by itself, but because the Tegami relay requires login for writes too, at the moment it accepts an envelope it knows which key sent it to which key. However, the relay code does not store the sender's key (in <code>relay/src/index.ts</code>, the <code>events</code> table has no sender column). The one exception: envelopes sent by people who registered without an invite code are stored with a marker, so they can be kept out of strangers' inboxes.</p></div>
-<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.73">There is no way for anyone outside to verify that the running relay is the same as the published code. The relay reports its running commit in <code>/stats</code> and in the <span class="whitespace-nowrap">NIP-11</span> <code>version</code>, but that is only our own claim.</p></div>
-<div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.74"><span class="tag idea">Considering</span>We have not yet decided how to let outsiders verify that the running relay matches the published code.</li>
+<p data-i18n="d.72">A gift wrap hides the sender by itself, but because the Tegami relay requires login for writes too, at the moment it accepts an envelope it knows which key sent it to which key. However, the relay code does not store the sender's key (in <code>relay/src/index.ts</code>, the <code>events</code> table has no sender column). The one exception: envelopes sent by people who registered without an invite code are stored with a marker, so the app shows them only when the sender is already a friend.</p></div>
+<div class="ph not"><b data-i18n="dv.not">Not yet</b><span class="sr-only">: </span><p data-i18n="d.73">There is no way for anyone outside to verify that the running relay is the same as the published code. The relay reports its running commit in <code>/stats</code> and in the <span class="whitespace-nowrap">NIP-11</span> <code>version</code>, but that is only our own claim.</p></div>
+<div class="ph next"><b data-i18n="dv.next">Next</b><span class="sr-only">: </span><ul>
+<li data-i18n="d.74"><span class="tag idea">Under discussion</span><span class="sr-only">: </span>We have not yet decided how to let outsiders verify that the running relay matches the published code.</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.75">Does Tegami have forward secrecy?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.76">No. <span class="whitespace-nowrap">NIP-44</span> derives its encryption key from the long-term keys of the sender and the recipient, so if a secret key is stolen, envelopes still on the relay (up to 30 days) and messages stored on devices can be decrypted later. Only the outer gift wrap layer uses a fresh throwaway key each time. Tegami protects your secret key by encrypting it with a passkey (or, where PRF is not supported, with a non-extractable key on the device), making the key itself harder to steal.</p></div>
-<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.77">Compared with schemes like Signal or MLS that keep rotating keys, this is a weakness.</p></div>
-<div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.78"><span class="tag idea">Considering</span>We have not decided whether to move to a scheme that keeps rotating keys.</li>
+<div class="ph now"><b data-i18n="dv.now">Now</b><span class="sr-only">: </span><p data-i18n="d.76">No. <span class="whitespace-nowrap">NIP-44</span> derives its encryption key from the long-term keys of the sender and the recipient, so if a secret key is stolen, envelopes still on the relay (up to 30 days) and messages stored on devices can be decrypted later. Only the outer gift wrap layer uses a fresh throwaway key each time. Tegami protects your secret key by encrypting it with a passkey (or, where PRF is not supported, with a non-extractable key on the device), making the key itself harder to steal.</p></div>
+<div class="ph not"><b data-i18n="dv.not">Not yet</b><span class="sr-only">: </span><p data-i18n="d.77">Compared with schemes like Signal or MLS that keep rotating keys, this is a weakness.</p></div>
+<div class="ph next"><b data-i18n="dv.next">Next</b><span class="sr-only">: </span><ul>
+<li data-i18n="d.78"><span class="tag idea">Under discussion</span><span class="sr-only">: </span>We have not decided whether to move to a scheme that keeps rotating keys.</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.79">How are groups encrypted?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.80">As the <span class="whitespace-nowrap">NIP-17</span> spec describes, we build a separate envelope for each member. For example, one message to a group of you plus 5 others becomes 6 envelopes, including your own copy. The relay cannot tell who is in the same group.</p></div>
-<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.81">The number of envelopes grows with group size, so this does not suit large groups. We do not use MLS.</p></div>
-<div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.82"><span class="tag released">Released</span>Groups now have a stable identifier, and adding, removing, and leaving members, name and icon changes, and admin changes are sent to everyone as changes carrying the signature (seal) of the person who made them. You can choose between groups with admins and neutral groups.</li>
-<li data-i18n="d.83"><span class="tag idea">Considering</span>We would also like to build spaces where many people can gather, like Discord servers.</li>
+<div class="ph now"><b data-i18n="dv.now">Now</b><span class="sr-only">: </span><p data-i18n="d.80">As the <span class="whitespace-nowrap">NIP-17</span> spec describes, we build a separate envelope for each member. For example, one message to a group of you plus 5 others becomes 6 envelopes, including your own copy. The relay cannot tell who is in the same group.</p></div>
+<div class="ph not"><b data-i18n="dv.not">Not yet</b><span class="sr-only">: </span><p data-i18n="d.81">The number of envelopes grows with group size, so this does not suit large groups. We do not use MLS.</p></div>
+<div class="ph next"><b data-i18n="dv.next">Next</b><span class="sr-only">: </span><ul>
+<li data-i18n="d.82"><span class="tag released">Available</span><span class="sr-only">: </span>Groups now have a stable identifier, and adding, removing, and leaving members, name and icon changes, and admin changes are sent to everyone as changes carrying the signature (seal) of the person who made them. You can choose between groups with admins and neutral groups.</li>
+<li data-i18n="d.83"><span class="tag idea">Under discussion</span><span class="sr-only">: </span>We would also like to build spaces where many people can gather, like Discord servers.</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.84">In the browser version, isn't it game over if the server serves malicious JavaScript?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.85">Yes. This is a weakness shared by every encrypted app that runs in a browser: if the source that serves it (<code>app.tegami.chat</code> on Cloudflare) is tampered with, it could serve code that steals keys. That is why Tegami sets a strict CSP that limits where code can load from, and includes no third-party analytics scripts at all.</p></div>
-<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.86">There is no way to verify that the files we serve were built from the public repository (reproducible builds plus verification).</p></div>
-<div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.87"><span class="tag decided">Decided</span>We will ship apps for iPhone, Android, Windows, Mac, and Linux. Versions distributed through app stores are fixed, which makes this weakness smaller.</li>
-<li data-i18n="d.88"><span class="tag built">Built, not released</span>The Android app runs on a test device (emulator) as far as showing the chat list.</li>
+<div class="ph now"><b data-i18n="dv.now">Now</b><span class="sr-only">: </span><p data-i18n="d.85">Yes. This is a weakness shared by every encrypted app that runs in a browser: if the source that serves it (<code>app.tegami.chat</code> on Cloudflare) is tampered with, it could serve code that steals keys. That is why Tegami sets a strict CSP that limits where code can load from, and includes no third-party analytics scripts at all.</p></div>
+<div class="ph not"><b data-i18n="dv.not">Not yet</b><span class="sr-only">: </span><p data-i18n="d.86">There is no way to verify that the files we serve were built from the public repository (reproducible builds plus verification).</p></div>
+<div class="ph next"><b data-i18n="dv.next">Next</b><span class="sr-only">: </span><ul>
+<li data-i18n="d.87"><span class="tag decided">Decided</span><span class="sr-only">: </span>We will ship apps for iPhone, Android, Windows, Mac, and Linux. Versions distributed through app stores are fixed, which makes this weakness smaller.</li>
+<li data-i18n="d.88"><span class="tag built">Coming soon</span><span class="sr-only">: </span>The Android app runs on a test device (emulator) as far as showing the chat list.</li>
 </ul></div>
 </div></details>
 
@@ -156,28 +156,28 @@
 <h2 data-i18n="d.89" id="key">Keys</h2>
 
 <details><summary data-i18n="d.90">How is my secret key protected?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.91">We use the passkey PRF extension to get a fixed 32-byte value per passkey, derive an AES-GCM key from it, and encrypt your Nostr secret key with that. Only the ciphertext is stored on the device, and every time you open the app it asks for Face ID or Windows Hello. If your passkey store does not support PRF, you can instead choose to keep a non-extractable AES key in IndexedDB and encrypt with that. The passkey stores we have confirmed working are iCloud Keychain and Windows Hello.</p></div>
-<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.92">Bitwarden can store passkeys but does not return PRF values, so it cannot be used to protect keys with a passkey. Passkeys are also not yet supported in the iPhone and Android apps.</p></div>
-<div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.93"><span class="tag decided">Decided</span>We will support Bitwarden. Tegami follows the PRF spec, so once Bitwarden returns PRF values, it will work without any changes on our side.</li>
-<li data-i18n="d.94"><span class="tag decided">Decided</span>We will keep using passkeys, not passwords, to protect your key.</li>
+<div class="ph now"><b data-i18n="dv.now">Now</b><span class="sr-only">: </span><p data-i18n="d.91">We use the passkey PRF extension to get a fixed 32-byte value per passkey, derive an AES-GCM key from it, and encrypt your Nostr secret key with that. Only the ciphertext is stored on the device, and every time you open the app it asks for Face ID or Windows Hello. If your passkey store does not support PRF, you can instead choose to keep a non-extractable AES key in IndexedDB and encrypt with that. The passkey stores we have confirmed working are iCloud Keychain and Windows Hello.</p></div>
+<div class="ph not"><b data-i18n="dv.not">Not yet</b><span class="sr-only">: </span><p data-i18n="d.92">Bitwarden can store passkeys but does not return PRF values, so it cannot be used to protect keys with a passkey. Passkeys are also not supported in the iPhone and Android apps.</p></div>
+<div class="ph next"><b data-i18n="dv.next">Next</b><span class="sr-only">: </span><ul>
+<li data-i18n="d.93"><span class="tag decided">Decided</span><span class="sr-only">: </span>We will support Bitwarden. Tegami follows the PRF spec, so once Bitwarden returns PRF values, it will work without any changes on our side.</li>
+<li data-i18n="d.94"><span class="tag decided">Decided</span><span class="sr-only">: </span>We will keep using passkeys, not passwords, to protect your key.</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.95">What happens if I lose my device?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.96">You can restore with a 28-character (140-bit) recovery code created in Settings. From this code, HKDF derives three things: a backup ID, an encryption key, and a signing key. Your secret key, name, friends, groups, blocks, AI permissions, and sticker list (up to 100) are encrypted into a backup stored on the relay. The backup is signed with a key derived from the recovery code, so the relay cannot tell whose account it belongs to.</p></div>
-<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.97">If you have not created a recovery code and lose all your devices, we cannot restore your account either. Chat history is not restored by the recovery code.</p></div>
-<div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.98"><span class="tag decided">Decided</span>Users will be able to choose how to recover a lost key.</li>
-<li data-i18n="d.99"><span class="tag idea">Considering</span>For stolen keys, we are considering a way to move your connections to a new key by having friends you have verified in person vouch for the new key.</li>
+<div class="ph now"><b data-i18n="dv.now">Now</b><span class="sr-only">: </span><p data-i18n="d.96">You can restore with a 28-character (140-bit) recovery code created in Settings. From this code, HKDF derives three things: a backup ID, an encryption key, and a signing key. Your secret key, name, friends, groups, blocks, AI permissions, and sticker list (up to 100) are encrypted into a backup stored on the relay. The backup is signed with a key derived from the recovery code, so the relay cannot tell whose account it belongs to.</p></div>
+<div class="ph not"><b data-i18n="dv.not">Not yet</b><span class="sr-only">: </span><p data-i18n="d.97">If you have not created a recovery code and lose all your devices, we cannot restore your account either. Chat history is not restored by the recovery code.</p></div>
+<div class="ph next"><b data-i18n="dv.next">Next</b><span class="sr-only">: </span><ul>
+<li data-i18n="d.98"><span class="tag decided">Decided</span><span class="sr-only">: </span>Users will be able to choose how to recover a lost key.</li>
+<li data-i18n="d.99"><span class="tag idea">Under discussion</span><span class="sr-only">: </span>For stolen keys, we are considering a way to move your connections to a new key by having friends you have verified in person vouch for the new key.</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.100">Can I move to a new device?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.101">Yes, with a device transfer link. Your old device creates a throwaway key, encrypts your secret key, name, friends, groups, blocks, AI permissions, and sticker list with <span class="whitespace-nowrap">NIP-44</span> so that only that key can open it, and leaves it on the relay as an envelope that expires in 10 minutes. The throwaway secret key is included only after the <code>#</code> in the link, so it never reaches the server. Your chat history moves too (see below), and the new device also re-fetches the envelopes still on the relay from the last 30 days (up to 500 at a time).</p></div>
-<div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.102"><span class="tag released">Released</span>The device transfer link also moves your chats to the new device. Chats are compressed, encrypted, and passed through the same storage as photos (up to about 32MB before compression, newest first, so very old messages may stay on the old device). Photos and files themselves are not moved; they open on the new device only while they are still in storage.</li>
-<li data-i18n="d.103"><span class="tag released">Released</span>Syncing your friend list, name, blocks, and AI permissions between your own devices is also implemented.</li>
+<div class="ph now"><b data-i18n="dv.now">Now</b><span class="sr-only">: </span><p data-i18n="d.101">Yes, with a device transfer link. Your old device creates a throwaway key, encrypts your secret key, name, friends, groups, blocks, AI permissions, and sticker list with <span class="whitespace-nowrap">NIP-44</span> so that only that key can open it, and leaves it on the relay as an envelope that expires in 10 minutes. The throwaway secret key is included only after the <code>#</code> in the link, so it never reaches the server. Your chat history moves too (see below), and the new device also re-fetches the envelopes still on the relay from the last 30 days (up to 500 at a time).</p></div>
+<div class="ph next"><b data-i18n="dv.next">Next</b><span class="sr-only">: </span><ul>
+<li data-i18n="d.102"><span class="tag released">Available</span><span class="sr-only">: </span>The device transfer link also moves your chats to the new device. Chats are compressed, encrypted, and passed through the same storage as photos (up to about 32MB before compression, newest first, so very old messages may stay on the old device). Photos and files themselves are not moved; they open on the new device only while they are still in storage.</li>
+<li data-i18n="d.103"><span class="tag released">Available</span><span class="sr-only">: </span>Syncing your friend list, name, blocks, and AI permissions between your own devices is also implemented.</li>
 </ul></div>
 </div></details>
 
@@ -205,9 +205,12 @@
       <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.devs">For developers</h3>
       <ul class="mt-3 space-y-2">
         <li><a href="/developers" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.ov">Overview</a></li>
+        <li><a href="/developers/protocol" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.protocol">Nostr, encryption and keys</a></li>
+        <li><a href="/developers/relay" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.relay">Relay, notifications and calls</a></li>
+        <li><a href="/developers/ai" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.ai">AI</a></li>
         <li><a href="/developers/spec" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.spec">Technical spec</a></li>
-        <li><a href="/developers/compare" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.compare">Compare apps</a></li>
-        <li><a href="/developers/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.faq">FAQ</a></li>
+        <li><a href="/developers/compare" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.devcompare">Developer comparison</a></li>
+        <li><a href="/developers/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.devfaq">Developer FAQ</a></li>
       </ul>
     </div>
     <div>

@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>技術仕様 | 開発者向けのTegamiの説明</title>
+<title>技術仕様 | Tegami</title>
 <meta name="description" content="暗号の部品、リレーの上限、HTTPの口、Tegami独自のkind。">
-<meta property="og:title" content="技術仕様 | 開発者向けのTegamiの説明">
+<meta property="og:title" content="技術仕様 | Tegami">
 <meta property="og:description" content="暗号の部品、リレーの上限、HTTPの口、Tegami独自のkind。">
 <meta property="og:url" content="https://tegami.chat/ja/developers/spec">
 <link rel="canonical" href="https://tegami.chat/ja/developers/spec">
@@ -41,11 +41,11 @@
 </header>
 
 <div class="mx-auto max-w-6xl px-4 py-10 md:py-14 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10">
-  <aside class="lg:sticky lg:top-20 lg:self-start"><nav class="devside mb-8 lg:mb-0" aria-label="Developer docs"><p class="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 lg:block" data-i18n="dv.side">開発者向けの目次</p><ul class="flex flex-wrap gap-1 text-sm lg:block lg:space-y-0.5"><li class="shrink-0"><a href="/ja/developers" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dv.ov">概要</a></li><li class="shrink-0"><a href="/ja/developers/protocol" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.protocol">Nostrと暗号と鍵</a></li><li class="shrink-0"><a href="/ja/developers/relay" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.relay">リレー、通知、通話</a></li><li class="shrink-0"><a href="/ja/developers/ai" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.ai">AI</a></li><li class="shrink-0"><a href="/ja/developers/compare" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.compare">ほかのアプリとの比較</a></li><li class="shrink-0"><a href="/ja/developers/spec" class="block rounded-lg px-3 py-2 bg-forest-50 font-semibold text-forest-700 dark:bg-forest-950 dark:text-forest-300" aria-current="page" data-i18n="dp.spec">技術仕様</a></li><li class="shrink-0"><a href="/ja/developers/faq" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.faq">よくある質問</a></li></ul></nav></aside>
+  <aside class="lg:sticky lg:top-20 lg:self-start"><nav class="devside mb-8 lg:mb-0" aria-label="Developer docs"><p class="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 lg:block" data-i18n="dv.side">開発者向けの目次</p><ul class="flex flex-wrap gap-1 text-sm lg:block lg:space-y-0.5"><li class="shrink-0"><a href="Tegamiの開発者向け_November 16, 2026.html" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dv.ov">概要</a></li><li class="shrink-0"><a href="/ja/developers/protocol" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.protocol">Nostrと暗号と鍵</a></li><li class="shrink-0"><a href="/ja/developers/relay" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.relay">リレーと通知と通話</a></li><li class="shrink-0"><a href="/ja/developers/ai" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.ai">AI</a></li><li class="shrink-0"><a href="/ja/developers/compare" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.compare">ほかのアプリとの比較</a></li><li class="shrink-0"><a href="/ja/developers/spec" class="block rounded-lg px-3 py-2 bg-forest-50 font-semibold text-forest-700 dark:bg-forest-950 dark:text-forest-300" aria-current="page" data-i18n="dp.spec">技術仕様</a></li><li class="shrink-0"><a href="/ja/developers/faq" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.faq">よくある質問</a></li></ul></nav></aside>
   <main class="devdoc min-w-0 max-w-3xl">
 <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dp.spec">技術仕様</h1>
 <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dp.spec.t">使う暗号、リレーの上限、HTTPエンドポイント、Tegami独自のkind。</p>
-<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">「これから」の札の意味：</li><li data-i18n="dv.lg.rel"><span class="tag released">公開済み</span>2026年11月18日から本番で動いているもの</li><li data-i18n="dv.lg.built"><span class="tag built">公開待ち</span>コードを書き終えて、本番に出す前のもの</li><li data-i18n="dv.lg.decided"><span class="tag decided">決定済み</span>方針を決めて、コードはまだのもの</li><li data-i18n="dv.lg.idea"><span class="tag idea">検討中</span>まだ決めていないもの</li></ul>
+<p class="mt-4 text-sm text-neutral-600 dark:text-neutral-400" data-i18n="dv.legend.link">「提供中」などの状態の表示の意味は、<a href="Tegamiの開発者向け_2026年11月16日.html#legend">概要</a>にあります。</p>
 <details open><summary data-i18n="d.312">全体の構成</summary><div>
 <div class="wrap"><table>
 <tr><th data-i18n="d.313">コンポーネント</th><th data-i18n="d.314">概要</th><th data-i18n="d.315">コード</th></tr>
@@ -60,7 +60,7 @@
 <details><summary data-i18n="d.331">暗号仕様</summary><div>
 <div class="wrap"><table>
 <tr><th data-i18n="d.332">使う場所</th><th data-i18n="d.333">方式</th></tr>
-<tr><td data-i18n="d.334">メッセージ</td><td data-i18n="d.335"><span class="whitespace-nowrap">NIP-44</span> v2（secp256k1のECDH、HKDF、ChaCha20、<span class="whitespace-nowrap">HMAC-SHA256</span>）。NIP-59でsealとgift wrapの二重に包む</td></tr>
+<tr><td data-i18n="d.334">メッセージ</td><td data-i18n="d.335"><span class="whitespace-nowrap">NIP-44</span> v2（secp256k1のECDH、HKDF、ChaCha20、<span class="whitespace-nowrap">HMAC-SHA256</span>）。NIP-59で二重に包み、外側を封筒（NIP-59 の gift wrap。暗号化したメッセージを入れた入れ物）にする</td></tr>
 <tr><td data-i18n="d.336">秘密鍵の保管</td><td data-i18n="d.337">パスキーのPRF拡張（<code>userVerification: required</code>）で32バイトを取り、<span class="whitespace-nowrap">HKDF-SHA256</span>でAES-GCM 256ビットの鍵にして暗号化。PRFが無い環境では、取り出せない設定のAES-GCMの鍵をIndexedDBに置く</td></tr>
 <tr><td data-i18n="d.338">写真とファイル</td><td data-i18n="d.339">ファイルごとに新しいAES-GCM 256ビットの鍵を生成。鍵と、暗号化した後のデータのsha256は、暗号化したメッセージ（<span class="whitespace-nowrap">kind 15</span>）の中で送信。スタンプは画像とアカウントの秘密鍵から鍵を導出</td></tr>
 <tr><td data-i18n="d.340">復旧コード</td><td data-i18n="d.341">28文字（140ビット）から<span class="whitespace-nowrap">HKDF-SHA256</span>でバックアップ用の番号、AES-GCMの鍵、署名用のNostrの鍵の3つを作成</td></tr>
@@ -72,46 +72,46 @@
 
 <details><summary data-i18n="d.348">リレーが受け付けるもの</summary><div>
 <ul>
-<li data-i18n="d.349">WebSocketで受け付けるイベントはkind 1059（gift wrap）のみで、宛先（<code>p</code>タグ）が1つのもの。サイズ上限は128KB</li>
+<li data-i18n="d.349">WebSocketで受け付けるイベントはkind 1059の封筒のみで、宛先（<code>p</code>タグ）が1つのもの。サイズ上限は128KB</li>
 <li data-i18n="d.350">読み書きともにNIP-42でログインした鍵のみ許可。ログインの署名は10分以内のものが有効で、購読は1つの接続で20まで</li>
 <li data-i18n="d.351">書き込めるのは登録済みで止められていない鍵だけ。読めるのは自分宛ての封筒のみで、1回の取得は500通まで、30日で削除。1人の受信箱は1万通まで、招待券なしで登録した人からの封筒は200通まで</li>
 <li data-i18n="d.352">送る量の上限（トークンバケット）：IPアドレスごとに一度に300通（その後は1秒に5通）、鍵ごとに一度に120通（その後は1秒に3通）。1つのIPアドレスからの接続は50本まで</li>
 </ul>
 <p data-i18n="d.353">HTTPエンドポイント（写真、ファイル、スタンプの操作はkind 24242の署名、それ以外の書き込みはNIP-98の署名が必要。<code>/crash</code>だけは署名なし）：</p>
 <div class="wrap"><table>
-<tr><th data-i18n="d.354">エンドポイント</th><th data-i18n="d.355">役割</th></tr>
-<tr><td data-i18n="d.356"><code>POST /register</code></td><td data-i18n="d.357">鍵の登録（招待券またはTurnstile）</td></tr>
-<tr><td data-i18n="d.358"><code>PUT /upload</code>、<code>GET</code>と<code>HEAD /&lt;sha256&gt;</code></td><td data-i18n="d.359">写真とファイルの預け入れと取り出し。10MBまで</td></tr>
-<tr><td data-i18n="d.360"><code>PUT /stamp</code>、<code>GET</code>と<code>HEAD</code>と<code>DELETE /stamp/&lt;sha256&gt;</code></td><td data-i18n="d.361">スタンプ。1枚512KB、1人200枚まで</td></tr>
-<tr><td data-i18n="d.362"><code>PUT</code>、<code>GET</code>、<code>DELETE /backup/&lt;番号&gt;</code></td><td data-i18n="d.363">復旧コードのバックアップ。64KBまで</td></tr>
-<tr><td data-i18n="d.364"><code>POST</code>、<code>DELETE /push</code>、<code>GET /push/key</code></td><td data-i18n="d.365">通知の宛先の登録と、通知の公開鍵</td></tr>
-<tr><td data-i18n="d.366"><code>POST /report</code></td><td data-i18n="d.367">通報</td></tr>
-<tr><td data-i18n="d.368"><code>GET /stats</code></td><td data-i18n="d.369">週ごとの利用統計（公開）</td></tr>
-<tr><td data-i18n="d.370"><code>POST /crash</code></td><td data-i18n="d.371">ユーザーが許した時のみのエラー報告（保存しない）</td></tr>
-<tr><td data-i18n="d.372"><code>POST /admin</code></td><td data-i18n="d.373">運営の鍵でのみ使える、鍵の停止などの管理操作</td></tr>
-<tr><td data-i18n="d.408"><code>POST /register</code>（AIの登録）</td><td data-i18n="d.409"><span class="tag released">公開済み</span>AIの鍵の登録。本文に持ち主の署名（kind 25070）を付けて送ると、リレーはその鍵をAIとして覚え、1日の上限を数える</td></tr>
-<tr><td data-i18n="d.410"><code>POST /turn</code></td><td data-i18n="d.411"><span class="tag released">公開済み</span>通話の中継（TURN）の短い期限の認証情報を発行する。登録済みの鍵だけが使える。リクエストの内容は保存しない</td></tr>
-<tr><td data-i18n="d.412"><code>DELETE /account</code></td><td data-i18n="d.413"><span class="tag released">公開済み</span>アカウントの削除。リレーはその鍵の封筒、スタンプ、通知の宛先、登録を消す</td></tr>
+<tr><th data-i18n="d.354">エンドポイント</th><th data-i18n="d.355">役割</th><th data-i18n="sp.status">状態</th></tr>
+<tr><td data-i18n="d.356"><code>POST /register</code></td><td data-i18n="d.357">鍵の登録（招待券またはTurnstile）</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.358"><code>PUT /upload</code>、<code>GET</code>と<code>HEAD /&lt;sha256&gt;</code></td><td data-i18n="d.359">写真とファイルの預け入れと取り出し。10MBまで</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.360"><code>PUT /stamp</code>、<code>GET</code>と<code>HEAD</code>と<code>DELETE /stamp/&lt;sha256&gt;</code></td><td data-i18n="d.361">スタンプ。1枚512KB、1人200枚まで</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.362"><code>PUT</code>、<code>GET</code>、<code>DELETE /backup/&lt;番号&gt;</code></td><td data-i18n="d.363">復旧コードのバックアップ。64KBまで</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.364"><code>POST</code>、<code>DELETE /push</code>、<code>GET /push/key</code></td><td data-i18n="d.365">通知の宛先の登録と、通知の公開鍵</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.366"><code>POST /report</code></td><td data-i18n="d.367">通報</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.368"><code>GET /stats</code></td><td data-i18n="d.369">週ごとの利用統計（公開）</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.370"><code>POST /crash</code></td><td data-i18n="d.371">ユーザーが許した時のみのエラー報告（保存しない）</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.372"><code>POST /admin</code></td><td data-i18n="d.373">運営の鍵でのみ使える、鍵の停止などの管理操作</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.408"><code>POST /register</code>（AIの登録）</td><td data-i18n="d.409">AIの鍵の登録。本文に持ち主の署名（kind 25070）を付けて送ると、リレーはその鍵をAIとして覚え、1日の上限を数える</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.410"><code>POST /turn</code></td><td data-i18n="d.411">通話の中継（TURN）の短い期限の認証情報を発行する。登録済みの鍵だけが使える。リクエストの内容は保存しない</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.412"><code>DELETE /account</code></td><td data-i18n="d.413">アカウントの削除。リレーはその鍵の封筒、スタンプ、通知の宛先、登録を消す</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
 </table></div>
 </div></details>
 
 <details><summary data-i18n="d.374">Tegami独自のkind</summary><div>
-<p data-i18n="d.375">いずれもgift wrapの中の暗号化された領域でのみ使用します。リレーに見えるのはkind 1059だけです。</p>
+<p data-i18n="d.375">いずれも封筒の中の暗号化された領域でのみ使用します。リレーに見えるのはkind 1059だけです。</p>
 <div class="wrap"><table>
-<tr><th data-i18n="d.376">kind</th><th data-i18n="d.377">中身</th></tr>
-<tr><td data-i18n="d.378">10100</td><td data-i18n="d.379">アイコン。友だちにだけ届ける</td></tr>
-<tr><td data-i18n="d.380">10101</td><td data-i18n="d.381">スタンプ一覧。自分の端末どうしで同期する</td></tr>
-<tr><td data-i18n="d.382">25050</td><td data-i18n="d.383">通話の合図（呼び出し、応答、終了、WebRTCの接続情報）</td></tr>
-<tr><td data-i18n="d.384">25060、25061</td><td data-i18n="d.385">AIへの下書き依頼と、AIからの下書き</td></tr>
-<tr><td data-i18n="d.390">10102</td><td data-i18n="d.391"><span class="tag released">公開済み</span>友だち、グループ、ブロック、AIの設定の控え。自分の端末どうしで同期する</td></tr>
-<tr><td data-i18n="d.392">10103</td><td data-i18n="d.393"><span class="tag released">公開済み</span>グループの状態（メンバー、名前、アイコン、管理者）。変更のたびに全体を送る</td></tr>
-<tr><td data-i18n="d.394">10104</td><td data-i18n="d.395"><span class="tag built">公開待ち</span>AIをトークに招く依頼と、メンバー1人ずつの応答</td></tr>
-<tr><td data-i18n="d.396">25062、25063</td><td data-i18n="d.397"><span class="tag released">公開済み</span>AIが持ち主の名前でメッセージを送りたいという依頼と、持ち主のアプリの答え</td></tr>
-<tr><td data-i18n="d.398">25064、25065</td><td data-i18n="d.399"><span class="tag released">公開済み</span>AIが友だち一覧を求める依頼と、アプリが返す一覧</td></tr>
-<tr><td data-i18n="d.400">25066、25067</td><td data-i18n="d.401"><span class="tag built">公開待ち</span>AIがほかの人のAIと話したいという依頼と、答え</td></tr>
-<tr><td data-i18n="d.402">25068</td><td data-i18n="d.403"><span class="tag released">公開済み</span>QRコードでAIを友だちに追加する際の、1回限りのコードに対するAI側の応答</td></tr>
-<tr><td data-i18n="d.404">25069</td><td data-i18n="d.405"><span class="tag released">公開済み</span>「すべてオフにする」。AIに止まるよう伝える</td></tr>
-<tr><td data-i18n="d.406">25070</td><td data-i18n="d.407"><span class="tag released">公開済み</span>持ち主がAIの鍵に付ける署名（持ち主の証明）。アプリがAIへ渡す</td></tr>
+<tr><th data-i18n="d.376">kind</th><th data-i18n="d.377">中身</th><th data-i18n="sp.status">状態</th></tr>
+<tr><td data-i18n="d.378">10100</td><td data-i18n="d.379">アイコン。友だちにだけ届ける</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.380">10101</td><td data-i18n="d.381">スタンプ一覧。自分の端末どうしで同期する</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.382">25050</td><td data-i18n="d.383">通話の合図（呼び出し、応答、終了、WebRTCの接続情報）</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.384">25060、25061</td><td data-i18n="d.385">AIへの下書き依頼と、AIからの下書き</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.390">10102</td><td data-i18n="d.391">友だち、グループ、ブロック、AIの設定の控え。自分の端末どうしで同期する</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.392">10103</td><td data-i18n="d.393">グループの状態（メンバー、名前、アイコン、管理者）。変更のたびに全体を送る</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.394">10104</td><td data-i18n="d.395">AIをトークに招く依頼と、メンバー1人ずつの応答</td><td><span class="tag built" data-i18n="sp.st.built">公開待ち</span></td></tr>
+<tr><td data-i18n="d.396">25062、25063</td><td data-i18n="d.397">AIが持ち主の名前でメッセージを送りたいという依頼と、持ち主のアプリの答え</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.398">25064、25065</td><td data-i18n="d.399">AIが友だち一覧を求める依頼と、アプリが返す一覧</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.400">25066、25067</td><td data-i18n="d.401">AIがほかの人のAIと話したいという依頼と、答え</td><td><span class="tag built" data-i18n="sp.st.built">公開待ち</span></td></tr>
+<tr><td data-i18n="d.402">25068</td><td data-i18n="d.403">QRコードでAIを友だちに追加する際の、1回限りのコードに対するAI側の応答</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.404">25069</td><td data-i18n="d.405">「すべてオフにする」。AIに止まるよう伝える</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
+<tr><td data-i18n="d.406">25070</td><td data-i18n="d.407">持ち主がAIの鍵に付ける署名（持ち主の証明）。アプリがAIへ渡す</td><td><span class="tag released" data-i18n="sp.st.rel">提供中</span></td></tr>
 </table></div>
 </div></details>
 
@@ -139,9 +139,12 @@
       <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.devs">開発者の方へ</h3>
       <ul class="mt-3 space-y-2">
         <li><a href="/ja/developers" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.ov">Tegamiの概要</a></li>
+        <li><a href="/ja/developers/protocol" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.protocol">Nostrと暗号と鍵</a></li>
+        <li><a href="/ja/developers/relay" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.relay">リレーと通知と通話</a></li>
+        <li><a href="/ja/developers/ai" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.ai">AI</a></li>
         <li><a href="/ja/developers/spec" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.spec">技術仕様</a></li>
-        <li><a href="/ja/developers/compare" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.compare">他アプリとの比較</a></li>
-        <li><a href="/ja/developers/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.faq">よくある質問</a></li>
+        <li><a href="/ja/developers/compare" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.devcompare">開発者向けの比較</a></li>
+        <li><a href="/ja/developers/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.devfaq">開発者向けのよくある質問</a></li>
       </ul>
     </div>
     <div>

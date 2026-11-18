@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI | 開発者向けのTegamiの説明</title>
+<title>AI | Tegami</title>
 <meta name="description" content="自分のAIがどうつながり、何を読めて、何がAIの会社に渡るか。">
-<meta property="og:title" content="AI | 開発者向けのTegamiの説明">
+<meta property="og:title" content="AI | Tegami">
 <meta property="og:description" content="自分のAIがどうつながり、何を読めて、何がAIの会社に渡るか。">
 <meta property="og:url" content="https://tegami.chat/ja/developers/ai">
 <link rel="canonical" href="https://tegami.chat/ja/developers/ai">
@@ -41,36 +41,36 @@
 </header>
 
 <div class="mx-auto max-w-6xl px-4 py-10 md:py-14 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10">
-  <aside class="lg:sticky lg:top-20 lg:self-start"><nav class="devside mb-8 lg:mb-0" aria-label="Developer docs"><p class="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 lg:block" data-i18n="dv.side">開発者向けの目次</p><ul class="flex flex-wrap gap-1 text-sm lg:block lg:space-y-0.5"><li class="shrink-0"><a href="/ja/developers" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dv.ov">概要</a></li><li class="shrink-0"><a href="/ja/developers/protocol" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.protocol">Nostrと暗号と鍵</a></li><li class="shrink-0"><a href="/ja/developers/relay" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.relay">リレー、通知、通話</a></li><li class="shrink-0"><a href="/ja/developers/ai" class="block rounded-lg px-3 py-2 bg-forest-50 font-semibold text-forest-700 dark:bg-forest-950 dark:text-forest-300" aria-current="page" data-i18n="dp.ai">AI</a></li><li class="shrink-0"><a href="/ja/developers/compare" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.compare">ほかのアプリとの比較</a></li><li class="shrink-0"><a href="/ja/developers/spec" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.spec">技術仕様</a></li><li class="shrink-0"><a href="/ja/developers/faq" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.faq">よくある質問</a></li></ul></nav></aside>
+  <aside class="lg:sticky lg:top-20 lg:self-start"><nav class="devside mb-8 lg:mb-0" aria-label="Developer docs"><p class="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 lg:block" data-i18n="dv.side">開発者向けの目次</p><ul class="flex flex-wrap gap-1 text-sm lg:block lg:space-y-0.5"><li class="shrink-0"><a href="Tegamiの開発者向け_November 16, 2026.html" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dv.ov">概要</a></li><li class="shrink-0"><a href="/ja/developers/protocol" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.protocol">Nostrと暗号と鍵</a></li><li class="shrink-0"><a href="/ja/developers/relay" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.relay">リレーと通知と通話</a></li><li class="shrink-0"><a href="/ja/developers/ai" class="block rounded-lg px-3 py-2 bg-forest-50 font-semibold text-forest-700 dark:bg-forest-950 dark:text-forest-300" aria-current="page" data-i18n="dp.ai">AI</a></li><li class="shrink-0"><a href="/ja/developers/compare" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.compare">ほかのアプリとの比較</a></li><li class="shrink-0"><a href="/ja/developers/spec" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.spec">技術仕様</a></li><li class="shrink-0"><a href="/ja/developers/faq" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.faq">よくある質問</a></li></ul></nav></aside>
   <main class="devdoc min-w-0 max-w-3xl">
 <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dp.ai">AI</h1>
 <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dp.ai.t">自分のAIがどうつながり、何を読めて、何がAIの会社に渡るか。</p>
-<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">「これから」の札の意味：</li><li data-i18n="dv.lg.rel"><span class="tag released">公開済み</span>2026年11月18日から本番で動いているもの</li><li data-i18n="dv.lg.built"><span class="tag built">公開待ち</span>コードを書き終えて、本番に出す前のもの</li><li data-i18n="dv.lg.decided"><span class="tag decided">決定済み</span>方針を決めて、コードはまだのもの</li><li data-i18n="dv.lg.idea"><span class="tag idea">検討中</span>まだ決めていないもの</li></ul>
+<p class="mt-4 text-sm text-neutral-600 dark:text-neutral-400" data-i18n="dv.legend.link">「提供中」などの状態の表示の意味は、<a href="Tegamiの開発者向け_2026年11月16日.html#legend">概要</a>にあります。</p>
 <details><summary data-i18n="d.137">AIはどうつながりますか？ Tegamiのサーバーで動いているのですか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.138">Tegamiのサーバーでは動きません。自分のパソコンで<code>tegami-agent</code>（Node.js）を動かすと、AIが固有のNostrの鍵を持ち、人間のユーザーと同じリレーと同じ暗号化方式で話します。返事は、既定ではパソコン上のClaude Code（<code>claude -p</code>）が書きます（<code class="whitespace-nowrap">--command</code>で、標準入力を読んで返事を出す別のプログラムに替えられます）。AIの契約やログイン情報はパソコンの中に留まってTegamiには渡りません。さらにMCPサーバーとしても動作するため、Claude Codeから「Tegamiで送って」と頼めます。</p></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.139">つなぐには、コマンドを入力する必要があります。追加の設定なしで動くAIはClaude Codeだけです。ほかのAI（OpenAI、Gemini、OpenRouter、Ollamaなど手元のモデル）は、設定のコマンドを1回実行して自分のAPIキーを入れるか、自分のプログラムを<code class="whitespace-nowrap">--command</code>に渡して使います。</p></div>
-<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.140"><span class="tag released">公開済み</span>パソコンに出るQRコードをアプリで読むだけで、AIを友だちに追加できるようにしました。</li>
-<li data-i18n="d.141"><span class="tag released">公開済み</span>手元で動くモデル（Ollamaなど）や、ユーザー自身のAPIキー（Anthropic、OpenAI、Gemini、OpenRouter）でも返事を書けます。</li>
-<li data-i18n="d.142"><span class="tag released">公開済み</span>AIが持ち主の名前でメッセージを送れるようにしました。この版では、送る前に持ち主が確かめる形だけが使えます。持ち主に聞かずに送る形は、後の版で使えるようにします。</li>
-<li data-i18n="d.143"><span class="tag built">公開待ち</span>全員が同意したグループや1対1のトークにAIを招く仕組みも作りました。この版では使えません。後の版で使えるようにします。</li>
-<li data-i18n="d.144"><span class="tag decided">決定済み</span>Tegamiの公式AIは置きません。</li>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span><p data-i18n="d.138">Tegamiのサーバーでは動きません。自分のパソコンで<code>tegami-agent</code>（Node.js）を動かすと、AIが固有のNostrの鍵を持ち、人間のユーザーと同じリレーと同じ暗号化方式で話します。返事は、既定ではパソコン上のClaude Code（<code>claude -p</code>）が書きます（<code class="whitespace-nowrap">--command</code>で、標準入力を読んで返事を出す別のプログラムに替えられます）。AIの契約やログイン情報はパソコンの中に留まってTegamiには渡りません。さらにMCPサーバーとしても動作するため、Claude Codeから「Tegamiで送って」と頼めます。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><span class="sr-only">：</span><p data-i18n="d.139">つなぐには、コマンドを入力する必要があります。追加の設定なしで動くAIはClaude Codeだけです。ほかのAI（OpenAI、Gemini、OpenRouter、Ollamaなど手元のモデル）は、設定のコマンドを1回実行して自分のAPIキーを入れるか、自分のプログラムを<code class="whitespace-nowrap">--command</code>に渡して使います。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><span class="sr-only">：</span><ul>
+<li data-i18n="d.140"><span class="tag released">提供中</span><span class="sr-only">：</span>パソコンに出るQRコードをアプリで読むだけで、AIを友だちに追加できるようにしました。</li>
+<li data-i18n="d.141"><span class="tag released">提供中</span><span class="sr-only">：</span>手元で動くモデル（Ollamaなど）や、ユーザー自身のAPIキー（Anthropic、OpenAI、Gemini、OpenRouter）でも返事を書けます。</li>
+<li data-i18n="d.142"><span class="tag released">提供中</span><span class="sr-only">：</span>AIが持ち主の名前でメッセージを送れるようにしました。この版では、送る前に持ち主が確かめる形だけが使えます。持ち主に聞かずに送る形は、後の版で使えるようにします。</li>
+<li data-i18n="d.143"><span class="tag built">公開待ち</span><span class="sr-only">：</span>全員が同意したグループや1対1のトークにAIを招く仕組みも作りました。この版では使えません。後の版で使えるようにします。</li>
+<li data-i18n="d.144"><span class="tag decided">決定済み</span><span class="sr-only">：</span>Tegamiの公式AIは置きません。</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.145">他人の文に指示を混ぜられて、AIが情報を漏らしませんか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.146">次の3つの仕組みで防いでいます。</p>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span><p data-i18n="d.146">次の3つの仕組みで防いでいます。</p>
 <ul>
 <li data-i18n="d.147">AIが自動で返事をするのは、持ち主が許可した相手（<code>--trust</code>）だけです。友だちでない人のメッセージは、中身をAIに見せず、何人から新しいメッセージが来ているかだけをAIに伝えます。</li>
-<li data-i18n="d.148">友だちとのトークをAIに読ませる場合も、アプリ内のスイッチで許したときに限り、その1対1のトークの最新30通までを10分で消える封筒でAIに渡します。その際AIは下書きを作るだけで、送るのは本人です。</li>
+<li data-i18n="d.148">友だちとのトークをAIに読ませる場合も、アプリ内のスイッチで許したときに限り、その1対1のトークの最新30通までを10分で消える封筒（NIP-59 の gift wrap。暗号化したメッセージを入れた入れ物）でAIに渡します。その際AIは下書きを作るだけで、送るのは本人です。</li>
 <li data-i18n="d.149">そのスイッチは、持ち主の鍵を持つアプリ側に置いています。AIが動くパソコンにスイッチを置くと、AI自身が設定を書き換えてしまうおそれがあるためです。</li>
 </ul></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.150">AIに読ませた内容は、AIの提供会社にも渡ります。パソコンにOSの保管庫が無い場合、AIの秘密鍵を暗号化せずに保存するのは、<code class="whitespace-nowrap">--insecure-store</code>を付けた時だけです。</p></div>
-<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.151"><span class="tag released">公開済み</span>相手が「自分の文を相手のAIに読ませない」を選べ、1通ずつ「AIに読ませない」の印も付けられるようにしました。消えるメッセージもAIには渡しません。公式のアプリがその印を見てAIに渡さない仕組みなので、改造したアプリや手でのコピーまでは止められません。</li>
-<li data-i18n="d.152"><span class="tag released">公開済み</span>AIの秘密鍵とAPIキーを、OSの保管庫で暗号化して保存するようにしました（Windowsで確かめ済み。MacとLinuxは未確認）。</li>
-<li data-i18n="d.153"><span class="tag released">公開済み</span>AIが送る量に上限を置き、リンクを含む文は必ず持ち主が確認するようにしました。「すべてオフにする」操作で、自分のAIをスマートフォンから一度に止められます。</li>
-<li data-i18n="d.414"><span class="tag released">公開済み</span>AIが送る量の上限：アプリは、AIが聞かずに送れる数を、初期設定で1分に5通、1つのトークで続けて20通、1日100通にしています（変えられますが、1分60通、1つのトークで200通、1日1000通までです）。リレーは、AIの鍵1つにつき1分30通、1日600通の封筒まで受け付け、持ち主のAIをすべて合わせても1日600通までです。自分のほかに5人いるグループへの1通は封筒6通になります。</li>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><span class="sr-only">：</span><p data-i18n="d.150">AIに読ませた内容は、AIの提供会社にも渡ります。パソコンにOSの保管庫が無い場合、AIの秘密鍵を暗号化せずに保存するのは、<code class="whitespace-nowrap">--insecure-store</code>を付けた時だけです。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><span class="sr-only">：</span><ul>
+<li data-i18n="d.151"><span class="tag released">提供中</span><span class="sr-only">：</span>相手が「自分の文を相手のAIに読ませない」を選べ、1通ずつ「AIに読ませない」の印も付けられるようにしました。消えるメッセージもAIには渡しません。公式のアプリがその印を見てAIに渡さない仕組みなので、改造したアプリや手でのコピーまでは止められません。</li>
+<li data-i18n="d.152"><span class="tag released">提供中</span><span class="sr-only">：</span>AIの秘密鍵とAPIキーを、OSの保管庫で暗号化して保存するようにしました（Windowsで確かめ済み。MacとLinuxは未確認）。</li>
+<li data-i18n="d.153"><span class="tag released">提供中</span><span class="sr-only">：</span>AIが送る量に上限を置き、リンクを含む文は必ず持ち主が確認するようにしました。「すべてオフにする」操作で、自分のAIをスマートフォンから一度に止められます。</li>
+<li data-i18n="d.414"><span class="tag released">提供中</span><span class="sr-only">：</span>AIが送る量の上限：アプリは、AIが聞かずに送れる数を、初期設定で1分に5通、1つのトークで続けて20通、1日100通にしています（変えられますが、1分60通、1つのトークで200通、1日1000通までです）。リレーは、AIの鍵1つにつき1分30通、1日600通の封筒まで受け付け、持ち主のAIをすべて合わせても1日600通までです。自分のほかに5人いるグループへの1通は封筒6通になります。</li>
 </ul></div>
 </div></details>
 
@@ -98,9 +98,12 @@
       <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.devs">開発者の方へ</h3>
       <ul class="mt-3 space-y-2">
         <li><a href="/ja/developers" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.ov">Tegamiの概要</a></li>
+        <li><a href="/ja/developers/protocol" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.protocol">Nostrと暗号と鍵</a></li>
+        <li><a href="/ja/developers/relay" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.relay">リレーと通知と通話</a></li>
+        <li><a href="/ja/developers/ai" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.ai">AI</a></li>
         <li><a href="/ja/developers/spec" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.spec">技術仕様</a></li>
-        <li><a href="/ja/developers/compare" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.compare">他アプリとの比較</a></li>
-        <li><a href="/ja/developers/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.faq">よくある質問</a></li>
+        <li><a href="/ja/developers/compare" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.devcompare">開発者向けの比較</a></li>
+        <li><a href="/ja/developers/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.devfaq">開発者向けのよくある質問</a></li>
       </ul>
     </div>
     <div>

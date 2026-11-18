@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tegami status and usage</title>
+<title>Status and stats | Tegami</title>
 <meta name="description" content="Whether the Tegami relay is responding, and weekly usage statistics.">
-<meta property="og:title" content="Tegami status and usage">
+<meta property="og:title" content="Status and stats | Tegami">
 <meta property="og:description" content="Whether the Tegami relay is responding, and weekly usage statistics.">
 <meta property="og:url" content="https://tegami.chat/status">
 <link rel="canonical" href="https://tegami.chat/status">
@@ -56,7 +56,7 @@
 
   <div class="mt-12">
     <section class="border-t border-neutral-200 py-8 dark:border-night-line">
-      <h2 class="text-xl font-bold" data-i18n="st.use.h">Weekly usage</h2>
+      <h2 class="text-2xl font-bold" data-i18n="st.use.h">Weekly usage</h2>
       <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-400 tabular-nums" id="period"></p>
       <p class="mt-3 text-sm text-neutral-600 dark:text-neutral-400" data-i18n="st.use.env">An envelope is one encrypted message on its way. Each message makes one envelope for every recipient and one copy for the sender, so a message to one person is two envelopes.</p>
       <p class="mt-2 text-sm text-neutral-600 dark:text-neutral-400" data-i18n="st.use.note">Only weeks that are over are shown. A week starts on Monday at 00:00 UTC. To keep quiet weeks from pointing to anyone, every figure is rounded up to a multiple of 10, and 0 to 9 is shown as "under 10".</p>
@@ -85,14 +85,14 @@
     </section>
 
     <section class="border-t border-neutral-200 py-8 dark:border-night-line">
-      <h2 class="text-xl font-bold" data-i18n="st.how.h">How we count</h2>
+      <h2 class="text-2xl font-bold" data-i18n="st.how.h">How we count</h2>
       <p class="mt-3 text-neutral-600 dark:text-neutral-400" data-i18n="st.how.t0">Each day, the relay counts the envelopes it accepted, the number of files, the number of logins, and an estimate of how many accounts logged in.</p>
       <p class="mt-3 text-neutral-600 dark:text-neutral-400" data-i18n="st.how.t1">The number of accounts is estimated with a random value that is made and thrown away every day, so the statistics can't show which accounts were active (the method is called HyperLogLog). For the same reason, the account figure is the average per day, not a weekly total. Envelopes, files and logins are weekly totals. We don't collect message contents, or which screens you open in the app.</p>
       <p class="mt-3 text-neutral-600 dark:text-neutral-400" data-i18n="st.how.t2">For what the relay stores and for how long, see "What the relay keeps" in our <a href="/privacy" class="font-semibold text-forest-700 underline dark:text-forest-300">privacy policy</a>.</p>
     </section>
 
     <section class="border-t border-neutral-200 py-8 dark:border-night-line">
-      <h2 class="text-xl font-bold" data-i18n="st.links.h">Related links</h2>
+      <h2 class="text-2xl font-bold" data-i18n="st.links.h">Related links</h2>
       <ul class="mt-3 space-y-2">
         <li><a href="https://relay.tegami.chat/stats" target="_blank" rel="noopener" class="font-semibold text-forest-700 underline dark:text-forest-300" data-i18n="st.links.json">Published statistics (JSON)<svg viewBox="0 0 24 24" class="ml-1 inline-block h-[0.85em] w-[0.85em] align-[-0.1em]" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg><span class="sr-only"> (opens in a new tab)</span></a></li>
         <li><a href="https://github.com/tegami-chat/tegami/blob/main/relay/src/stats.ts" target="_blank" rel="noopener" class="font-semibold text-forest-700 underline dark:text-forest-300" data-i18n="st.links.code">Source code of the counter (GitHub)<svg viewBox="0 0 24 24" class="ml-1 inline-block h-[0.85em] w-[0.85em] align-[-0.1em]" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg><span class="sr-only"> (opens in a new tab)</span></a></li>
@@ -123,9 +123,12 @@
       <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.devs">For developers</h3>
       <ul class="mt-3 space-y-2">
         <li><a href="/developers" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.ov">Overview</a></li>
+        <li><a href="/developers/protocol" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.protocol">Nostr, encryption and keys</a></li>
+        <li><a href="/developers/relay" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.relay">Relay, notifications and calls</a></li>
+        <li><a href="/developers/ai" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.ai">AI</a></li>
         <li><a href="/developers/spec" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.spec">Technical spec</a></li>
-        <li><a href="/developers/compare" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.compare">Compare apps</a></li>
-        <li><a href="/developers/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.faq">FAQ</a></li>
+        <li><a href="/developers/compare" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.devcompare">Developer comparison</a></li>
+        <li><a href="/developers/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.devfaq">Developer FAQ</a></li>
       </ul>
     </div>
     <div>

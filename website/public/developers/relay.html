@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Relay, notifications and calls | Tegami for developers</title>
+<title>Relay, notifications and calls | Tegami</title>
 <meta name="description" content="The rules of the Tegami relay, and how notifications, calls and photos work.">
-<meta property="og:title" content="Relay, notifications and calls | Tegami for developers">
+<meta property="og:title" content="Relay, notifications and calls | Tegami">
 <meta property="og:description" content="The rules of the Tegami relay, and how notifications, calls and photos work.">
 <meta property="og:url" content="https://tegami.chat/developers/relay">
 <link rel="canonical" href="https://tegami.chat/developers/relay">
@@ -41,41 +41,41 @@
 </header>
 
 <div class="mx-auto max-w-6xl px-4 py-10 md:py-14 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10">
-  <aside class="lg:sticky lg:top-20 lg:self-start"><nav class="devside mb-8 lg:mb-0" aria-label="Developer docs"><p class="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 lg:block" data-i18n="dv.side">Developer docs</p><ul class="flex flex-wrap gap-1 text-sm lg:block lg:space-y-0.5"><li class="shrink-0"><a href="/developers" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dv.ov">Overview</a></li><li class="shrink-0"><a href="/developers/protocol" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.protocol">Nostr, encryption and keys</a></li><li class="shrink-0"><a href="/developers/relay" class="block rounded-lg px-3 py-2 bg-forest-50 font-semibold text-forest-700 dark:bg-forest-950 dark:text-forest-300" aria-current="page" data-i18n="dp.relay">Relay, notifications and calls</a></li><li class="shrink-0"><a href="/developers/ai" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.ai">AI</a></li><li class="shrink-0"><a href="/developers/compare" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.compare">Compared with other apps</a></li><li class="shrink-0"><a href="/developers/spec" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.spec">Technical spec</a></li><li class="shrink-0"><a href="/developers/faq" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.faq">FAQ</a></li></ul></nav></aside>
+  <aside class="lg:sticky lg:top-20 lg:self-start"><nav class="devside mb-8 lg:mb-0" aria-label="Developer docs"><p class="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 lg:block" data-i18n="dv.side">Developer docs</p><ul class="flex flex-wrap gap-1 text-sm lg:block lg:space-y-0.5"><li class="shrink-0"><a href="Tegamiの開発者向け_November 16, 2026.html" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dv.ov">Overview</a></li><li class="shrink-0"><a href="/developers/protocol" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.protocol">Nostr, encryption and keys</a></li><li class="shrink-0"><a href="/developers/relay" class="block rounded-lg px-3 py-2 bg-forest-50 font-semibold text-forest-700 dark:bg-forest-950 dark:text-forest-300" aria-current="page" data-i18n="dp.relay">Relay, notifications and calls</a></li><li class="shrink-0"><a href="/developers/ai" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.ai">AI</a></li><li class="shrink-0"><a href="/developers/compare" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.compare">Compared with other apps</a></li><li class="shrink-0"><a href="/developers/spec" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.spec">Technical spec</a></li><li class="shrink-0"><a href="/developers/faq" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.faq">FAQ</a></li></ul></nav></aside>
   <main class="devdoc min-w-0 max-w-3xl">
 <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dp.relay">Relay, notifications and calls</h1>
 <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dp.relay.t">The rules of the Tegami relay, and how notifications, calls and photos work.</p>
-<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">Labels on the "Next" items:</li><li data-i18n="dv.lg.rel"><span class="tag released">Released</span>in production since November 18, 2026</li><li data-i18n="dv.lg.built"><span class="tag built">Built, not released</span>the code is written but not in production yet</li><li data-i18n="dv.lg.decided"><span class="tag decided">Decided</span>the direction is set, the code isn't written yet</li><li data-i18n="dv.lg.idea"><span class="tag idea">Considering</span>not decided yet</li></ul>
+<p class="mt-4 text-sm text-neutral-600 dark:text-neutral-400" data-i18n="dv.legend.link">Status labels such as "Available" are explained in the <a href="Tegamiの開発者向け_November 16, 2026.html#legend">overview</a>.</p>
 <h2 data-i18n="d.104" id="relay">Relay</h2>
 
 <details><summary data-i18n="d.105">What does the relay run on?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.106">It runs on Cloudflare Workers and a Durable Object (SQLite), and the code is in <code>relay/</code>. It only accepts gift wraps (<span class="whitespace-nowrap">kind 1059</span>) with a single recipient, and you can only read envelopes addressed to you. Stored envelopes are deleted after 30 days, and sending limits apply per IP address and per key.</p></div>
-<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.107">There is only one relay, run by Tegami.</p></div>
-<div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.108"><span class="tag decided">Decided</span>We start with a 30-day retention for envelopes, watch how it is used, and shorten it if almost nobody goes a long time without opening the app.</li>
+<div class="ph now"><b data-i18n="dv.now">Now</b><span class="sr-only">: </span><p data-i18n="d.106">It runs on Cloudflare Workers and a Durable Object (SQLite), and the code is in <code>relay/</code>. It only accepts gift wraps (<span class="whitespace-nowrap">kind 1059</span>) with a single recipient, and you can only read envelopes addressed to you. Stored envelopes are deleted after 30 days, and sending limits apply per IP address and per key.</p></div>
+<div class="ph not"><b data-i18n="dv.not">Not yet</b><span class="sr-only">: </span><p data-i18n="d.107">There is only one relay, run by Tegami.</p></div>
+<div class="ph next"><b data-i18n="dv.next">Next</b><span class="sr-only">: </span><ul>
+<li data-i18n="d.108"><span class="tag decided">Decided</span><span class="sr-only">: </span>We start with a 30-day retention for envelopes, watch how it is used, and shorten it if almost nobody goes a long time without opening the app.</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.109">How does registration work? Can anyone use Tegami?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.110">Yes, anyone can register. Registration is a <code>POST /register</code> signed with <span class="whitespace-nowrap">NIP-98</span>, and requires either an invite code or a human check (Cloudflare Turnstile). Unregistered keys cannot write. Messages from people who registered without an invite code do not reach strangers' inboxes, but you can still talk if the other person adds them as a friend via QR code or invite link. Even then, their messages do not trigger notifications on the other person's device. A modified app can still use the relay if its key passed registration, so what we protect is the registration gate, not the app.</p></div>
-<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.111">There is no identity verification badge (a mark of authenticity) yet.</p></div>
-<div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.112"><span class="tag decided">Decided</span>We will prevent impersonation by combining several methods. Family and friends scan each other's QR codes in person, companies and shops are verified by domain, and people who want a mark of authenticity can get one for a fee through a third-party identity verification company. Even then, Tegami only receives the result that verification happened, and holds no personal information such as addresses.</li>
+<div class="ph now"><b data-i18n="dv.now">Now</b><span class="sr-only">: </span><p data-i18n="d.110">Yes, anyone can register. Registration is a <code>POST /register</code> signed with <span class="whitespace-nowrap">NIP-98</span>, and requires either an invite code or a human check (Cloudflare Turnstile). Unregistered keys cannot write. Messages from people who registered without an invite code are not shown anywhere, including the strangers box, until you add them as a friend, and they do not trigger notifications. Messages sent after the other person adds them as a friend, via QR code or invite link, are shown. A modified app can still use the relay if its key passed registration, so what we protect is the registration gate, not the app.</p></div>
+<div class="ph not"><b data-i18n="dv.not">Not yet</b><span class="sr-only">: </span><p data-i18n="d.111">There is no identity verification badge (a mark of authenticity).</p></div>
+<div class="ph next"><b data-i18n="dv.next">Next</b><span class="sr-only">: </span><ul>
+<li data-i18n="d.112"><span class="tag decided">Decided</span><span class="sr-only">: </span>We will prevent impersonation by combining several methods. Family and friends scan each other's QR codes in person, companies and shops are verified by domain, and people who want a mark of authenticity can get one for a fee through a third-party identity verification company. Even then, Tegami only receives the result that verification happened, and holds no personal information such as addresses.</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.113">Can I run my own relay?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.114">The relay code is public, so you can set it up and run it yourself.</p></div>
-<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.115">However, the Tegami app currently connects only to the official relay, so you would need to modify the app to use your own.</p></div>
-<div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.116"><span class="tag decided">Decided</span>Companies and schools will be able to run their own relays. Whoever runs a relay sets its registration rules, choosing from "anyone," "invite code only," or "approved keys only."</li>
+<div class="ph now"><b data-i18n="dv.now">Now</b><span class="sr-only">: </span><p data-i18n="d.114">The relay code is public, so you can set it up and run it yourself.</p></div>
+<div class="ph not"><b data-i18n="dv.not">Not yet</b><span class="sr-only">: </span><p data-i18n="d.115">However, the Tegami app currently connects only to the official relay, so you would need to modify the app to use your own.</p></div>
+<div class="ph next"><b data-i18n="dv.next">Next</b><span class="sr-only">: </span><ul>
+<li data-i18n="d.116"><span class="tag decided">Decided</span><span class="sr-only">: </span>Companies and schools will be able to run their own relays. Whoever runs a relay sets its registration rules, choosing from "anyone," "invite code only," or "approved keys only."</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.117">What usage do you count?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.118">The relay keeps daily totals (envelopes received, number and size of files stored, number of logins, and an approximate count of keys that logged in that day) for 183 days. On <a href="/status">Status and usage statistics</a> we publish only totals for completed weeks, for the last 24 weeks. Only we can see the daily numbers. The count of keys that logged in is estimated with HyperLogLog, mixing in a value that changes every day (a salt) before counting, and that value is deleted when the day ends. The published key count is a daily average. Published numbers are 0 for 0 to 9, and rounded up to a multiple of 10 for 10 and above. Neither the app nor the website has any analytics.</p></div>
-<div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.119"><span class="tag decided">Decided</span>We will never add analytics that track what people do.</li>
+<div class="ph now"><b data-i18n="dv.now">Now</b><span class="sr-only">: </span><p data-i18n="d.118">The relay keeps daily totals (envelopes received, number and size of files stored, number of logins, and an approximate count of keys that logged in that day) for 183 days. On <a href="Tegamiの稼働状況と利用統計案_November 15, 2026.html">Status and usage statistics</a> we publish only totals for completed weeks, for the last 24 weeks. Only we can see the daily numbers. The count of keys that logged in is estimated with HyperLogLog, mixing in a value that changes every day (a salt) before counting, and that value is deleted when the day ends. The published key count is a daily average. Published numbers are 0 for 0 to 9, and rounded up to a multiple of 10 for 10 and above. Neither the app nor the website has any analytics.</p></div>
+<div class="ph next"><b data-i18n="dv.next">Next</b><span class="sr-only">: </span><ul>
+<li data-i18n="d.119"><span class="tag decided">Decided</span><span class="sr-only">: </span>We will never add analytics that track what people do.</li>
 </ul></div>
 </div></details>
 
@@ -83,29 +83,29 @@
 <h2 data-i18n="d.120" id="features">Notifications, calls, photos</h2>
 
 <details><summary data-i18n="d.121">How are notifications delivered?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.122">We use Web Push. Your device signs its notification endpoint and notification keys with your key and leaves them with the relay. When an envelope arrives, the relay sends a payload encrypted per device (RFC 8291). It contains only the type (message or call), the recipient account, and a count; never the sender or message text. However, to tell calls apart, only envelopes that ring the other person carry a <code>t=call</code> tag, so the relay knows that an envelope was a call.</p></div>
-<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.123">You cannot mute notifications per chat. Neither the relay nor the part of the device that receives notifications knows which chat an envelope belongs to. Also, in the iPhone browser version, incoming calls do not show full screen like a regular phone call.</p></div>
-<div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.124"><span class="tag decided">Decided</span>When we build the iPhone app, we will add full-screen incoming calls (Apple's CallKit).</li>
+<div class="ph now"><b data-i18n="dv.now">Now</b><span class="sr-only">: </span><p data-i18n="d.122">We use Web Push. Your device signs its notification endpoint and notification keys with your key and leaves them with the relay. When an envelope arrives, the relay sends a payload encrypted per device (RFC 8291). It contains only the type (message or call), the recipient account, and a count; never the sender or message text. However, to tell calls apart, only envelopes that ring the other person carry a <code>t=call</code> tag, so the relay knows that an envelope was a call.</p></div>
+<div class="ph not"><b data-i18n="dv.not">Not yet</b><span class="sr-only">: </span><p data-i18n="d.123">You cannot mute notifications per chat. Neither the relay nor the part of the device that receives notifications knows which chat an envelope belongs to. Also, in the iPhone browser version, incoming calls do not show full screen like a regular phone call.</p></div>
+<div class="ph next"><b data-i18n="dv.next">Next</b><span class="sr-only">: </span><ul>
+<li data-i18n="d.124"><span class="tag decided">Decided</span><span class="sr-only">: </span>When we build the iPhone app, we will add full-screen incoming calls (Apple's CallKit).</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.125">How do calls work?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.126">One-to-one voice and video calls over WebRTC. Signaling such as ringing and answering goes through the relay in encrypted envelopes that expire after 1 minute, and STUN (<code>stun.cloudflare.com</code>) is used to find a connection path. When a direct path is not possible, or when you choose "Always relay calls," the call goes through a TURN relay server. Audio and video stay encrypted.</p></div>
-<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.127">Calls that connect directly show the other person your IP address, unless you choose "Always relay calls." There are no group calls.</p></div>
-<div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.128"><span class="tag released">Released</span>Calls can now use Cloudflare's TURN server.</li>
-<li data-i18n="d.129"><span class="tag released">Released</span>If you choose "Always relay calls," the other person can no longer see your IP address.</li>
-<li data-i18n="d.130"><span class="tag released">Released</span>You can also set up your own TURN server.</li>
+<div class="ph now"><b data-i18n="dv.now">Now</b><span class="sr-only">: </span><p data-i18n="d.126">One-to-one voice and video calls over WebRTC. Signaling such as ringing and answering goes through the relay in encrypted envelopes that expire after 1 minute, and STUN (<code>stun.cloudflare.com</code>) is used to find a connection path. When a direct path is not possible, or when you choose "Always relay calls," the call goes through a TURN relay server. Audio and video stay encrypted.</p></div>
+<div class="ph not"><b data-i18n="dv.not">Not yet</b><span class="sr-only">: </span><p data-i18n="d.127">Calls that connect directly show the other person your IP address, unless you choose "Always relay calls." There are no group calls.</p></div>
+<div class="ph next"><b data-i18n="dv.next">Next</b><span class="sr-only">: </span><ul>
+<li data-i18n="d.128"><span class="tag released">Available</span><span class="sr-only">: </span>Calls can now use Cloudflare's TURN server.</li>
+<li data-i18n="d.129"><span class="tag released">Available</span><span class="sr-only">: </span>If you choose "Always relay calls," the other person can no longer see your IP address.</li>
+<li data-i18n="d.130"><span class="tag released">Available</span><span class="sr-only">: </span>You can also set up your own TURN server.</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.131">How are photos and files handled?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.132">Each one is encrypted with a new AES-GCM key and then stored in the relay's storage (Cloudflare R2). The key goes inside the encrypted message, so only the recipient gets it. Data in storage is deleted after 30 days, but stays on the recipient's device. Photos are shrunk to 1600px on the long side before sending, and the file size limit is 10MB after encryption. Stickers are different: their key is derived from the image and your account's secret key (so your own devices produce the same ciphertext), and they stay in separate storage until you delete them.</p></div>
-<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.133">There is no option to send at original quality.</p></div>
-<div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.134"><span class="tag decided">Decided</span>Senders will be able to choose between sending a smaller version or the original quality.</li>
-<li data-i18n="d.135"><span class="tag idea">Considering</span>We have not decided whether sending at original quality will be a paid feature.</li>
+<div class="ph now"><b data-i18n="dv.now">Now</b><span class="sr-only">: </span><p data-i18n="d.132">Each one is encrypted with a new AES-GCM key and then stored in the relay's storage (Cloudflare R2). The key goes inside the encrypted message, so only the recipient gets it. Data in storage is deleted after 30 days, but stays on the recipient's device. Photos are shrunk to 1600px on the long side before sending, and the file size limit is 10MB after encryption. Stickers are different: their key is derived from the image and your account's secret key (so your own devices produce the same ciphertext), and they stay in separate storage until you delete them.</p></div>
+<div class="ph not"><b data-i18n="dv.not">Not yet</b><span class="sr-only">: </span><p data-i18n="d.133">There is no option to send at original quality.</p></div>
+<div class="ph next"><b data-i18n="dv.next">Next</b><span class="sr-only">: </span><ul>
+<li data-i18n="d.134"><span class="tag decided">Decided</span><span class="sr-only">: </span>Senders will be able to choose between sending a smaller version or the original quality.</li>
+<li data-i18n="d.135"><span class="tag idea">Under discussion</span><span class="sr-only">: </span>We have not decided whether sending at original quality will be a paid feature.</li>
 </ul></div>
 </div></details>
 
@@ -133,9 +133,12 @@
       <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.devs">For developers</h3>
       <ul class="mt-3 space-y-2">
         <li><a href="/developers" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.ov">Overview</a></li>
+        <li><a href="/developers/protocol" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.protocol">Nostr, encryption and keys</a></li>
+        <li><a href="/developers/relay" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.relay">Relay, notifications and calls</a></li>
+        <li><a href="/developers/ai" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.ai">AI</a></li>
         <li><a href="/developers/spec" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.spec">Technical spec</a></li>
-        <li><a href="/developers/compare" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.compare">Compare apps</a></li>
-        <li><a href="/developers/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.faq">FAQ</a></li>
+        <li><a href="/developers/compare" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.devcompare">Developer comparison</a></li>
+        <li><a href="/developers/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.devfaq">Developer FAQ</a></li>
       </ul>
     </div>
     <div>

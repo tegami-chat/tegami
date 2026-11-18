@@ -45,6 +45,7 @@ html.dark { background-color: #101311; color-scheme: dark; }
 .devdoc th, .devdoc td { border:1px solid var(--line); padding:6px 8px; text-align:left; vertical-align:top; }
 .devdoc th { background:var(--code); }
 .devdoc .wrap { overflow-x:auto; }
+@media (max-width:640px) { .devdoc .wrap td:first-child, .devdoc .wrap th:first-child { position:sticky; left:0; z-index:1; background:var(--card); box-shadow:1px 0 0 var(--line); min-width:6.5em; } .devdoc .wrap th:first-child { background:var(--code); } }
 .devdoc .ph { border-left:3px solid var(--line); padding:2px 0 2px 12px; margin:0 0 12px; }
 .devdoc .ph > b { display:inline-block; font-size:.8rem; letter-spacing:.05em; border-radius:4px; padding:0 8px; margin:0 0 6px; color:var(--card); }
 .devdoc .ph.now { border-color:var(--accent); } .devdoc .ph.now > b { background:var(--accent); }
@@ -76,3 +77,4 @@ svg.map .ok { fill:none; stroke:var(--accent); stroke-width:2.5; }
 svg.map .call { fill:none; stroke:var(--accent); stroke-width:2; stroke-dasharray:6 5; }
 svg.map .fi { fill:var(--ink); } svg.map .fa { fill:var(--accent); } svg.map .fs { fill:var(--sub); }
 .devdoc .tag.released { color:var(--accent); }
+.devdoc .tag.dev { color:var(--warn); } .devdoc .tag.plan { color:var(--sub); border-style:dashed; }

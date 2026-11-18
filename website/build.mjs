@@ -56,35 +56,35 @@ const DRAFT_LINKS = {
 };
 const META = {
   faq: {
-    en: { title: 'Tegami FAQ', desc: 'Questions people ask first about Tegami.' },
-    ja: { title: 'Tegamiのよくある質問', desc: 'Tegamiについて、よく聞かれること。' },
+    en: { title: 'FAQ | Tegami', desc: 'Questions people ask first about Tegami.' },
+    ja: { title: 'よくある質問 | Tegami', desc: 'Tegamiについて、よく聞かれること。' },
   },
   'dev-protocol': {
-    en: { title: 'Nostr, encryption and keys | Tegami for developers', desc: 'Which parts of Nostr Tegami uses, how messages are sealed, what the relay can see, and how keys are kept.' },
-    ja: { title: 'Nostrと暗号と鍵 | 開発者向けのTegamiの説明', desc: 'TegamiがNostrのどこを使うか、メッセージをどう封じるか、リレーに何が見えるか、鍵をどう守るか。' },
+    en: { title: 'Nostr, encryption and keys | Tegami', desc: 'Which parts of Nostr Tegami uses, how messages are sealed, what the relay can see, and how keys are kept.' },
+    ja: { title: 'Nostrと暗号と鍵 | Tegami', desc: 'TegamiがNostrのどこを使うか、メッセージをどう封じるか、リレーに何が見えるか、鍵をどう守るか。' },
   },
   'dev-relay': {
-    en: { title: 'Relay, notifications and calls | Tegami for developers', desc: 'The rules of the Tegami relay, and how notifications, calls and photos work.' },
-    ja: { title: 'リレー、通知、通話 | 開発者向けのTegamiの説明', desc: 'Tegamiのリレーの決まりと、通知、通話、写真の仕組み。' },
+    en: { title: 'Relay, notifications and calls | Tegami', desc: 'The rules of the Tegami relay, and how notifications, calls and photos work.' },
+    ja: { title: 'リレーと通知と通話 | Tegami', desc: 'Tegamiのリレーの決まりと、通知、通話、写真の仕組み。' },
   },
   'dev-ai': {
-    en: { title: 'AI | Tegami for developers', desc: 'How your own AI joins Tegami, what it can read, and what goes to the AI provider.' },
-    ja: { title: 'AI | 開発者向けのTegamiの説明', desc: '自分のAIがどうつながり、何を読めて、何がAIの会社に渡るか。' },
+    en: { title: 'AI | Tegami', desc: 'How your own AI joins Tegami, what it can read, and what goes to the AI provider.' },
+    ja: { title: 'AI | Tegami', desc: '自分のAIがどうつながり、何を読めて、何がAIの会社に渡るか。' },
   },
   'dev-compare': {
-    en: { title: 'Compared with other apps | Tegami for developers', desc: 'Tegami next to LINE, WhatsApp, Signal, Telegram and other Nostr apps.' },
-    ja: { title: 'ほかのアプリとの比較 | 開発者向けのTegamiの説明', desc: 'LINE、WhatsApp、Signal、Telegram、ほかのNostrアプリとの比較。' },
+    en: { title: 'Developer comparison | Tegami', desc: 'Tegami next to LINE, WhatsApp, Signal, Telegram and other Nostr apps.' },
+    ja: { title: '開発者向けの比較 | Tegami', desc: 'LINE、WhatsApp、Signal、Telegram、ほかのNostrアプリとの比較。' },
   },
   'dev-spec': {
-    en: { title: 'Technical spec | Tegami for developers', desc: 'Crypto building blocks, relay limits, HTTP endpoints and Tegami event kinds.' },
-    ja: { title: '技術仕様 | 開発者向けのTegamiの説明', desc: '暗号の部品、リレーの上限、HTTPの口、Tegami独自のkind。' },
+    en: { title: 'Technical spec | Tegami', desc: 'Crypto building blocks, relay limits, HTTP endpoints and Tegami event kinds.' },
+    ja: { title: '技術仕様 | Tegami', desc: '暗号の部品、リレーの上限、HTTPの口、Tegami独自のkind。' },
   },
   'dev-faq': {
     en: { title: 'Developer FAQ | Tegami', desc: 'Questions developers ask about Tegami.' },
     ja: { title: '開発者向けのよくある質問 | Tegami', desc: '開発者からよく聞かれること。' },
   },
   compare: {
-    en: { title: 'Tegami compared with other apps', desc: 'Tegami next to LINE, WhatsApp, Signal and Telegram.' },
+    en: { title: 'Compare apps | Tegami', desc: 'Tegami next to LINE, WhatsApp, Signal and Telegram.' },
     ja: { title: 'ほかのアプリとの比較 | Tegami', desc: 'LINE、WhatsApp、Signal、Telegramと並べた、Tegamiの比較。' },
   },
   index: {
@@ -92,28 +92,28 @@ const META = {
     ja: { title: 'Tegami: トークはあなたのもの', desc: 'Nostrで動く、オープンソースのメッセージアプリ。広告も追跡もなく、いつものAIを連れてこられます。' },
   },
   how: {
-    en: { title: 'How Tegami keeps you safe', desc: 'What protects your messages, what we can and can\'t see, and what isn\'t done yet.' },
-    ja: { title: 'Tegamiの安全の仕組み', desc: 'メッセージを守る仕組みと、運営者に見えるもの、見えないもの、まだ足りないこと。' },
+    en: { title: 'Security | Tegami', desc: 'What protects your messages, what we can and can\'t see, and what isn\'t done yet.' },
+    ja: { title: '安全の仕組み | Tegami', desc: 'メッセージを守る仕組みと、運営者に見えるもの、見えないもの、まだ足りないこと。' },
   },
   roadmap: {
-    en: { title: 'Tegami roadmap', desc: 'What we\'ve built, and what\'s next.' },
-    ja: { title: 'Tegamiのロードマップ', desc: 'できたこと、これから作ること。' },
+    en: { title: 'Roadmap | Tegami', desc: 'What we\'ve built, and what\'s next.' },
+    ja: { title: 'ロードマップ | Tegami', desc: 'できたこと、これから作ること。' },
   },
   privacy: {
-    en: { title: 'Tegami privacy policy', desc: 'What Tegami keeps, why, and for how long.' },
-    ja: { title: 'Tegamiのプライバシーポリシー', desc: 'Tegamiが何を、なぜ、どれだけの期間預かるか。' },
+    en: { title: 'Privacy policy | Tegami', desc: 'What Tegami keeps, why, and for how long.' },
+    ja: { title: 'プライバシーポリシー | Tegami', desc: 'Tegamiが何を、なぜ、どれだけの期間預かるか。' },
   },
   about: {
-    en: { title: 'About the Tegami operator', desc: 'Who runs Tegami, and how to contact us.' },
-    ja: { title: 'Tegamiの運営者情報', desc: 'Tegamiの運営者と連絡先。' },
+    en: { title: 'About us | Tegami', desc: 'Who runs Tegami, and how to contact us.' },
+    ja: { title: '運営者情報 | Tegami', desc: 'Tegamiの運営者と連絡先。' },
   },
   developers: {
-    en: { title: 'Tegami for developers', desc: 'How Tegami uses Nostr, what the relay can see, keys, AI, and the full technical spec.' },
-    ja: { title: '開発者向けのTegamiの説明', desc: 'TegamiがNostrのどこを使うか、リレーに見えるもの、鍵、AI、技術仕様。' },
+    en: { title: 'For developers | Tegami', desc: 'How Tegami uses Nostr, what the relay can see, keys, AI, and the full technical spec.' },
+    ja: { title: '開発者向けの説明 | Tegami', desc: 'TegamiがNostrのどこを使うか、リレーに見えるもの、鍵、AI、技術仕様。' },
   },
   status: {
-    en: { title: 'Tegami status and usage', desc: 'Whether the Tegami relay is responding, and weekly usage statistics.' },
-    ja: { title: 'Tegamiの稼働状況と利用統計', desc: 'Tegamiのリレーの稼働状況と、週ごとの利用統計。' },
+    en: { title: 'Status and stats | Tegami', desc: 'Whether the Tegami relay is responding, and weekly usage statistics.' },
+    ja: { title: '稼働状況と利用統計 | Tegami', desc: 'Tegamiのリレーの稼働状況と、週ごとの利用統計。' },
   },
 };
 const LANG_ON = 'block px-4 py-2 text-sm font-semibold text-forest-600 dark:text-forest-300';
@@ -212,6 +212,10 @@ function build(name, lang) {
     const icon = /\bdata-noext\b/.test(open) ? '' : EXT_ICON;
     return open + inner + icon + `<span class="sr-only">${lang === 'ja' ? '（新しいタブで開きます）' : ' (opens in a new tab)'}</span>` + close;
   });
+  // A status label sits right before its sentence. Give text-only readers a break between them (a status that stands alone in a table cell needs none).
+  const SEP = `<span class="sr-only">${lang === 'ja' ? '：' : ': '}</span>`;
+  html = html.replace(/(<span class="tag [^"]*"[^>]*>[^<]*<\/span>)(?!<\/td>)/g, `$1${SEP}`);
+  html = html.replace(/(<div class="ph (?:now|not|next)"><b[^>]*>[^<]*<\/b>)/g, `$1${SEP}`);
   // anchors on the home page from other pages already point to /#x; on the home page keep #x
   writeFileSync(page.out[lang], html);
 }

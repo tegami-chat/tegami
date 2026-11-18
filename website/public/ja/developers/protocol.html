@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Nostrと暗号と鍵 | 開発者向けのTegamiの説明</title>
+<title>Nostrと暗号と鍵 | Tegami</title>
 <meta name="description" content="TegamiがNostrのどこを使うか、メッセージをどう封じるか、リレーに何が見えるか、鍵をどう守るか。">
-<meta property="og:title" content="Nostrと暗号と鍵 | 開発者向けのTegamiの説明">
+<meta property="og:title" content="Nostrと暗号と鍵 | Tegami">
 <meta property="og:description" content="TegamiがNostrのどこを使うか、メッセージをどう封じるか、リレーに何が見えるか、鍵をどう守るか。">
 <meta property="og:url" content="https://tegami.chat/ja/developers/protocol">
 <link rel="canonical" href="https://tegami.chat/ja/developers/protocol">
@@ -41,36 +41,36 @@
 </header>
 
 <div class="mx-auto max-w-6xl px-4 py-10 md:py-14 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10">
-  <aside class="lg:sticky lg:top-20 lg:self-start"><nav class="devside mb-8 lg:mb-0" aria-label="Developer docs"><p class="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 lg:block" data-i18n="dv.side">開発者向けの目次</p><ul class="flex flex-wrap gap-1 text-sm lg:block lg:space-y-0.5"><li class="shrink-0"><a href="/ja/developers" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dv.ov">概要</a></li><li class="shrink-0"><a href="/ja/developers/protocol" class="block rounded-lg px-3 py-2 bg-forest-50 font-semibold text-forest-700 dark:bg-forest-950 dark:text-forest-300" aria-current="page" data-i18n="dp.protocol">Nostrと暗号と鍵</a></li><li class="shrink-0"><a href="/ja/developers/relay" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.relay">リレー、通知、通話</a></li><li class="shrink-0"><a href="/ja/developers/ai" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.ai">AI</a></li><li class="shrink-0"><a href="/ja/developers/compare" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.compare">ほかのアプリとの比較</a></li><li class="shrink-0"><a href="/ja/developers/spec" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.spec">技術仕様</a></li><li class="shrink-0"><a href="/ja/developers/faq" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.faq">よくある質問</a></li></ul></nav></aside>
+  <aside class="lg:sticky lg:top-20 lg:self-start"><nav class="devside mb-8 lg:mb-0" aria-label="Developer docs"><p class="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 lg:block" data-i18n="dv.side">開発者向けの目次</p><ul class="flex flex-wrap gap-1 text-sm lg:block lg:space-y-0.5"><li class="shrink-0"><a href="Tegamiの開発者向け_November 16, 2026.html" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dv.ov">概要</a></li><li class="shrink-0"><a href="/ja/developers/protocol" class="block rounded-lg px-3 py-2 bg-forest-50 font-semibold text-forest-700 dark:bg-forest-950 dark:text-forest-300" aria-current="page" data-i18n="dp.protocol">Nostrと暗号と鍵</a></li><li class="shrink-0"><a href="/ja/developers/relay" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.relay">リレーと通知と通話</a></li><li class="shrink-0"><a href="/ja/developers/ai" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.ai">AI</a></li><li class="shrink-0"><a href="/ja/developers/compare" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.compare">ほかのアプリとの比較</a></li><li class="shrink-0"><a href="/ja/developers/spec" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.spec">技術仕様</a></li><li class="shrink-0"><a href="/ja/developers/faq" class="block rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-white/5" data-i18n="dp.faq">よくある質問</a></li></ul></nav></aside>
   <main class="devdoc min-w-0 max-w-3xl">
 <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dp.protocol">Nostrと暗号と鍵</h1>
 <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dp.protocol.t">TegamiがNostrのどこを使うか、メッセージをどう封じるか、リレーに何が見えるか、鍵をどう守るか。</p>
-<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">「これから」の札の意味：</li><li data-i18n="dv.lg.rel"><span class="tag released">公開済み</span>2026年11月18日から本番で動いているもの</li><li data-i18n="dv.lg.built"><span class="tag built">公開待ち</span>コードを書き終えて、本番に出す前のもの</li><li data-i18n="dv.lg.decided"><span class="tag decided">決定済み</span>方針を決めて、コードはまだのもの</li><li data-i18n="dv.lg.idea"><span class="tag idea">検討中</span>まだ決めていないもの</li></ul>
+<p class="mt-4 text-sm text-neutral-600 dark:text-neutral-400" data-i18n="dv.legend.link">「提供中」などの状態の表示の意味は、<a href="Tegamiの開発者向け_2026年11月16日.html#legend">概要</a>にあります。</p>
 <h2 data-i18n="d.10" id="nostr">Nostrとの関係</h2>
 
 <details open><summary data-i18n="d.11">TegamiはNostrクライアントですか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.12">Nostrの規格上で動くメッセージアプリですが、SNSとしてのNostrクライアントではありません。アカウントにはNostrの鍵（secp256k1）を使い、メッセージはNIP-17の形式で送受信しますが、公開の投稿（<span class="whitespace-nowrap">kind 1</span>）もプロフィールの公開（<span class="whitespace-nowrap">kind 0</span>）も行いません。</p></div>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span><p data-i18n="d.12">Nostrの規格上で動くメッセージアプリですが、SNSとしてのNostrクライアントではありません。アカウントにはNostrの鍵（secp256k1）を使い、メッセージはNIP-17の形式で送受信しますが、公開の投稿（<span class="whitespace-nowrap">kind 1</span>）もプロフィールの公開（<span class="whitespace-nowrap">kind 0</span>）も行いません。</p></div>
 </div></details>
 
 <details><summary data-i18n="d.13">ほかのNostrアプリの人とメッセージをやり取りできますか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.14">できません。Tegamiのアプリが接続するのは専用のリレー（<code>wss://relay.tegami.chat</code>）のみで、そのリレーもTegamiに登録された鍵でログインした接続からの封筒しか受け付けないためです。このように閉じた構成にしているのは、迷惑メッセージやなりすましを入口で止めるためであり、リレー側には登録制御、送信量の上限、通報、運営による鍵の停止機能を備えています。</p></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.15">「どのアプリでも同じ鍵で使える」というNostr本来の良さは、いまのTegamiにはありません。</p></div>
-<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.16"><span class="tag idea">検討中</span>受信先として会社や学校などの独自のリレーを追加できる形、ほかのNostrアプリからのメッセージを表示できる形、Tegamiの定めるルールに同意したリレーだけを公式一覧に載せる形を比較しています。どれを採用するかはまだ決めていません。</li>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span><p data-i18n="d.14">できません。Tegamiのアプリが接続するのは専用のリレー（<code>wss://relay.tegami.chat</code>）のみで、そのリレーもTegamiに登録された鍵でログインした接続からの封筒（NIP-59 の gift wrap。暗号化したメッセージを入れた入れ物）しか受け付けないためです。このように閉じた構成にしているのは、迷惑メッセージやなりすましを入口で止めるためであり、リレー側には登録制御、送信量の上限、通報、運営による鍵の停止機能を備えています。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><span class="sr-only">：</span><p data-i18n="d.15">「どのアプリでも同じ鍵で使える」というNostr本来の良さは、Tegamiにはありません。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><span class="sr-only">：</span><ul>
+<li data-i18n="d.16"><span class="tag idea">検討中</span><span class="sr-only">：</span>受信先として会社や学校などの独自のリレーを追加できる形、ほかのNostrアプリからのメッセージを表示できる形、Tegamiの定めるルールに同意したリレーだけを公式一覧に載せる形を比較しています。どれを採用するかはまだ決めていません。</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.17">手持ちのnsecでログインできますか？ Tegamiの鍵を書き出せますか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.18">どちらもできません。Tegamiは鍵をアプリ内で生成し、外に出さない仕様になっています。</p></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.19">Tegamiが無くなった際に、同じ鍵のままほかのアプリへ移行する手段がありません。</p></div>
-<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.20"><span class="tag idea">検討中</span>Tegamiが無くなった時の避難手段として、鍵を書き出せるようにするかを検討しています。書き出せばほかのアプリへ移れますが、書き出した鍵を盗まれると乗っ取られ、ほかのアプリでプロフィールを公開すれば公開鍵と本人が結び付いてしまいます。</li>
-<li data-i18n="d.21"><span class="tag idea">検討中</span>Tegamiを使いながら、同じ鍵でほかのNostrアプリも使いたい人のために、秘密鍵を渡さずにTegamiのアプリが署名を引き受ける方式（<span class="whitespace-nowrap">NIP-46</span>）も検討しています。ただし、NIP-46はTegamiのアプリが動いている間しか使えないので、避難手段にはなりません。</li>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span><p data-i18n="d.18">どちらもできません。Tegamiは鍵をアプリ内で生成し、外に出さない仕様になっています。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><span class="sr-only">：</span><p data-i18n="d.19">Tegamiが無くなった際に、同じ鍵のままほかのアプリへ移行する手段がありません。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><span class="sr-only">：</span><ul>
+<li data-i18n="d.20"><span class="tag idea">検討中</span><span class="sr-only">：</span>Tegamiが無くなった時の避難手段として、鍵を書き出せるようにするかを検討しています。書き出せばほかのアプリへ移れますが、書き出した鍵を盗まれると乗っ取られ、ほかのアプリでプロフィールを公開すれば公開鍵と本人が結び付いてしまいます。</li>
+<li data-i18n="d.21"><span class="tag idea">検討中</span><span class="sr-only">：</span>Tegamiを使いながら、同じ鍵でほかのNostrアプリも使いたい人のために、秘密鍵を渡さずにTegamiのアプリが署名を引き受ける方式（<span class="whitespace-nowrap">NIP-46</span>）も検討しています。ただし、NIP-46はTegamiのアプリが動いている間しか使えないので、避難手段にはなりません。</li>
 </ul></div>
 </div></details>
 
 <details open><summary data-i18n="d.22">Nostrのどの部分を使っていて、どの部分を使っていませんか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span>
 <div class="wrap"><table>
 <tr><th data-i18n="d.23">Nostrの要素</th><th data-i18n="d.24">Tegamiでの扱い</th></tr>
 <tr><td data-i18n="d.25">アカウント＝secp256k1の鍵ペア（npubとnsec）</td><td data-i18n="d.26">使う。電話番号もメールアドレスも使わない</td></tr>
@@ -84,17 +84,17 @@
 <tr><td data-i18n="d.41">古いDM（<span class="whitespace-nowrap">NIP-04</span>）</td><td data-i18n="d.42">使わない。送り主と宛先がリレーに丸見えになるため</td></tr>
 </table></div>
 <p data-i18n="d.43">このように、Nostrを「鍵で本人性を表し、署名した封筒をリレーに預ける」仕組みとして使っており、SNSとしての部分は取り入れていません。</p></div>
-<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.44"><span class="tag idea">検討中</span>ビットコインで自由にお金のやり取りができるようにしたいと考えています。アプリにZapを組み込むかどうかはまだ決めていません。</li>
+<div class="ph next"><b data-i18n="dv.next">これから</b><span class="sr-only">：</span><ul>
+<li data-i18n="d.44"><span class="tag idea">検討中</span><span class="sr-only">：</span>ビットコインで自由にお金のやり取りができるようにしたいと考えています。アプリにZapを組み込むかどうかはまだ決めていません。</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.45">どのNIPを使っていますか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span>
 <div class="wrap"><table>
 <tr><th data-i18n="d.46">NIP</th><th data-i18n="d.47">使い方</th></tr>
-<tr><td data-i18n="d.48"><span class="whitespace-nowrap">NIP-17</span>、<span class="whitespace-nowrap">NIP-59</span></td><td data-i18n="d.49">1対1およびグループのメッセージ。文字はkind 14、写真とファイルはkind 15を用い、seal（<span class="whitespace-nowrap">kind 13</span>）とgift wrap（<span class="whitespace-nowrap">kind 1059</span>）で包む</td></tr>
-<tr><td data-i18n="d.50"><span class="whitespace-nowrap">NIP-44</span></td><td data-i18n="d.51">sealとgift wrapの暗号化、および端末引き継ぎデータの暗号化</td></tr>
+<tr><td data-i18n="d.48"><span class="whitespace-nowrap">NIP-17</span>、<span class="whitespace-nowrap">NIP-59</span></td><td data-i18n="d.49">1対1およびグループのメッセージ。文字はkind 14、写真とファイルはkind 15を用い、署名つきの内側の層（<span class="whitespace-nowrap">kind 13</span>）と封筒（<span class="whitespace-nowrap">kind 1059</span>）の二重に包む</td></tr>
+<tr><td data-i18n="d.50"><span class="whitespace-nowrap">NIP-44</span></td><td data-i18n="d.51">内側の層と封筒の暗号化、および端末引き継ぎデータの暗号化</td></tr>
 <tr><td data-i18n="d.52"><span class="whitespace-nowrap">NIP-42</span></td><td data-i18n="d.53">リレーへの認証（ログイン）。読み書きともに認証済みの鍵のみ許可</td></tr>
 <tr><td data-i18n="d.54"><span class="whitespace-nowrap">NIP-40</span></td><td data-i18n="d.55">期限付きの封筒（通話の合図は1分、引き継ぎとAIへの下書きの依頼は10分）</td></tr>
 <tr><td data-i18n="d.56"><span class="whitespace-nowrap">NIP-98</span></td><td data-i18n="d.57">HTTPエンドポイント（登録、通知、復旧用のバックアップ、通報、管理操作）への署名</td></tr>
@@ -102,9 +102,9 @@
 <tr><td data-i18n="d.60">Blossom（kind 24242の署名）</td><td data-i18n="d.61">写真とファイルのストレージ（<code>/upload</code>と<code>/&lt;sha256&gt;</code>）。暗号化した後のデータのsha256で預けて取り出す。スタンプ用の<code>/stamp</code>はTegami独自の拡張</td></tr>
 </table></div>
 <p data-i18n="d.62">NIPに規定のない部分は、暗号化した封筒の中だけで使う独自のkindで実装しています。具体的には、アイコン（10100）、スタンプ一覧（10101）、通話のシグナリング（25050）、AIへの下書き依頼と応答（25060、25061）です。</p></div>
-<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.63"><span class="tag released">公開済み</span>自分の端末どうしの同期（10102）、グループメンバーの変更（10103）、AIをトークに招く同意（10104）、AIとのやり取り（25062〜25070）の独自kindを追加しました。この版のアプリは、10104と、AIどうしのやり取り（25066、25067）をまだ使いません。</li>
-<li data-i18n="d.64"><span class="tag idea">検討中</span>鍵のローテーションやパスキーで鍵を守る提案（NIPのプルリクエスト#2137と#2519）が採用されたら、仕様に合わせるかを検討します。</li>
+<div class="ph next"><b data-i18n="dv.next">これから</b><span class="sr-only">：</span><ul>
+<li data-i18n="d.63"><span class="tag released">提供中</span><span class="sr-only">：</span>自分の端末どうしの同期（10102）、グループメンバーの変更（10103）、AIをトークに招く同意（10104）、AIとのやり取り（25062〜25070）の独自kindを追加しました。この版のアプリは、10104と、AIどうしのやり取り（25066、25067）をまだ使いません。</li>
+<li data-i18n="d.64"><span class="tag idea">検討中</span><span class="sr-only">：</span>鍵のローテーションやパスキーで鍵を守る提案（NIPのプルリクエスト#2137と#2519）が採用されたら、仕様に合わせるかを検討します。</li>
 </ul></div>
 </div></details>
 
@@ -112,43 +112,43 @@
 <h2 data-i18n="d.65" id="crypto">暗号化とサーバーに見える情報</h2>
 
 <details><summary data-i18n="d.66">サーバーからは何が見えますか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.67">リレーはメッセージの中身を読めません。リレーが把握できるのは、次の情報に限られます。</p>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span><p data-i18n="d.67">リレーはメッセージの中身を読めません。リレーが把握できるのは、次の情報に限られます。</p>
 <ul>
-<li data-i18n="d.68">封筒の宛先の公開鍵（gift wrapの<code>p</code>タグ）、届いた時刻、データサイズ</li>
+<li data-i18n="d.68">封筒の宛先の公開鍵（封筒の<code>p</code>タグ）、届いた時刻、データサイズ</li>
 <li data-i18n="d.69">ログインして接続している鍵と、接続元のIPアドレス</li>
 <li data-i18n="d.70">封筒の外側のタグ：相手を呼び出す封筒かどうか（<code>t=call</code>）、通知を出さない封筒かどうか（<code>t=quiet</code>）、期限（<code>expiration</code>）</li>
 <li data-i18n="d.71">封筒のほかに、登録で誰が誰を招待したか（90日で消す）、スタンプを預けた鍵と大きさ、通報の中身（90日で消す）</li>
 </ul>
-<p data-i18n="d.72">gift wrap自体は送り主を隠しますが、Tegamiのリレーは書き込みにもログインを求めるため、受け付ける瞬間には「どの鍵がどの鍵宛てに送ったか」が分かります。ただし、リレーのコードは送信者の鍵を保存していません（<code>relay/src/index.ts</code>の<code>events</code>テーブルに送信者の列はありません）。例外として、招待券なしで登録した人が送った封筒については、「知らない人から」の欄に出さないための印を付けて保存します。</p></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.73">稼働中のリレーが公開コードと同じものであることを、外部から確かめる方法がありません。リレーは稼働しているコミットを<code>/stats</code>と<span class="whitespace-nowrap">NIP-11</span>の<code>version</code>に記載していますが、運営者による申告にとどまります。</p></div>
-<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.74"><span class="tag idea">検討中</span>稼働中のリレーと公開コードの同一性を外部から確かめる方法は、まだ決めていません。</li>
+<p data-i18n="d.72">封筒自体は送り主を隠しますが、Tegamiのリレーは書き込みにもログインを求めるため、受け付ける瞬間には「どの鍵がどの鍵宛てに送ったか」が分かります。ただし、リレーのコードは送信者の鍵を保存していません（<code>relay/src/index.ts</code>の<code>events</code>テーブルに送信者の列はありません）。例外として、招待券なしで登録した人が送った封筒については、友だち以外のときは表示しないための印を付けて保存します。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><span class="sr-only">：</span><p data-i18n="d.73">稼働中のリレーが公開コードと同じものであることを、外部から確かめる方法がありません。リレーは稼働しているコミットを<code>/stats</code>と<span class="whitespace-nowrap">NIP-11</span>の<code>version</code>に記載していますが、運営者による申告にとどまります。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><span class="sr-only">：</span><ul>
+<li data-i18n="d.74"><span class="tag idea">検討中</span><span class="sr-only">：</span>稼働中のリレーと公開コードの同一性を外部から確かめる方法は、まだ決めていません。</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.75">前方秘匿性（forward secrecy）はありますか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.76">ありません。NIP-44の暗号鍵は送る人と受け取る人の長期鍵から作るため、秘密鍵が盗まれると、リレーに残っている封筒（最長30日分）や端末に保存されたメッセージを後から復号できてしまいます。なお、gift wrapの外側の層だけは毎回使い捨ての鍵を使っています。Tegamiでは秘密鍵をパスキー（PRFに対応しない環境では端末の中の取り出せない鍵）で暗号化して保管し、鍵自体を盗まれにくくすることで保護しています。</p></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.77">SignalやMLSのように鍵を継続的に更新し続ける方式と比べると、この点は弱みになります。</p></div>
-<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.78"><span class="tag idea">検討中</span>鍵を更新し続ける方式へ移行するかどうかは、まだ決めていません。</li>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span><p data-i18n="d.76">ありません。NIP-44の暗号鍵は送る人と受け取る人の長期鍵から作るため、秘密鍵が盗まれると、リレーに残っている封筒（最長30日分）や端末に保存されたメッセージを後から復号できてしまいます。なお、封筒の外側の層だけは毎回使い捨ての鍵を使っています。Tegamiでは秘密鍵をパスキー（PRFに対応しない環境では端末の中の取り出せない鍵）で暗号化して保管し、鍵自体を盗まれにくくすることで保護しています。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><span class="sr-only">：</span><p data-i18n="d.77">SignalやMLSのように鍵を継続的に更新し続ける方式と比べると、この点は弱みになります。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><span class="sr-only">：</span><ul>
+<li data-i18n="d.78"><span class="tag idea">検討中</span><span class="sr-only">：</span>鍵を更新し続ける方式へ移行するかどうかは、まだ決めていません。</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.79">グループはどのように暗号化していますか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.80">NIP-17の仕様どおり、メンバー1人ずつに別の封筒を作って送ります。たとえば自分のほかに5人いるグループへの1通は、自分用の写しを含めて封筒6通になります。リレーからは誰が同じグループに属しているかは見えません。</p></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.81">人数が増えるほど送る封筒が増えるため、大人数のグループには向きません。MLSは使っていません。</p></div>
-<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.82"><span class="tag released">公開済み</span>グループに変わらない識別子を持たせ、メンバーの追加、削除、退会、名前とアイコン、管理者の変更を、操作した人の署名（seal）付きで全員に伝えるようにしました。管理者がいるグループと、管理者がいない（誰でも変更できる）グループを選べます。</li>
-<li data-i18n="d.83"><span class="tag idea">検討中</span>Discordのサーバーのように大勢が集まれる場所も作りたいと考えています。</li>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span><p data-i18n="d.80">NIP-17の仕様どおり、メンバー1人ずつに別の封筒を作って送ります。たとえば自分のほかに5人いるグループへの1通は、自分用の写しを含めて封筒6通になります。リレーからは誰が同じグループに属しているかは見えません。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><span class="sr-only">：</span><p data-i18n="d.81">人数が増えるほど送る封筒が増えるため、大人数のグループには向きません。MLSは使っていません。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><span class="sr-only">：</span><ul>
+<li data-i18n="d.82"><span class="tag released">提供中</span><span class="sr-only">：</span>グループに変わらない識別子を持たせ、メンバーの追加、削除、退会、名前とアイコン、管理者の変更を、操作した人の署名付きで全員に伝えるようにしました。管理者がいるグループと、管理者がいない（誰でも変更できる）グループを選べます。</li>
+<li data-i18n="d.83"><span class="tag idea">検討中</span><span class="sr-only">：</span>Discordのサーバーのように大勢が集まれる場所も作りたいと考えています。</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.84">ブラウザ版は、サーバーが悪いJavaScriptを配信すれば終わりではないですか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.85">そのとおりです。ブラウザで動く暗号化アプリに共通する弱点であり、配信元（Cloudflare上の<code>app.tegami.chat</code>）が書き換えられると、鍵を盗むコードを配信できてしまいます。そのためTegamiでは、読み込み元を絞る厳しいCSPを設定し、外部の解析スクリプトも一切入れていません。</p></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.86">配信しているファイルが公開リポジトリからビルドされたものと同じかを確かめる仕組み（再現可能ビルドと照合）がありません。</p></div>
-<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.87"><span class="tag decided">決定済み</span>iPhone、Android、Windows、Mac、Linux向けのアプリを提供します。ストアが配信する版は固定されるため、この弱点は小さくなります。</li>
-<li data-i18n="d.88"><span class="tag built">公開待ち</span>Androidアプリは、試験用の端末（エミュレーター）上でトーク一覧の表示まで動作しました。</li>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span><p data-i18n="d.85">そのとおりです。ブラウザで動く暗号化アプリに共通する弱点であり、配信元（Cloudflare上の<code>app.tegami.chat</code>）が書き換えられると、鍵を盗むコードを配信できてしまいます。そのためTegamiでは、読み込み元を絞る厳しいCSPを設定し、外部の解析スクリプトも一切入れていません。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><span class="sr-only">：</span><p data-i18n="d.86">配信しているファイルが公開リポジトリからビルドされたものと同じかを確かめる仕組み（再現可能ビルドと照合）がありません。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><span class="sr-only">：</span><ul>
+<li data-i18n="d.87"><span class="tag decided">決定済み</span><span class="sr-only">：</span>iPhone、Android、Windows、Mac、Linux向けのアプリを提供します。ストアが配信する版は固定されるため、この弱点は小さくなります。</li>
+<li data-i18n="d.88"><span class="tag built">公開待ち</span><span class="sr-only">：</span>Androidアプリは、試験用の端末（エミュレーター）上でトーク一覧の表示まで動作しました。</li>
 </ul></div>
 </div></details>
 
@@ -156,28 +156,28 @@
 <h2 data-i18n="d.89" id="key">鍵</h2>
 
 <details><summary data-i18n="d.90">秘密鍵はどのように守っていますか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.91">パスキーのPRF拡張を使い、パスキーごとに決まった32バイトの値を取り出して、その値から導出したAES-GCMの鍵でNostrの秘密鍵を暗号化しています。端末に保存されるのは暗号文だけで、アプリを開くたびにFace IDやWindows Helloによる認証を求めます。PRFに非対応の保存先では、鍵データを取り出せない設定（non-extractable）のAES鍵をIndexedDBに置き、その鍵で暗号化する方式も選べます。なお、パスキーの保存先として動作を確認したのは、iCloudキーチェーンとWindows Helloです。</p></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.92">Bitwardenはパスキーを保存できてもPRFの値を返さないため、パスキーによる鍵保護には使えません。また、iPhoneとAndroidのアプリにおけるパスキー対応もまだありません。</p></div>
-<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.93"><span class="tag decided">決定済み</span>Bitwardenに対応します。TegamiはPRFの規格どおりに作っているので、Bitwarden側がPRFの値を返すようになれば、Tegami側を直さずに使えます。</li>
-<li data-i18n="d.94"><span class="tag decided">決定済み</span>今後もパスワードは使わず、パスキーで保護する方針を続けます。</li>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span><p data-i18n="d.91">パスキーのPRF拡張を使い、パスキーごとに決まった32バイトの値を取り出して、その値から導出したAES-GCMの鍵でNostrの秘密鍵を暗号化しています。端末に保存されるのは暗号文だけで、アプリを開くたびにFace IDやWindows Helloによる認証を求めます。PRFに非対応の保存先では、鍵データを取り出せない設定（non-extractable）のAES鍵をIndexedDBに置き、その鍵で暗号化する方式も選べます。なお、パスキーの保存先として動作を確認したのは、iCloudキーチェーンとWindows Helloです。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><span class="sr-only">：</span><p data-i18n="d.92">Bitwardenはパスキーを保存できてもPRFの値を返さないため、パスキーによる鍵保護には使えません。また、iPhoneとAndroidのアプリにおけるパスキー対応もありません。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><span class="sr-only">：</span><ul>
+<li data-i18n="d.93"><span class="tag decided">決定済み</span><span class="sr-only">：</span>Bitwardenに対応します。TegamiはPRFの規格どおりに作っているので、Bitwarden側がPRFの値を返すようになれば、Tegami側を直さずに使えます。</li>
+<li data-i18n="d.94"><span class="tag decided">決定済み</span><span class="sr-only">：</span>今後もパスワードは使わず、パスキーで保護する方針を続けます。</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.95">端末をなくした場合はどうなりますか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.96">設定画面で作る28文字（140ビット）の復旧コードを使って復元できます。このコードからHKDFでバックアップ用の番号、暗号化鍵、署名鍵の3つを導出し、秘密鍵、名前、友だち、グループ、ブロック、AIの権限、スタンプの一覧（100枚まで）を暗号化したバックアップをリレーに預ける仕組みです。バックアップの署名には復旧コードから導出した鍵を使うため、リレーからはどのアカウントのバックアップなのか分かりません。</p></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.97">復旧コードを作っていない人が手元の端末をすべてなくすと、Tegami側でも戻せません。また、会話の履歴は復旧コードでは戻りません。</p></div>
-<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.98"><span class="tag decided">決定済み</span>鍵をなくした際の救済方法は、ユーザーが選べるようにします。</li>
-<li data-i18n="d.99"><span class="tag idea">検討中</span>鍵を盗まれた時のために、会って確かめ合った友だちが新しい鍵を認めることで、友だちとのつながりを新しい鍵へ移す方法を検討しています。</li>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span><p data-i18n="d.96">設定画面で作る28文字（140ビット）の復旧コードを使って復元できます。このコードからHKDFでバックアップ用の番号、暗号化鍵、署名鍵の3つを導出し、秘密鍵、名前、友だち、グループ、ブロック、AIの権限、スタンプの一覧（100枚まで）を暗号化したバックアップをリレーに預ける仕組みです。バックアップの署名には復旧コードから導出した鍵を使うため、リレーからはどのアカウントのバックアップなのか分かりません。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><span class="sr-only">：</span><p data-i18n="d.97">復旧コードを作っていない人が手元の端末をすべてなくすと、Tegami側でも戻せません。また、会話の履歴は復旧コードでは戻りません。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><span class="sr-only">：</span><ul>
+<li data-i18n="d.98"><span class="tag decided">決定済み</span><span class="sr-only">：</span>鍵をなくした際の救済方法は、ユーザーが選べるようにします。</li>
+<li data-i18n="d.99"><span class="tag idea">検討中</span><span class="sr-only">：</span>鍵を盗まれた時のために、会って確かめ合った友だちが新しい鍵を認めることで、友だちとのつながりを新しい鍵へ移す方法を検討しています。</li>
 </ul></div>
 </div></details>
 
 <details><summary data-i18n="d.100">新しい端末への引き継ぎはできますか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.101">はい、引き継ぎ用のリンクで移行できます。元の端末で使い捨ての鍵を作り、秘密鍵、名前、友だち、グループ、ブロック、AIの権限、スタンプの一覧をNIP-44でその鍵だけが開ける形に暗号化したうえで、10分で消える封筒としてリレーに預けます。使い捨ての秘密鍵はリンクの<code>#</code>より後ろにのみ含めるため、サーバーには届きません。会話の履歴も移ります（下の項目を参照）。新しい端末は、リレーに残っている直近30日分の封筒（1回に500通まで）も受け取り直します。</p></div>
-<div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.102"><span class="tag released">公開済み</span>引き継ぎ用のリンクで、会話も新しい端末へ移せます。会話は圧縮して暗号化し、写真と同じ置き場を通して渡します（圧縮前で約32MBまで。新しいものから先に移すため、とても古いものは元の端末に残ることがあります）。写真とファイルそのものは移さず、保管されている間だけ新しい端末で開けます。</li>
-<li data-i18n="d.103"><span class="tag released">公開済み</span>友だち一覧、名前、ブロック、AIの権限を、自分の端末どうしで同期する仕組みも実装済みです。</li>
+<div class="ph now"><b data-i18n="dv.now">いま</b><span class="sr-only">：</span><p data-i18n="d.101">はい、引き継ぎ用のリンクで移行できます。元の端末で使い捨ての鍵を作り、秘密鍵、名前、友だち、グループ、ブロック、AIの権限、スタンプの一覧をNIP-44でその鍵だけが開ける形に暗号化したうえで、10分で消える封筒としてリレーに預けます。使い捨ての秘密鍵はリンクの<code>#</code>より後ろにのみ含めるため、サーバーには届きません。会話の履歴も移ります（下の項目を参照）。新しい端末は、リレーに残っている直近30日分の封筒（1回に500通まで）も受け取り直します。</p></div>
+<div class="ph next"><b data-i18n="dv.next">これから</b><span class="sr-only">：</span><ul>
+<li data-i18n="d.102"><span class="tag released">提供中</span><span class="sr-only">：</span>引き継ぎ用のリンクで、会話も新しい端末へ移せます。会話は圧縮して暗号化し、写真と同じ置き場を通して渡します（圧縮前で約32MBまで。新しいものから先に移すため、とても古いものは元の端末に残ることがあります）。写真とファイルそのものは移さず、保管されている間だけ新しい端末で開けます。</li>
+<li data-i18n="d.103"><span class="tag released">提供中</span><span class="sr-only">：</span>友だち一覧、名前、ブロック、AIの権限を、自分の端末どうしで同期する仕組みも実装済みです。</li>
 </ul></div>
 </div></details>
 
@@ -205,9 +205,12 @@
       <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100" data-i18n="ft.devs">開発者の方へ</h3>
       <ul class="mt-3 space-y-2">
         <li><a href="/ja/developers" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.ov">Tegamiの概要</a></li>
+        <li><a href="/ja/developers/protocol" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.protocol">Nostrと暗号と鍵</a></li>
+        <li><a href="/ja/developers/relay" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.relay">リレーと通知と通話</a></li>
+        <li><a href="/ja/developers/ai" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.ai">AI</a></li>
         <li><a href="/ja/developers/spec" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.spec">技術仕様</a></li>
-        <li><a href="/ja/developers/compare" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.compare">他アプリとの比較</a></li>
-        <li><a href="/ja/developers/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="dp.faq">よくある質問</a></li>
+        <li><a href="/ja/developers/compare" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.devcompare">開発者向けの比較</a></li>
+        <li><a href="/ja/developers/faq" class="hover:text-neutral-900 dark:hover:text-white" data-i18n="ft.devfaq">開発者向けのよくある質問</a></li>
       </ul>
     </div>
     <div>
