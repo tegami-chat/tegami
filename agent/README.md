@@ -2,7 +2,7 @@
 
 [日本語](README.ja.md)
 
-Puts an AI on your own computer into Tegami as a friend. This document calls the program that answers messages the "watcher".
+Puts an AI on your own computer into Tegami as a friend. This document calls the program that passes messages between Tegami and your AI the "gateway".
 
 The AI gets its own Tegami key. It talks through the same relay and the same
 end-to-end encryption as everyone else. Your AI subscription or API key stays on your
@@ -12,19 +12,19 @@ computer: Tegami never sees it.
 
 - Node.js and npm. Run `npm install` in this folder (`agent`).
 - An AI to write the replies. For the default, Claude Code, install it and sign in with
-  your own account first. For any other AI, set it up in "Which AI writes the replies".
+  your own account first. For any other AI, set it up in "AIs you can use".
 - The Tegami app.
 - Tested on Windows and Linux (Ubuntu in WSL). Not yet tried on macOS: the macOS notes
   below (launchd, the Keychain) have not been checked.
 
 Every command below is run in this folder as `node agent.mjs <command>`. If you install
-the package with `npm link`, `tegami-agent <command>` works as well. Where the watcher's
+the package with `npm link`, `tegami-agent <command>` works as well. Where the gateway's
 messages and notices say `tegami-agent <command>`, it means the same as `node agent.mjs <command>`.
 
-## Which AI writes the replies
+## AIs you can use
 
-There are three ways. Tegami does not push one on you: they differ in where your messages
-go, what it costs, and whose terms apply.
+The gateway can connect three kinds of AI. Use whichever you like; Tegami does not push one
+on you. They differ in where your messages go, what it costs, and whose terms apply.
 
 | | Claude Code with your own plan | A model on this computer | Your own API key |
 |---|---|---|---|
@@ -50,7 +50,7 @@ Not supported: Antigravity (`agy`). Its terms say that reaching it through third
 software breaks the agreement and can get the account stopped. Tegami never holds your
 sign-in to any AI service: Claude Code signs in by itself, the others take a key or none.
 
-With the default Claude Code you can skip this step. To pick another one:
+With the default Claude Code you can skip this step. To connect another one:
 
 ```bash
 node agent.mjs backend ollama --model llama3.2                          # Ollama on this computer
@@ -110,7 +110,7 @@ Open the AI's invite link from `init` in Tegami to add the AI as a friend, then 
 
 ## Keep it running
 
-`node agent.mjs autostart on` starts the watcher every time you log in, with no window:
+`node agent.mjs autostart on` starts the gateway every time you log in, with no window:
 
 - Windows: a Task Scheduler task named "Tegami agent claude".
 - macOS: a launchd agent, `~/Library/LaunchAgents/chat.tegami.agent.claude.plist`. Not
@@ -123,12 +123,12 @@ With `--agent` set to another name, the "claude" part of these names changes too
 
 - `autostart status` shows whether it starts at login, whether it is running, and the
   last 5 log lines.
-- `autostart off` removes the autostart and stops the watcher it was running.
+- `autostart off` removes the autostart and stops the gateway it was running.
 - To run it by hand, use `watch`. `watch --log <file>` also writes the log to a file.
   `autostart` writes the log to `~/.tegami/agents/<name>/watch.log`.
 
-Only one watcher runs per AI friend. Messages that arrived while the computer was off
-are answered when the watcher starts again: from a little before it last ran, up to a
+Only one gateway runs per AI friend. Messages that arrived while the computer was off
+are answered when the gateway starts again: from a little before it last ran, up to a
 day back.
 
 ## What the AI may do, and how it stays safe
@@ -141,7 +141,7 @@ instructions into a message, so by default the AI can only write a reply:
   most 2 turns per reply (`--max-turns`). It cannot read your files or use your mail. When a
   trusted contact's app asks for a reply draft, the draft is made once, with no tools and
   nothing saved. To let the AI use tools in everyday replies: `node agent.mjs setting tools on`
-  (or `watch --allow-tools` for one run). The watcher then says
+  (or `watch --allow-tools` for one run). The gateway then says
   "道具を使える状態で動いています" (tools are open) when it starts.
 - **A daily limit.** The AI sends at most 50 messages a day to one person or group
   (`setting dailyReplies <number>`; it cannot be 0 or unlimited). When it stops for the
@@ -157,7 +157,7 @@ instructions into a message, so by default the AI can only write a reply:
 - **People who say no.** A message tagged as not for AIs, and anything from a person who
   chose that in their profile card, is never handed to the AI or kept.
 - The public version of the app does not open sending without asking, talking to other
-  people's AIs, or calling the AI into a group at first. The watcher does not answer
+  people's AIs, or calling the AI into a group at first. The gateway does not answer
   group messages yet either.
 
 ### AIの検査
@@ -167,7 +167,7 @@ Replies to the owner are not checked. There are two checks:
 
 - **Fixed rules.** A text that looks like a secret key, a recovery code, an API key or a
   card number is never sent. Money talk (accounts, payment apps, crypto, gift cards, words
-  that move money) is left to the model check below in the watcher; the app stops money talk
+  that move money) is left to the model check below in the gateway; the app stops money talk
   that the AI would send without asking, with rules that match the ones in `screen.mjs`. This check uses no model,
   so nothing leaves the computer. Characters a person cannot see are taken out of what comes
   in, and the AI gets at most 20,000 characters of it.
@@ -190,7 +190,7 @@ is then held for the owner. In that case turn the model check off:
 
 ## What stays on this computer
 
-The watcher says where its records are when it starts. In the AI friend's folder
+The gateway says where its records are when it starts. In the AI friend's folder
 (`~/.tegami/agents/<name>`):
 
 - `key.json` (the AI's secret key) and `keys.json` (API keys) are encrypted by your
@@ -205,7 +205,7 @@ The watcher says where its records are when it starts. In the AI friend's folder
 - `messages.json`, `history.json`, `contacts.json` and `state.json` are encrypted too,
   with a key made from the AI's own secret key: they open only where `key.json` opens.
   With no store, `messages.json` and `history.json` (message text) are kept in memory
-  only and are gone when the watcher stops; `contacts.json` and `state.json` are written
+  only and are gone when the gateway stops; `contacts.json` and `state.json` are written
   unencrypted. When the store is there but does not open (a locked keyring), nothing is
   written.
 - `messages.json` keeps messages from your contacts for 30 days (`setting keepDays`).
@@ -217,14 +217,14 @@ The watcher says where its records are when it starts. In the AI friend's folder
   conversation starts after `keepDays`.
 - `node agent.mjs setting remember off` (or `watch --no-memory`) keeps nothing: every
   reply starts afresh (`--no-session-persistence`), and `history.json` is not written.
-- The watcher's log (`watch.log`) names people by a short id and never holds message
+- The gateway's log (`watch.log`) names people by a short id and never holds message
   text when it receives or replies. The one exception is the line for a reply that the
   AIの検査 held: it names the contact as you saved it. The log is not encrypted. At about
   1 MB the log moves to `watch.log.old` and a new one starts.
 
 `node agent.mjs setting` shows all settings: `tools`, `remember`, `keepDays`,
 `dailyReplies`, `mcpContacts`, `mcpPeerAis`, `mcpGroups` and `modelCheck`. A running
-watcher uses a changed setting after it starts again (`autostart off` then `autostart on`,
+gateway uses a changed setting after it starts again (`autostart off` then `autostart on`,
 or stop `watch` and run it again).
 
 ## More
