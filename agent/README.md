@@ -26,7 +26,7 @@ messages and notices say `tegami-agent <command>`, it means the same as `node ag
 An AI provider is where the AI that writes the replies runs. The gateway can connect three kinds. Use whichever you like; Tegami does not push one
 on you. They differ in where your messages go, what it costs, and whose terms apply.
 
-| | Your own subscription plan | A model on this computer | Your own API key |
+| | Subscription | Local model | API key |
 |---|---|---|---|
 | What you can use | Claude Code (only Claude Code for now) | models run with Ollama, llama.cpp, LM Studio or vLLM (Llama, Qwen, DeepSeek, gpt-oss and more) | Anthropic, OpenAI, Gemini, OpenRouter (many more models such as DeepSeek, Qwen and Mistral through OpenRouter) |
 | Backend | `claude-code` (the default) | `ollama`, `local` | `anthropic`, `openai`, `gemini`, `openrouter` |
@@ -34,17 +34,17 @@ on you. They differ in where your messages go, what it costs, and whose terms ap
 | Cost | your plan | your computer's power | paid by use |
 | Terms | the plan is for your own, individual use | none from an AI company | the API terms, meant for programs |
 
-- **Your own subscription plan.** Only Claude Code for now; plans from other companies,
-  such as ChatGPT, are not supported yet. Use Claude Code only on your own computer, signed in with
+- **Subscription.** A monthly plan such as Claude Pro or Max. Only Claude Code for now;
+  subscriptions from other companies, such as ChatGPT, are not supported yet. Use Claude Code only on your own computer, signed in with
   your own account, with the official `claude` unchanged, and for talking with you.
   Anthropic does not stop you from using its unchanged Claude Code with your own plan,
   but the plan is meant for ordinary individual use, and nothing from Anthropic names an
   always-on program that answers messages as allowed. If you let the AI answer other
   people (a second trusted contact), that may be outside the terms, and the account
   could be stopped. tegami-agent says this once when you trust a second person.
-- **A model on this computer** (Ollama, llama.cpp, LM Studio, vLLM). Nothing leaves your
+- **Local model** (Ollama, llama.cpp, LM Studio, vLLM): a model run on this computer. Nothing leaves your
   computer and no AI company's terms are involved. The answers depend on your computer.
-- **Your own API key.** The way AI companies offer for programs. Each reply costs money:
+- **API key.** The way AI companies offer for programs. Each reply costs money:
   set a monthly spending limit for the key in the company's console. Some companies may
   use what you send on a free tier to improve their models; check their terms.
 
