@@ -91,7 +91,7 @@ tailwind.config = {
       <div class="mt-10 grid gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
         <div>
           <h3 class="font-bold" data-i18n="ai.pick.h">Use the AI you like</h3>
-          <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="ai.pick.t">Claude, ChatGPT, Gemini, or one running on your own computer. Claude Code works as it is; the others use your own API key or a model on your computer. Tegami never picks for you.</p>
+          <p class="mt-1 text-neutral-600 dark:text-neutral-400" data-i18n="ai.pick.t">Claude, an OpenAI model, Gemini, or a model running on your own computer. Claude Code works as it is. Any other needs one setup command and your own API key from the AI company, or a model on your computer such as Ollama. Tegami never picks for you.</p>
         </div>
         <div>
           <h3 class="font-bold" data-i18n="ai.talk.h">Talk with your AI</h3>
@@ -205,7 +205,6 @@ tailwind.config = {
   </div>
 </footer>
 
-<script src="diff.js"></script>
 <script>
 // 言葉の切り替え。HTMLに書いた英語が元で、日本語はここに置く。
 // 下書きでは ?lang=jaで日本語にする。ブラウザの言葉で勝手に切り替えない（Googleの多言語サイトの指針）。
@@ -290,7 +289,7 @@ const JA = {
   'faq.lost.q': 'スマホをなくしたらどうなりますか？',
   'faq.lost.a': '設定で復旧コードを作っておけば、新しい端末でアカウント、友だち、グループを戻せます。会話の履歴は戻りません。復旧コードがないと、Tegamiの運営者でも戻せません。',
   'faq.multi.q': 'スマホとパソコンで同時に使えますか？',
-  'faq.multi.a': 'はい。設定の引き継ぎ用のリンクで、別の端末でも同じアカウントを同時に使えます。それまでの会話は移らず、新しい端末はサーバーに残っている直近30日分のメッセージを受け取り直します。',
+  'faq.multi.a': 'はい。設定の引き継ぎ用のリンクで、別の端末でも同じアカウントを同時に使えます。それまでの会話も、新しいものから先に移ります。とても多い時は、古い会話が元の端末に残ります。写真とファイルは、サーバーに残っている間だけ、新しい端末で開けます。',
   'faq.collect.q': 'Tegamiは何を記録していますか？',
   'faq.ai.q': '自分のAIはどうやってつなぎますか？',
   'faq.spam.q': '迷惑なメッセージへの対策はありますか？',
@@ -328,7 +327,7 @@ const JA = {
   'feat.move': '機種変更の引き継ぎ',
   'ai.h': 'AIを自由に。',
   'ai.pick.h': '好きなAIを使う',
-  'ai.pick.t': 'Claude、ChatGPT、Gemini、自分のパソコンで動かすAIから選べます。そのまま使えるのはClaude Codeです。ほかは、AIの会社から受け取った自分のAPIキー（利用のための鍵）か、自分のパソコンで動かすモデルで使います。どれを使うかは、あなたが決めます。',
+  'ai.pick.t': 'Claude、OpenAIのモデル、Gemini、自分のパソコンで動かすモデルから選べます。そのまま使えるのはClaude Codeだけです。ほかは、設定のコマンドを1回実行し、AIの会社から受け取った自分のAPIキー（利用のための鍵）を入れるか、Ollamaなど自分のパソコンで動かすモデルを使います。どれを使うかは、あなたが決めます。',
   'ai.talk.h': 'AIと話す',
   'ai.talk.t': 'あなたのAIが、友だちと同じようにトーク一覧に並びます。パソコンでAIをつなぐ小さなプログラム（tegami-agent）を動かしている間は、いつでも、どこからでも話しかけられます。',
   'ai.join.h': 'AIをトークに呼ぶ',

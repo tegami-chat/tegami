@@ -51,7 +51,7 @@
   <main class="devdoc min-w-0 max-w-3xl">
 <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dp.relay">リレー、通知、通話</h1>
 <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dp.relay.t">Tegamiのリレーの決まりと、通知、通話、写真の仕組み。</p>
-<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">「これから」の札の意味：</li><li data-i18n="dv.lg.built"><span class="tag built">公開待ち</span>コードを書き終えて、本番に出す前のもの</li><li data-i18n="dv.lg.decided"><span class="tag decided">決定済み</span>方針を決めて、コードはまだのもの</li><li data-i18n="dv.lg.idea"><span class="tag idea">検討中</span>まだ決めていないもの</li></ul>
+<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">「これから」の札の意味：</li><li data-i18n="dv.lg.rel"><span class="tag released">公開済み</span>2026年11月18日から本番で動いているもの</li><li data-i18n="dv.lg.built"><span class="tag built">公開待ち</span>コードを書き終えて、本番に出す前のもの</li><li data-i18n="dv.lg.decided"><span class="tag decided">決定済み</span>方針を決めて、コードはまだのもの</li><li data-i18n="dv.lg.idea"><span class="tag idea">検討中</span>まだ決めていないもの</li></ul>
 <h2 data-i18n="d.104" id="relay">リレー</h2>
 
 <details><summary data-i18n="d.105">リレーは何で動いていますか？</summary><div>
@@ -97,12 +97,12 @@
 </div></details>
 
 <details><summary data-i18n="d.125">通話はどのように動きますか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.126">WebRTCによる1対1の音声通話とビデオ通話です。呼び出しや応答などのシグナリングは1分で期限が切れる暗号化した封筒でリレーを通し、接続経路を探す際にはSTUN（<code>stun.cloudflare.com</code>）を使います。</p></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.127">中継サーバー（TURN）が本番に無いため、制限の厳しいネットワークどうしではつながらないことがあります。また、端末どうしが直接つながるため、通話の相手には自分のIPアドレスが見えます。グループ通話もありません。</p></div>
+<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.126">WebRTCによる1対1の音声通話とビデオ通話です。呼び出しや応答などのシグナリングは1分で期限が切れる暗号化した封筒でリレーを通し、接続経路を探す際にはSTUN（<code>stun.cloudflare.com</code>）を使います。直接つながらない時や、「通話を常に中継する」を選んだ時は、中継サーバー（TURN）を通します。音声と映像は暗号化されたままです。</p></div>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.127">直接つながる通話では、通話の相手に自分のIPアドレスが見えます。「通話を常に中継する」を選ぶと見えなくなります。グループ通話はありません。</p></div>
 <div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.128"><span class="tag built">公開待ち</span>Cloudflareの中継サーバー（TURN）を使えるようにしました。</li>
-<li data-i18n="d.129"><span class="tag built">公開待ち</span>「通話を常に中継する」を選ぶと、相手に自分のIPアドレスが見えなくなります。</li>
-<li data-i18n="d.130"><span class="tag built">公開待ち</span>自分で用意した中継サーバーを設定できるようにもなっています。</li>
+<li data-i18n="d.128"><span class="tag released">公開済み</span>Cloudflareの中継サーバー（TURN）を使えるようにしました。</li>
+<li data-i18n="d.129"><span class="tag released">公開済み</span>「通話を常に中継する」を選ぶと、相手に自分のIPアドレスが見えなくなります。</li>
+<li data-i18n="d.130"><span class="tag released">公開済み</span>自分で用意した中継サーバーを設定できるようにもなっています。</li>
 </ul></div>
 </div></details>
 

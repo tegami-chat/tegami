@@ -41,7 +41,7 @@ tailwind.config = {
   <main class="devdoc min-w-0 max-w-3xl">
 <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dp.compare">Compared with other apps</h1>
 <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dp.compare.t">Tegami next to LINE, WhatsApp, Signal and Telegram, and next to other Nostr apps.</p>
-<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">Labels on the "Next" items:</li><li data-i18n="dv.lg.built"><span class="tag built">Built, not released</span>the code is written but not in production yet</li><li data-i18n="dv.lg.decided"><span class="tag decided">Decided</span>the direction is set, the code isn't written yet</li><li data-i18n="dv.lg.idea"><span class="tag idea">Considering</span>not decided yet</li></ul>
+<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">Labels on the "Next" items:</li><li data-i18n="dv.lg.rel"><span class="tag released">Released</span>in production since November 18, 2026</li><li data-i18n="dv.lg.built"><span class="tag built">Built, not released</span>the code is written but not in production yet</li><li data-i18n="dv.lg.decided"><span class="tag decided">Decided</span>the direction is set, the code isn't written yet</li><li data-i18n="dv.lg.idea"><span class="tag idea">Considering</span>not decided yet</li></ul>
 <details open><summary data-i18n="d.155">How is Tegami different from LINE, WhatsApp, Signal, and Telegram?</summary><div>
 <div class="ph now"><b data-i18n="dv.now">Now</b>
 <p data-i18n="d.156">This comparison is based on each company's official documentation as checked on 2026-11-16. The Tegami column reflects what is running in production now.</p>
@@ -77,15 +77,15 @@ tailwind.config = {
 <tr><td data-i18n="d.233">If you lose your key</td><td data-i18n="d.234">No backup mechanism found. Assumes you store your nsec yourself</td><td data-i18n="d.235">Restore with a recovery code</td></tr>
 <tr><td data-i18n="d.236">AI</td><td data-i18n="d.237">Translation only (on-device or LibreTranslate). No AI bots or MCP found in the code</td><td data-i18n="d.238">Your own PC's AI appears as a friend. MCP support. The app controls what the AI is allowed to do</td></tr>
 <tr><td data-i18n="d.239">Groups</td><td data-i18n="d.240"><span class="whitespace-nowrap">NIP-17</span> groups, <span class="whitespace-nowrap">NIP-28</span> channels, <span class="whitespace-nowrap">NIP-29</span> relay-based groups. MLS supported in the sister app XChat</td><td data-i18n="d.241"><span class="whitespace-nowrap">NIP-17</span> groups only</td></tr>
-<tr><td data-i18n="d.242">Calls</td><td data-i18n="d.243">WebRTC via <span class="whitespace-nowrap">NIP-100</span>. Users configure their own TURN server</td><td data-i18n="d.244">WebRTC with signaling in encrypted envelopes. No TURN server yet</td></tr>
+<tr><td data-i18n="d.242">Calls</td><td data-i18n="d.243">WebRTC via <span class="whitespace-nowrap">NIP-100</span>. Users configure their own TURN server</td><td data-i18n="d.244">WebRTC with signaling in encrypted envelopes. Cloudflare's TURN server is available, and you can set your own</td></tr>
 <tr><td data-i18n="d.245">Platforms</td><td data-i18n="d.246">Apps for iPhone, Android, Windows, Mac, Linux. No browser version found</td><td data-i18n="d.247">Browser only for now. Apps in progress</td></tr>
 <tr><td data-i18n="d.248">Other</td><td data-i18n="d.249">Built-in Tor, Cashu wallet, zaps, translation</td><td data-i18n="d.250">Registration via invite codes and human checks; key suspension by the operator</td></tr>
 </table></div>
 <p data-i18n="d.251">0xchat is an app for people who already use Nostr, while Tegami is for people who want to leave LINE without knowing anything about Nostr. 0xchat is further ahead in openness to the Nostr world and in fine-grained settings.</p></div>
-<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.252">Tegami has no external signers, no key export, no app-store apps, and no TURN server.</p>
+<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.252">Tegami has no external signers, no key export, and no app-store apps.</p>
 <p data-i18n="d.253" class="small">We could not fully verify whether 0xchat's entire database is encrypted (there is a screen for entering a database passphrase).</p></div>
 <div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.254"><span class="tag built">Built, not released</span>TURN server. Android app prototype (runs on an emulator as far as the chat list).</li>
+<li data-i18n="d.254"><span class="tag built">Built, not released</span>Android app prototype (runs on an emulator as far as the chat list).</li>
 <li data-i18n="d.255"><span class="tag decided">Decided</span>We will ship apps for iPhone, Android, Windows, and Mac.</li>
 <li data-i18n="d.256"><span class="tag idea">Considering</span>External signers (<span class="whitespace-nowrap">NIP-46</span>), and how to connect with other Nostr apps.</li>
 </ul></div>
@@ -116,8 +116,9 @@ tailwind.config = {
 const JA = {
   'dv.h': '開発者向けの説明',
   'dv.t': 'Tegamiの作りを、確かめたい人のためにまとめました。どの答えも、本番でいま動いていること、まだ足りないこと、これからのことの3つに分けて書いています。',
-  'dv.base': '本番で動いている内容は、<a href="https://github.com/tegami-chat/tegami" target="_blank" rel="noopener">tegami-chat/tegami</a>のコミット<code>37034b3</code>の時点のものです。',
+  'dv.base': '本番で動いている内容は、2026年11月18日の時点の<a href="https://github.com/tegami-chat/tegami" target="_blank" rel="noopener">tegami-chat/tegami</a>のものです。',
   'dv.legend': '「これから」の札の意味：',
+  'dv.lg.rel': '<span class="tag released">公開済み</span>2026年11月18日から本番で動いているもの',
   'dv.lg.built': '<span class="tag built">公開待ち</span>コードを書き終えて、本番に出す前のもの',
   'dv.lg.decided': '<span class="tag decided">決定済み</span>方針を決めて、コードはまだのもの',
   'dv.lg.idea': '<span class="tag idea">検討中</span>まだ決めていないもの',
@@ -202,7 +203,7 @@ const JA = {
   'd.60': 'Blossom（kind 24242の署名）',
   'd.61': '写真とファイルのストレージ（<code>/upload</code>と<code>/&lt;sha256&gt;</code>）。暗号化した後のデータのsha256で預けて取り出す。スタンプ用の<code>/stamp</code>はTegami独自の拡張',
   'd.62': 'NIPに規定のない部分は、暗号化した封筒の中だけで使う独自のkindで実装しています。具体的には、アイコン（10100）、スタンプ一覧（10101）、通話のシグナリング（25050）、AIへの下書き依頼と応答（25060、25061）です。',
-  'd.63': '<span class="tag built">公開待ち</span>自分の端末どうしの同期（10102）、グループメンバーの変更（10103）、AIをトークに招く同意（10104）、AIとのやり取り（25062〜25070）の独自kindを追加しました。',
+  'd.63': '<span class="tag released">公開済み</span>自分の端末どうしの同期（10102）、グループメンバーの変更（10103）、AIをトークに招く同意（10104）、AIとのやり取り（25062〜25070）の独自kindを追加しました。この版のアプリは、10104と、AIどうしのやり取り（25066、25067）をまだ使いません。',
   'd.64': '<span class="tag idea">検討中</span>鍵のローテーションやパスキーで鍵を守る提案（NIPのプルリクエスト#2137と#2519）が採用されたら、仕様に合わせるかを検討します。',
   'd.65': '暗号化とサーバーに見える情報',
   'd.66': 'サーバーからは何が見えますか？',
@@ -219,9 +220,9 @@ const JA = {
   'd.77': 'SignalやMLSのように鍵を継続的に更新し続ける方式と比べると、この点は弱みになります。',
   'd.78': '<span class="tag idea">検討中</span>鍵を更新し続ける方式へ移行するかどうかは、まだ決めていません。',
   'd.79': 'グループはどのように暗号化していますか？',
-  'd.80': 'NIP-17の仕様どおり、メンバー1人ずつに別の封筒を作って送ります。たとえば自分のほかに5人いるグループへの1通は、自分用の写しを含めて封筒6通になります。リレーからは誰が同じグループに属しているかは見えません。なお、グループのメンバーは後から変更できず、変更すると別のグループ扱いになります。',
+  'd.80': 'NIP-17の仕様どおり、メンバー1人ずつに別の封筒を作って送ります。たとえば自分のほかに5人いるグループへの1通は、自分用の写しを含めて封筒6通になります。リレーからは誰が同じグループに属しているかは見えません。',
   'd.81': '人数が増えるほど送る封筒が増えるため、大人数のグループには向きません。MLSは使っていません。',
-  'd.82': '<span class="tag built">公開待ち</span>グループに変わらない識別子を持たせ、メンバーの追加、削除、退会、名前とアイコン、管理者の変更を、操作した人の署名（seal）付きで全員に伝えるようにしました。管理者がいるグループと、管理者がいない（誰でも変更できる）グループを選べます。',
+  'd.82': '<span class="tag released">公開済み</span>グループに変わらない識別子を持たせ、メンバーの追加、削除、退会、名前とアイコン、管理者の変更を、操作した人の署名（seal）付きで全員に伝えるようにしました。管理者がいるグループと、管理者がいない（誰でも変更できる）グループを選べます。',
   'd.83': '<span class="tag idea">検討中</span>Discordのサーバーのように大勢が集まれる場所も作りたいと考えています。',
   'd.84': 'ブラウザ版は、サーバーが悪いJavaScriptを配信すれば終わりではないですか？',
   'd.85': 'そのとおりです。ブラウザで動く暗号化アプリに共通する弱点であり、配信元（Cloudflare上の<code>app.tegami.chat</code>）が書き換えられると、鍵を盗むコードを配信できてしまいます。そのためTegamiでは、読み込み元を絞る厳しいCSPを設定し、外部の解析スクリプトも一切入れていません。',
@@ -240,9 +241,9 @@ const JA = {
   'd.98': '<span class="tag decided">決定済み</span>鍵をなくした際の救済方法は、ユーザーが選べるようにします。',
   'd.99': '<span class="tag idea">検討中</span>鍵を盗まれた時のために、会って確かめ合った友だちが新しい鍵を認めることで、友だちとのつながりを新しい鍵へ移す方法を検討しています。',
   'd.100': '新しい端末への引き継ぎはできますか？',
-  'd.101': 'はい、引き継ぎ用のリンクで移行できます。元の端末で使い捨ての鍵を作り、秘密鍵、名前、友だち、グループ、ブロック、AIの権限、スタンプの一覧をNIP-44でその鍵だけが開ける形に暗号化したうえで、10分で消える封筒としてリレーに預けます。使い捨ての秘密鍵はリンクの<code>#</code>より後ろにのみ含めるため、サーバーには届きません。なお、会話履歴は引き継がれず、新しい端末はリレーに残っている直近30日分の封筒（1回に500通まで）から受け取り直す形になります。',
-  'd.102': '<span class="tag built">公開待ち</span>引き継ぎ用のリンクで、すべての会話を新しい端末へ移せるようにしました。会話は圧縮して暗号化し、写真と同じ置き場を通して渡します（圧縮前で約32MBまで、写真そのものは移しません）。',
-  'd.103': '<span class="tag built">公開待ち</span>友だち一覧、名前、ブロック、AIの権限を、自分の端末どうしで同期する仕組みも実装済みです。',
+  'd.101': 'はい、引き継ぎ用のリンクで移行できます。元の端末で使い捨ての鍵を作り、秘密鍵、名前、友だち、グループ、ブロック、AIの権限、スタンプの一覧をNIP-44でその鍵だけが開ける形に暗号化したうえで、10分で消える封筒としてリレーに預けます。使い捨ての秘密鍵はリンクの<code>#</code>より後ろにのみ含めるため、サーバーには届きません。会話の履歴も移ります（下の項目を参照）。新しい端末は、リレーに残っている直近30日分の封筒（1回に500通まで）も受け取り直します。',
+  'd.102': '<span class="tag released">公開済み</span>引き継ぎ用のリンクで、会話も新しい端末へ移せます。会話は圧縮して暗号化し、写真と同じ置き場を通して渡します（圧縮前で約32MBまで。新しいものから先に移すため、とても古いものは元の端末に残ることがあります）。写真とファイルそのものは移さず、保管されている間だけ新しい端末で開けます。',
+  'd.103': '<span class="tag released">公開済み</span>友だち一覧、名前、ブロック、AIの権限を、自分の端末どうしで同期する仕組みも実装済みです。',
   'd.104': 'リレー',
   'd.105': 'リレーは何で動いていますか？',
   'd.106': 'Cloudflare WorkersとDurable Object（SQLite）上で動作しており、コードは<code>relay/</code>にあります。受け付けるのは宛先が1人のgift wrap（<span class="whitespace-nowrap">kind 1059</span>）のみで、読み出せるのは自分宛ての封筒だけです。預かった封筒は30日で削除され、送る量の上限はIPアドレス単位と鍵単位で設けています。',
@@ -265,11 +266,11 @@ const JA = {
   'd.123': 'トークごとに通知を切ることはできません。リレーも端末側の通知を受け取る仕組みも、届いた封筒がどのトーク宛てかを知らないためです。また、iPhoneのブラウザ版では、着信が通常の電話のような全画面になりません。',
   'd.124': '<span class="tag decided">決定済み</span>iPhoneアプリを作る際に、全画面の着信表示（AppleのCallKit）を入れます。',
   'd.125': '通話はどのように動きますか？',
-  'd.126': 'WebRTCによる1対1の音声通話とビデオ通話です。呼び出しや応答などのシグナリングは1分で期限が切れる暗号化した封筒でリレーを通し、接続経路を探す際にはSTUN（<code>stun.cloudflare.com</code>）を使います。',
-  'd.127': '中継サーバー（TURN）が本番に無いため、制限の厳しいネットワークどうしではつながらないことがあります。また、端末どうしが直接つながるため、通話の相手には自分のIPアドレスが見えます。グループ通話もありません。',
-  'd.128': '<span class="tag built">公開待ち</span>Cloudflareの中継サーバー（TURN）を使えるようにしました。',
-  'd.129': '<span class="tag built">公開待ち</span>「通話を常に中継する」を選ぶと、相手に自分のIPアドレスが見えなくなります。',
-  'd.130': '<span class="tag built">公開待ち</span>自分で用意した中継サーバーを設定できるようにもなっています。',
+  'd.126': 'WebRTCによる1対1の音声通話とビデオ通話です。呼び出しや応答などのシグナリングは1分で期限が切れる暗号化した封筒でリレーを通し、接続経路を探す際にはSTUN（<code>stun.cloudflare.com</code>）を使います。直接つながらない時や、「通話を常に中継する」を選んだ時は、中継サーバー（TURN）を通します。音声と映像は暗号化されたままです。',
+  'd.127': '直接つながる通話では、通話の相手に自分のIPアドレスが見えます。「通話を常に中継する」を選ぶと見えなくなります。グループ通話はありません。',
+  'd.128': '<span class="tag released">公開済み</span>Cloudflareの中継サーバー（TURN）を使えるようにしました。',
+  'd.129': '<span class="tag released">公開済み</span>「通話を常に中継する」を選ぶと、相手に自分のIPアドレスが見えなくなります。',
+  'd.130': '<span class="tag released">公開済み</span>自分で用意した中継サーバーを設定できるようにもなっています。',
   'd.131': '写真とファイルはどう扱われますか？',
   'd.132': '1つずつ新しいAES-GCMの鍵で暗号化してから、リレー側のストレージ（Cloudflare R2）に預けます。その鍵は暗号化したメッセージの中に入れて相手にだけ届けます。ストレージ上のデータは30日で消去されますが、受け取った人の端末には残ります。なお、写真は送る前に長辺1600pxへ縮められ、ファイルサイズの上限は暗号化した後で10MBです。スタンプだけは扱いが違い、自分のどの端末でも同じ暗号文になるように、画像とアカウントの秘密鍵から鍵を作り、本人が消すまで別の置き場に残します。',
   'd.133': '元の画質のまま送る選択肢はありません。',
@@ -278,10 +279,10 @@ const JA = {
   'd.136': 'AI',
   'd.137': 'AIはどうつながりますか？ Tegamiのサーバーで動いているのですか？',
   'd.138': 'Tegamiのサーバーでは動きません。自分のパソコンで<code>tegami-agent</code>（Node.js）を動かすと、AIが固有のNostrの鍵を持ち、人間のユーザーと同じリレーと同じ暗号化方式で話します。返事は、既定ではパソコン上のClaude Code（<code>claude -p</code>）が書きます（<code class="whitespace-nowrap">--command</code>で、標準入力を読んで返事を出す別のプログラムに替えられます）。AIの契約やログイン情報はパソコンの中に留まってTegamiには渡りません。さらにMCPサーバーとしても動作するため、Claude Codeから「Tegamiで送って」と頼めます。',
-  'd.139': 'つなぐにはコマンドを打つ必要があります。そのまま使えるAIはClaude Codeだけで、ほかのAIは自分で<code class="whitespace-nowrap">--command</code>に渡すプログラムを用意する必要があります。',
-  'd.140': '<span class="tag built">公開待ち</span>パソコンに出るQRコードをアプリで読むだけで、AIを友だちに追加できるようにしました。',
-  'd.141': '<span class="tag built">公開待ち</span>手元で動くモデル（Ollamaなど）や、ユーザー自身のAPIキー（Anthropic、OpenAI、Gemini、OpenRouter）でも返事を書けます。',
-  'd.142': '<span class="tag built">公開待ち</span>AIが持ち主の名前でメッセージを送れるようにしました。この版では、送る前に持ち主が確かめる形だけが使えます。持ち主に聞かずに送る形は、後の版で使えるようにします。',
+  'd.139': 'つなぐには、コマンドを入力する必要があります。追加の設定なしで動くAIはClaude Codeだけです。ほかのAI（OpenAI、Gemini、OpenRouter、Ollamaなど手元のモデル）は、設定のコマンドを1回実行して自分のAPIキーを入れるか、自分のプログラムを<code class="whitespace-nowrap">--command</code>に渡して使います。',
+  'd.140': '<span class="tag released">公開済み</span>パソコンに出るQRコードをアプリで読むだけで、AIを友だちに追加できるようにしました。',
+  'd.141': '<span class="tag released">公開済み</span>手元で動くモデル（Ollamaなど）や、ユーザー自身のAPIキー（Anthropic、OpenAI、Gemini、OpenRouter）でも返事を書けます。',
+  'd.142': '<span class="tag released">公開済み</span>AIが持ち主の名前でメッセージを送れるようにしました。この版では、送る前に持ち主が確かめる形だけが使えます。持ち主に聞かずに送る形は、後の版で使えるようにします。',
   'd.143': '<span class="tag built">公開待ち</span>全員が同意したグループや1対1のトークにAIを招く仕組みも作りました。この版では使えません。後の版で使えるようにします。',
   'd.144': '<span class="tag decided">決定済み</span>Tegamiの公式AIは置きません。',
   'd.145': '他人の文に指示を混ぜられて、AIが情報を漏らしませんか？',
@@ -289,10 +290,10 @@ const JA = {
   'd.147': 'AIが自動で返事をするのは、持ち主が許可した相手（<code>--trust</code>）だけです。友だちでない人のメッセージは、中身をAIに見せず、何人から新しいメッセージが来ているかだけをAIに伝えます。',
   'd.148': '友だちとのトークをAIに読ませる場合も、アプリ内のスイッチで許したときに限り、その1対1のトークの最新30通までを10分で消える封筒でAIに渡します。その際AIは下書きを作るだけで、送るのは本人です。',
   'd.149': 'そのスイッチは、持ち主の鍵を持つアプリ側に置いています。AIが動くパソコンにスイッチを置くと、AI自身が設定を書き換えてしまうおそれがあるためです。',
-  'd.150': 'AIの秘密鍵は無人稼働を続けるためにパソコン上に暗号化せず保存しています（SSH鍵と同じ扱い）。また、AIに読ませた内容はAIの提供会社にも渡ります。トークの相手が「自分の文を相手のAIに読ませない」と断る仕組みもまだありません。',
-  'd.151': '<span class="tag built">公開待ち</span>相手が「自分の文を相手のAIに読ませない」を選べ、1通ずつ「AIに読ませない」の印も付けられるようにしました。消えるメッセージもAIには渡しません。公式のアプリがその印を見てAIに渡さない仕組みなので、改造したアプリや手でのコピーまでは止められません。',
-  'd.152': '<span class="tag built">公開待ち</span>AIの秘密鍵とAPIキーを、OSの保管庫で暗号化して保存するようにしました（Windowsで確かめ済み。MacとLinuxは未確認）。',
-  'd.153': '<span class="tag built">公開待ち</span>AIが送る量に上限を置き、リンクを含む文は必ず持ち主が確認するようにしました。「すべてオフにする」操作で、自分のAIをスマートフォンから一度に止められます。',
+  'd.150': 'AIに読ませた内容は、AIの提供会社にも渡ります。パソコンにOSの保管庫が無い場合、AIの秘密鍵を暗号化せずに保存するのは、<code class="whitespace-nowrap">--insecure-store</code>を付けた時だけです。',
+  'd.151': '<span class="tag released">公開済み</span>相手が「自分の文を相手のAIに読ませない」を選べ、1通ずつ「AIに読ませない」の印も付けられるようにしました。消えるメッセージもAIには渡しません。公式のアプリがその印を見てAIに渡さない仕組みなので、改造したアプリや手でのコピーまでは止められません。',
+  'd.152': '<span class="tag released">公開済み</span>AIの秘密鍵とAPIキーを、OSの保管庫で暗号化して保存するようにしました（Windowsで確かめ済み。MacとLinuxは未確認）。',
+  'd.153': '<span class="tag released">公開済み</span>AIが送る量に上限を置き、リンクを含む文は必ず持ち主が確認するようにしました。「すべてオフにする」操作で、自分のAIをスマートフォンから一度に止められます。',
   'd.154': 'ほかのアプリとの違い',
   'd.155': 'LINE、WhatsApp、Signal、Telegramとは何が違いますか？',
   'd.156': '2026-11-16時点で各社の公式ドキュメントを確認した範囲での比較です。Tegamiの列は、いま本番環境で動いている仕様に基づいています。',
@@ -381,7 +382,7 @@ const JA = {
   'd.241': 'NIP-17のグループのみ',
   'd.242': '通話',
   'd.243': 'NIP-100のWebRTC。中継サーバーは利用者が設定する',
-  'd.244': '暗号化した封筒で合図を送るWebRTC。中継サーバーはまだ無い',
+  'd.244': '暗号化した封筒で合図を送るWebRTC。Cloudflareの中継サーバー（TURN）を使え、自分の中継サーバーも設定できる',
   'd.245': '端末',
   'd.246': 'iPhone、Android、Windows、Mac、Linuxのアプリ。ブラウザ版は見つからなかった',
   'd.247': 'いまはブラウザ版のみ。アプリは準備中',
@@ -389,9 +390,9 @@ const JA = {
   'd.249': 'Tor、Cashuのウォレット、Zap、翻訳を内蔵',
   'd.250': '招待券または人間かどうかの確認（Turnstile）による登録、運営による鍵の停止',
   'd.251': '0xchatはすでにNostrを使っている人のためのアプリであるのに対し、TegamiはNostrを知らずにLINEをやめたい人向けのアプリです。Nostrの世界に開いている点や細かく自分で設定できる点では、0xchatの方が進んでいます。',
-  'd.252': 'Tegamiには、外部の署名機能、鍵の書き出し、ストアのアプリ、中継サーバーがありません。',
+  'd.252': 'Tegamiには、外部の署名機能、鍵の書き出し、ストアのアプリがありません。',
   'd.253': 'なお、0xchatのデータベース全体が暗号化されているかどうかは、確かめきれていません（データベースのパスフレーズを入力する画面はあります）。',
-  'd.254': '<span class="tag built">公開待ち</span>中継サーバー（TURN）。Androidアプリは試作版（エミュレーターでトーク一覧まで動作）。',
+  'd.254': '<span class="tag built">公開待ち</span>Androidアプリは試作版です（エミュレーターでトーク一覧まで動作）。',
   'd.255': '<span class="tag decided">決定済み</span>iPhone、Android、Windows、Mac、Linux向けのアプリを提供します。',
   'd.256': '<span class="tag idea">検討中</span>外部の署名機能（<span class="whitespace-nowrap">NIP-46</span>）と、ほかのNostrアプリとのつながり方。',
   'd.257': 'White Noiseとは何が違いますか？',

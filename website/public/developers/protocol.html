@@ -51,7 +51,7 @@
   <main class="devdoc min-w-0 max-w-3xl">
 <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dp.protocol">Nostr, encryption and keys</h1>
 <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dp.protocol.t">Which parts of Nostr Tegami uses, how messages are sealed, what the relay can see, and how keys are kept.</p>
-<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">Labels on the "Next" items:</li><li data-i18n="dv.lg.built"><span class="tag built">Built, not released</span>the code is written but not in production yet</li><li data-i18n="dv.lg.decided"><span class="tag decided">Decided</span>the direction is set, the code isn't written yet</li><li data-i18n="dv.lg.idea"><span class="tag idea">Considering</span>not decided yet</li></ul>
+<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">Labels on the "Next" items:</li><li data-i18n="dv.lg.rel"><span class="tag released">Released</span>in production since November 18, 2026</li><li data-i18n="dv.lg.built"><span class="tag built">Built, not released</span>the code is written but not in production yet</li><li data-i18n="dv.lg.decided"><span class="tag decided">Decided</span>the direction is set, the code isn't written yet</li><li data-i18n="dv.lg.idea"><span class="tag idea">Considering</span>not decided yet</li></ul>
 <h2 data-i18n="d.10" id="nostr">Relationship to Nostr</h2>
 
 <details open><summary data-i18n="d.11">Is Tegami a Nostr client?</summary><div>
@@ -109,7 +109,7 @@
 </table></div>
 <p data-i18n="d.62">Where no NIP covers what we need, we use our own kinds, only inside encrypted envelopes: icon (10100), sticker list (10101), call signaling (25050), and AI draft requests and replies (25060, 25061).</p></div>
 <div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.63"><span class="tag built">Built, not released</span>We added more custom kinds: sync between your own devices (10102), group member changes (10103), consent to invite an AI into a chat (10104), and exchanges with AI (25062 to 25070).</li>
+<li data-i18n="d.63"><span class="tag released">Released</span>We added more custom kinds: sync between your own devices (10102), group member changes (10103), consent to invite an AI into a chat (10104), and exchanges with AI (25062 to 25070). In this version the app does not use 10104 or the AI-to-AI messages (25066, 25067) yet.</li>
 <li data-i18n="d.64"><span class="tag idea">Considering</span>If the proposals for key rotation and protecting keys with passkeys (NIP pull requests #2137 and #2519) are merged, we will consider adopting them.</li>
 </ul></div>
 </div></details>
@@ -141,10 +141,10 @@
 </div></details>
 
 <details><summary data-i18n="d.79">How are groups encrypted?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.80">As the <span class="whitespace-nowrap">NIP-17</span> spec describes, we build a separate envelope for each member. For example, one message to a group of you plus 5 others becomes 6 envelopes, including your own copy. The relay cannot tell who is in the same group. Group members cannot be changed afterward; changing them creates a different group.</p></div>
+<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.80">As the <span class="whitespace-nowrap">NIP-17</span> spec describes, we build a separate envelope for each member. For example, one message to a group of you plus 5 others becomes 6 envelopes, including your own copy. The relay cannot tell who is in the same group.</p></div>
 <div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.81">The number of envelopes grows with group size, so this does not suit large groups. We do not use MLS.</p></div>
 <div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.82"><span class="tag built">Built, not released</span>Groups now have a stable identifier, and adding, removing, and leaving members, name and icon changes, and admin changes are sent to everyone as changes carrying the signature (seal) of the person who made them. You can choose between groups with admins and neutral groups.</li>
+<li data-i18n="d.82"><span class="tag released">Released</span>Groups now have a stable identifier, and adding, removing, and leaving members, name and icon changes, and admin changes are sent to everyone as changes carrying the signature (seal) of the person who made them. You can choose between groups with admins and neutral groups.</li>
 <li data-i18n="d.83"><span class="tag idea">Considering</span>We would also like to build spaces where many people can gather, like Discord servers.</li>
 </ul></div>
 </div></details>
@@ -180,10 +180,10 @@
 </div></details>
 
 <details><summary data-i18n="d.100">Can I move to a new device?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.101">Yes, with a device transfer link. Your old device creates a throwaway key, encrypts your secret key, name, friends, groups, blocks, AI permissions, and sticker list with <span class="whitespace-nowrap">NIP-44</span> so that only that key can open it, and leaves it on the relay as an envelope that expires in 10 minutes. The throwaway secret key is included only after the <code>#</code> in the link, so it never reaches the server. Chat history is not transferred; the new device re-fetches the envelopes still on the relay from the last 30 days (up to 500 at a time).</p></div>
+<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.101">Yes, with a device transfer link. Your old device creates a throwaway key, encrypts your secret key, name, friends, groups, blocks, AI permissions, and sticker list with <span class="whitespace-nowrap">NIP-44</span> so that only that key can open it, and leaves it on the relay as an envelope that expires in 10 minutes. The throwaway secret key is included only after the <code>#</code> in the link, so it never reaches the server. Your chat history moves too (see below), and the new device also re-fetches the envelopes still on the relay from the last 30 days (up to 500 at a time).</p></div>
 <div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.102"><span class="tag built">Built, not released</span>The device transfer link can now move all your chats to the new device. Chats are compressed, encrypted, and passed through the same storage as photos (up to about 32MB before compression; the photos themselves are not moved).</li>
-<li data-i18n="d.103"><span class="tag built">Built, not released</span>Syncing your friend list, name, blocks, and AI permissions between your own devices is also implemented.</li>
+<li data-i18n="d.102"><span class="tag released">Released</span>The device transfer link also moves your chats to the new device. Chats are compressed, encrypted, and passed through the same storage as photos (up to about 32MB before compression, newest first, so very old messages may stay on the old device). Photos and files themselves are not moved; they open on the new device only while they are still in storage.</li>
+<li data-i18n="d.103"><span class="tag released">Released</span>Syncing your friend list, name, blocks, and AI permissions between your own devices is also implemented.</li>
 </ul></div>
 </div></details>
 

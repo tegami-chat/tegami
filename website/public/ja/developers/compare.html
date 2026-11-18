@@ -51,7 +51,7 @@
   <main class="devdoc min-w-0 max-w-3xl">
 <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dp.compare">ほかのアプリとの比較</h1>
 <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dp.compare.t">LINE、WhatsApp、Signal、Telegramとの比較と、ほかのNostrアプリとの違い。</p>
-<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">「これから」の札の意味：</li><li data-i18n="dv.lg.built"><span class="tag built">公開待ち</span>コードを書き終えて、本番に出す前のもの</li><li data-i18n="dv.lg.decided"><span class="tag decided">決定済み</span>方針を決めて、コードはまだのもの</li><li data-i18n="dv.lg.idea"><span class="tag idea">検討中</span>まだ決めていないもの</li></ul>
+<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">「これから」の札の意味：</li><li data-i18n="dv.lg.rel"><span class="tag released">公開済み</span>2026年11月18日から本番で動いているもの</li><li data-i18n="dv.lg.built"><span class="tag built">公開待ち</span>コードを書き終えて、本番に出す前のもの</li><li data-i18n="dv.lg.decided"><span class="tag decided">決定済み</span>方針を決めて、コードはまだのもの</li><li data-i18n="dv.lg.idea"><span class="tag idea">検討中</span>まだ決めていないもの</li></ul>
 <details open><summary data-i18n="d.155">LINE、WhatsApp、Signal、Telegramとは何が違いますか？</summary><div>
 <div class="ph now"><b data-i18n="dv.now">いま</b>
 <p data-i18n="d.156">2026-11-16時点で各社の公式ドキュメントを確認した範囲での比較です。Tegamiの列は、いま本番環境で動いている仕様に基づいています。</p>
@@ -87,15 +87,15 @@
 <tr><td data-i18n="d.233">鍵をなくした時</td><td data-i18n="d.234">控えを預ける仕組みは見つからなかった。nsecを自分で保管する前提</td><td data-i18n="d.235">復旧コードで戻せる</td></tr>
 <tr><td data-i18n="d.236">AI</td><td data-i18n="d.237">翻訳（端末内またはLibreTranslate）のみ。AIのボットやMCPはコードに見つからなかった</td><td data-i18n="d.238">自分のパソコンのAIが友だちとして並ぶ。MCP対応。AIに許す範囲をアプリで決める</td></tr>
 <tr><td data-i18n="d.239">グループ</td><td data-i18n="d.240">NIP-17のグループ、<span class="whitespace-nowrap">NIP-28</span>のチャンネル、NIP-29のリレーのグループ。MLSは姉妹アプリのXChatで対応</td><td data-i18n="d.241">NIP-17のグループのみ</td></tr>
-<tr><td data-i18n="d.242">通話</td><td data-i18n="d.243">NIP-100のWebRTC。中継サーバーは利用者が設定する</td><td data-i18n="d.244">暗号化した封筒で合図を送るWebRTC。中継サーバーはまだ無い</td></tr>
+<tr><td data-i18n="d.242">通話</td><td data-i18n="d.243">NIP-100のWebRTC。中継サーバーは利用者が設定する</td><td data-i18n="d.244">暗号化した封筒で合図を送るWebRTC。Cloudflareの中継サーバー（TURN）を使え、自分の中継サーバーも設定できる</td></tr>
 <tr><td data-i18n="d.245">端末</td><td data-i18n="d.246">iPhone、Android、Windows、Mac、Linuxのアプリ。ブラウザ版は見つからなかった</td><td data-i18n="d.247">いまはブラウザ版のみ。アプリは準備中</td></tr>
 <tr><td data-i18n="d.248">そのほか</td><td data-i18n="d.249">Tor、Cashuのウォレット、Zap、翻訳を内蔵</td><td data-i18n="d.250">招待券または人間かどうかの確認（Turnstile）による登録、運営による鍵の停止</td></tr>
 </table></div>
 <p data-i18n="d.251">0xchatはすでにNostrを使っている人のためのアプリであるのに対し、TegamiはNostrを知らずにLINEをやめたい人向けのアプリです。Nostrの世界に開いている点や細かく自分で設定できる点では、0xchatの方が進んでいます。</p></div>
-<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.252">Tegamiには、外部の署名機能、鍵の書き出し、ストアのアプリ、中継サーバーがありません。</p>
+<div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.252">Tegamiには、外部の署名機能、鍵の書き出し、ストアのアプリがありません。</p>
 <p data-i18n="d.253" class="small">なお、0xchatのデータベース全体が暗号化されているかどうかは、確かめきれていません（データベースのパスフレーズを入力する画面はあります）。</p></div>
 <div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.254"><span class="tag built">公開待ち</span>中継サーバー（TURN）。Androidアプリは試作版（エミュレーターでトーク一覧まで動作）。</li>
+<li data-i18n="d.254"><span class="tag built">公開待ち</span>Androidアプリは試作版です（エミュレーターでトーク一覧まで動作）。</li>
 <li data-i18n="d.255"><span class="tag decided">決定済み</span>iPhone、Android、Windows、Mac、Linux向けのアプリを提供します。</li>
 <li data-i18n="d.256"><span class="tag idea">検討中</span>外部の署名機能（<span class="whitespace-nowrap">NIP-46</span>）と、ほかのNostrアプリとのつながり方。</li>
 </ul></div>

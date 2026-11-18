@@ -51,7 +51,7 @@
   <main class="devdoc min-w-0 max-w-3xl">
 <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dp.relay">Relay, notifications and calls</h1>
 <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dp.relay.t">The rules of the Tegami relay, and how notifications, calls and photos work.</p>
-<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">Labels on the "Next" items:</li><li data-i18n="dv.lg.built"><span class="tag built">Built, not released</span>the code is written but not in production yet</li><li data-i18n="dv.lg.decided"><span class="tag decided">Decided</span>the direction is set, the code isn't written yet</li><li data-i18n="dv.lg.idea"><span class="tag idea">Considering</span>not decided yet</li></ul>
+<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">Labels on the "Next" items:</li><li data-i18n="dv.lg.rel"><span class="tag released">Released</span>in production since November 18, 2026</li><li data-i18n="dv.lg.built"><span class="tag built">Built, not released</span>the code is written but not in production yet</li><li data-i18n="dv.lg.decided"><span class="tag decided">Decided</span>the direction is set, the code isn't written yet</li><li data-i18n="dv.lg.idea"><span class="tag idea">Considering</span>not decided yet</li></ul>
 <h2 data-i18n="d.104" id="relay">Relay</h2>
 
 <details><summary data-i18n="d.105">What does the relay run on?</summary><div>
@@ -97,12 +97,12 @@
 </div></details>
 
 <details><summary data-i18n="d.125">How do calls work?</summary><div>
-<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.126">One-to-one voice and video calls over WebRTC. Signaling such as ringing and answering goes through the relay in encrypted envelopes that expire after 1 minute, and STUN (<code>stun.cloudflare.com</code>) is used to find a connection path.</p></div>
-<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.127">There is no TURN server in production, so calls may fail between two restrictive networks. Also, because devices connect directly, the other person can see your IP address. There are no group calls.</p></div>
+<div class="ph now"><b data-i18n="dv.now">Now</b><p data-i18n="d.126">One-to-one voice and video calls over WebRTC. Signaling such as ringing and answering goes through the relay in encrypted envelopes that expire after 1 minute, and STUN (<code>stun.cloudflare.com</code>) is used to find a connection path. When a direct path is not possible, or when you choose "Always relay calls," the call goes through a TURN relay server. Audio and video stay encrypted.</p></div>
+<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.127">Calls that connect directly show the other person your IP address, unless you choose "Always relay calls." There are no group calls.</p></div>
 <div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.128"><span class="tag built">Built, not released</span>Calls can now use Cloudflare's TURN server.</li>
-<li data-i18n="d.129"><span class="tag built">Built, not released</span>If you choose "Always relay calls," the other person can no longer see your IP address.</li>
-<li data-i18n="d.130"><span class="tag built">Built, not released</span>You can also set up your own TURN server.</li>
+<li data-i18n="d.128"><span class="tag released">Released</span>Calls can now use Cloudflare's TURN server.</li>
+<li data-i18n="d.129"><span class="tag released">Released</span>If you choose "Always relay calls," the other person can no longer see your IP address.</li>
+<li data-i18n="d.130"><span class="tag released">Released</span>You can also set up your own TURN server.</li>
 </ul></div>
 </div></details>
 

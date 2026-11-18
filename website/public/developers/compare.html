@@ -51,7 +51,7 @@
   <main class="devdoc min-w-0 max-w-3xl">
 <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dp.compare">Compared with other apps</h1>
 <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dp.compare.t">Tegami next to LINE, WhatsApp, Signal and Telegram, and next to other Nostr apps.</p>
-<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">Labels on the "Next" items:</li><li data-i18n="dv.lg.built"><span class="tag built">Built, not released</span>the code is written but not in production yet</li><li data-i18n="dv.lg.decided"><span class="tag decided">Decided</span>the direction is set, the code isn't written yet</li><li data-i18n="dv.lg.idea"><span class="tag idea">Considering</span>not decided yet</li></ul>
+<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">Labels on the "Next" items:</li><li data-i18n="dv.lg.rel"><span class="tag released">Released</span>in production since November 18, 2026</li><li data-i18n="dv.lg.built"><span class="tag built">Built, not released</span>the code is written but not in production yet</li><li data-i18n="dv.lg.decided"><span class="tag decided">Decided</span>the direction is set, the code isn't written yet</li><li data-i18n="dv.lg.idea"><span class="tag idea">Considering</span>not decided yet</li></ul>
 <details open><summary data-i18n="d.155">How is Tegami different from LINE, WhatsApp, Signal, and Telegram?</summary><div>
 <div class="ph now"><b data-i18n="dv.now">Now</b>
 <p data-i18n="d.156">This comparison is based on each company's official documentation as checked on 2026-11-16. The Tegami column reflects what is running in production now.</p>
@@ -87,15 +87,15 @@
 <tr><td data-i18n="d.233">If you lose your key</td><td data-i18n="d.234">No backup mechanism found. Assumes you store your nsec yourself</td><td data-i18n="d.235">Restore with a recovery code</td></tr>
 <tr><td data-i18n="d.236">AI</td><td data-i18n="d.237">Translation only (on-device or LibreTranslate). No AI bots or MCP found in the code</td><td data-i18n="d.238">Your own PC's AI appears as a friend. MCP support. The app controls what the AI is allowed to do</td></tr>
 <tr><td data-i18n="d.239">Groups</td><td data-i18n="d.240"><span class="whitespace-nowrap">NIP-17</span> groups, <span class="whitespace-nowrap">NIP-28</span> channels, <span class="whitespace-nowrap">NIP-29</span> relay-based groups. MLS supported in the sister app XChat</td><td data-i18n="d.241"><span class="whitespace-nowrap">NIP-17</span> groups only</td></tr>
-<tr><td data-i18n="d.242">Calls</td><td data-i18n="d.243">WebRTC via <span class="whitespace-nowrap">NIP-100</span>. Users configure their own TURN server</td><td data-i18n="d.244">WebRTC with signaling in encrypted envelopes. No TURN server yet</td></tr>
+<tr><td data-i18n="d.242">Calls</td><td data-i18n="d.243">WebRTC via <span class="whitespace-nowrap">NIP-100</span>. Users configure their own TURN server</td><td data-i18n="d.244">WebRTC with signaling in encrypted envelopes. Cloudflare's TURN server is available, and you can set your own</td></tr>
 <tr><td data-i18n="d.245">Platforms</td><td data-i18n="d.246">Apps for iPhone, Android, Windows, Mac, Linux. No browser version found</td><td data-i18n="d.247">Browser only for now. Apps in progress</td></tr>
 <tr><td data-i18n="d.248">Other</td><td data-i18n="d.249">Built-in Tor, Cashu wallet, zaps, translation</td><td data-i18n="d.250">Registration via invite codes and human checks; key suspension by the operator</td></tr>
 </table></div>
 <p data-i18n="d.251">0xchat is an app for people who already use Nostr, while Tegami is for people who want to leave LINE without knowing anything about Nostr. 0xchat is further ahead in openness to the Nostr world and in fine-grained settings.</p></div>
-<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.252">Tegami has no external signers, no key export, no app-store apps, and no TURN server.</p>
+<div class="ph not"><b data-i18n="dv.not">Not yet</b><p data-i18n="d.252">Tegami has no external signers, no key export, and no app-store apps.</p>
 <p data-i18n="d.253" class="small">We could not fully verify whether 0xchat's entire database is encrypted (there is a screen for entering a database passphrase).</p></div>
 <div class="ph next"><b data-i18n="dv.next">Next</b><ul>
-<li data-i18n="d.254"><span class="tag built">Built, not released</span>TURN server. Android app prototype (runs on an emulator as far as the chat list).</li>
+<li data-i18n="d.254"><span class="tag built">Built, not released</span>Android app prototype (runs on an emulator as far as the chat list).</li>
 <li data-i18n="d.255"><span class="tag decided">Decided</span>We will ship apps for iPhone, Android, Windows, and Mac.</li>
 <li data-i18n="d.256"><span class="tag idea">Considering</span>External signers (<span class="whitespace-nowrap">NIP-46</span>), and how to connect with other Nostr apps.</li>
 </ul></div>

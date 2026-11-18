@@ -51,7 +51,7 @@
   <main class="devdoc min-w-0 max-w-3xl">
 <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dp.protocol">Nostrと暗号と鍵</h1>
 <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dp.protocol.t">TegamiがNostrのどこを使うか、メッセージをどう封じるか、リレーに何が見えるか、鍵をどう守るか。</p>
-<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">「これから」の札の意味：</li><li data-i18n="dv.lg.built"><span class="tag built">公開待ち</span>コードを書き終えて、本番に出す前のもの</li><li data-i18n="dv.lg.decided"><span class="tag decided">決定済み</span>方針を決めて、コードはまだのもの</li><li data-i18n="dv.lg.idea"><span class="tag idea">検討中</span>まだ決めていないもの</li></ul>
+<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">「これから」の札の意味：</li><li data-i18n="dv.lg.rel"><span class="tag released">公開済み</span>2026年11月18日から本番で動いているもの</li><li data-i18n="dv.lg.built"><span class="tag built">公開待ち</span>コードを書き終えて、本番に出す前のもの</li><li data-i18n="dv.lg.decided"><span class="tag decided">決定済み</span>方針を決めて、コードはまだのもの</li><li data-i18n="dv.lg.idea"><span class="tag idea">検討中</span>まだ決めていないもの</li></ul>
 <h2 data-i18n="d.10" id="nostr">Nostrとの関係</h2>
 
 <details open><summary data-i18n="d.11">TegamiはNostrクライアントですか？</summary><div>
@@ -109,7 +109,7 @@
 </table></div>
 <p data-i18n="d.62">NIPに規定のない部分は、暗号化した封筒の中だけで使う独自のkindで実装しています。具体的には、アイコン（10100）、スタンプ一覧（10101）、通話のシグナリング（25050）、AIへの下書き依頼と応答（25060、25061）です。</p></div>
 <div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.63"><span class="tag built">公開待ち</span>自分の端末どうしの同期（10102）、グループメンバーの変更（10103）、AIをトークに招く同意（10104）、AIとのやり取り（25062〜25070）の独自kindを追加しました。</li>
+<li data-i18n="d.63"><span class="tag released">公開済み</span>自分の端末どうしの同期（10102）、グループメンバーの変更（10103）、AIをトークに招く同意（10104）、AIとのやり取り（25062〜25070）の独自kindを追加しました。この版のアプリは、10104と、AIどうしのやり取り（25066、25067）をまだ使いません。</li>
 <li data-i18n="d.64"><span class="tag idea">検討中</span>鍵のローテーションやパスキーで鍵を守る提案（NIPのプルリクエスト#2137と#2519）が採用されたら、仕様に合わせるかを検討します。</li>
 </ul></div>
 </div></details>
@@ -141,10 +141,10 @@
 </div></details>
 
 <details><summary data-i18n="d.79">グループはどのように暗号化していますか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.80">NIP-17の仕様どおり、メンバー1人ずつに別の封筒を作って送ります。たとえば自分のほかに5人いるグループへの1通は、自分用の写しを含めて封筒6通になります。リレーからは誰が同じグループに属しているかは見えません。なお、グループのメンバーは後から変更できず、変更すると別のグループ扱いになります。</p></div>
+<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.80">NIP-17の仕様どおり、メンバー1人ずつに別の封筒を作って送ります。たとえば自分のほかに5人いるグループへの1通は、自分用の写しを含めて封筒6通になります。リレーからは誰が同じグループに属しているかは見えません。</p></div>
 <div class="ph not"><b data-i18n="dv.not">まだ</b><p data-i18n="d.81">人数が増えるほど送る封筒が増えるため、大人数のグループには向きません。MLSは使っていません。</p></div>
 <div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.82"><span class="tag built">公開待ち</span>グループに変わらない識別子を持たせ、メンバーの追加、削除、退会、名前とアイコン、管理者の変更を、操作した人の署名（seal）付きで全員に伝えるようにしました。管理者がいるグループと、管理者がいない（誰でも変更できる）グループを選べます。</li>
+<li data-i18n="d.82"><span class="tag released">公開済み</span>グループに変わらない識別子を持たせ、メンバーの追加、削除、退会、名前とアイコン、管理者の変更を、操作した人の署名（seal）付きで全員に伝えるようにしました。管理者がいるグループと、管理者がいない（誰でも変更できる）グループを選べます。</li>
 <li data-i18n="d.83"><span class="tag idea">検討中</span>Discordのサーバーのように大勢が集まれる場所も作りたいと考えています。</li>
 </ul></div>
 </div></details>
@@ -180,10 +180,10 @@
 </div></details>
 
 <details><summary data-i18n="d.100">新しい端末への引き継ぎはできますか？</summary><div>
-<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.101">はい、引き継ぎ用のリンクで移行できます。元の端末で使い捨ての鍵を作り、秘密鍵、名前、友だち、グループ、ブロック、AIの権限、スタンプの一覧をNIP-44でその鍵だけが開ける形に暗号化したうえで、10分で消える封筒としてリレーに預けます。使い捨ての秘密鍵はリンクの<code>#</code>より後ろにのみ含めるため、サーバーには届きません。なお、会話履歴は引き継がれず、新しい端末はリレーに残っている直近30日分の封筒（1回に500通まで）から受け取り直す形になります。</p></div>
+<div class="ph now"><b data-i18n="dv.now">いま</b><p data-i18n="d.101">はい、引き継ぎ用のリンクで移行できます。元の端末で使い捨ての鍵を作り、秘密鍵、名前、友だち、グループ、ブロック、AIの権限、スタンプの一覧をNIP-44でその鍵だけが開ける形に暗号化したうえで、10分で消える封筒としてリレーに預けます。使い捨ての秘密鍵はリンクの<code>#</code>より後ろにのみ含めるため、サーバーには届きません。会話の履歴も移ります（下の項目を参照）。新しい端末は、リレーに残っている直近30日分の封筒（1回に500通まで）も受け取り直します。</p></div>
 <div class="ph next"><b data-i18n="dv.next">これから</b><ul>
-<li data-i18n="d.102"><span class="tag built">公開待ち</span>引き継ぎ用のリンクで、すべての会話を新しい端末へ移せるようにしました。会話は圧縮して暗号化し、写真と同じ置き場を通して渡します（圧縮前で約32MBまで、写真そのものは移しません）。</li>
-<li data-i18n="d.103"><span class="tag built">公開待ち</span>友だち一覧、名前、ブロック、AIの権限を、自分の端末どうしで同期する仕組みも実装済みです。</li>
+<li data-i18n="d.102"><span class="tag released">公開済み</span>引き継ぎ用のリンクで、会話も新しい端末へ移せます。会話は圧縮して暗号化し、写真と同じ置き場を通して渡します（圧縮前で約32MBまで。新しいものから先に移すため、とても古いものは元の端末に残ることがあります）。写真とファイルそのものは移さず、保管されている間だけ新しい端末で開けます。</li>
+<li data-i18n="d.103"><span class="tag released">公開済み</span>友だち一覧、名前、ブロック、AIの権限を、自分の端末どうしで同期する仕組みも実装済みです。</li>
 </ul></div>
 </div></details>
 

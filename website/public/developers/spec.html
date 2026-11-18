@@ -51,7 +51,7 @@
   <main class="devdoc min-w-0 max-w-3xl">
 <h1 class="text-4xl font-bold tracking-tight sm:text-5xl" data-i18n="dp.spec">Technical spec</h1>
 <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400" data-i18n="dp.spec.t">Crypto building blocks, relay limits, HTTP endpoints and Tegami's own event kinds.</p>
-<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">Labels on the "Next" items:</li><li data-i18n="dv.lg.built"><span class="tag built">Built, not released</span>the code is written but not in production yet</li><li data-i18n="dv.lg.decided"><span class="tag decided">Decided</span>the direction is set, the code isn't written yet</li><li data-i18n="dv.lg.idea"><span class="tag idea">Considering</span>not decided yet</li></ul>
+<ul class="legend mt-4 text-sm text-neutral-600 dark:text-neutral-400"><li class="font-semibold" data-i18n="dv.legend">Labels on the "Next" items:</li><li data-i18n="dv.lg.rel"><span class="tag released">Released</span>in production since November 18, 2026</li><li data-i18n="dv.lg.built"><span class="tag built">Built, not released</span>the code is written but not in production yet</li><li data-i18n="dv.lg.decided"><span class="tag decided">Decided</span>the direction is set, the code isn't written yet</li><li data-i18n="dv.lg.idea"><span class="tag idea">Considering</span>not decided yet</li></ul>
 <details open><summary data-i18n="d.312">Overall architecture</summary><div>
 <div class="wrap"><table>
 <tr><th data-i18n="d.313">Component</th><th data-i18n="d.314">Overview</th><th data-i18n="d.315">Code</th></tr>
@@ -95,9 +95,9 @@
 <tr><td data-i18n="d.368"><code>GET /stats</code></td><td data-i18n="d.369">Weekly usage statistics (public)</td></tr>
 <tr><td data-i18n="d.370"><code>POST /crash</code></td><td data-i18n="d.371">Error reports, only when the user allows (not stored)</td></tr>
 <tr><td data-i18n="d.372"><code>POST /admin</code></td><td data-i18n="d.373">Admin operations such as suspending keys, usable only with the operator's key</td></tr>
-<tr><td data-i18n="d.408"><code>POST /register</code> (AI)</td><td data-i18n="d.409"><span class="tag built">Built, not released</span>Register an AI key. The body carries the owner card (kind 25070); the relay remembers the key as an AI and counts its daily limits</td></tr>
-<tr><td data-i18n="d.410"><code>POST /turn</code></td><td data-i18n="d.411"><span class="tag built">Built, not released</span>Short-lived TURN credentials for calls, for registered keys only. Nothing about the request is kept</td></tr>
-<tr><td data-i18n="d.412"><code>DELETE /account</code></td><td data-i18n="d.413"><span class="tag built">Built, not released</span>Delete the account. The relay removes the envelopes, stamps, notification endpoints and registration it holds for the key</td></tr>
+<tr><td data-i18n="d.408"><code>POST /register</code> (AI)</td><td data-i18n="d.409"><span class="tag released">Released</span>Register an AI key. The body carries the owner card (kind 25070); the relay remembers the key as an AI and counts its daily limits</td></tr>
+<tr><td data-i18n="d.410"><code>POST /turn</code></td><td data-i18n="d.411"><span class="tag released">Released</span>Short-lived TURN credentials for calls, for registered keys only. Nothing about the request is kept</td></tr>
+<tr><td data-i18n="d.412"><code>DELETE /account</code></td><td data-i18n="d.413"><span class="tag released">Released</span>Delete the account. The relay removes the envelopes, stamps, notification endpoints and registration it holds for the key</td></tr>
 </table></div>
 </div></details>
 
@@ -109,15 +109,15 @@
 <tr><td data-i18n="d.380">10101</td><td data-i18n="d.381">Sticker list. Synced between your own devices</td></tr>
 <tr><td data-i18n="d.382">25050</td><td data-i18n="d.383">Call signaling (ring, answer, hang up, WebRTC connection info)</td></tr>
 <tr><td data-i18n="d.384">25060, 25061</td><td data-i18n="d.385">Draft requests to AI, and drafts from AI</td></tr>
-<tr><td data-i18n="d.390">10102</td><td data-i18n="d.391"><span class="tag built">Built, not released</span>Friends, groups, blocks and AI settings. Synced between your own devices</td></tr>
-<tr><td data-i18n="d.392">10103</td><td data-i18n="d.393"><span class="tag built">Built, not released</span>A group's whole state (members, name, picture, admins), sent with every change</td></tr>
+<tr><td data-i18n="d.390">10102</td><td data-i18n="d.391"><span class="tag released">Released</span>Friends, groups, blocks and AI settings. Synced between your own devices</td></tr>
+<tr><td data-i18n="d.392">10103</td><td data-i18n="d.393"><span class="tag released">Released</span>A group's whole state (members, name, picture, admins), sent with every change</td></tr>
 <tr><td data-i18n="d.394">10104</td><td data-i18n="d.395"><span class="tag built">Built, not released</span>An invitation of an AI into a chat, and each member's answer</td></tr>
-<tr><td data-i18n="d.396">25062, 25063</td><td data-i18n="d.397"><span class="tag built">Built, not released</span>An AI's request to send a message in its owner's name, and the owner app's answer</td></tr>
-<tr><td data-i18n="d.398">25064, 25065</td><td data-i18n="d.399"><span class="tag built">Built, not released</span>An AI's request for the friend list, and the list</td></tr>
+<tr><td data-i18n="d.396">25062, 25063</td><td data-i18n="d.397"><span class="tag released">Released</span>An AI's request to send a message in its owner's name, and the owner app's answer</td></tr>
+<tr><td data-i18n="d.398">25064, 25065</td><td data-i18n="d.399"><span class="tag released">Released</span>An AI's request for the friend list, and the list</td></tr>
 <tr><td data-i18n="d.400">25066, 25067</td><td data-i18n="d.401"><span class="tag built">Built, not released</span>An AI's request to talk to another person's AI, and the answer</td></tr>
-<tr><td data-i18n="d.402">25068</td><td data-i18n="d.403"><span class="tag built">Built, not released</span>The answer to an AI's one-time pairing code (adding an AI by QR code)</td></tr>
-<tr><td data-i18n="d.404">25069</td><td data-i18n="d.405"><span class="tag built">Built, not released</span>"Turn all off": tells an AI to stop</td></tr>
-<tr><td data-i18n="d.406">25070</td><td data-i18n="d.407"><span class="tag built">Built, not released</span>The owner's signature on an AI's key (owner card), handed to the AI by the app</td></tr>
+<tr><td data-i18n="d.402">25068</td><td data-i18n="d.403"><span class="tag released">Released</span>The answer to an AI's one-time pairing code (adding an AI by QR code)</td></tr>
+<tr><td data-i18n="d.404">25069</td><td data-i18n="d.405"><span class="tag released">Released</span>"Turn all off": tells an AI to stop</td></tr>
+<tr><td data-i18n="d.406">25070</td><td data-i18n="d.407"><span class="tag released">Released</span>The owner's signature on an AI's key (owner card), handed to the AI by the app</td></tr>
 </table></div>
 </div></details>
 

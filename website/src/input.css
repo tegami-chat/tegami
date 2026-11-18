@@ -68,3 +68,4 @@ svg.map .ln { fill:none; stroke:var(--sub); stroke-width:1.5; }
 svg.map .ok { fill:none; stroke:var(--accent); stroke-width:2.5; }
 svg.map .call { fill:none; stroke:var(--accent); stroke-width:2; stroke-dasharray:6 5; }
 svg.map .fi { fill:var(--ink); } svg.map .fa { fill:var(--accent); } svg.map .fs { fill:var(--sub); }
+.devdoc .tag.released { color:var(--accent); }
