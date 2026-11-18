@@ -12,7 +12,7 @@ computer: Tegami never sees it.
 
 - Node.js and npm. Run `npm install` in this folder (`agent`).
 - An AI to write the replies. For the default, Claude Code, install it and sign in with
-  your own account first. For any other AI, set it up in "AIs you can use".
+  your own account first. For any other AI, set it up in "AI providers".
 - The Tegami app.
 - Tested on Windows and Linux (Ubuntu in WSL). Not yet tried on macOS: the macOS notes
   below (launchd, the Keychain) have not been checked.
@@ -21,9 +21,9 @@ Every command below is run in this folder as `node agent.mjs <command>`. If you 
 the package with `npm link`, `tegami-agent <command>` works as well. Where the gateway's
 messages and notices say `tegami-agent <command>`, it means the same as `node agent.mjs <command>`.
 
-## AIs you can use
+## AI providers
 
-The gateway can connect three kinds of AI. Use whichever you like; Tegami does not push one
+An AI provider is where the AI that writes the replies runs. The gateway can connect three kinds. Use whichever you like; Tegami does not push one
 on you. They differ in where your messages go, what it costs, and whose terms apply.
 
 | | Claude Code with your own plan | A model on this computer | Your own API key |
