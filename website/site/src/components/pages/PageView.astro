@@ -14,7 +14,7 @@ import type { Lang, PageName } from '~/site';
 export interface Props { name: PageName; lang: Lang }
 const { name, lang } = Astro.props;
 // The document pages share the table of contents script; the status page also has its live script.
-const DOC = ['how', 'status', 'compare', 'faq'];
+const DOC = ['how', 'status', 'compare', 'faq', 'roadmap'];
 const scripts = name === 'index' ? ['/diff.js'] : [...(DOC.includes(name) ? ['/doc-toc.js'] : []), ...(name === 'status' ? ['/status.js'] : [])];
 ---
 <Base name={name} lang={lang} scripts={scripts}>

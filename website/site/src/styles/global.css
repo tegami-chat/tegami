@@ -33,7 +33,7 @@
   --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-pop: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 
-  /* Container widths: three. narrow = reading pages (the prop is width="prose"), content = the top page and the roadmap, wide = header and footer. */
+  /* Container widths: three. narrow = reading pages (the prop is width="prose"), content = the top page, wide = header and footer. */
   --container-narrow: 48rem;
   --container-content: 64rem;
   --container-wide: 72rem;
@@ -55,14 +55,10 @@
   --color-accent-strong: var(--c-accent-strong);
   --color-accent-soft: var(--c-accent-soft);
   --color-on-accent: var(--c-on-accent);
-  --color-accent-2: var(--c-accent-2);
-  --color-accent-2-soft: var(--c-accent-2-soft);
   --color-warn: var(--c-warn);
-  --color-warn-soft: var(--c-warn-soft);
   --color-quiet: var(--c-quiet);
   --color-quiet-soft: var(--c-quiet-soft);
   --color-danger: var(--c-danger);
-  --color-danger-soft: var(--c-danger-soft);
 }
 :root {
   --c-page: #fff;
@@ -77,14 +73,10 @@
   --c-accent-strong: var(--color-forest-700);
   --c-accent-soft: var(--color-forest-50);
   --c-on-accent: #fff;
-  --c-accent-2: var(--color-nostr-600);
-  --c-accent-2-soft: #f1e9fc;
   --c-warn: #b45309;
-  --c-warn-soft: #fffbeb;
   --c-quiet: #525252;
   --c-quiet-soft: #f5f5f5;
   --c-danger: #ef4444;
-  --c-danger-soft: #fef2f2;
 }
 /* The dark values. .tone-inverse (a section that is dark in both modes) uses the same set. */
 .dark, .tone-inverse {
@@ -100,14 +92,10 @@
   --c-accent-strong: rgb(127 215 168 / 0.9);
   --c-accent-soft: var(--color-forest-950);
   --c-on-accent: var(--color-forest-950);
-  --c-accent-2: var(--color-nostr-300);
-  --c-accent-2-soft: #2b2140;
   --c-warn: #fcd34d;
-  --c-warn-soft: rgb(69 26 3 / 0.6);
   --c-quiet: #d4d4d4;
   --c-quiet-soft: rgb(255 255 255 / 0.1);
   --c-danger: #f87171;
-  --c-danger-soft: rgb(69 10 10 / 0.4);
 }
 .tone-inverse { --c-page: var(--color-night); background-color: var(--c-page); color: var(--c-fg); }
 .dark .tone-inverse { --c-page: #0a0d0b; border-block: 1px solid var(--c-line); }
@@ -191,7 +179,7 @@ html.dark { background-color: #101311; color-scheme: dark; }
   /* Two columns from 64rem: the text column (the narrow width) and the table of contents. Both the header and the body use it, so they line up. */
   .doc-cols { display: grid; gap: 2rem; }
   @media (width >= 64rem) { .doc-cols { grid-template-columns: minmax(0, var(--container-narrow)) var(--container-toc); column-gap: 4rem; justify-content: center; } }
-  .doc-hero { border-bottom: 1px solid var(--c-line); background: var(--c-surface-muted); overflow: hidden; }
+  .doc-hero { border-bottom: 1px solid var(--c-line); overflow: hidden; }
   .doc-art { display: none; }
   @media (width >= 64rem) { .doc-art { display: flex; justify-content: center; } }
   .chip.doc-icon-mobile { margin-bottom: 1.5rem; }
@@ -219,8 +207,8 @@ html.dark { background-color: #101311; color-scheme: dark; }
   /* The picture in the header band: a big icon with three small ones circling it. */
   .orbit { position: relative; width: 14rem; height: 14rem; }
   .orbit::before { content: ''; position: absolute; inset: 1.25rem; border: 2px dashed var(--c-line-strong); border-radius: 9999px; }
-  .orbit-main { position: absolute; inset: 3.5rem; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-box); background: var(--c-accent); color: var(--c-on-accent); box-shadow: var(--shadow-pop); }
-  .orbit-sat { position: absolute; display: flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border-radius: 9999px; background: var(--c-surface); border: 1px solid var(--c-line-strong); color: var(--c-accent-2); box-shadow: var(--shadow-card); }
+  .orbit-main { position: absolute; inset: 3.5rem; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-box); background: var(--c-surface); border: 1px solid var(--c-line-strong); color: var(--c-accent); }
+  .orbit-sat { position: absolute; display: flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border-radius: 9999px; background: var(--c-surface); border: 1px solid var(--c-line-strong); color: var(--c-fg-muted); }
   .orbit-sat:nth-of-type(1) { top: 0.25rem; left: 2.5rem; }
   .orbit-sat:nth-of-type(2) { top: 5.5rem; right: -0.25rem; }
   .orbit-sat:nth-of-type(3) { bottom: 0.5rem; left: 1.5rem; }
@@ -229,11 +217,9 @@ html.dark { background-color: #101311; color-scheme: dark; }
   .chip { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: var(--radius-control); width: 2.5rem; height: 2.5rem; }
   .chip-lg { width: 3.5rem; height: 3.5rem; border-radius: var(--radius-box); }
   .chip-sm { width: 1.75rem; height: 1.75rem; }
-  .chip-accent { background: var(--c-accent-soft); color: var(--c-accent); }
+  .chip-quiet { background: var(--c-quiet-soft); color: var(--c-fg-muted); }
+  .chip-accent { background: var(--c-quiet-soft); color: var(--c-accent); }
   .chip-solid { background: var(--c-accent); color: var(--c-on-accent); }
-  .chip-violet { background: var(--c-accent-2-soft); color: var(--c-accent-2); }
-  .chip-warn { background: var(--c-warn-soft); color: var(--c-warn); }
-  .chip-quiet { background: var(--c-quiet-soft); color: var(--c-quiet); }
 
   /* A list whose items start with an icon. */
   .iconlist { display: grid; gap: 0.75rem; }
@@ -259,25 +245,22 @@ html.dark { background-color: #101311; color-scheme: dark; }
   .matrix thead th { border-top: 0; background: transparent; color: var(--c-fg-muted); font-weight: 600; padding-block: 1rem; }
   .matrix tbody th { background: var(--c-surface); font-weight: 600; }
   .matrix [data-sticky] td:first-child, .matrix [data-sticky] th:first-child, .matrix [data-sticky] thead th:first-child { background: var(--c-surface); }
-  .matrix [data-hl] { background: var(--c-accent-soft); box-shadow: inset 2px 0 0 var(--c-accent), inset -2px 0 0 var(--c-accent); }
-  .matrix thead th[data-hl] { background: var(--c-accent); color: var(--c-on-accent); border-top-left-radius: var(--radius-control); border-top-right-radius: var(--radius-control); box-shadow: none; }
-  .matrix tbody tr:last-child td[data-hl] { border-bottom: 2px solid var(--c-accent); }
+  .matrix [data-hl] { background: color-mix(in oklab, var(--c-accent) 6%, var(--c-surface)); }
+  .matrix thead th[data-hl] { color: var(--c-accent); box-shadow: inset 0 -2px 0 var(--c-accent); }
   .matrix td[data-hl] { color: var(--c-fg); font-weight: 600; }
   .cell { display: flex; gap: 0.5rem; align-items: flex-start; }
   .mark { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; border-radius: 9999px; margin-top: 0.1rem; }
   .mark-yes { background: var(--c-accent-soft); color: var(--c-accent); }
-  .mark-part { background: var(--c-warn-soft); color: var(--c-warn); }
-  .mark-no { background: var(--c-danger-soft); color: var(--c-danger); }
-  .mark-unknown { background: var(--c-quiet-soft); color: var(--c-quiet); }
-  .matrix td[data-hl] .mark-yes { background: var(--c-accent); color: var(--c-on-accent); }
+  .mark-part, .mark-unknown { background: var(--c-quiet-soft); color: var(--c-fg-muted); }
+  .mark-no { color: var(--c-danger); opacity: 0.75; }
 }
 
 /* ---- /status: the live card, the numbers and the charts. status.js sets data-state on the card. ---- */
 @layer components {
   .status-hero { display: grid; gap: 1.5rem; padding: 1.5rem; border: 1px solid var(--c-line); border-radius: var(--radius-box); background: var(--c-surface); box-shadow: var(--shadow-card); }
   @media (width >= 40rem) { .status-hero { grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 2rem; } }
-  .status-hero[data-state='up'] { border-color: color-mix(in oklab, var(--c-accent) 40%, transparent); background: var(--c-accent-soft); }
-  .status-hero[data-state='down'] { border-color: color-mix(in oklab, var(--c-danger) 50%, transparent); background: var(--c-danger-soft); }
+  [data-state='up'] #state { color: var(--c-accent); }
+  [data-state='down'] #state { color: var(--c-danger); }
   .status-dot { width: 1rem; height: 1rem; border-radius: 9999px; background: var(--c-line-strong); flex-shrink: 0; }
   [data-state='up'] .status-dot { background: var(--c-accent); animation: status-pulse 2s ease-out infinite; }
   [data-state='down'] .status-dot { background: var(--c-danger); }
@@ -288,9 +271,18 @@ html.dark { background-color: #101311; color-scheme: dark; }
   .stat-label { font-size: 0.75rem; line-height: 1rem; color: var(--c-fg-muted); font-weight: 600; }
   .stat-week { font-size: 0.75rem; line-height: 1rem; color: var(--c-fg-muted); font-variant-numeric: tabular-nums; }
   .chart-card { border: 1px solid var(--c-line); border-radius: var(--radius-box); background: var(--c-surface); box-shadow: var(--shadow-card); padding: 1.25rem; }
-  .art-bars { display: flex; align-items: flex-end; gap: 0.5rem; height: 9rem; padding: 1rem 1.25rem; border-radius: var(--radius-box); background: var(--c-surface); border: 1px solid var(--c-line-strong); box-shadow: var(--shadow-pop); }
-  .art-bars > span { width: 1.25rem; border-radius: 0.25rem 0.25rem 0 0; background: var(--c-accent); }
+  .art-bars { display: flex; align-items: flex-end; gap: 0.5rem; height: 9rem; padding: 1rem 1.25rem; border-radius: var(--radius-box); background: var(--c-surface); border: 1px solid var(--c-line-strong); }
+  .art-bars > span { width: 1.25rem; border-radius: 0.25rem 0.25rem 0 0; background: var(--c-line-strong); }
+  .art-bars > .h6 { background: var(--c-accent); }
   .art-bars > .h1 { height: 30%; } .art-bars > .h2 { height: 50%; } .art-bars > .h3 { height: 40%; } .art-bars > .h4 { height: 75%; } .art-bars > .h5 { height: 60%; } .art-bars > .h6 { height: 100%; }
+}
+
+/* ---- /roadmap: one row per item, a thin rule between rows. ---- */
+@layer components {
+  .rm-list > li { display: grid; gap: 0.5rem; padding-block: 1.25rem; border-top: 1px solid var(--c-line); }
+  .rm-list > li:first-child { border-top: 0; padding-top: 0.25rem; }
+  .rm-list > li:last-child { padding-bottom: 0; }
+  .rm-count { font-size: 0.875rem; line-height: 1.25rem; font-weight: 400; color: var(--c-fg-muted); font-variant-numeric: tabular-nums; }
 }
 
 /* ---- /faq: an accordion row. ---- */

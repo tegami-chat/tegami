@@ -1,17 +1,16 @@
 ---
 // A box. plain = a coloured surface, outlined = surface with a border and a faint shadow, muted = paper colour,
-// accent = the highlighted tile, soft = the pale green box, violet = the pale purple box, note = the pale amber box for something to be careful about.
+// accent = the highlighted tile, soft = a grey box, note = a grey box with a thin amber line on the left, for the one thing to be careful about on a page.
 // tile = the small one-line version (a feature in a grid); every other card has the same padding.
-export interface Props { variant?: 'plain' | 'outlined' | 'muted' | 'accent' | 'soft' | 'violet' | 'note'; tile?: boolean; as?: string; class?: string; [key: string]: unknown }
+export interface Props { variant?: 'plain' | 'outlined' | 'muted' | 'accent' | 'soft' | 'note'; tile?: boolean; as?: string; class?: string; [key: string]: unknown }
 const { variant = 'plain', tile = false, as: Tag = 'div', class: cls, ...rest } = Astro.props;
 const VARIANT = {
   plain: 'bg-surface',
   outlined: 'border border-line bg-surface shadow-card',
   muted: 'bg-surface-muted',
   accent: 'bg-accent text-on-accent dark:bg-accent-soft dark:text-accent',
-  soft: 'border border-accent/25 bg-accent-soft',
-  violet: 'border border-accent-2/25 bg-accent-2-soft',
-  note: 'border border-warn/30 bg-warn-soft',
+  soft: 'border border-line bg-surface-muted',
+  note: 'border border-line border-l-2 border-l-warn bg-surface-muted',
 };
 ---
 <Tag class:list={['rounded-box', tile ? 'px-4 py-3 font-medium' : 'p-5', VARIANT[variant], cls]} {...rest}><slot /></Tag>

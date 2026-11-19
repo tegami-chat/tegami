@@ -8,18 +8,18 @@ import { t, type Lang } from '~/site';
 const { lang = 'en' } = Astro.props as { lang?: Lang };
 const x = (k: string) => t(k, lang);
 // The categories group the questions that were already there. The names are in dict.json (faq.cat.*).
-const cats: { id: string; icon: IconName; tone: 'accent' | 'violet' | 'solid' | 'quiet'; items: string[] }[] = [
-  { id: 'start', icon: 'sparkles', tone: 'accent', items: ['free', 'phone', 'devices', 'friends', 'ai'] },
-  { id: 'devices', icon: 'smartphone', tone: 'violet', items: ['lost', 'multi'] },
-  { id: 'safety', icon: 'shield', tone: 'solid', items: ['read', 'collect', 'spam'] },
-  { id: 'project', icon: 'code', tone: 'quiet', items: ['shutdown', 'dev'] },
+const cats: { id: string; icon: IconName; items: string[] }[] = [
+  { id: 'start', icon: 'sparkles', items: ['free', 'phone', 'devices', 'friends', 'ai'] },
+  { id: 'devices', icon: 'smartphone', items: ['lost', 'multi'] },
+  { id: 'safety', icon: 'shield', items: ['read', 'collect', 'spam'] },
+  { id: 'project', icon: 'code', items: ['shutdown', 'dev'] },
 ];
 const toc = cats.map((c) => ({ id: c.id, label: x('faq.cat.' + c.id) }));
 ---
 <DocPage lang={lang} title={x('faq.h')} toc={toc} icon="faq">
   <Orbit slot="art" main="faq" around={['question', 'shield', 'smartphone']} />
   {cats.map((c) => (
-    <DocSection id={c.id} title={x('faq.cat.' + c.id)} icon={c.icon} tone={c.tone}>
+    <DocSection id={c.id} title={x('faq.cat.' + c.id)} icon={c.icon}>
       <div class="acc">
         {c.items.map((k) => (
           <Disclosure>

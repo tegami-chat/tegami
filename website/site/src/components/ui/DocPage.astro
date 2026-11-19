@@ -14,9 +14,9 @@ const { lang, title, lead, toc, icon, numbered = false } = Astro.props;
 const label = t('doc.toc', lang);
 ---
 <main>
-  <Section tone="muted" rhythm="page" width="wide" class="doc-cols items-center" bordered>
+  <Section rhythm="page" width="wide" class="doc-cols items-center" bordered>
     <div>
-      <IconChip name={icon} size="lg" tone="solid" class="doc-icon-mobile" />
+      <IconChip name={icon} size="lg" tone="quiet" class="doc-icon-mobile" />
       <SectionHeading level={1} title={title} lead={lead} flush />
     </div>
     <div class="doc-art"><slot name="art" /></div>

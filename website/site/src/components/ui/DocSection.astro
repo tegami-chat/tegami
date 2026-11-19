@@ -7,10 +7,10 @@ import Heading from '~/components/ui/Heading.astro';
 import IconChip from '~/components/ui/IconChip.astro';
 import type { IconName } from '~/components/ui/Icon.astro';
 export interface Props {
-  id: string; title?: string; icon?: IconName; tone?: 'accent' | 'solid' | 'violet' | 'warn' | 'quiet';
-  card?: 'plain' | 'outlined' | 'muted' | 'accent' | 'soft' | 'violet' | 'note'; compact?: boolean; class?: string;
+  id: string; title?: string; icon?: IconName; tone?: 'quiet' | 'accent' | 'solid';
+  card?: 'plain' | 'outlined' | 'muted' | 'accent' | 'soft' | 'note'; compact?: boolean; class?: string;
 }
-const { id, title, icon, tone = 'accent', card, compact = false, class: cls } = Astro.props;
+const { id, title, icon, tone = 'quiet', card, compact = false, class: cls } = Astro.props;
 const Root = card ? Card : 'section';
 const rootProps = card ? { as: 'section', variant: card } : {};
 ---

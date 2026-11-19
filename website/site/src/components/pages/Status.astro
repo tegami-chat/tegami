@@ -18,7 +18,7 @@ const stats = [['envelopes', 'st.k.envelopes'], ['files', 'st.k.files'], ['login
   </div>
 
   <div>
-    <div id="sample-bar" hidden class="mb-6 rounded-control bg-warn-soft px-4 py-2 text-center text-small font-semibold text-warn"><Fragment set:html={x('st.sample')} /></div>
+    <div id="sample-bar" hidden class="mb-6 rounded-control border border-line border-l-2 border-l-warn bg-surface-muted px-4 py-2 text-center text-small font-semibold text-fg-muted"><Fragment set:html={x('st.sample')} /></div>
 
     <!-- The live card. status.js sets data-state (checking, up, down) and fills the text. -->
     <div id="banner" class="status-hero" data-state="checking">
@@ -72,19 +72,19 @@ const stats = [['envelopes', 'st.k.envelopes'], ['files', 'st.k.files'], ['login
   </DocSection>
 
   <!-- How the numbers are made: three steps joined by a line. -->
-  <DocSection id="how" title={x('st.how.h')} icon="database" tone="violet">
+  <DocSection id="how" title={x('st.how.h')} icon="database">
     <ol class="steps">
-      <li><IconChip name="database" tone="violet" /><p class="pt-2 text-fg-muted"><Fragment set:html={x('st.how.t0')} /></p></li>
-      <li><IconChip name="eye-off" tone="violet" /><p class="pt-2 text-fg-muted"><Fragment set:html={x('st.how.t1')} /></p></li>
-      <li><IconChip name="shield" tone="violet" /><p class="pt-2 text-fg-muted"><Fragment set:html={x('st.how.t2')} /></p></li>
+      <li><IconChip name="database" /><p class="pt-2 text-fg-muted"><Fragment set:html={x('st.how.t0')} /></p></li>
+      <li><IconChip name="eye-off" /><p class="pt-2 text-fg-muted"><Fragment set:html={x('st.how.t1')} /></p></li>
+      <li><IconChip name="shield" /><p class="pt-2 text-fg-muted"><Fragment set:html={x('st.how.t2')} /></p></li>
     </ol>
   </DocSection>
 
-  <DocSection id="links" title={x('st.links.h')} icon="link" tone="quiet">
+  <DocSection id="links" title={x('st.links.h')} icon="link">
     <div class="grid gap-3 sm:grid-cols-3">
-      <a href="https://relay.tegami.chat/stats" target="_blank" rel="noopener" class="flex flex-col gap-3 rounded-box border border-line bg-surface p-4 font-semibold shadow-card hover:bg-hover"><IconChip name="database" tone="accent" size="sm" /><span><Fragment set:html={x('st.links.json')} /><ExtMark lang={lang} /></span></a>
-      <a href="https://github.com/tegami-chat/tegami/blob/main/relay/src/stats.ts" target="_blank" rel="noopener" class="flex flex-col gap-3 rounded-box border border-line bg-surface p-4 font-semibold shadow-card hover:bg-hover"><IconChip name="code" tone="accent" size="sm" /><span><Fragment set:html={x('st.links.code')} /><ExtMark lang={lang} /></span></a>
-      <a href={link('/how', lang)} class="flex flex-col gap-3 rounded-box border border-line bg-surface p-4 font-semibold shadow-card hover:bg-hover"><IconChip name="shield" tone="accent" size="sm" /><span><Fragment set:html={x('st.links.how')} /></span></a>
+      <a href="https://relay.tegami.chat/stats" target="_blank" rel="noopener" class="flex flex-col gap-3 rounded-box border border-line bg-surface p-4 font-semibold shadow-card hover:bg-hover"><IconChip name="database" size="sm" /><span><Fragment set:html={x('st.links.json')} /><ExtMark lang={lang} /></span></a>
+      <a href="https://github.com/tegami-chat/tegami/blob/main/relay/src/stats.ts" target="_blank" rel="noopener" class="flex flex-col gap-3 rounded-box border border-line bg-surface p-4 font-semibold shadow-card hover:bg-hover"><IconChip name="code" size="sm" /><span><Fragment set:html={x('st.links.code')} /><ExtMark lang={lang} /></span></a>
+      <a href={link('/how', lang)} class="flex flex-col gap-3 rounded-box border border-line bg-surface p-4 font-semibold shadow-card hover:bg-hover"><IconChip name="shield" size="sm" /><span><Fragment set:html={x('st.links.how')} /></span></a>
     </div>
     <!-- The technical details: quiet, small. -->
     <Card variant="muted" class="mt-6 text-caption text-fg-muted">

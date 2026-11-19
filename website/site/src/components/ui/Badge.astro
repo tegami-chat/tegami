@@ -1,5 +1,5 @@
 ---
-// A status label. The words come from dict.json so they match on every page; label overrides them for a few special cases.
+// A status label. Only the finished states (available, decided) use the accent; the others are grey and differ by their sign. The words come from dict.json so they match on every page; label overrides them for a few special cases.
 import { t, type Lang } from '~/site';
 export type Status = 'available' | 'coming' | 'dev' | 'planned' | 'decided' | 'discussing';
 export interface Props { status: Status; lang: Lang; label?: string; icon?: boolean; class?: string }
@@ -8,10 +8,10 @@ const WORDS: Record<Status, string> = { available: 'now', coming: 'st.built', de
 const LOOK: Record<Status, string> = {
   available: 'bg-accent-soft text-accent',
   decided: 'bg-accent-soft text-accent',
-  coming: 'bg-accent-2-soft text-accent-2',
-  discussing: 'bg-accent-2-soft text-accent-2',
-  dev: 'bg-warn-soft text-warn',
-  planned: 'bg-quiet-soft text-quiet',
+  coming: 'bg-quiet-soft text-fg-muted',
+  discussing: 'bg-quiet-soft text-fg-muted',
+  dev: 'bg-quiet-soft text-fg-muted',
+  planned: 'bg-quiet-soft text-fg-muted',
 };
 const MARK: Record<Status, string> = { available: '✓', decided: '✓', coming: '◆', discussing: '◆', dev: '●', planned: '○' };
 ---

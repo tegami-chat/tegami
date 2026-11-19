@@ -1,36 +1,43 @@
 ---
-import Section from '~/components/ui/Section.astro';
-import SectionHeading from '~/components/ui/SectionHeading.astro';
+import DocPage from '~/components/ui/DocPage.astro';
+import DocSection from '~/components/ui/DocSection.astro';
+import Orbit from '~/components/ui/Orbit.astro';
 import Heading from '~/components/ui/Heading.astro';
-import Card from '~/components/ui/Card.astro';
+import Icon, { type IconName } from '~/components/ui/Icon.astro';
 import Badge, { type Status } from '~/components/ui/Badge.astro';
 import Button from '~/components/ui/Button.astro';
 import { t, type Lang } from '~/site';
 const { lang = 'en' } = Astro.props as { lang?: Lang };
 const x = (k: string) => t(k, lang);
-const items: [string, Status][] = [
-  ['basics', 'available'], ['calls', 'available'], ['e2e', 'available'], ['move', 'available'], ['accounts', 'available'],
-  ['ai', 'available'], ['safety', 'available'], ['signup', 'available'], ['qr', 'available'],
-  ['aigroup', 'coming'],
-  ['address', 'dev'], ['mobile', 'dev'],
-  ['vanish', 'planned'], ['desktop', 'planned'], ['api', 'planned'], ['screens', 'planned'], ['relay', 'planned'], ['nostr', 'planned'], ['export', 'planned'],
+// The groups are the four states; the words of each group are the status words that were already in dict.json.
+const groups: { id: string; status: Status; word: string; icon: IconName; items: string[] }[] = [
+  { id: 'done', status: 'available', word: 'rm.done', icon: 'check', items: ['basics', 'calls', 'e2e', 'move', 'accounts', 'ai', 'safety', 'signup', 'qr'] },
+  { id: 'built', status: 'coming', word: 'rm.built', icon: 'clock', items: ['aigroup'] },
+  { id: 'now', status: 'dev', word: 'rm.now', icon: 'code', items: ['address', 'mobile'] },
+  { id: 'plan', status: 'planned', word: 'rm.plan', icon: 'list', items: ['vanish', 'desktop', 'api', 'screens', 'relay', 'nostr', 'export'] },
 ];
+const toc = groups.map((g) => ({ id: g.id, label: x(g.word) }));
 ---
-<main>
-  <Section rhythm="page" class="grid gap-12 md:grid-cols-12">
-    <div class="md:sticky md:top-24 md:col-span-5 md:self-start">
-      <SectionHeading level={1} title={x('rm.h')} lead={x('rm.t')} flush />
-      <p class="mt-4 text-small text-fg-muted"><Fragment set:html={x('rm.note')} /></p>
-      <Button href="https://github.com/tegami-chat/tegami/issues" variant="secondary" size="sm" external lang={lang} class="mt-6"><Fragment set:html={x('rm.issue')} /></Button>
-    </div>
-    <div class="space-y-4 md:col-span-7">
-      {items.map(([k, status]) => (
-        <Card as="article" variant="outlined">
-          <Badge status={status} lang={lang} icon />
-          <Heading level={3} class="mt-3"><Fragment set:html={x('rm.' + k + '.h')} /></Heading>
-          <p class="mt-2 text-fg-muted"><Fragment set:html={x('rm.' + k + '.t')} /></p>
-        </Card>
-      ))}
-    </div>
-  </Section>
-</main>
+<DocPage lang={lang} title={x('rm.h')} lead={x('rm.t')} toc={toc} icon="list">
+  <Orbit slot="art" main="list" around={['check', 'clock', 'code']} />
+
+  <p class="flex items-start gap-3 text-fg-muted"><Icon name="info" class="mt-1 h-5 w-5" /><span><Fragment set:html={x('rm.note')} /></span></p>
+
+  {groups.map((g) => (
+    <DocSection id={g.id} title={`${x(g.word)} <span class="rm-count">${g.items.length}</span>`} icon={g.icon}>
+      <ul class="rm-list">
+        {g.items.map((k) => (
+          <li>
+            <div><Badge status={g.status} lang={lang} icon /></div>
+            <Heading level={3}><Fragment set:html={x('rm.' + k + '.h')} /></Heading>
+            <p class="text-fg-muted"><Fragment set:html={x('rm.' + k + '.t')} /></p>
+          </li>
+        ))}
+      </ul>
+    </DocSection>
+  ))}
+
+  <div>
+    <Button href="https://github.com/tegami-chat/tegami/issues" variant="secondary" size="sm" external lang={lang}><Fragment set:html={x('rm.issue')} /></Button>
+  </div>
+</DocPage>

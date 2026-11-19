@@ -22,7 +22,7 @@ const toc = ids.map((id) => ({ id, label: x('sec.' + id + '.h') }));
       <div class="flex items-center gap-3" aria-hidden="true">
         <IconChip name="smartphone" size="lg" tone="quiet" />
         <span class="seal-line"></span>
-        <IconChip name="lock" size="lg" tone="solid" />
+        <IconChip name="lock" size="lg" tone="accent" />
         <span class="seal-line"></span>
         <IconChip name="smartphone" size="lg" tone="quiet" />
       </div>
@@ -33,13 +33,13 @@ const toc = ids.map((id) => ({ id, label: x('sec.' + id + '.h') }));
   <!-- 2. What the server sees and does not see: two columns. -->
   <DocSection id="server" title={x('sec.server.h')} icon="server">
     <div class="grid gap-4 sm:grid-cols-2">
-      <Card variant="soft">
-        <h3 class="flex items-center gap-2 text-subsection text-accent"><Icon name="eye-off" class="h-5 w-5" /><Fragment set:html={x('sec.server.1')} /></h3>
+      <Card variant="outlined">
+        <h3 class="flex items-center gap-2 text-subsection"><Icon name="eye-off" class="h-5 w-5 text-accent" /><Fragment set:html={x('sec.server.1')} /></h3>
         <ul class="iconlist mt-4">
           {['2.1', '2.2', '2.3', '2.4'].map((n) => <li><Icon name="check" class="h-4 w-4 text-accent" stroke={3} /><span><Fragment set:html={x('sec.server.' + n)} /></span></li>)}
         </ul>
       </Card>
-      <Card variant="outlined">
+      <Card variant="muted">
         <h3 class="flex items-center gap-2 text-subsection text-fg-muted"><Icon name="eye" class="h-5 w-5" /><Fragment set:html={x('sec.server.3')} /></h3>
         <ul class="iconlist mt-4">
           {['4.1', '4.2'].map((n) => <li><Icon name="eye" class="h-4 w-4 text-fg-muted" /><span><Fragment set:html={x('sec.server.' + n)} /></span></li>)}
@@ -50,19 +50,19 @@ const toc = ids.map((id) => ({ id, label: x('sec.' + id + '.h') }));
   </DocSection>
 
   <!-- 3. The account is a key: two small tiles. -->
-  <DocSection id="account" title={x('sec.account.h')} icon="key" tone="violet">
+  <DocSection id="account" title={x('sec.account.h')} icon="key">
     <div class="grid gap-4 sm:grid-cols-2">
-      <Card variant="muted"><IconChip name="key" tone="violet" /><p class="mt-3 text-fg-muted"><Fragment set:html={x('sec.account.1')} /></p></Card>
-      <Card variant="muted"><IconChip name="fingerprint" tone="violet" /><p class="mt-3 text-fg-muted"><Fragment set:html={x('sec.account.2')} /></p></Card>
+      <Card variant="muted"><IconChip name="key" /><p class="mt-3 text-fg-muted"><Fragment set:html={x('sec.account.1')} /></p></Card>
+      <Card variant="muted"><IconChip name="fingerprint" /><p class="mt-3 text-fg-muted"><Fragment set:html={x('sec.account.2')} /></p></Card>
     </div>
   </DocSection>
 
   <!-- 4. Losing a device: a small flow of two ways back. -->
-  <DocSection id="lost" title={x('sec.lost.h')} icon="smartphone" tone="warn">
+  <DocSection id="lost" title={x('sec.lost.h')} icon="smartphone">
     <Card variant="outlined">
       <ol class="steps">
-        <li><IconChip name="key" tone="warn" /><p class="pt-2 text-fg-muted"><Fragment set:html={x('sec.lost.1')} /></p></li>
-        <li><IconChip name="qr" tone="accent" /><p class="pt-2 text-fg-muted"><Fragment set:html={x('sec.lost.2')} /></p></li>
+        <li><IconChip name="key" /><p class="pt-2 text-fg-muted"><Fragment set:html={x('sec.lost.1')} /></p></li>
+        <li><IconChip name="qr" /><p class="pt-2 text-fg-muted"><Fragment set:html={x('sec.lost.2')} /></p></li>
       </ol>
     </Card>
   </DocSection>
@@ -76,17 +76,17 @@ const toc = ids.map((id) => ({ id, label: x('sec.' + id + '.h') }));
       <p class="text-fg-muted"><Fragment set:html={x('sec.calls.1')} /></p>
     </DocSection>
   </div>
-  <DocSection id="strangers" title={x('sec.strangers.h')} icon="users" tone="violet" card="violet" class="p-6">
+  <DocSection id="strangers" title={x('sec.strangers.h')} icon="users" card="soft" class="p-6">
     <p class="text-fg-muted"><Fragment set:html={x('sec.strangers.1')} /></p>
   </DocSection>
 
   <!-- 8. AI: the main sentence, then two promises. -->
-  <DocSection id="ai" title={x('sec.ai.h')} icon="bot" tone="violet">
+  <DocSection id="ai" title={x('sec.ai.h')} icon="bot">
     <p class="text-lead text-fg-muted"><Fragment set:html={x('sec.ai.1')} /></p>
     <Card variant="muted" class="mt-4">
       <ul class="iconlist text-fg-muted">
-        <li><IconChip name="user-lock" size="sm" tone="violet" /><span class="pt-0.5"><Fragment set:html={x('sec.ai.2')} /></span></li>
-        <li><IconChip name="bot" size="sm" tone="violet" /><span class="pt-0.5"><Fragment set:html={x('sec.ai.3')} /></span></li>
+        <li><IconChip name="user-lock" size="sm" /><span class="pt-0.5"><Fragment set:html={x('sec.ai.2')} /></span></li>
+        <li><IconChip name="bot" size="sm" /><span class="pt-0.5"><Fragment set:html={x('sec.ai.3')} /></span></li>
       </ul>
     </Card>
   </DocSection>
@@ -96,15 +96,15 @@ const toc = ids.map((id) => ({ id, label: x('sec.' + id + '.h') }));
     <Prose><p><Fragment set:html={x('sec.count.1')} /></p></Prose>
   </DocSection>
 
-  <!-- 10. What is still missing: an honest note, in amber, not red. -->
-  <DocSection id="notyet" title={x('sec.notyet.h')} icon="warning" tone="warn" card="note" class="p-6">
+  <!-- 10. What is still missing: an honest note, grey with a thin amber line. -->
+  <DocSection id="notyet" title={x('sec.notyet.h')} icon="warning" card="note" class="p-6">
     <ul class="iconlist">
-      {['1.1', '1.2', '1.3', '1.4'].map((n) => <li><Icon name="info" class="h-5 w-5 text-warn" /><span class="text-fg"><Fragment set:html={x('sec.notyet.' + n)} /></span></li>)}
+      {['1.1', '1.2', '1.3', '1.4'].map((n) => <li><Icon name="info" class="h-5 w-5 text-fg-muted" /><span class="text-fg-muted"><Fragment set:html={x('sec.notyet.' + n)} /></span></li>)}
     </ul>
   </DocSection>
 
   <!-- 11. Check it yourself: the closing card. -->
-  <DocSection id="check" title={x('sec.check.h')} icon="code" tone="solid" card="soft" class="p-6 sm:p-8">
+  <DocSection id="check" title={x('sec.check.h')} icon="code" card="soft" class="p-6 sm:p-8">
     <Prose><p class="text-lead"><Fragment set:html={x('sec.check.1')} /></p></Prose>
     <div class="mt-6 flex flex-wrap gap-3">
       <Button href="https://github.com/tegami-chat/tegami" size="sm" external lang={lang}><Fragment set:html={x('ft.src')} /></Button>
