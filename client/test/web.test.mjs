@@ -162,6 +162,69 @@ async function newUser(browser, { prf = true, wrap = {}, authenticator = true } 
 
 const text = (page) => page.evaluate(() => document.body.innerText);
 const storage = (page) => page.evaluate(() => Object.fromEntries(Object.entries(localStorage)));
+/** The names kept in the encrypted store (IndexedDB "tegami-store"), listed without opening anything. */
+const sealedNames = (page) =>
+  page.evaluate(
+    () =>
+      new Promise((ok, fail) => {
+        const r = indexedDB.open('tegami-store', 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('records');
+        r.onerror = () => fail(r.error);
+        r.onsuccess = () => {
+          const g = r.result.transaction('records').objectStore('records').getAllKeys();
+          g.onsuccess = () => {
+            r.result.close();
+            ok(g.result);
+          };
+          g.onerror = () => fail(g.error);
+        };
+      }),
+  );
+/**
+ * Where a piece of text shows up as it is on this device: in localStorage, or in the raw bytes
+ * of IndexedDB "tegami-store" and "tegami-files" (the encrypted records and files).
+ */
+const leaks = (page, needle) =>
+  page.evaluate(async (needle) => {
+    const bytes = new TextEncoder().encode(needle);
+    const has = (hay) => {
+      outer: for (let i = 0; i + bytes.length <= hay.length; i++) {
+        for (let j = 0; j < bytes.length; j++) if (hay[i + j] !== bytes[j]) continue outer;
+        return true;
+      }
+      return false;
+    };
+    const found = [];
+    for (const [k, v] of Object.entries(localStorage)) if (v.includes(needle)) found.push(`localStorage ${k}`);
+    for (const [db, store] of [['tegami-store', 'records'], ['tegami-files', 'files']]) {
+      const d = await new Promise((ok, fail) => {
+        const r = indexedDB.open(db, 1);
+        r.onupgradeneeded = () => r.result.createObjectStore(store);
+        r.onsuccess = () => ok(r.result);
+        r.onerror = () => fail(r.error);
+      });
+      const rows = await new Promise((ok, fail) => {
+        const out = [];
+        const c = d.transaction(store).objectStore(store).openCursor();
+        c.onsuccess = () => {
+          if (c.result) {
+            out.push([c.result.key, c.result.value]);
+            c.result.continue();
+          } else ok(out);
+        };
+        c.onerror = () => fail(c.error);
+      });
+      d.close();
+      for (const [key, value] of rows) {
+        let hay;
+        if (value instanceof Blob) hay = new Uint8Array(await value.arrayBuffer());
+        else if (value && value.ct instanceof Uint8Array) hay = value.ct;
+        else hay = new TextEncoder().encode(JSON.stringify(value));
+        if (has(hay)) found.push(`${db} ${key}`);
+      }
+    }
+    return found;
+  }, needle);
 const calls = (page) => page.evaluate(() => window.__calls);
 const button = (page, name) => page.getByRole('button', { name, exact: true });
 /** Opens settings: the header link on a phone, the gear on the rail on a desktop (both are buttons named 設定). */
@@ -235,7 +298,7 @@ async function markMyAi(u, hex, shotName) {
   await waitText(u.page, 'を自分のAIにしますか？');
   if (shotName) await shot(u.page, shotName, '自分のAIにする前の確認');
   await button(u.page, '自分のAIにする').click();
-  await u.page.waitForFunction((h) => JSON.parse(localStorage.getItem('tegami.contacts') || '[]').some((c) => c.pubkey === h && c.mine), hex, { timeout: 10000 });
+  await u.page.waitForFunction((h) => JSON.parse(__tegamiStore.getItem('tegami.contacts') || '[]').some((c) => c.pubkey === h && c.mine), hex, { timeout: 10000 });
 }
 /** u adds an AI by its invite link and marks it as their own AI. */
 async function befriendMyAi(u, link) {
@@ -650,7 +713,7 @@ async function main() {
       await (await chooser).setFiles({ name: 'test.png', mimeType: 'image/png', buffer: png });
       await a.page.locator('img[alt="写真"]').first().waitFor({ timeout: 15000 });
 
-      const sent = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages')).find((m) => m.file)?.file);
+      const sent = await a.page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.messages')).find((m) => m.file)?.file);
       assert(sent && sent.dim === '1600x1067', `photo not made smaller: ${sent?.dim}`);
       const stored = Buffer.from(await (await fetch(sent.url)).arrayBuffer());
       // Ciphertext looks random, so check the image signatures, not one byte (1 in 128 by chance).
@@ -863,9 +926,10 @@ async function main() {
       const oldAt = Math.floor(Date.now() / 1000) - 60 * 86400;
       await a.page.evaluate(
         ({ peer, at }) => {
-          const list = JSON.parse(localStorage.getItem('tegami.messages') || '[]');
+          const list = JSON.parse(__tegamiStore.getItem('tegami.messages') || '[]');
           list.unshift({ id: '9'.repeat(64), from: peer, peer, text: '六十日前の手紙', at, got: at * 1000 });
-          localStorage.setItem('tegami.messages', JSON.stringify(list));
+          __tegamiStore.setItem('tegami.messages', JSON.stringify(list));
+          return __tegamiStore.flush();
         },
         { peer: b.hex, at: oldAt },
       );
@@ -883,7 +947,7 @@ async function main() {
       await a2.page.getByText('びー').first().click();
       await waitText(a2.page, '六十日前の手紙');
       // The relay never had it: it came in the history file, once.
-      const files = await a2.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages') || '[]').filter((m) => m.text === '六十日前の手紙').length);
+      const files = await a2.page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.messages') || '[]').filter((m) => m.text === '六十日前の手紙').length);
       assert(files === 1, `the old message is there ${files} times`);
 
       // A2 adds C as a friend: A, still open, gets C too.
@@ -891,7 +955,7 @@ async function main() {
       await a.page.goto(ORIGIN + '/');
       await button(a.page, '友だち').click();
       await waitText(a.page, 'しー');
-      const contactsOf = (p) => p.evaluate(() => JSON.parse(localStorage.getItem('tegami.contacts') || '[]').map((x) => x.name).sort().join(','));
+      const contactsOf = (p) => p.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.contacts') || '[]').map((x) => x.name).sort().join(','));
       assert((await contactsOf(a.page)) === 'しー,びー', `A's friends: ${await contactsOf(a.page)}`);
 
       // A2 makes a group with B and C: it shows on A.
@@ -902,7 +966,7 @@ async function main() {
       await a2.page.getByRole('checkbox', { name: 'びー' }).click();
       await a2.page.getByRole('checkbox', { name: 'しー' }).click();
       await button(a2.page, '作る').click();
-      await a.page.waitForFunction(() => JSON.parse(localStorage.getItem('tegami.groups') || '[]').some((g) => g.name === 'いつもの三人'), null, { timeout: 15000 });
+      await a.page.waitForFunction(() => JSON.parse(__tegamiStore.getItem('tegami.groups') || '[]').some((g) => g.name === 'いつもの三人'), null, { timeout: 15000 });
 
       // A blocks C: A2 has C blocked too. A2 unblocks: A lets C back.
       await a.page.goto(`${ORIGIN}/chat/${c.hex}`);
@@ -912,8 +976,8 @@ async function main() {
       await waitText(a.page, 'しーをブロックしますか？');
       await button(a.page, 'ブロック').click();
       await button(infoArea(a.page), 'ブロック解除').waitFor();
-      const blockedOn = (p, hex) => p.waitForFunction((h) => JSON.parse(localStorage.getItem('tegami.blocked') || '[]').includes(h), hex, { timeout: 15000 });
-      const notBlockedOn = (p, hex) => p.waitForFunction((h) => !JSON.parse(localStorage.getItem('tegami.blocked') || '[]').includes(h), hex, { timeout: 15000 });
+      const blockedOn = (p, hex) => p.waitForFunction((h) => JSON.parse(__tegamiStore.getItem('tegami.blocked') || '[]').includes(h), hex, { timeout: 15000 });
+      const notBlockedOn = (p, hex) => p.waitForFunction((h) => !JSON.parse(__tegamiStore.getItem('tegami.blocked') || '[]').includes(h), hex, { timeout: 15000 });
       await blockedOn(a2.page, c.hex);
       await a2.page.goto(ORIGIN + '/settings/privacy');
       await waitText(a2.page, 'ブロックリスト');
@@ -1120,8 +1184,9 @@ async function main() {
       assert(!(await text(d.page)).includes('前の話'), 'D sees a message from before being added');
       // The page closed after the group was saved but before its line was: the relay's replay brings the line back.
       await d.page.evaluate(() => {
-        const list = JSON.parse(localStorage.getItem('tegami.messages')).filter((m) => !m.notice);
-        localStorage.setItem('tegami.messages', JSON.stringify(list));
+        const list = JSON.parse(__tegamiStore.getItem('tegami.messages')).filter((m) => !m.notice);
+        __tegamiStore.setItem('tegami.messages', JSON.stringify(list));
+        return __tegamiStore.flush();
       });
       await d.page.reload();
       await waitText(d.page, 'あきらがだいをグループに追加しました。');
@@ -1809,7 +1874,7 @@ async function main() {
       await waitText(a.page, 'あとで届く');
       await waitText(a.page, '未送信');
       assert(!(await text(a.page)).includes('やめる分'), 'the stopped message came back after a reload');
-      const box = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.outbox')));
+      const box = await a.page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.outbox')));
       assert(box.length === 1 && box[0].wraps.length === 2 && box[0].done.length === 0, `outbox: ${JSON.stringify(box).slice(0, 120)}`);
 
       // The relay is back: sent without anyone doing anything, once.
@@ -1823,7 +1888,7 @@ async function main() {
       assert(!bt.includes('やめる分'), 'the stopped message was delivered');
       assert((await envelopesFor(b.hex)).length === 1, `envelopes for B: ${(await envelopesFor(b.hex)).length}`);
       assert((await envelopesFor(a.hex)).length === 1, `envelopes for my own devices: ${(await envelopesFor(a.hex)).length}`);
-      assert((await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.outbox')))).length === 0, 'the outbox is not empty');
+      assert((await a.page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.outbox')))).length === 0, 'the outbox is not empty');
 
       // Offline in the browser (no network at all): waits, then goes when the network returns.
       await a.context.setOffline(true);
@@ -1867,7 +1932,7 @@ async function main() {
 
       await startRelay();
       await a.page.waitForFunction(() => !document.body.innerText.includes('未送信'), null, { timeout: 30000 });
-      const sent = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages')).find((m) => m.file));
+      const sent = await a.page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.messages')).find((m) => m.file));
       assert(sent && !sent.id.startsWith('local:') && sent.file.url.startsWith('http'), `sent: ${JSON.stringify(sent).slice(0, 120)}`);
       await b.page.getByText('あお').first().click();
       await b.page.waitForFunction(() => {
@@ -1947,7 +2012,7 @@ async function main() {
         await u.page.getByPlaceholder('メッセージ').waitFor();
         const aiHex = nip19.decode(aiLink.match(/npub1[0-9a-z]+/)[0]).data;
         assert(
-          await u.page.evaluate((h) => JSON.parse(localStorage.getItem('tegami.contacts') || '[]').some((c) => c.pubkey === h && c.mine), aiHex),
+          await u.page.evaluate((h) => JSON.parse(__tegamiStore.getItem('tegami.contacts') || '[]').some((c) => c.pubkey === h && c.mine), aiHex),
           'pairing did not mark the AI as mine',
         );
         await waitOut('Paired with わたし');
@@ -2002,7 +2067,7 @@ async function main() {
 
       // B: the reply carries the quote (B's own name and the first line).
       await waitText(b.page, 'それに返信');
-      const stored = await b.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages')));
+      const stored = await b.page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.messages')));
       const orig = stored.find((m) => m.text === '最初のメッセージ');
       const reply = stored.find((m) => m.text === 'それに返信');
       assert(reply.replyTo === orig.id, `replyTo: ${reply.replyTo} vs ${orig.id}`);
@@ -2223,6 +2288,7 @@ async function main() {
       await waitText(u.page, 'あいさんへの手紙');
       t = await text(u.page);
       assert(!t.includes('知らない人から') && !t.includes('びいさんへの手紙'), "B's message shows in A");
+      assert(!((await u.page.evaluate(() => __tegamiStore.getItem('tegami.messages'))) ?? '').includes('びいさんへの手紙'), "B's message in A's storage");
       // The open account is remembered across a reload.
       await u.page.reload();
       await waitOpen(u.page);
@@ -2233,8 +2299,9 @@ async function main() {
       await waitOpen(u.page);
       await u.page.getByText('知らない人から').click();
       await waitText(u.page, 'びいさんへの手紙');
-      const s = await storage(u.page);
-      assert(JSON.parse(s['tegami.messages']).every((m) => m.text !== 'びいさんへの手紙'), "B's message in A's storage");
+      // Only B is open now: A's records cannot be read (they are another account's), and no message is kept as plain text.
+      assert((await u.page.evaluate(() => __tegamiStore.getItem('tegami.messages'))) === null, "A's messages are readable while B is open");
+      assert(!(await leaks(u.page, 'びいさんへの手紙')).length, 'a message is kept as plain text');
       await u.context.close();
     });
 
@@ -2247,12 +2314,15 @@ async function main() {
       // The earlier version had no account list.
       await u.page.evaluate(() => localStorage.removeItem('tegami.accounts'));
       const before = await storage(u.page);
+      const messagesBefore = await u.page.evaluate(() => __tegamiStore.getItem('tegami.messages'));
+      assert(messagesBefore && messagesBefore.includes('前の版からの手紙'), 'setup: the message is not kept');
       await u.page.reload();
       await waitOpen(u.page);
       await waitText(u.page, '知らない人から');
       const after = await storage(u.page);
-      for (const k of ['tegami.device', 'tegami.messages', 'tegami.myName', 'tegami.setupAt'])
+      for (const k of ['tegami.device', 'tegami.myName', 'tegami.setupAt'])
         assert(after[k] === before[k], `${k} changed when the account list was made`);
+      assert((await u.page.evaluate(() => __tegamiStore.getItem('tegami.messages'))) === messagesBefore, 'the messages changed when the account list was made');
 
       await openSettings(u.page, 'アカウント');
       await button(u.page, 'アカウントを追加').click();
@@ -2747,7 +2817,7 @@ async function main() {
         const sorted = (v) => (v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((key) => [key, sorted(v[key])])) : v);
         return JSON.stringify(sorted(x)) === JSON.stringify(sorted(y));
       };
-      const log = (page) => page.evaluate(() => localStorage.getItem('tegami.ai.log'));
+      const log = (page) => page.evaluate(() => __tegamiStore.getItem('tegami.ai.log'));
       const sw = (name) => p.getByRole('switch', { name, exact: true });
 
       // All AI may read; for テストB too; the Anthropic Claude model may not.
@@ -2764,7 +2834,10 @@ async function main() {
       const want = await perms(p);
       assert(want.all.read === true && want.friends[b.hex].read === true && want.models['Anthropic Claude'].read === false, 'settings were not saved');
       // A decision log on this device: it must not move.
-      await p.evaluate(() => localStorage.setItem('tegami.ai.log', JSON.stringify([{ at: 1, ai: 'x', action: 'read', allowed: false, stoppedBy: 'all' }])));
+      await p.evaluate(() => {
+        __tegamiStore.setItem('tegami.ai.log', JSON.stringify([{ at: 1, ai: 'x', action: 'read', allowed: false, stoppedBy: 'all' }]));
+        return __tegamiStore.flush();
+      });
 
       // The 10-minute link brings the settings, not the log.
       await p.goto(ORIGIN + '/settings/account');
@@ -2911,7 +2984,7 @@ async function main() {
         // The draft is not sent: it reaches neither the friend nor this chat.
         await p.waitForTimeout(2500);
         assert(!(await text(b.page)).includes('echo:'), 'the draft was sent to the friend');
-        const mine = await p.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages') || '[]'));
+        const mine = await p.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.messages') || '[]'));
         assert(!mine.some((m) => m.text.startsWith('echo:')), 'the draft was added as a message');
         assert(!(await envelopesFor(b.hex)).some((e) => e.created_at >= Math.floor(Date.now() / 1000) - 5), 'something new went to the friend');
 
@@ -3024,7 +3097,7 @@ async function main() {
         }
         localStorage.setItem('tegami.ai.permissions', JSON.stringify(s));
       }, update);
-    const storedTexts = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages') || '[]').map((m) => m.text));
+    const storedTexts = (page) => page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.messages') || '[]').map((m) => m.text));
 
     await test('AI opt-out: a marked message and a friend who says no stay out of drafts; the choice reaches my other device', async () => {
       const AGENT = join(ROOT, '../agent');
@@ -3116,7 +3189,7 @@ async function main() {
         await mySwitch(b2.page).waitFor();
         assert((await mySwitch(b2.page).isChecked()) === true, 'the setting did not reach my other device');
         await p.waitForFunction(
-          (hex) => JSON.parse(localStorage.getItem('tegami.contacts') || '[]').some((c) => c.pubkey === hex && c.noai === true),
+          (hex) => JSON.parse(__tegamiStore.getItem('tegami.contacts') || '[]').some((c) => c.pubkey === hex && c.noai === true),
           b.hex,
           { timeout: 15000 },
         );
@@ -3137,7 +3210,7 @@ async function main() {
         await mySwitch(b2.page).click();
         await bp.waitForFunction(() => localStorage.getItem('tegami.noai') === 'false', null, { timeout: 15000 });
         await p.waitForFunction(
-          (hex) => JSON.parse(localStorage.getItem('tegami.contacts') || '[]').some((c) => c.pubkey === hex && !c.noai),
+          (hex) => JSON.parse(__tegamiStore.getItem('tegami.contacts') || '[]').some((c) => c.pubkey === hex && !c.noai),
           b.hex,
           { timeout: 15000 },
         );
@@ -3471,7 +3544,7 @@ async function main() {
       await button(a2.page, 'この端末で使う').click();
       await button(a2.page, 'パスキーを使わずに始める').click();
       await waitOpen(a2.page);
-      await a2.page.waitForFunction((h) => JSON.parse(localStorage.getItem('tegami.contacts') || '[]').some((c) => c.pubkey === h && c.mine), ai.hex, { timeout: 15000 });
+      await a2.page.waitForFunction((h) => JSON.parse(__tegamiStore.getItem('tegami.contacts') || '[]').some((c) => c.pubkey === h && c.mine), ai.hex, { timeout: 15000 });
 
       // A turns a switch on: A2 says so in one line on the list, until the AI screen is opened.
       await a.page.goto(ORIGIN + '/ai');
@@ -3542,7 +3615,7 @@ async function main() {
       const say = async (u, t) => {
         await u.page.getByPlaceholder('メッセージ').fill(t);
         await button(u.page, '送る').click();
-        await u.page.waitForFunction((t) => JSON.parse(localStorage.getItem('tegami.messages') || '[]').some((m) => m.text === t && !m.pending), t, { timeout: 15000 });
+        await u.page.waitForFunction((t) => JSON.parse(__tegamiStore.getItem('tegami.messages') || '[]').some((m) => m.text === t && !m.pending), t, { timeout: 15000 });
       };
 
       // The owner invites from the + panel. Nothing goes to the AI yet.
@@ -3601,7 +3674,7 @@ async function main() {
       const say = async (u, t) => {
         await u.page.getByPlaceholder('メッセージ').fill(t);
         await button(u.page, '送る').click();
-        await u.page.waitForFunction((t) => JSON.parse(localStorage.getItem('tegami.messages') || '[]').some((m) => m.text === t && !m.pending), t, { timeout: 15000 });
+        await u.page.waitForFunction((t) => JSON.parse(__tegamiStore.getItem('tegami.messages') || '[]').some((m) => m.text === t && !m.pending), t, { timeout: 15000 });
       };
       await a.page.goto(ORIGIN + `/chat/${b.hex}`);
       await b.page.goto(ORIGIN + `/chat/${a.hex}`);
@@ -3625,7 +3698,7 @@ async function main() {
       await Promise.all([a.hex, b.hex].map((x) => relaySend(ai.sk, wrapTo(ai.sk, x, rumor))));
       await waitText(b.page, 'AIです');
       assert((await b.page.getByText('クロード', { exact: true }).count()) > 0, 'the AI is not named as the writer');
-      assert(!(await b.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.groups') || '[]'))).length, 'the AI made a new group');
+      assert(!(await b.page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.groups') || '[]'))).length, 'the AI made a new group');
 
       await button(b.page, '同意をやめる').click();
       await say(b, 'もう読まないで');
@@ -3716,7 +3789,7 @@ async function main() {
       await a2.page.goto(moveLink);
       await button(a2.page, 'この端末で使う').click();
       await waitOpen(a2.page);
-      await a2.page.waitForFunction(() => JSON.parse(localStorage.getItem('tegami.blocked') || '[]').length > 0, null, { timeout: 15000 });
+      await a2.page.waitForFunction(() => JSON.parse(__tegamiStore.getItem('tegami.blocked') || '[]').length > 0, null, { timeout: 15000 });
       await a2.page.goto(ORIGIN + '/settings/privacy');
       await a2.page.waitForFunction(() => /ひらく|ブロックリスト/.test(document.body.innerText), null, { timeout: 15000 });
       if ((await text(a2.page)).includes('ひらく')) await button(a2.page, 'ひらく').click();
@@ -3824,8 +3897,8 @@ async function main() {
       // C's own envelopes to itself (its friend list for its other devices, lib/own-sync.ts) are
       // there already; nothing more may arrive for C.
       await c.page.waitForFunction(() => {
-        const s = JSON.parse(localStorage.getItem('tegami.syncSent') || 'null');
-        return s && s.hash.includes(JSON.stringify(Object.keys(JSON.parse(localStorage.getItem('tegami.sync'))).find((k) => k.startsWith('c:'))));
+        const s = JSON.parse(__tegamiStore.getItem('tegami.syncSent') || 'null');
+        return s && s.hash.includes(JSON.stringify(Object.keys(JSON.parse(__tegamiStore.getItem('tegami.sync'))).find((k) => k.startsWith('c:'))));
       }, null, { timeout: 15000 });
       const cOwn = (await envelopesFor(c.hex)).length;
 
@@ -3863,7 +3936,7 @@ async function main() {
       await button(b.page, 'トーク').click();
       await b.page.getByTestId('avatar-img').first().waitFor({ timeout: 15000 });
 
-      const avatar = await b.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.contacts'))[0]?.avatar);
+      const avatar = await b.page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.contacts'))[0]?.avatar);
       assert(avatar && avatar.url, 'no avatar ref on contact');
       const stored = Buffer.from(await (await fetch(avatar.url)).arrayBuffer());
       const head = stored.subarray(0, 4).toString('hex');
@@ -4199,7 +4272,7 @@ async function main() {
       await aItem.waitFor({ timeout: 15000 });
       await shot(a.page, 'stamp-panel', '「スタンプ」を押して、スタンプを1つ作った後');
 
-      const saved = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.stamps'))?.[0]);
+      const saved = await a.page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.stamps'))?.[0]);
       assert(saved && saved.dim === '320x320' && saved.type === 'image/png', `stamp not shrunk: ${JSON.stringify(saved)}`);
       const stored = Buffer.from(await (await fetch(saved.url)).arrayBuffer());
       const head = stored.subarray(0, 4).toString('hex');
@@ -4252,20 +4325,23 @@ async function main() {
       await button(a.page, 'スタンプを作る').click();
       await (await chooser).setFiles({ name: 'stamp.png', mimeType: 'image/png', buffer: png });
       await a.page.getByTestId('stamp-item').first().waitFor({ timeout: 15000 });
-      const made = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.stamps'))[0]);
+      const made = await a.page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.stamps'))[0]);
       const ghostSha = 'e'.repeat(64);
       const ghost = { ...made, url: made.url.replace(made.sha256, ghostSha), sha256: ghostSha, uploadedAt: Math.floor(Date.now() / 1000) };
       // A stamp from before the stamp storage: on the 30-day file server (gone there by now),
       // with this device's copy still kept.
       const old = { ...made, url: made.url.replace('/stamp/', '/'), uploadedAt: Math.floor(Date.now() / 1000) - 25 * DAY };
-      await a.page.evaluate((list) => localStorage.setItem('tegami.stamps', JSON.stringify(list)), [old, ghost]);
+      await a.page.evaluate((list) => {
+        __tegamiStore.setItem('tegami.stamps', JSON.stringify(list));
+        return __tegamiStore.flush();
+      }, [old, ghost]);
 
       // Opening the app moves the old stamp into the stamp storage, so the new device can fetch it.
       await a.page.goto(ORIGIN + '/settings/account');
       await a.page.getByText('別の端末でも使う').click();
       await waitText(a.page, 'まで使えます');
       const moveLink = (await text(a.page)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)[0];
-      const aList = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.stamps')));
+      const aList = await a.page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.stamps')));
       assert(aList.length === 2 && aList[0].url.endsWith(`/stamp/${made.sha256}`), `old stamp not moved into the stamp storage: ${JSON.stringify(aList)}`);
       assert(aList[1].sha256 === ghostSha, 'the gone stamp changed on the old device');
 
@@ -4275,7 +4351,7 @@ async function main() {
       await button(a2.page, 'この端末で使う').click();
       await button(a2.page, 'パスキーを使わずに始める').click();
       await waitOpen(a2.page);
-      const moved = await a2.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.stamps') ?? '[]'));
+      const moved = await a2.page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.stamps') ?? '[]'));
       assert(moved.length === 2 && moved[0].sha256 === aList[0].sha256 && moved[1].sha256 === ghostSha, `stamps on the new device: ${JSON.stringify(moved)}`);
       await a2.page.goto(`${ORIGIN}/chat/${b.hex}`);
       await a2.page.getByPlaceholder('メッセージ').waitFor();
@@ -4291,7 +4367,7 @@ async function main() {
       await button(a2.page, 'スタンプ').click();
       await gone.click({ button: 'right' });
       await button(a2.page, '削除').click();
-      await a2.page.waitForFunction(() => JSON.parse(localStorage.getItem('tegami.stamps')).length === 1, null, { timeout: 5000 });
+      await a2.page.waitForFunction(() => JSON.parse(__tegamiStore.getItem('tegami.stamps')).length === 1, null, { timeout: 5000 });
       await a2.context.close();
 
       // The recovery code: the backup holds the stamps, and a restored device gets them.
@@ -4308,7 +4384,7 @@ async function main() {
       await button(r.page, 'この端末で使う').click();
       await button(r.page, 'パスキーを使わずに始める').click();
       await waitOpen(r.page);
-      const restored = await r.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.stamps') ?? '[]'));
+      const restored = await r.page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.stamps') ?? '[]'));
       // The gone stamp removed on the second device was removed here too (my devices share one list).
       assert(restored.length === 1 && restored[0].sha256 === aList[0].sha256, `stamps after restoring: ${JSON.stringify(restored)}`);
       await r.page.goto(`${ORIGIN}/chat/${b.hex}`);
@@ -4346,7 +4422,7 @@ async function main() {
       await button(o.page, 'パスキーを使わずに始める').click();
       await waitOpen(o.page);
       await waitText(o.page, 'ばんり');
-      const none = await o.page.evaluate(() => localStorage.getItem('tegami.stamps'));
+      const none = await o.page.evaluate(() => __tegamiStore.getItem('tegami.stamps'));
       assert(JSON.parse(none ?? '[]').length === 0, `stamps from an old backup: ${none}`);
       await o.page.goto(`${ORIGIN}/chat/${b.hex}`);
       await o.page.getByPlaceholder('メッセージ').waitFor();
@@ -4362,7 +4438,7 @@ async function main() {
       await befriend(b, a);
       await befriend(a, b);
       const relayStamps = async () => (await fetch(`http://localhost:${RELAY_PORT}/_stamps`)).json();
-      const list = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('tegami.stamps') ?? '[]').map((s) => s.sha256));
+      const list = (page) => page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.stamps') ?? '[]').map((s) => s.sha256));
       const until = async (cond, what) => {
         for (let i = 0; i < 100; i++) {
           if (await cond()) return;
@@ -4525,7 +4601,7 @@ async function main() {
       assert(fileText.includes('サイズ：'), `file message missing size: ${fileText}`);
       await shot(b.page, 'video-file', '動画とファイルが届いたトーク');
 
-      const sentFiles = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages')).filter((m) => m.file).map((m) => m.file));
+      const sentFiles = await a.page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.messages')).filter((m) => m.file).map((m) => m.file));
       assert(sentFiles.length === 2, `expected 2 sent files, got ${sentFiles.length}`);
       for (const f of sentFiles) {
         const stored = Buffer.from(await (await fetch(f.url)).arrayBuffer());
@@ -4585,7 +4661,7 @@ async function main() {
       await (await chooser).setFiles({ name: 'huge.bin', mimeType: 'application/octet-stream', buffer: big });
       await waitText(a.page, '10MBを超えるファイルは送れません');
       await shot(a.page, 'too-large', '10MBを超えるファイルを選んだ時');
-      const count = await a.page.evaluate(() => JSON.parse(localStorage.getItem('tegami.messages') ?? '[]').length);
+      const count = await a.page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.messages') ?? '[]').length);
       assert(count === 0, `expected 0 messages in chat, got ${count}`);
       for (const u of [a, b]) await u.context.close();
     });
@@ -4879,20 +4955,19 @@ async function main() {
       await waitText(u.page, '使用中');
       await shot(u.page, 'account-list-remove', '設定のアカウントの一覧（2つある時は、それぞれに「削除」）');
       const before = await storage(u.page);
-      assert(before['tegami.messages'] && Object.keys(before).some((k) => k.startsWith('tegami@')), 'setup: both accounts keep storage');
+      assert((await sealedNames(u.page)).includes('tegami.messages') && Object.keys(before).some((k) => k.startsWith('tegami@')), 'setup: both accounts keep storage');
       // Remove the first account (not the open one) from the list.
       await button(u.page, 'この端末から削除（いち）').click();
       await waitText(u.page, 'いちをこの端末から削除しますか？');
       await shot(u.page, 'account-remove-dialog', '一覧の「削除」を押した時の確認');
       await u.page.getByTestId('dialog').getByRole('button', { name: 'キャンセル', exact: true }).click();
-      assert((await storage(u.page))['tegami.messages'], 'cancel removed the account');
+      assert((await sealedNames(u.page)).includes('tegami.messages'), 'cancel removed the account');
       await button(u.page, 'この端末から削除（いち）').click();
       await u.page.getByTestId('dialog').getByRole('button', { name: '削除', exact: true }).click();
-      await u.page.waitForFunction(() => !localStorage.getItem('tegami.messages'), null, { timeout: 5000 }).catch(() => {
-        throw new Error('the removed account kept its messages');
-      });
+      for (let i = 0; i < 50 && (await sealedNames(u.page)).some((n) => n.startsWith('tegami.')); i++) await new Promise((r) => setTimeout(r, 100));
+      assert(!(await sealedNames(u.page)).some((n) => n.startsWith('tegami.')), 'the removed account kept its messages');
       let s = await storage(u.page);
-      const left = Object.keys(s).filter((k) => k.startsWith('tegami.') && !['tegami.accounts', 'tegami.theme', 'tegami.crashReports'].includes(k));
+      const left = Object.keys(s).filter((k) => k.startsWith('tegami.') && !['tegami.accounts', 'tegami.theme', 'tegami.crashReports', 'tegami.filesSealed'].includes(k));
       assert(left.length === 0, `the first account left storage behind: ${left}`);
       assert(JSON.parse(s['tegami.accounts']).list.length === 1, `account list: ${s['tegami.accounts']}`);
       assert(Object.keys(s).some((k) => k.startsWith('tegami@') && k.endsWith('.device')), 'the open account lost its key');
@@ -4906,6 +4981,7 @@ async function main() {
       await button(u.page, 'はじめる').waitFor({ timeout: 10000 });
       s = await storage(u.page);
       assert(!Object.keys(s).some((k) => k.endsWith('.device') || k.endsWith('.messages') || k.endsWith('.contacts')), `storage left: ${Object.keys(s)}`);
+      assert((await sealedNames(u.page)).length === 0, `encrypted records left: ${await sealedNames(u.page)}`);
       assert(JSON.parse(s['tegami.accounts']).list.length === 1, 'the new empty account is not alone');
       // The account itself is still on the relay (only this device forgot it).
       const members = await (await fetch(`http://localhost:${RELAY_PORT}/_members`)).json();
@@ -4956,6 +5032,7 @@ async function main() {
       assert((await backups()) === backupsBefore - 1, 'the recovery backup is still on the relay');
       const s = await storage(a.page);
       assert(!Object.keys(s).some((k) => k.endsWith('.device') || k.endsWith('.messages') || k.endsWith('.recovery')), `storage left: ${Object.keys(s)}`);
+      assert((await sealedNames(a.page)).length === 0, `encrypted records left: ${await sealedNames(a.page)}`);
       // A message sent now is not kept for it.
       await b.page.getByPlaceholder('メッセージ').fill('もう届かない手紙');
       await b.page.keyboard.press('Enter');
@@ -4998,6 +5075,249 @@ async function main() {
       await waitOpen(v.page);
       assert(!(await text(v.page)).includes('Tegamiへの意見'), 'listed for an account that never opened it');
       for (const w of [u, v]) await w.context.close();
+    });
+
+
+    // ---------- what the device keeps is encrypted (src/lib/at-rest.ts) ----------
+
+    /** The keys of one IndexedDB store, read straight from the page. */
+    const idbKeys = (page, db, store) =>
+      page.evaluate(
+        ([db, store]) =>
+          new Promise((ok, fail) => {
+            const r = indexedDB.open(db, 1);
+            r.onupgradeneeded = () => r.result.createObjectStore(store);
+            r.onerror = () => fail(r.error);
+            r.onsuccess = () => {
+              const g = r.result.transaction(store).objectStore(store).getAllKeys();
+              g.onsuccess = () => {
+                r.result.close();
+                ok(g.result);
+              };
+              g.onerror = () => fail(g.error);
+            };
+          }),
+        [db, store],
+      );
+    const SEALED_IN_LS = /^tegami(@[0-9a-f]+)?\.(messages|contacts|groups|outbox|blocked|deleted|readAt|cleared|sync|syncSent|stamps|stampsUsed|avatar|historyPending|noaiChats|ai\.(log|proposals|peerNames|groups|ownerCards|sent))$/;
+    const savedHas = (page, name, part) =>
+      page.waitForFunction(([n, p]) => (__tegamiStore.getItem(n) ?? '').includes(p), [name, part], { timeout: 15000 });
+
+    await test('At rest: messages and friends are kept encrypted, come back after a reload, and plain data from the earlier version is moved in', async () => {
+      const u = await person(browser, 'ほぞん');
+      const x = generateSecretKey();
+      await relaySend(x, wrapTo(x, u.hex, rumorTo(x, u.hex, 'ひみつの手紙A')));
+      await u.page.goto(ORIGIN + '/');
+      await waitText(u.page, '知らない人から');
+      await savedHas(u.page, 'tegami.messages', 'ひみつの手紙A');
+      // A friend, and a message from me.
+      const b = await person(browser, 'ほぞんの友');
+      await befriend(u, b);
+      await u.page.getByPlaceholder('メッセージ').fill('おくった手紙B');
+      await u.page.keyboard.press('Enter');
+      await savedHas(u.page, 'tegami.messages', 'おくった手紙B');
+      await savedHas(u.page, 'tegami.contacts', 'ほぞんの友');
+      await u.page.evaluate(() => __tegamiStore.flush());
+      // Nothing of it is plain text: not in localStorage, not in the raw bytes of the store.
+      for (const w of ['ひみつの手紙A', 'おくった手紙B', 'ほぞんの友']) {
+        const found = await leaks(u.page, w);
+        assert(!found.length, `${w} is kept as plain text: ${found}`);
+      }
+      const ls = await storage(u.page);
+      assert(!Object.keys(ls).some((k) => SEALED_IN_LS.test(k)), `names kept in localStorage: ${Object.keys(ls).filter((k) => SEALED_IN_LS.test(k))}`);
+      const names = await sealedNames(u.page);
+      assert(names.includes('tegami.messages') && names.includes('tegami.contacts'), `records: ${names}`);
+      // The key is not kept: nothing of it in localStorage or the store (it is made again from the secret key).
+      assert(!Object.entries(ls).some(([k, v]) => /at-rest|hkdf/i.test(k + v)), 'a key was kept in localStorage');
+
+      // A reload: opened again, everything is back.
+      await u.page.reload();
+      await u.page.goto(ORIGIN + '/');
+      await waitOpen(u.page);
+      await savedHas(u.page, 'tegami.messages', 'おくった手紙B');
+      await savedHas(u.page, 'tegami.messages', 'ひみつの手紙A');
+      await u.page.goto(ORIGIN + '/');
+      await waitText(u.page, '知らない人から');
+      await u.page.goto(`${ORIGIN}/chat/${b.hex}`);
+      await waitText(u.page, 'おくった手紙B');
+
+      // The earlier version kept these as plain JSON in localStorage: put them back that way.
+      await u.page.evaluate(async () => {
+        const saved = {};
+        for (const n of ['messages', 'contacts']) {
+          saved[n] = __tegamiStore.getItem(`tegami.${n}`);
+          __tegamiStore.removeItem(`tegami.${n}`);
+        }
+        await __tegamiStore.flush();
+        for (const [n, v] of Object.entries(saved)) localStorage.setItem(`tegami.${n}`, v);
+      });
+      assert(JSON.parse((await storage(u.page))['tegami.messages']).length >= 2, 'setup: no plain messages');
+      assert(!(await sealedNames(u.page)).includes('tegami.messages'), 'setup: the encrypted record is still there');
+      await u.page.reload();
+      await u.page.goto(ORIGIN + '/');
+      await waitOpen(u.page);
+      await savedHas(u.page, 'tegami.messages', 'おくった手紙B');
+      await u.page.goto(`${ORIGIN}/chat/${b.hex}`);
+      await waitText(u.page, 'おくった手紙B');
+      await u.page.evaluate(() => __tegamiStore.flush());
+      const after = await storage(u.page);
+      assert(!Object.keys(after).some((k) => SEALED_IN_LS.test(k)), `plain copies left: ${Object.keys(after).filter((k) => SEALED_IN_LS.test(k))}`);
+      assert((await sealedNames(u.page)).includes('tegami.messages'), 'the messages were not moved into the encrypted store');
+      for (const w of ['ひみつの手紙A', 'おくった手紙B']) assert(!(await leaks(u.page, w)).length, `${w} is plain after the move`);
+
+      // A record moved to another name (or another account) cannot be read; the app starts without it and does not break.
+      await u.page.evaluate(
+        () =>
+          new Promise((ok, fail) => {
+            const r = indexedDB.open('tegami-store', 1);
+            r.onsuccess = () => {
+              const tx = r.result.transaction('records', 'readwrite');
+              const s = tx.objectStore('records');
+              const g = s.get('tegami.messages');
+              g.onsuccess = () => s.put(g.result, 'tegami.contacts');
+              tx.oncomplete = () => {
+                r.result.close();
+                ok();
+              };
+              tx.onerror = () => fail(tx.error);
+            };
+            r.onerror = () => fail(r.error);
+          }),
+      );
+      await u.page.reload();
+      await u.page.goto(ORIGIN + '/');
+      await waitOpen(u.page);
+      await savedHas(u.page, 'tegami.messages', 'ひみつの手紙A');
+      assert((await u.page.evaluate(() => __tegamiStore.getItem('tegami.contacts'))) === null, 'a record under another name was read');
+      await u.page.goto(ORIGIN + '/');
+      await waitText(u.page, '知らない人から');
+      for (const w of [u, b]) await w.context.close();
+    });
+
+    await test('At rest: with a passkey nothing is read before the passkey opens the account, and a save made before then does not erase it', async () => {
+      const u = await newUser(browser);
+      await button(u.page, 'はじめる').click();
+      await waitOpen(u.page);
+      await button(u.page, '友だち追加').click();
+      await waitText(u.page, 'マイQRコード');
+      const hex = nip19.decode((await text(u.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0].match(/npub1[0-9a-z]+/)[0]).data;
+      const x = generateSecretKey();
+      await relaySend(x, wrapTo(x, hex, rumorTo(x, hex, '鍵の前の手紙')));
+      await u.page.goBack();
+      await waitText(u.page, '知らない人から');
+      await savedHas(u.page, 'tegami.messages', '鍵の前の手紙');
+      await u.page.evaluate(() => __tegamiStore.flush());
+      await u.page.reload();
+      await button(u.page, 'ひらく').waitFor();
+      // Locked: nothing can be read here, and a save is dropped (the screen has not loaded).
+      assert((await u.page.evaluate(() => __tegamiStore.open())) === false, 'open before the passkey');
+      assert((await u.page.evaluate(() => __tegamiStore.getItem('tegami.messages'))) === null, 'messages read before the passkey');
+      await u.page.evaluate(() => {
+        __tegamiStore.setItem('tegami.messages', '[]');
+        __tegamiStore.setItem('tegami.contacts', '[]');
+        return __tegamiStore.flush();
+      });
+      assert((await sealedNames(u.page)).includes('tegami.messages'), 'a save before the passkey erased the record');
+      assert(!(await leaks(u.page, '鍵の前の手紙')).length, 'the message is plain text');
+      await button(u.page, 'ひらく').click();
+      await waitOpen(u.page);
+      await savedHas(u.page, 'tegami.messages', '鍵の前の手紙');
+      await waitText(u.page, '知らない人から');
+      await u.context.close();
+    });
+
+    await test('At rest: kept photos are encrypted, an account keeps its own, and plain ones from before are moved in', async () => {
+      const a = await person(browser, 'しゃしん');
+      const b = await person(browser, 'しゃしんの友');
+      await befriend(b, a);
+      await befriend(a, b);
+      const png = Buffer.from(
+        await a.page.evaluate(() => {
+          const c = document.createElement('canvas');
+          c.width = 800;
+          c.height = 600;
+          const g = c.getContext('2d');
+          g.fillStyle = '#2f6fb5';
+          g.fillRect(0, 0, 800, 600);
+          g.fillStyle = '#ffffff';
+          g.fillRect(100, 100, 300, 200);
+          return c.toDataURL('image/png').split(',')[1];
+        }),
+        'base64',
+      );
+      const chooser = a.page.waitForEvent('filechooser');
+      await button(a.page, '写真').click();
+      await (await chooser).setFiles({ name: 'test.png', mimeType: 'image/png', buffer: png });
+      await a.page.locator('img[alt="写真"]').first().waitFor({ timeout: 15000 });
+      await a.page.waitForFunction(() => (__tegamiStore.getItem('tegami.messages') ?? '').includes('"file"'), null, { timeout: 15000 });
+      const id = await a.page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.messages')).find((m) => m.file).id);
+      await a.page.evaluate(() => __tegamiStore.flush());
+      const kept = await idbKeys(a.page, 'tegami-files', 'files');
+      assert(kept.includes(`main|${id}`), `the kept photo is not under the account's name: ${kept}`);
+      assert(!kept.includes(id), 'a plain copy is kept too');
+      // The saved image is JPEG or PNG; neither signature may appear in what is stored.
+      for (const sig of ['IHDR', 'JFIF', 'Exif']) assert(!(await leaks(a.page, sig)).length, `an image is kept as it is (${sig}): ${await leaks(a.page, sig)}`);
+      // It still shows after a reload (decrypted from the kept copy).
+      await a.page.reload();
+      await a.page.goto(ORIGIN + '/');
+      await waitOpen(a.page);
+      await a.page.goto(`${ORIGIN}/chat/${b.hex}`);
+      await a.page.waitForFunction(() => {
+        const i = document.querySelector('img[alt="写真"]');
+        return i && i.complete && i.naturalWidth > 0;
+      }, null, { timeout: 15000 });
+
+      // A plain copy from before the encryption (a Blob under the message id, and the list of accounts done not yet written).
+      await a.page.evaluate(
+        ([id]) =>
+          new Promise((ok, fail) => {
+            localStorage.removeItem('tegami.filesSealed');
+            const r = indexedDB.open('tegami-files', 1);
+            r.onsuccess = () => {
+              const tx = r.result.transaction('files', 'readwrite');
+              const s = tx.objectStore('files');
+              const g = s.get(`main|${id}`);
+              g.onsuccess = () => {
+                // The plain copy is the real image: taken from the page's own picture.
+                const c = document.createElement('canvas');
+                c.width = 20;
+                c.height = 20;
+                c.toBlob((blob) => {
+                  const tx2 = r.result.transaction('files', 'readwrite');
+                  tx2.objectStore('files').delete(`main|${id}`);
+                  tx2.objectStore('files').put(blob, id);
+                  tx2.objectStore('files').put(new Blob(['not mine'], { type: 'image/png' }), 'someone-elses-file');
+                  tx2.oncomplete = () => {
+                    r.result.close();
+                    ok();
+                  };
+                  tx2.onerror = () => fail(tx2.error);
+                }, 'image/png');
+              };
+              tx.onerror = () => fail(tx.error);
+            };
+            r.onerror = () => fail(r.error);
+          }),
+        [id],
+      );
+      assert((await idbKeys(a.page, 'tegami-files', 'files')).includes(id), 'setup: no plain copy');
+      await a.page.reload();
+      await a.page.goto(ORIGIN + '/');
+      await waitOpen(a.page);
+      let keys = [];
+      for (let i = 0; i < 50; i++) {
+        keys = await idbKeys(a.page, 'tegami-files', 'files');
+        if (keys.includes(`main|${id}`) && !keys.includes(id)) break;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      assert(keys.includes(`main|${id}`), `the plain copy was not encrypted: ${keys}`);
+      assert(!keys.includes(id) && !keys.includes('someone-elses-file'), `plain copies left: ${keys}`);
+      await a.page.goto(`${ORIGIN}/chat/${b.hex}`);
+      await a.page.waitForFunction(() => {
+        const i = document.querySelector('img[alt="写真"]');
+        return i && i.complete && i.naturalWidth > 0;
+      }, null, { timeout: 15000 });
+      for (const w of [a, b]) await w.context.close();
     });
 
   } finally {
