@@ -6,7 +6,7 @@ import { finalizeEvent, generateSecretKey, getPublicKey, type EventTemplate } fr
 import { bytesToHex, hexToBytes } from 'nostr-tools/utils';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-import { accounts, describeAccount, removeAccountHere } from './accounts';
+import { accounts, describeAccount, readyAccounts, removeAccountHere } from './accounts';
 import { FEEDBACK_NAME, FEEDBACK_PUBKEY } from './feedback';
 import { AI_DRAFT_ASK_KIND, AI_DRAFT_KIND, draftAsk, parseDraft, wrapExpiring } from './ai-draft';
 import { pairWrap } from './ai-pair';
@@ -63,9 +63,10 @@ import {
 import { clearNewMark } from './sw-store';
 import { createDeviceVault, deviceVaultAvailable, openDeviceVault, type DeviceVault } from './device-vault';
 import { setCrashReports } from './crash';
-import { MAX_FILE_BYTES, deleteStampFile, encryptAndUpload, fileFromRumor, fileTags, forgetFile, isKeptStamp, isStampRumor, keepSent, keptFile, openFile, shrinkAvatar, shrinkImage, shrinkStamp, uploadStamp, validFileName, validFileRef, type FileRef } from './files';
+import { MAX_FILE_BYTES, deleteStampFile, encryptAndUpload, fileFromRumor, fileTags, forgetFile, isKeptStamp, isStampRumor, keepSent, keptFile, openFile, sealLegacyFiles, shrinkAvatar, shrinkImage, shrinkStamp, uploadStamp, validFileName, validFileRef, type FileRef } from './files';
 import { backoff, loadOutbox, publishOne, saveOutbox, type Outgoing } from './outbox';
-import { k, keyFor, load, remove, save } from './storage';
+import { k, keyFor, load, remove, save, storageAccount } from './storage';
+import { openAtRest } from './at-rest';
 import { replaceAiPermissions, useAiPermissions } from './ai-permissions';
 import { downloadHistory, uploadHistory } from './history';
 import {
@@ -595,6 +596,66 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   // My「AIに読ませない」as my other device changed it (set by the code after setMyNoAi).
   const takeMyNoAiRef = useRef<(on: boolean) => void>(() => {});
 
+  // What the account keeps on this device (messages, friends, groups …) is encrypted with a key
+  // made from its secret key (lib/at-rest.ts). So it can be read only once the secret key is
+  // here: this opens the encrypted records and puts what they hold on the screen. Everything
+  // that sets the secret key calls it first, and sets the secret key only after it finishes, so
+  // nothing can be saved from a screen that has not loaded yet.
+  const loadPrivate = useCallback(async (sk: Uint8Array) => {
+    await openAtRest(storageAccount(), sk);
+    const loadedContacts = load<Contact[]>(k('contacts'), []);
+    contactsRef.current = loadedContacts;
+    setContacts(loadedContacts);
+    const loadedGroups = load<Group[]>(k('groups'), []);
+    setGroups(loadedGroups);
+    const loadedAvatar = load<FileRef | null>(k('avatar'), null);
+    myAvatarRef.current = loadedAvatar;
+    setMyAvatarState(loadedAvatar);
+    const loadedStamps = load<Stamp[]>(k('stamps'), []);
+    setStamps(loadedStamps);
+    setStampsUsed(load<Record<string, number>>(k('stampsUsed'), {}));
+    const loadedBlocked = load<string[]>(k('blocked'), []);
+    blockedRef.current = loadedBlocked;
+    setBlocked(loadedBlocked);
+    // Messages waiting to be sent: the outbox is what counts. A message still marked as
+    // being sent when the app closed is now waiting; a mark without an outbox entry is stale.
+    const deletedSet = new Set(load<string[]>(k('deleted'), []));
+    deletedRef.current = deletedSet;
+    const box = loadOutbox();
+    const stored = load<Message[]>(k('messages'), []).filter((m) => !deletedSet.has(m.id));
+    const ids = new Set(stored.map((m) => m.id));
+    // Leaving a group has no message left on this device (lib/groups.ts), but must still go.
+    outbox.current = box.filter((o) => ids.has(o.id) || o.peer.endsWith('#leave'));
+    if (outbox.current.length !== box.length) saveOutbox(outbox.current);
+    const waiting = new Set(outbox.current.map((o) => o.id));
+    setMessages(
+      stored.map((m) => {
+        if (waiting.has(m.id)) return m.pending === 'unsent' ? m : { ...m, pending: 'unsent' };
+        if (!m.pending) return m;
+        const { pending: _, ...rest } = m;
+        return rest;
+      }),
+    );
+    setReadAt(load<Record<string, number>>(k('readAt'), {}));
+    ledgerRef.current = load<Ledger | null>(k('sync'), null);
+    clearedRef.current = load<Record<string, number>>(k('cleared'), {});
+    // What my AI friends asked for and the AIs in groups (lib/ai-actions.ts) are encrypted too.
+    setAiGroups(loadAiGroups());
+    setAiProposals(loadProposals());
+    // Photos kept before they were encrypted are encrypted now (lib/files.ts).
+    const fileIds: string[] = [];
+    for (const m of stored) if (m.file) fileIds.push(m.id);
+    for (const o of box) if (o.photo) fileIds.push(o.id);
+    for (const st of loadedStamps) if (st.sha256) fileIds.push(`stamp:${st.sha256}`);
+    for (const c of loadedContacts) if (c.avatar?.sha256) fileIds.push(`avatar:${c.avatar.sha256}`);
+    for (const g of loadedGroups) if (g.avatar?.sha256) fileIds.push(`avatar:${g.avatar.sha256}`);
+    if (loadedAvatar?.sha256) fileIds.push(`avatar:${loadedAvatar.sha256}`);
+    void sealLegacyFiles(
+      fileIds,
+      readyAccounts().map((a) => a.id),
+    );
+  }, []);
+
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -621,44 +682,14 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
         }
       }
       if (!alive) return;
+      // The secret key is here (no passkey, or the device key): load what it protects first.
+      // With a passkey it is not here yet, and unlock() does this once the passkey is used.
+      if (sk) await loadPrivate(sk);
+      if (!alive) return;
       setVault(v);
       if (sk) setSecret(sk);
-      const loadedContacts = load<Contact[]>(k('contacts'), []);
-      contactsRef.current = loadedContacts;
-      setContacts(loadedContacts);
-      setGroups(load<Group[]>(k('groups'), []));
-      const loadedAvatar = load<FileRef | null>(k('avatar'), null);
-      myAvatarRef.current = loadedAvatar;
-      setMyAvatarState(loadedAvatar);
-      setStamps(load<Stamp[]>(k('stamps'), []));
-      setStampsUsed(load<Record<string, number>>(k('stampsUsed'), {}));
-      const loadedBlocked = load<string[]>(k('blocked'), []);
-      blockedRef.current = loadedBlocked;
-      setBlocked(loadedBlocked);
-      // Messages waiting to be sent: the outbox is what counts. A message still marked as
-      // being sent when the app closed is now waiting; a mark without an outbox entry is stale.
-      const deletedSet = new Set(load<string[]>(k('deleted'), []));
-      deletedRef.current = deletedSet;
-      const box = loadOutbox();
-      const stored = load<Message[]>(k('messages'), []).filter((m) => !deletedSet.has(m.id));
-      const ids = new Set(stored.map((m) => m.id));
-      // Leaving a group has no message left on this device (lib/groups.ts), but must still go.
-      outbox.current = box.filter((o) => ids.has(o.id) || o.peer.endsWith('#leave'));
-      if (outbox.current.length !== box.length) saveOutbox(outbox.current);
-      const waiting = new Set(outbox.current.map((o) => o.id));
-      setMessages(
-        stored.map((m) => {
-          if (waiting.has(m.id)) return m.pending === 'unsent' ? m : { ...m, pending: 'unsent' };
-          if (!m.pending) return m;
-          const { pending: _, ...rest } = m;
-          return rest;
-        }),
-      );
-      setReadAt(load<Record<string, number>>(k('readAt'), {}));
-      ledgerRef.current = load<Ledger | null>(k('sync'), null);
       myNoAiRef.current = myNoAi();
       setMyNoAiState(myNoAiRef.current);
-      clearedRef.current = load<Record<string, number>>(k('cleared'), {});
       setShowUnreadState(load<boolean>(k('showUnread'), true));
       // Accounts made before unread counts existed: what is already here counts as read.
       let setup = load<number>(k('setupAt'), 0);
@@ -675,7 +706,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [loadPrivate]);
 
   const status: Status = !loaded ? 'loading' : secret ? 'open' : vault ? 'locked' : 'new';
   const me = useMemo(() => (secret ? getPublicKey(secret) : null), [secret]);
@@ -763,10 +794,10 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // ---------- what AI friends ask this app to do (lib/ai-actions.ts) ----------
-  const [aiGroups, setAiGroups] = useState<AiGroups>(() => loadAiGroups());
+  const [aiGroups, setAiGroups] = useState<AiGroups>({});
   const aiGroupsRef = useRef<AiGroups>(aiGroups);
   aiGroupsRef.current = aiGroups;
-  const [aiProposals, setAiProposals] = useState<AiProposal[]>(() => loadProposals());
+  const [aiProposals, setAiProposals] = useState<AiProposal[]>([]);
   const aiProposalsRef = useRef<AiProposal[]>(aiProposals);
   // When my other device last let AIs do more (lib/ai-permissions.ts aiWidened); 0 when seen.
   const [aiWidenedAt, setAiWidenedAt] = useState(() => load<number>(k('ai.widened'), 0));
@@ -1257,6 +1288,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     async (moved?: Bundle) => {
       const sk = moved ? bundleSecret(moved) : generateSecretKey();
       const v = await createVault(sk as Uint8Array<ArrayBuffer>);
+      // Open the encrypted records first: adopt() and the code after it save into them.
+      await openAtRest(storageAccount(), sk);
       if (moved) await adopt(moved, sk);
       else forgetRecovery();
       beginAccount();
@@ -1272,6 +1305,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       const sk = moved ? bundleSecret(moved) : generateSecretKey();
       if (deviceVaultAvailable()) save(k('device'), await createDeviceVault(sk as Uint8Array<ArrayBuffer>));
       else save(k('account'), { secretHex: bytesToHex(sk) });
+      await openAtRest(storageAccount(), sk);
       if (moved) await adopt(moved, sk);
       else forgetRecovery();
       beginAccount();
@@ -1306,8 +1340,11 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
 
   const unlock = useCallback(async () => {
     if (!vault) return;
-    setSecret(await unlockVault(vault));
-  }, [vault]);
+    const sk = await unlockVault(vault);
+    // What the passkey protects is read now, before anything can save (see loadPrivate).
+    await loadPrivate(sk);
+    setSecret(sk);
+  }, [vault, loadPrivate]);
 
   const setCrashReportsOn = useCallback((on: boolean) => {
     save('tegami.crashReports', on);

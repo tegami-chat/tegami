@@ -12,7 +12,8 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import { FIRST_ACCOUNT, keyFor, load, remove, save, setStorageAccount } from './storage';
-import { forgetFile } from './files';
+import { closeAtRest, forgetAccountRecords } from './at-rest';
+import { forgetAccountFiles } from './files';
 import { clearNewMark, newMarks, shareAccounts } from './sw-store';
 
 export type AccountEntry = { id: string; pubkey?: string; name?: string };
@@ -100,6 +101,7 @@ function forgetStorage(id: string) {
       if (n?.startsWith(prefix)) names.push(n);
     }
     for (const n of names) remove(n);
+    void forgetAccountRecords(id);
   } catch {
     // Storage unavailable.
   }
@@ -126,7 +128,7 @@ export function readyAccounts(i: Index = index) {
 }
 
 // Names under "tegami." that belong to the whole device, not to the first account.
-const DEVICE_WIDE = new Set(['tegami.accounts', 'tegami.theme', 'tegami.crashReports']);
+const DEVICE_WIDE = new Set(['tegami.accounts', 'tegami.theme', 'tegami.crashReports', 'tegami.filesSealed']);
 
 /** Every storage name an account keeps. The first account's are "tegami.<name>" (not the device's). */
 function storageNames(id: string) {
@@ -145,25 +147,6 @@ function storageNames(id: string) {
   return names;
 }
 
-/** The ids of the files this account keeps in IndexedDB that no other account here also shows. */
-function filesOf(id: string) {
-  type M = { id: string; file?: { sha256?: string } };
-  type F = { sha256?: string; avatar?: { sha256?: string } };
-  const ids = (acc: string) => {
-    const out = new Set<string>();
-    for (const m of load<M[]>(keyFor(acc, 'messages'), [])) if (m.file) out.add(m.id);
-    for (const s of load<F[]>(keyFor(acc, 'stamps'), [])) if (s.sha256) out.add(`stamp:${s.sha256}`);
-    for (const c of load<F[]>(keyFor(acc, 'contacts'), [])) if (c.avatar?.sha256) out.add(`avatar:${c.avatar.sha256}`);
-    const mine = load<F | null>(keyFor(acc, 'avatar'), null);
-    if (mine?.sha256) out.add(`avatar:${mine.sha256}`);
-    return out;
-  };
-  const mine = ids(id);
-  // Two accounts on one device that talk to each other hold the same message (and file) ids.
-  for (const other of index.list) if (other.id !== id) for (const f of ids(other.id)) mine.delete(f);
-  return [...mine];
-}
-
 /**
  * Removes an account from this device only: its storage, its files kept here, and its line in
  * the list. The account itself stays (on other devices, on the relay, in a recovery backup).
@@ -173,7 +156,9 @@ function filesOf(id: string) {
 export async function removeAccountHere(id: string) {
   const entry = index.list.find((a) => a.id === id);
   if (!entry) return;
-  await Promise.all(filesOf(id).map((f) => forgetFile(f).catch(() => {})));
+  // Each account keeps its own copies of files and its own encrypted records (lib/files.ts, lib/at-rest.ts).
+  await forgetAccountFiles(id);
+  await forgetAccountRecords(id);
   for (const n of storageNames(id)) remove(n);
   if (entry.pubkey) void clearNewMark(entry.pubkey);
   const rest = index.list.filter((a) => a.id !== id);
@@ -192,6 +177,7 @@ export async function removeAccountHere(id: string) {
 export function switchAccount(id: string) {
   if (id === index.current || !index.list.some((a) => a.id === id)) return;
   const leaving = index.current;
+  closeAtRest(); // the open account's key and memory go; its unwritten changes are written first
   setStorageAccount(id);
   write({ v: 1, current: id, list: index.list });
   // Leaving an account that was being added and never got a key: nothing to keep.
@@ -205,6 +191,7 @@ export function switchAccount(id: string) {
 export function addAccount() {
   const id = Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => b.toString(16).padStart(2, '0')).join('');
   const back = index.current;
+  closeAtRest();
   setStorageAccount(id);
   write({ v: 1, current: id, list: [...index.list, { id }], back });
   return id;
