@@ -5,7 +5,7 @@
  },
  "hero.kicker": {
   "en": "Open-source messaging app. <span class=\"text-nostr-600 dark:text-nostr-300\">Built on Nostr.</span>",
-  "ja": "<span class=\"text-nostr-600 dark:text-nostr-300\">Nostrで動く</span>、オープンソースのメッセージアプリ"
+  "ja": "<span class=\"text-nostr-600 dark:text-nostr-300\">Nostrで動く</span>オープンソースのメッセージアプリ"
  },
  "hero.h1a": {
   "en": "Your chats<br class=\"sm:hidden\"> belong <span class=\"text-forest-600 dark:text-forest-300\">to you.</span>",
@@ -28,16 +28,16 @@
   "ja": "プラットフォームから自由に。"
  },
  "p1.t": {
-  "en": "No creepy ads, no news you didn't ask for, no games, no unwanted features. None of it. And your personal data is never sold for corporate marketing.",
-  "ja": "気持ち悪い広告も、見たくないニュースも、やりたくないゲームも、いらない機能も、全部ありません。あなたの個人情報を企業のマーケティングに売ることはありません。"
+  "en": "No creepy ads, no news you didn't ask for, no games, no unwanted features. None of it. And your personal data is never sold for advertising or marketing.",
+  "ja": "追いかけてくる広告も、見たくないニュースも、やりたくないゲームも、いらない機能も、全部ありません。あなたの個人情報を広告や営業のために売ることもありません。"
  },
  "p2.h": {
   "en": "Use AI your way.",
   "ja": "AIを自由に使う。"
  },
  "p2.t": {
-  "en": "Connect your own AI as a friend in your chat list and work with your messages freely via MCP (the API is planned). You're just as free to not use AI at all, or to keep other people's AIs from reading your messages.",
-  "ja": "自分のAIを、友だちとしてつなげられます。MCP（AIとツールをつなぐ仕組み）で、メッセージを自由に扱えます（APIは予定です）。AIを使わないことも、相手のAIに自分の文を読ませないことも、あなたの自由です。"
+  "en": "Connect your own AI as a friend in your chat list, and let it read and send messages through MCP (the API is planned). You're just as free to not use AI at all, or to keep other people's AIs from reading your messages.",
+  "ja": "自分のAIを、友だちとしてつなげられます。MCP（AIとツールをつなぐ仕組み）を使えば、AIがメッセージを読んだり送ったりできます（APIは予定です）。AIを使わないことも、相手のAIに自分の文を読ませないことも、あなたの自由です。"
  },
  "p3.h": {
   "en": "No one else can read them.",
@@ -128,8 +128,8 @@
   "ja": "好きなAIを選べる"
  },
  "ai.pick.t": {
-  "en": "Claude, Gemini, OpenAI models, or an AI that runs on your own computer. You choose which one.",
-  "ja": "ClaudeやGemini、OpenAIのモデルのほか、自分のパソコンで動くAIも使えます。どのAIにするかは、あなたが選びます。"
+  "en": "Run a small program (tegami-agent) on your computer to connect Claude Code, Claude, Gemini or OpenAI models with your own API key, or an AI that runs on your computer. You choose which one.",
+  "ja": "自分のパソコンで小さなプログラム（tegami-agent）を動かすと、Claude Codeのほか、自分のAPIキーを使うClaude、Gemini、OpenAIのモデルや、パソコンで動くAIをつなげます。どのAIにするかは、あなたが選びます。"
  },
  "ai.talk.h": {
   "en": "Talk with your AI",
@@ -153,7 +153,7 @@
  },
  "ai.each.h": {
   "en": "Let AIs talk to each other",
-  "ja": "AI同士でやり取りさせる"
+  "ja": "AIどうしでやり取りさせる"
  },
  "ai.each.t": {
   "en": "When you both allow it, your AI and a friend's AI can sort out plans and pass details to each other.",
@@ -172,8 +172,8 @@
   "ja": "自分でカスタマイズする"
  },
  "ai.own.t": {
-  "en": "Tegami supports MCP, so you can build your own bots and automations. The API is planned.",
-  "ja": "自分だけのボットや、決まった作業を自動でこなす仕組みを作れます。プログラムから直接つなぐAPIは予定です。"
+  "en": "Connect your own program that writes the replies, and you have your own bot. An API for connecting programs directly is planned.",
+  "ja": "返事を書く自分のプログラムをつなげば、自分だけのボットを作れます。プログラムから直接つなぐAPIは予定です。"
  },
  "mk.h": {
   "en": "Make Tegami yours.",
@@ -212,8 +212,8 @@
   "ja": "AIやボットをつなぐ"
  },
  "mk.bots.t": {
-  "en": "Give an AI or bot on your computer its own Tegami account, and chat with it like anyone else.",
-  "ja": "パソコンで動くAIやボットに、Tegamiのアカウントを持たせられます。ほかの友だちと同じようにトークできます。"
+  "en": "Run one command on your computer and scan the QR code it shows. Your AI or bot becomes a Tegami friend you can chat with like anyone else.",
+  "ja": "パソコンでコマンドを1つ実行し、表示されるQRコードをアプリで読むと、AIやボットがTegamiの友だちになります。ほかの友だちと同じようにトークできます。"
  },
  "mk.api.h": {
   "en": "API and MCP",
@@ -308,8 +308,8 @@
   "ja": "安全の仕組み"
  },
  "sec.t": {
-  "en": "How we protect your messages, what we can and can't see, and what isn't done yet.",
-  "ja": "あなたのメッセージをどう守っているか、運営者に何が見えるか、まだ足りないところはどこかを説明します。"
+  "en": "How we protect your messages, what we can and can't see, and how you can check it yourself.",
+  "ja": "あなたのメッセージをどう守っているか、運営者に何が見えるか、自分でどう確かめられるかを説明します。"
  },
  "sec.seal.h": {
   "en": "Only you and your friend can read your messages",
@@ -384,8 +384,8 @@
   "ja": "メッセージの宛先のアカウント、届いた時刻、データの大きさ"
  },
  "sec.server.4.2": {
-  "en": "Which account is connected, and the IP address it connects from",
-  "ja": "サーバーにつないでいるアカウントと、接続元のIPアドレス"
+  "en": "Which account is connected, and the IP address it connects from (a number that works like an address on the internet)",
+  "ja": "サーバーにつないでいるアカウントと、接続元のIPアドレス（ネット上の住所にあたる番号）"
  },
  "sec.server.5": {
   "en": "The server needs these to deliver messages. It deletes messages after 30 days and doesn't keep a record of who sent them.",
@@ -416,28 +416,28 @@
   "ja": "音声通話とビデオ通話では、暗号化したまま端末どうしを直接つなぎます。直接つなぐため、通話の相手にあなたのIPアドレスが伝わり、おおよその地域が分かることがあります。設定の「通話の中継」で「通話を常に中継する」をオンにすると、相手にIPアドレスは伝わりません。"
  },
  "sec.strangers.1": {
-  "en": "Messages from people you don't know go to a separate box. Messages from people who joined without an invite are not shown anywhere, including the strangers box, until you add them as a friend, and they do not trigger notifications. You can block and report anyone. If you attach messages to a report, we can read only the ones you attached.",
-  "ja": "知らない人からのメッセージは、「知らない人から」の欄に分けて届きます。招待なしで登録した人からのメッセージは、友だちに追加するまで「知らない人から」の欄を含めてどこにも表示されず、通知も鳴りません。どの相手もブロックや通報ができます。通報にメッセージを添えた時は、添えたメッセージだけを運営者が読みます。"
+  "en": "Messages from people you don't know (people who are not your friends) go to a separate box. The exception is people who joined without an invite: their messages do not show up even there, and do not trigger notifications, until you add them as a friend. You can block and report anyone. If you attach messages to a report, we can read only the ones you attached.",
+  "ja": "知らない人（友だちではない人）からのメッセージは、「知らない人から」の欄に分けて届きます。ただし、招待なしで登録した人からのメッセージは、友だちに追加するまで、この欄にも出ず、通知も鳴りません。どの相手もブロックや通報ができます。通報にメッセージを添えた時は、添えたメッセージだけを運営者が読みます。"
  },
  "sec.ai.1": {
-  "en": "Your AI runs on your own computer, not on our servers. If you use an AI company's service, whatever you let your AI read also goes to that company. Everything an AI can do starts switched off, and it only does what you allow.",
-  "ja": "AIは、Tegamiのサーバーではなく、あなたのパソコンで動きます。AIの会社のサービスを使う時は、AIに読ませたメッセージがその会社にも送られます。AIにできることは最初はすべてオフで、あなたが許可した機能だけが動きます。"
+  "en": "Your AI runs on your own computer, not on our servers. If you use an AI company's service, whatever you let your AI read also goes to that company. Everything an AI can do starts switched off, and it only does what you allow. \"Turn everything off\" under \"AI\" in Settings stops it all at once.",
+  "ja": "AIは、Tegamiのサーバーではなく、あなたのパソコンで動きます。AIの会社のサービスを使う時は、AIに読ませたメッセージがその会社にも送られます。AIにできることは最初はすべてオフで、あなたが許可した機能だけが動きます。設定の「AI」にある「すべてオフにする」で、いつでも一度に止められます。"
  },
  "sec.ai.2": {
   "en": "The people you chat with can also choose not to let other people's AIs read what they write.",
   "ja": "あなたもトークの相手も、自分のメッセージをほかの人のAIに読ませないように設定できます。"
  },
  "sec.ai.3": {
-  "en": "The official Tegami app marks messages written by an AI. The model name shown next to an AI is what that AI says about itself. Apps modified from Tegami's code may leave out the mark.",
-  "ja": "公式のアプリでは、AIが書いたメッセージに印が付きます。AIの横に出るモデルの名前は、AI自身が名乗っているものです。Tegamiのコードを改造したアプリでは、印が付かないことがあります。"
+  "en": "The official Tegami app marks messages written by an AI. The model name shown next to an AI is only what that AI says about itself, and nobody has checked it. Apps modified from Tegami's code may leave out the mark, so a missing mark does not prove a person wrote it.",
+  "ja": "公式のアプリでは、AIが書いたメッセージに印が付きます。AIの横に出るモデルの名前は、AI自身が名乗っているだけで、確かめたものではありません。Tegamiのコードを改造したアプリから送った文には、印が付かないことがあります。印がないからといって、人が書いた文とは限りません。"
  },
  "sec.count.1": {
   "en": "There is no analytics or tracking, in the app or on this website. We only count totals, and publish the weekly numbers on the <a href=\"Tegamiの稼働状況と利用統計案_2026-11-15.html\" class=\"underline\">status page</a>.",
   "ja": "アプリにもこのサイトにも、アクセス解析や追跡の仕組みは入れていません。数えるのは全体の合計だけで、毎週の数を<a href=\"Tegamiの稼働状況と利用統計案_2026-11-15.html\" class=\"underline\">稼働状況のページ</a>で公開しています。"
  },
  "sec.check.1": {
-  "en": "All of Tegami's code is public under AGPL-3.0, so anyone can check what this page says. The details are on the <a href=\"Tegamiの開発者向け_2026-11-16.html\" class=\"underline\">developer pages</a>, and what we keep and for how long is in the <a href=\"Tegamiのプライバシーポリシー案_2026-11-14.html\" class=\"underline\">privacy policy</a>.",
-  "ja": "Tegamiのコードは、AGPL-3.0というライセンスで、すべて公開しています。このページに書いたことは、誰でもコードを読んで確かめられます。詳しい作りは<a href=\"Tegamiの開発者向け_2026-11-16.html\" class=\"underline\">開発者向けの説明</a>に、預かる情報と期間は<a href=\"Tegamiのプライバシーポリシー案_2026-11-14.html\" class=\"underline\">プライバシーポリシー</a>に書いています。"
+  "en": "All of Tegami's code is public. The license is AGPL-3.0: anyone can read the code, and apps built from it must publish theirs too. So anyone can check what this page says. The details are on the <a href=\"Tegamiの開発者向け_2026-11-16.html\" class=\"underline\">developer pages</a>, and what we keep and for how long is in the <a href=\"Tegamiのプライバシーポリシー案_2026-11-14.html\" class=\"underline\">privacy policy</a>.",
+  "ja": "Tegamiのコードは、すべて公開しています。ライセンスはAGPL-3.0で、誰でもコードを読めて、Tegamiのコードを使ったアプリにもコードの公開を求めます。このページに書いたことは、誰でもコードを読んで確かめられます。詳しい作りは<a href=\"Tegamiの開発者向け_2026-11-16.html\" class=\"underline\">開発者向けの説明</a>に、預かる情報と期間は<a href=\"Tegamiのプライバシーポリシー案_2026-11-14.html\" class=\"underline\">プライバシーポリシー</a>に書いています。"
  },
  "sec.check.status": {
   "en": "Service status",
@@ -452,16 +452,16 @@
   "ja": "無料ですか？ 費用は誰が出しているのですか？"
  },
  "faq.free.a": {
-  "en": "Yes, it's free, with no ads. Tegami is made by an independent developer in Japan, with no outside investment. The developer currently covers the costs, and support from users and supporters is welcome.",
-  "ja": "はい、無料です。広告も表示されません。Tegamiは日本の個人開発者が作っています。投資は受けていません。いまは開発者が費用を負担していますが、使う人や応援してくれる人からの支援も受け付けています。"
+  "en": "Yes, it's free, with no ads. Tegami is made by an independent developer in Japan, with no outside investment. The developer currently covers the costs, and donations from users and supporters are welcome.",
+  "ja": "はい、無料です。広告も出ません。Tegamiは日本の個人開発者が作っています。投資は受けていません。いまは開発者が費用を負担していますが、使う人や応援してくれる人からの寄付も受け付けています。"
  },
  "faq.read.q": {
   "en": "Who can read my messages?",
   "ja": "メッセージを読めるのは誰ですか？"
  },
  "faq.read.a": {
-  "en": "Only you and the people you send them to. Messages are encrypted on your device, so not even Tegami's operator can read them. There are two exceptions. If you allow an AI to read a chat, that AI can read it, and what it reads also goes to the company behind it. You can choose not to let other people’s AIs read your messages. If you attach messages to a report, the operator can read the ones you attached.",
-  "ja": "あなたと、トークの相手だけです。メッセージは端末の中で暗号化されるので、運営者にも読めません。例外は2つあります。AIに読ませる許可を出したトークは、そのAIが読めます。AIに読ませたものは、そのAIの会社にも渡ります。自分の文を相手のAIに読ませない設定もあります。通報にメッセージを添えたときは、添えたメッセージを運営者が読めます。"
+  "en": "Only you and the people you send them to. Messages are encrypted on your device, so not even Tegami's operator can read them. There are two exceptions. First, if you allow an AI to read a chat, that AI can read it, and what it reads also goes to the company behind it. Second, if you attach messages to a report, the operator can read the ones you attached. You can also choose not to let other people’s AIs read your messages.",
+  "ja": "あなたと、トークの相手だけです。メッセージは端末の中で暗号化して送るので、運営者にも読めません。例外は2つあります。1つ目は、AIに読ませる許可を出したトークです。許可したAIがそのトークを読め、読ませたものはそのAIの会社にも渡ります。2つ目は、通報にメッセージを添えたときです。添えたメッセージだけを運営者が読めます。なお、自分の文を相手のAIに読ませない設定もあります。"
  },
  "faq.phone.q": {
   "en": "Do I need a phone number or email?",
@@ -485,7 +485,7 @@
  },
  "faq.friends.a": {
   "en": "Send your invite link, or show your QR code. Your friends need Tegami too.",
-  "ja": "招待リンクを送るか、QRコードを見せるだけです。友だちにもTegamiを入れてもらう必要があります。"
+  "ja": "招待リンクを送るか、QRコードを見せるだけです。友だちにもTegamiを始めてもらう必要があります。"
  },
  "faq.lost.q": {
   "en": "What if I lose my phone?",
@@ -532,8 +532,8 @@
   "ja": "もしTegamiが終了したらどうなりますか？"
  },
  "faq.shutdown.a": {
-  "en": "The code is public, so someone with the skills can run their own server and keep Tegami going. But the app cannot yet connect to a different server, and you cannot yet move your account to another Nostr app. You can export your chats anytime.",
-  "ja": "コードを公開しているので、技術のある人は自分でサーバーを立てて、Tegamiを動かし続けられます。ただし、いまのアプリを別のサーバーにつなぐ機能や、ほかのNostrアプリへアカウントを移す機能は、まだありません。トーク履歴は、いつでも書き出せます。"
+  "en": "The code is public, so someone with the skills can run their own server and keep Tegami going. But the app cannot yet connect to a different server, and you cannot yet move your account to another Nostr app (an app that uses the same protocol). You can export your chats anytime.",
+  "ja": "コードを公開しているので、技術のある人は自分でサーバーを立てて、Tegamiを動かし続けられます。ただし、いまのアプリを別のサーバーにつなぐ機能や、ほかのNostrアプリ（同じ通信の仕組みを使う別のアプリ）へアカウントを移す機能は、まだありません。トーク履歴は、いつでも書き出せます。"
  },
  "faq.dev.q": {
   "en": "Where are the technical details?",
@@ -801,7 +801,7 @@
  },
  "rm.note": {
   "en": "We release what can be taken back first. Anything that can't be taken back comes last.",
-  "ja": "あとから取り消せる機能から順に公開し、取り消せない機能は最後に作ります。"
+  "ja": "あとから元に戻せる機能から順に公開し、一度外へ出すと元に戻せない機能（アカウントの持ち出しなど）は最後に作ります。"
  },
  "rm.issue": {
   "en": "Suggest a feature on GitHub",
@@ -833,7 +833,7 @@
  },
  "rm.e2e.t": {
   "en": "Messages are encrypted on your device. Your account is protected by a passkey, with no password.",
-  "ja": "メッセージは端末の中で暗号化されます。アカウントはパスワードではなく、顔認証や指紋認証で開くパスキーで守ります。"
+  "ja": "メッセージは端末の中で暗号化します。アカウントはパスワードではなく、顔認証や指紋認証で開くパスキーで守ります。"
  },
  "rm.move.h": {
   "en": "Recovery code and new phones",
@@ -868,12 +868,12 @@
   "ja": "知らない人からのメッセージは「知らない人から」の欄にまとまります。誰でもブロックと通報ができます。"
  },
  "rm.signup.h": {
-  "en": "Open sign-up with invites",
-  "ja": "招待で広がる登録"
+  "en": "Invites and unwanted messages",
+  "ja": "招待と迷惑メッセージ対策"
  },
  "rm.signup.t": {
-  "en": "Anyone can join. Messages from people who joined without an invite are not shown anywhere, including the strangers box, until you add them as a friend, and they do not trigger notifications. Messages sent after you add them as a friend are shown.",
-  "ja": "誰でも登録できます。招待なしで登録した人からのメッセージは、友だちに追加するまで「知らない人から」の欄を含めてどこにも表示されず、通知も鳴りません。友だちに追加したあとに届くメッセージから表示されます。"
+  "en": "Anyone can join, with or without an invite. But messages from people who joined without an invite are not shown anywhere, including the strangers box, until you add them as a friend, and they do not trigger notifications. Messages sent after you add them as a friend are shown.",
+  "ja": "招待がなくても誰でも登録できます。ただし、招待なしで登録した人からのメッセージは、友だちに追加するまで「知らない人から」の欄にも出ず、通知も鳴りません。友だちに追加したあとに届くメッセージから表示されます。"
  },
  "rm.qr.h": {
   "en": "Connect your AI with a QR code",
@@ -889,11 +889,11 @@
  },
  "rm.aigroup.h": {
   "en": "AI in group chats",
-  "ja": "グループにAIを呼ぶ"
+  "ja": "グループのAIとAIどうしの会話"
  },
  "rm.aigroup.t": {
   "en": "Invite an AI into a group once everyone agrees, and let AIs talk to each other when you allow it. The code is written, but this version does not allow it. It will come in a later version.",
-  "ja": "全員の同意でAIをグループに呼べます。許可すればAI同士でもやり取りできます。コードは書き終えていますが、この版では使えません。後の版で使えるようにします。"
+  "ja": "全員の同意でAIをグループに呼べます。許可すればAIどうしでもやり取りできます。コードは書き終えていますが、この版では使えません。後の版で使えるようにします。"
  },
  "rm.now": {
   "en": "In development",
@@ -949,7 +949,7 @@
  },
  "rm.screens.t": {
   "en": "Make the screens you like on top of Tegami, without handing over your secret key, and share them.",
-  "ja": "秘密の鍵を渡さずに、Tegamiの上に好きな画面を作り、人と共有できます。"
+  "ja": "アカウントの暗号の鍵を渡さずに、Tegamiの上に好きな画面を作り、人と共有できます。"
  },
  "rm.relay.h": {
   "en": "Run your own server",
@@ -1104,8 +1104,8 @@
   "ja": "今後公開するiPhone版とAndroid版のアプリ"
  },
  "pv.scope.p": {
-  "en": "Relays and apps that other people run with Tegami's open-source code are not covered. Neither is an AI friend you run on your own computer, nor how the AI service it uses handles information. What the official app passes to your AI friend is described in section 7.",
-  "ja": "本サービスのオープンソースのコードを使って第三者が運営するリレーやアプリは、本ポリシーの対象外です。利用者が自分のパソコンで動かすAIの友だちと、AIの友だちが利用するAIサービスでの情報の取扱いも、本ポリシーの対象外です。本サービスの公式のアプリがAIの友だちへ渡す情報については、第7節で定めます。"
+  "en": "Relays and apps that other people run with Tegami's open-source code are not covered. Neither is an AI friend (a program you run on your own computer and connect as a friend), nor how the AI service it uses handles information. What the official app passes to your AI friend is described in section 7.",
+  "ja": "本サービスのオープンソースのコードを使って第三者が運営するリレーやアプリは、本ポリシーの対象外です。利用者が自分のパソコンで動かして友だちとしてつなぐAIのプログラム（以下「AIの友だち」といいます）と、AIの友だちが利用するAIサービスでの情報の取扱いも、本ポリシーの対象外です。本サービスの公式のアプリがAIの友だちへ渡す情報については、第7節で定めます。"
  },
  "pv.cant.h": {
   "en": "2. What the operator can't see",
@@ -1189,7 +1189,7 @@
  },
  "pv.k.2.1": {
   "en": "The encrypted message (an \"envelope\": each message makes one for every recipient and one copy for the sender), the recipient's public key, the arrival time, and the data size. Envelopes sent by an account that registered without an invite also get a mark so that the app shows them only when the sender is already a friend (the sender's public key is not stored)",
-  "ja": "暗号化されたメッセージ（以下「封筒」といいます。メッセージ1通につき、受信者ごとに1つと、送信者の控えに1つ作られます）、宛先の公開鍵、受信日時、データサイズ。招待券なしで登録したアカウントが送った封筒には、友だち以外のときは表示しないための印も付けて保存します（送信者の公開鍵は保存しません）"
+  "ja": "暗号化されたメッセージ（以下「封筒」といいます。メッセージ1通につき、受信者ごとに1つと、送信者の控えに1つ作られます）、宛先の公開鍵、受信日時、データサイズ。招待なしで登録したアカウントが送った封筒には、友だち以外のときは表示しないための印も付けて保存します（送信者の公開鍵は保存しません）"
  },
  "pv.k.2.2": {
   "en": "To deliver messages later when a device is off or offline",
@@ -1197,7 +1197,7 @@
  },
  "pv.k.2.3": {
   "en": "30 days. Envelopes with an expiry (moving an account to a new device, requests to and answers from your AI for reply drafts, the friend list, and call signals) are handed out only until they expire. After that, the relay deletes them when the next envelope arrives or in its daily cleanup, whichever comes first, so they are gone within a day at the latest",
-  "ja": "30日間。期限つきの封筒（新しい端末への移行、AIへの下書きの依頼と返事、友だちの一覧、通話の合図）は、期限までだけ配ります。期限を過ぎた封筒は、遅くとも1日以内に削除します"
+  "ja": "30日間。期限つきの封筒（新しい端末への移行、AIへの下書きの依頼と返事、友だちの一覧、通話の合図）は、期限が切れるまで配信します。期限を過ぎた封筒は、遅くとも1日以内に削除します"
  },
  "pv.k.3.t": {
   "en": "Photos, videos, files, voice messages, and chat history transferred to a new device",
@@ -1253,15 +1253,15 @@
  },
  "pv.k.ai.1": {
   "en": "For an AI account that registers itself as an AI: its public key, the public key of its owner (from the card the owner signed), when it registered, how many envelopes each AI account and each owner sent per day (kept under the owner's public key), and the daily limit the operator set for a particular owner, only if the operator changed it",
-  "ja": "AIとして登録したAIのアカウントの公開鍵、そのAIの持ち主の公開鍵（持ち主が署名した証明から取得します）、登録した日時、AIのアカウントごと、持ち主ごとの1日の封筒の送信数（持ち主の公開鍵ごとに数えます）、運営者が持ち主ごとに変えた場合に限り、その持ち主の1日の送信の上限"
+  "ja": "AIとして登録したAIのアカウントの公開鍵、そのAIの持ち主の公開鍵（持ち主が署名した証明から取得します）、登録した日時、1日の封筒の送信数（AIのアカウントと持ち主の公開鍵のそれぞれで数えます）、運営者が特定の持ち主について変えた場合に限り、その持ち主の1日の送信の上限"
  },
  "pv.k.ai.2": {
   "en": "To limit how much an AI sends, per AI account and per owner, even when a modified app or tool skips the limits on the device, and to stop the owner's AI accounts when the operator stops the owner or the owner deletes their account",
-  "ja": "改造したアプリやツールが端末の上限を守らない場合でも、AIが送信する量をAIのアカウントごと、持ち主ごとに制限するため。また、運営者が持ち主の利用を停止した場合や持ち主がアカウントを削除した場合に、その持ち主のAIのアカウントも停止するため"
+  "ja": "改造したアプリやツールが端末の上限を守らない場合でも、AIが送信する量を、AIのアカウントと持ち主のそれぞれで制限するため。また、運営者が持ち主の利用を停止した場合や持ち主がアカウントを削除した場合に、その持ち主のAIのアカウントも停止するため"
  },
  "pv.k.ai.3": {
   "en": "The registration as an AI: until the AI account is deleted. If the owner deletes their account, the registration stays, stopped, with the owner's public key. The daily send counts: 2 days. The limit the operator set for an owner: no end date",
-  "ja": "AIとしての登録は、AIのアカウントの削除まで。持ち主がアカウントを削除した場合は、持ち主の公開鍵つきで、止めた状態のまま残ります。1日の送信数は2日間。運営者が持ち主ごとに変えた上限は、期限を設けていません"
+  "ja": "AIとしての登録は、AIのアカウントの削除まで。持ち主がアカウントを削除した場合は、持ち主の公開鍵つきで、止めた状態のまま残ります。1日の送信数は2日間。運営者が特定の持ち主について変えた上限は、期限を設けていません"
  },
  "pv.k.dl.t": {
   "en": "Deleted accounts",
@@ -1372,8 +1372,8 @@
   "ja": "1つのネットワークからの接続数と送信量を制限するため。招待なしの登録時に、自動プログラムでないことを確認するため"
  },
  "pv.k.10.3": {
-  "en": "Held in memory only, and never saved to disk. It stays in memory for rate limiting and is cleared when the number of entries grows large",
-  "ja": "メモリにだけ置き、ディスクには保存しません。流量を制限するためにメモリに残り、件数が増えると消えます"
+  "en": "Held in memory only, and never saved to disk. It stays in memory for rate limiting, and all of it is cleared if too many entries pile up",
+  "ja": "メモリにだけ置き、ディスクには保存しません。流量を制限するためにメモリに残り、記録がたまりすぎた時は、すべて消します"
  },
  "pv.dev.h": {
   "en": "4. What stays on your device",
@@ -1537,7 +1537,7 @@
  },
  "pv.ai.p3": {
   "en": "This information is encrypted for your own AI friend's public key. The envelopes for reply drafts and the friend list are handed out for 10 minutes only. After that, the relay deletes them when the next envelope arrives or in its daily cleanup, whichever comes first, so they are gone within a day at the latest. The operator cannot see what is passed.",
-  "ja": "渡す情報は、利用者自身のAIの友だちの公開鍵宛てに暗号化します。返信の下書きと友だちの一覧を渡す封筒は、10分間だけ配ります。10分を過ぎた封筒は、遅くとも1日以内にリレーから削除します。運営者は、渡した情報の中身を閲覧できません。"
+  "ja": "渡す情報は、利用者自身のAIの友だちの公開鍵宛てに暗号化します。返信の下書きと友だちの一覧を渡す封筒は、10分間だけ配信します。10分を過ぎた封筒は、遅くとも1日以内にリレーから削除します。運営者は、渡した情報の中身を閲覧できません。"
  },
  "pv.ai.p4": {
   "en": "The official app does not pass the following to AI friends:",
@@ -1624,12 +1624,36 @@
   "ja": "スタンプを削除すると、リレーはスタンプの画像と保存の記録を削除します"
  },
  "pv.del.a.5": {
-  "en": "Tap \"Delete account\" in settings: the relay deletes the envelopes waiting for the account, its stamps, its notification addresses, its registration and its invite code, and the data on that device is deleted too. If that device has the recovery code, the recovery backup is deleted first",
-  "ja": "設定の「アカウントを削除」を押すと、リレーはそのアカウント宛ての封筒、スタンプ、通知の宛先、アカウントの登録、招待コードを削除します。あわせて、操作した端末のデータも削除します。その端末に復旧コードがある場合は、復旧用バックアップも先に削除します"
+  "en": "Tap \"Delete account\" in settings: the relay deletes the envelopes waiting for the account, its stamps, its notification addresses, its registration and its invites, and the data on that device is deleted too. If that device has the recovery code, the recovery backup is deleted first",
+  "ja": "設定の「アカウントを削除」を押すと、リレーはそのアカウント宛ての封筒、スタンプ、通知の宛先、アカウントの登録、招待券を削除します。あわせて、操作した端末のデータも削除します。その端末に復旧コードがある場合は、復旧用バックアップも先に削除します"
  },
  "pv.del.a.6": {
-  "en": "Even after the account is deleted, the following remain: the public key and when it was deleted, so the same key cannot register again; envelopes, files and transferred chat history already sent (deleted automatically after 30 days); reports and the records of whom the account invited (deleted automatically after 90 days); a recovery backup made on another device (deleted when you tap \"Delete recovery code\" on that device); the registration of each AI the account owned, kept stopped with the owner's public key so that it cannot send, and the daily send limit the operator set for that owner, if there is one; and the data on your other devices (deleted when you tap \"Remove from this device\" on each)",
-  "ja": "アカウントを削除した後も、次の情報は残ります。同じ公開鍵で再び登録できないようにするための公開鍵と削除した日時。ほかの利用者に送った封筒、ファイル、移した会話の履歴（30日後に自動で削除）。通報の記録と、そのアカウントが招待した記録（90日後に自動で削除）。ほかの端末で作った復旧コードの復旧用バックアップ（その端末で「復旧コードを削除」を押すと削除）。そのアカウントが持ち主だったAIの登録（AIが送信できないよう、持ち主の公開鍵つきで止めた状態のまま残ります）と、運営者が持ち主に設定した1日の送信の上限。ほかの端末のデータ（それぞれの端末で「この端末から削除」を押すと削除）"
+  "en": "Even after the account is deleted, the following remain:",
+  "ja": "アカウントを削除した後も、次の情報は残ります。"
+ },
+ "pv.del.a.6.1": {
+  "en": "The public key and when it was deleted, so the same key cannot register again",
+  "ja": "同じ公開鍵で再び登録できないようにするための、公開鍵と削除した日時"
+ },
+ "pv.del.a.6.2": {
+  "en": "Envelopes, files and transferred chat history already sent to other users (deleted automatically after 30 days)",
+  "ja": "ほかの利用者に送った封筒、ファイル、移した会話の履歴（30日後に自動で削除します）"
+ },
+ "pv.del.a.6.3": {
+  "en": "Reports and the records of whom the account invited (deleted automatically after 90 days)",
+  "ja": "通報の記録と、そのアカウントが招待した記録（90日後に自動で削除します）"
+ },
+ "pv.del.a.6.4": {
+  "en": "The registration of each AI the account owned, kept stopped with the owner's public key so that it cannot send, and the daily send limit the operator set for that owner, if there is one",
+  "ja": "そのアカウントが持ち主だったAIの登録。AIが送信できないよう、持ち主の公開鍵つきで止めた状態のまま残ります。運営者が持ち主に設定した1日の送信の上限も残ります"
+ },
+ "pv.del.a.6.5": {
+  "en": "A recovery backup made on another device (deleted when you tap \"Delete recovery code\" on that device)",
+  "ja": "ほかの端末で作った復旧用バックアップ（その端末で「復旧コードを削除」を押すと削除できます）"
+ },
+ "pv.del.a.6.6": {
+  "en": "The data on your other devices (deleted when you tap \"Remove from this device\" on each)",
+  "ja": "ほかの端末のデータ（それぞれの端末で「この端末から削除」を押すと削除できます）"
  },
  "pv.del.a.7": {
   "en": "\"Remove from this device\" in settings deletes the data on that device. If notifications are on, it also deletes that device's notification address from the relay. It deletes nothing else on the relay",
@@ -1916,8 +1940,8 @@
   "ja": "運営者情報"
  },
  "st.tech.nipnote": {
-  "en": "A NIP is a numbered specification for Nostr. See the <a href=\"/developers/spec/#glossary\" class=\"underline\">glossary</a> for the words used here.",
-  "ja": "NIPは、Nostrの仕様に付いている番号です。詳しくは<a href=\"/ja/developers/spec/#用語\" class=\"underline\">開発者向けの用語</a>をご覧ください。"
+  "en": "A NIP is a numbered specification for Nostr, the protocol Tegami is built on. See the <a href=\"/developers/spec/#glossary\" class=\"underline\">glossary</a> for the words used here.",
+  "ja": "NIPは、Nostr（Tegamiが土台にしている通信の規格）の仕様に付いている番号です。詳しくは<a href=\"/ja/developers/spec/#用語\" class=\"underline\">開発者向けの用語</a>をご覧ください。"
  },
  "mk.api.mcp": {
   "en": "MCP",
@@ -1980,8 +2004,8 @@
   "ja": "AIが書いた文は、あなたが「送る」を押すまで届きません。"
  },
  "ai.shot3": {
-  "en": "The AI joins a group only after everyone agrees.",
-  "ja": "全員が同意するまで、AIはグループに入りません。"
+  "en": "Once released, an AI will still join a group only after everyone agrees.",
+  "ja": "公開後も、全員が同意するまでAIはグループに入りません。"
  },
  "ai.alt.chat": {
   "en": "A chat with an AI friend on a phone",
@@ -2004,8 +2028,8 @@
   "ja": "コピーしました"
  },
  "donate.h": {
-  "en": "Donate with Lightning",
-  "ja": "Lightningで寄付する"
+  "en": "Donate with Bitcoin (Lightning)",
+  "ja": "ビットコイン（Lightning）で寄付する"
  },
  "donate.open": {
   "en": "Open in your wallet",

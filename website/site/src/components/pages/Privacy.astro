@@ -146,7 +146,11 @@ const x = (k: string) => t(k, lang);
     <li><Fragment set:html={x('pv.del.a.3')} /></li>
     <li><Fragment set:html={x('pv.del.a.4')} /></li>
     <li><Fragment set:html={x('pv.del.a.5')} /></li>
-    <li><Fragment set:html={x('pv.del.a.6')} /></li>
+    <li><Fragment set:html={x('pv.del.a.6')} />
+      <ul>
+        {['1', '2', '3', '4', '5', '6'].map((n) => <li><Fragment set:html={x('pv.del.a.6.' + n)} /></li>)}
+      </ul>
+    </li>
     <li><Fragment set:html={x('pv.del.a.7')} /></li>
   </ul>
 

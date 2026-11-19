@@ -72,7 +72,7 @@ NIPに規定のない部分は、暗号化した封筒の中だけで使う独�
 | `POST`、`DELETE /push`、`GET /push/key` | 通知の宛先の登録と、通知の公開鍵 | <Badge text="提供中" variant="success" /> |
 | `POST /report` | 通報 | <Badge text="提供中" variant="success" /> |
 | `GET /stats` | 週ごとの利用統計（公開） | <Badge text="提供中" variant="success" /> |
-| `POST /crash` | ユーザーが許した時だけのエラー報告（保存しない） | <Badge text="提供中" variant="success" /> |
+| `POST /crash` | ユーザーが許可した時だけのエラー報告（リレーには保存せず、Cloudflareのログに最大7日間残る） | <Badge text="提供中" variant="success" /> |
 | `POST /admin` | 運営の鍵でだけ使える、鍵の停止などの管理操作 | <Badge text="提供中" variant="success" /> |
 | `POST /register`（AIの登録） | AIの鍵の登録。本文に持ち主の署名（kind 25070）を付けて送ると、リレーはその鍵をAIとして覚え、1日の上限を数える | <Badge text="提供中" variant="success" /> |
 | `POST /turn` | 通話の中継（TURN）の、短い期限の認証情報を発行する。登録済みの鍵だけが使える。リクエストの内容は保存しない | <Badge text="提供中" variant="success" /> |

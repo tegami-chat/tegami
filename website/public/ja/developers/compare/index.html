@@ -135,7 +135,7 @@
 </tr>
 <tr>
 <td>運営</td>
-<td>LINEヤフー（ソフトバンクとNAVERが半分ずつ持つ会社が議決権の62.4%を保有）</td>
+<td>LINEヤフー</td>
 <td>Meta</td>
 <td>アメリカの非営利団体</td>
 <td>Telegram Messenger Inc.</td>
@@ -151,7 +151,7 @@
 </tr>
 </tbody>
 </table>
-<p>調べた日：2026年11月16日。各社の公式ドキュメントを確認しました。</p>
+<p>調べた日：2026年11月16日。各社の公式ドキュメントを確認しました。LINEヤフーは、ソフトバンクとNAVERが半分ずつ持つ会社が議決権の62.4%を保有しています。</p>
 <p>暗号の強さだけで比べると、Signalの方がTegamiより強い設計です。一方でTegamiが異なるのは、電話番号が不要なこと、広告や運営のAIがないこと、自分のAIを友だちとして並べられること、そしてサーバー側までコードを公開していることです（4つのうち、サーバーまで公開しているのはSignalだけです）。</p>
 <aside aria-label="Tegamiの弱い点と、確かめきれていない点" class="starlight-aside starlight-aside--caution"><p class="starlight-aside__title" aria-hidden="true"><svg aria-hidden="true" class="starlight-aside__icon astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 16a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm10.67 1.47-8.05-14a3 3 0 0 0-5.24 0l-8 14A3 3 0 0 0 3.94 22h16.12a3 3 0 0 0 2.61-4.53Zm-1.73 2a1 1 0 0 1-.88.51H3.94a1 1 0 0 1-.88-.51 1 1 0 0 1 0-1l8-14a1 1 0 0 1 1.78 0l8.05 14a1 1 0 0 1 .05 1.02v-.02ZM12 8a1 1 0 0 0-1 1v4a1 1 0 0 0 2 0V9a1 1 0 0 0-1-1Z"/></svg>Tegamiの弱い点と、確かめきれていない点</p><div class="starlight-aside__content"><p>Tegamiは、ブラウザ版だけが<span class="sl-badge success small astro-f4zorn72">提供中</span>で、ストアのアプリはまだありません（Androidは<span class="sl-badge tip small astro-f4zorn72">公開待ち</span>、iPhoneは<span class="sl-badge default small astro-f4zorn72">予定</span>）。前方秘匿性もありません。</p><p>比較した各社のうち、WhatsAppの暗号化の説明とコードの公開、SignalのAIの機能については、公式のヘルプページを開けず、本文を確かめきれていません。</p></div></aside>
 <ul>
@@ -177,7 +177,7 @@
 <tr>
 <td>秘密鍵の保存</td>
 <td>アプリが作ったパスワードで暗号化し、同じデータベースの同じ行にそのパスワードも置いて、起動時に自動で開く。アプリのロック（生体認証、PIN）は別にある</td>
-<td>パスキーのPRFで暗号化し、開くたびにパスキー認証を求める（PRFに対応しない環境では端末の中の鍵で暗号化）</td>
+<td>パスキーのPRFで暗号化し、開くたびにパスキー認証を求める</td>
 </tr>
 <tr>
 <td>外部の署名機能</td>
@@ -221,7 +221,7 @@
 </tr>
 </tbody>
 </table>
-<p>調べた日：2026年11月16日。0xchatの公開リポジトリ（<code dir="auto">0xchat-app/0xchat-app-main</code>）のコードで確かめました。</p>
+<p>調べた日：2026年11月16日。0xchatの公開リポジトリ（<code dir="auto">0xchat-app/0xchat-app-main</code>）のコードで確かめました。Tegamiは、PRFに対応しない環境では、端末の中の鍵で暗号化します。</p>
 <p>0xchatはすでにNostrを使っている人のためのアプリで、TegamiはNostrを知らずにLINEをやめたい人向けのアプリです。Nostrの世界に開いている点や、細かく自分で設定できる点では、0xchatの方が進んでいます。</p>
 <aside aria-label="Tegamiにないものと、確かめきれていない点" class="starlight-aside starlight-aside--caution"><p class="starlight-aside__title" aria-hidden="true"><svg aria-hidden="true" class="starlight-aside__icon astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 16a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm10.67 1.47-8.05-14a3 3 0 0 0-5.24 0l-8 14A3 3 0 0 0 3.94 22h16.12a3 3 0 0 0 2.61-4.53Zm-1.73 2a1 1 0 0 1-.88.51H3.94a1 1 0 0 1-.88-.51 1 1 0 0 1 0-1l8-14a1 1 0 0 1 1.78 0l8.05 14a1 1 0 0 1 .05 1.02v-.02ZM12 8a1 1 0 0 0-1 1v4a1 1 0 0 0 2 0V9a1 1 0 0 0-1-1Z"/></svg>Tegamiにないものと、確かめきれていない点</p><div class="starlight-aside__content"><p>Tegamiには、外部の署名機能、鍵の書き出し、ストアのアプリがありません。</p><p>0xchatのデータベース全体が暗号化されているかどうかは、確かめきれていません（データベースのパスフレーズを入力する画面はあります）。</p></div></aside>
 <ul>

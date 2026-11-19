@@ -28,7 +28,7 @@ import { Steps, TabItem, Tabs } from '@astrojs/starlight/components';
 
 3. ターミナルにAIが誰とつながったかが表示されて、`pair`が終了します。
 
-4. AIが返事を続けられるように、ゲートウェイを動かし続けます。`pair`はつなぐだけなので、この手順が必要です。
+4. AIが返事を続けられるように、`tegami-agent`を動かし続けます。`pair`はつなぐだけなので、この手順が必要です。
 
    ```bash
    node agent.mjs autostart on
@@ -89,7 +89,7 @@ node agent.mjs watch --command "<コマンド>"
 
 ## 招待リンクでつなぐ
 
-アプリでQRコードを読み取らずに、手動でつなぐこともできます。AIの招待リンクを表示してTegamiで開き、AIを友だちに追加したあとで、あなたの招待リンクを渡します。
+アプリでQRコードを読み取らずに、招待リンクで手動でつなぐこともできます。1行目の`init`でAIの招待リンクを表示し、Tegamiで開いてAIを友だちに追加します。そのあと、あなたの招待リンクを、2行目の`add`に渡します。
 
 ```bash
 node agent.mjs init --name Claude

@@ -9,7 +9,7 @@ import { Aside, Badge, Steps } from '@astrojs/starlight/components';
 
 リレーのコードは[`relay/`](https://github.com/tegami-chat/tegami/tree/main/relay)で公開していて、Cloudflare WorkersとDurable Objectの上で動きます。ただし、いまのアプリは公式のリレー（`wss://relay.tegami.chat`）にしかつながりません。自分のリレーを使うには、アプリを自分でビルドして、接続先を変える必要があります。
 
-- <Badge text="決定済み" variant="note" /> 会社や学校が独自のリレーを置けるようにします。登録のルールは置いた側が決められ、「誰でも」「招待券だけ」「許可した鍵だけ」から選べるようにします。
+- <Badge text="決定済み" variant="note" /> 会社や学校が独自のリレーを立てられるようにします。登録のルールは置いた側が決められ、「誰でも」「招待券だけ」「許可した鍵だけ」から選べるようにします。
 
 ## 用意するもの
 
@@ -35,7 +35,7 @@ import { Aside, Badge, Steps } from '@astrojs/starlight/components';
    npm run dev
    ```
 
-3. R2のバケットを2つ作ります。名前は`relay/wrangler.jsonc`と同じ`tegami-files`と`tegami-stamps`です。`tegami-files`は暗号化した写真とファイルを入れる置き場で、公式のリレーでは30日で消す設定にしています。`tegami-stamps`はスタンプの置き場で、消す設定はありません。30日で消す設定の手順はリポジトリにないので、Cloudflareの設定画面で自分で付けます。
+3. R2のバケットを2つ作ります。名前は`relay/wrangler.jsonc`と同じ`tegami-files`と`tegami-stamps`です。`tegami-files`は暗号化した写真とファイルを入れる置き場で、公式のリレーでは30日で消す設定にしています。`tegami-stamps`はスタンプの置き場で、消す設定はありません。30日で消す設定の手順はリポジトリにないので、Cloudflareの管理画面で自分で設定します。
 
    ```bash
    npx wrangler@4 r2 bucket create tegami-files
@@ -60,7 +60,7 @@ import { Aside, Badge, Steps } from '@astrojs/starlight/components';
    - `vars`の`ADMIN_PUBKEYS`：運営の鍵の公開鍵です。`node scripts/admin.mjs init`で運営の鍵を作り、`node scripts/admin.mjs whoami`で公開鍵を見られます
    - `routes`：公式のリレーのドメイン（`relay.tegami.chat`）を、自分のドメインに替えます
 
-6. 本番に置きます。
+6. 本番にデプロイします。
 
    ```bash
    npx wrangler@4 deploy
@@ -70,7 +70,7 @@ import { Aside, Badge, Steps } from '@astrojs/starlight/components';
 
 <Aside type="caution" title="deploy.mjsは公式のリレー用です">
 
-`relay/scripts/deploy.mjs`（`npm run deploy`）は、公式のリレーを置くための道具です。コミットしていない変更がある時と、コミットが`origin/main`に載っていない時は、置くのを断ります。自分のリレーを置く時は、上の`npx wrangler@4 deploy`を使います。
+`relay/scripts/deploy.mjs`（`npm run deploy`）は、公式のリレーをデプロイするためのスクリプトです。コミットしていない変更がある時と、コミットが`origin/main`に載っていない時は、デプロイを中止します。自分のリレーをデプロイする時は、上の`npx wrangler@4 deploy`を使います。
 
 </Aside>
 

@@ -98,7 +98,7 @@
 </table>
 <p>CSPは<code dir="auto">script-src 'self' https://challenges.cloudflare.com</code>です。<code dir="auto">connect-src</code>は、自身のオリジンとリレーだけです。Cloudflare Web Analytics（RUM）は無効です。そのほか外部へ出る通信は、リレー経由のファイルストレージ（R2）、通話用のSTUN（<code dir="auto">stun.cloudflare.com</code>）、Web Pushサービスです。R2はCloudflareのオブジェクトストレージ、STUNは通話で端末の外から見える経路を調べる仕組み、Web Pushはブラウザやアプリが閉じていても通知を届ける仕組みです。</p>
 <div class="sl-heading-wrapper level-h2"><h2 id="アカウントと鍵">アカウントと鍵</h2><a class="sl-anchor-link" href="#アカウントと鍵"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “アカウントと鍵”</span></a></div>
-<p>Tegamiのアカウントは、電話番号ではなく、端末で作るNostrの鍵ペア（secp256k1）です。秘密鍵は、WebAuthn（パスワードなしでブラウザやOSの認証を使うWeb標準）の<a href="/ja/developers/spec/#%E7%94%A8%E8%AA%9E">PRF</a>拡張の出力から作ったAES-GCMの鍵で暗号化し、端末内に保存します。</p>
+<p>Tegamiのアカウントは、電話番号ではなく、端末で作るNostrの鍵ペア（secp256k1）です。秘密鍵は、WebAuthn（パスワードなしでブラウザやOSの認証を使うWeb標準）の<a href="/ja/developers/spec/#%E7%94%A8%E8%AA%9E">PRF</a>拡張の出力から作ったAES-GCM（暗号化と改ざんの検知を同時にできる暗号方式）の鍵で暗号化し、端末内に保存します。</p>
 <table>
 <thead>
 <tr>
@@ -121,7 +121,8 @@
 </tr>
 </tbody>
 </table>
-<p>登録には、招待コードかCloudflare Turnstileを使います。Turnstileは、ブラウザの環境を調べてボットを見分けるCloudflareの人間確認です。誰が誰を招待したかの記録は、90日で消します。署名にはSchnorr署名（secp256k1上の電子署名）を使います。鍵の導出にはHKDF（秘密の値から、暗号に使う固定長の鍵を作る方法）、暗号化にはAES-GCM（暗号化と改ざんの検知を同時にできる暗号方式）を使います。PRF拡張に非対応の認証器では、取り出せない設定のAES鍵をIndexedDBに保存します。</p>
+<p>登録には、招待券かCloudflare Turnstileを使います。Turnstileは、ブラウザの環境を調べてボットを見分けるCloudflareの人間確認です。誰が誰を招待したかの記録は、90日で消します。</p>
+<p>署名にはSchnorr署名（secp256k1上の電子署名）を使います。鍵の導出にはHKDF（秘密の値から、暗号に使う固定長の鍵を作る方法）、暗号化にはAES-GCMを使います。PRF拡張に非対応の認証器では、取り出せない設定のAES鍵をIndexedDBに保存します。</p>
 <div class="sl-heading-wrapper level-h2"><h2 id="暗号化">暗号化</h2><a class="sl-anchor-link" href="#暗号化"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “暗号化”</span></a></div>
 <p>よくあるアプリのサーバーは、送信者、受信者、時刻をデータベースに記録します。Tegamiは、<a href="/ja/developers/spec/#%E7%94%A8%E8%AA%9E">rumor</a>（<a href="/ja/developers/spec/#%E7%94%A8%E8%AA%9E">kind</a> 14または15）をNIP-44で暗号化して、送信者が署名した内側の層（seal、kind 13）に収めます。さらに、使い捨ての鍵で再びNIP-44による暗号化と署名をして、<a href="/ja/developers/architecture/#%E5%B0%81%E7%AD%92">封筒</a>で包みます。1対1では、宛先用と自分用の控えの2通を送ります。</p>
 <table>
@@ -149,7 +150,7 @@
 <p>内側の層と封筒の<code dir="auto">created_at</code>は、最大2日前にずらします（nostr-toolsのNIP-59の実装）。TLSは通信経路を暗号化する標準のしくみ、E2EEは送る端末で暗号化して受け取る端末だけが復号する方式です。</p>
 <aside aria-label="限界" class="starlight-aside starlight-aside--caution"><p class="starlight-aside__title" aria-hidden="true"><svg aria-hidden="true" class="starlight-aside__icon astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 16a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm10.67 1.47-8.05-14a3 3 0 0 0-5.24 0l-8 14A3 3 0 0 0 3.94 22h16.12a3 3 0 0 0 2.61-4.53Zm-1.73 2a1 1 0 0 1-.88.51H3.94a1 1 0 0 1-.88-.51 1 1 0 0 1 0-1l8-14a1 1 0 0 1 1.78 0l8.05 14a1 1 0 0 1 .05 1.02v-.02ZM12 8a1 1 0 0 0-1 1v4a1 1 0 0 0 2 0V9a1 1 0 0 0-1-1Z"/></svg>限界</p><div class="starlight-aside__content"><p>書き込みにもNIP-42の認証と事前の登録が必要なため、リレーは、送信元の公開鍵、宛先の公開鍵、到着時刻、IPアドレスを結びつけられます。NIP-44は同じ鍵を使い続けるため、前方秘匿性はありません。</p></div></aside>
 <div class="sl-heading-wrapper level-h2"><h2 id="保存">保存</h2><a class="sl-anchor-link" href="#保存"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “保存”</span></a></div>
-<p>Tegamiのリレーは、データベースが丸ごと持ち出されても、チャットの中身は暗号文のままです。リレーのデータベースに保存されるメッセージは、封筒の暗号文です。写真やファイルも、個別の鍵を使ってAES-GCMで暗号化してから、ストレージにアップロードします。</p>
+<p>Tegamiのリレーは、データベースが丸ごと持ち出されても、トークの中身は暗号文のままです。リレーのデータベースに保存されるメッセージは、封筒の暗号文です。写真やファイルも、個別の鍵を使ってAES-GCMで暗号化してから、ストレージにアップロードします。</p>
 <table>
 <thead>
 <tr>
@@ -164,7 +165,7 @@
 </tr>
 <tr>
 <td>データベースが外に持ち出される</td>
-<td>データベースが外に持ち出される（よくある構成と同じ）</td>
+<td>同じく、データベースが外に持ち出される</td>
 </tr>
 <tr>
 <td>電話番号やプロフィールが平文のまま読まれる</td>
@@ -175,7 +176,7 @@
 <p>持ち出される可能性があるものは、次のとおりです。宛先の公開鍵（<code dir="auto">p</code>タグ）、到着時刻、登録済みの公開鍵と招待関係（90日保持）、Web Pushのエンドポイント（ブラウザのプッシュサービスが発行する、通知の宛先のURL）と鍵、暗号化した復旧用バックアップ、R2の暗号化ファイルとスタンプ（サイズ、SHA-256、保持者情報を含む）、通報記録です。通報記録には、通報者と相手の公開鍵、理由が入り、添付された場合は直近メッセージの平文を90日保持します。</p>
 <p>持ち出されても読めないものは、通常のメッセージ、写真、ファイル、スタンプ、バックアップの平文です。</p>
 <div class="sl-heading-wrapper level-h2"><h2 id="ログイン">ログイン</h2><a class="sl-anchor-link" href="#ログイン"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “ログイン”</span></a></div>
-<p>Tegamiには、ログインのパスワードがそもそもありません。秘密鍵（nsec）は端末で生成し、WebAuthnのPRF拡張の出力から作った鍵で暗号化して、オリジンごとの保存領域に置きます。パスキー（生体認証や端末のロック解除で使う、オリジンに紐づく資格情報）はオリジンに紐づくため、偽のドメインではPRFの出力が得られず、復号できません。</p>
+<p>Tegamiには、ログインのパスワードがそもそもありません。中継型フィッシングは、本物のログインサイトと利用者の間に偽サイトを挟み、入力を中継する攻撃です。秘密鍵（nsec）は端末で生成し、WebAuthnのPRF拡張の出力から作った鍵で暗号化して、オリジンごとの保存領域に置きます。パスキー（生体認証や端末のロック解除で使う、オリジンに紐づく資格情報）はオリジンに紐づくため、偽のドメインではPRFの出力が得られず、復号できません。</p>
 <table>
 <thead>
 <tr>
@@ -189,7 +190,7 @@
 <td>端末に保存したnsecをパスキーで復号する</td>
 </tr>
 <tr>
-<td>中継型フィッシング（本物のログインサイトと利用者の間に偽サイトを挟み、入力を中継する攻撃）で両方を横取りされる</td>
+<td>中継型フィッシングで両方を横取りされる</td>
 <td>偽のドメインではPRFの出力が得られず、復号できない</td>
 </tr>
 <tr>
@@ -223,7 +224,7 @@
 </tr>
 </tbody>
 </table>
-<p>Workersのinvocation logs（リクエストごとの実行の記録）は無効です。ユーザーが許可したクラッシュ報告などの出力（<code dir="auto">console.log</code>）は、Workers Logsに数日残ります。日ごとの集計は183日で削除し、運営者だけが閲覧できます。公開ページには、終わった週（UTCの月曜始まり）を、直近24週分だけ出します。</p>
+<p>Workersのinvocation logs（リクエストごとの実行の記録）は無効です。ユーザーが許可したクラッシュ報告などの出力（<code dir="auto">console.log</code>）は、Workers Logsに最大7日間残ります。日ごとの集計は183日で削除し、運営者だけが閲覧できます。公開ページには、終わった週（UTCの月曜始まり）を、直近24週分だけ出します。</p>
 <div class="sl-heading-wrapper level-h2"><h2 id="ai">AI</h2><a class="sl-anchor-link" href="#ai"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “AI”</span></a></div>
 <p>Tegamiでは、AIは自分の鍵を持つ相手です。<code dir="auto">tegami-agent</code>は、パソコン上で独自のNostr鍵を持ち、人間と同じNIP-17でやり取りします。AIの契約やAPIキーを、Tegamiのサーバーに渡すことはありません。AIに読ませた内容は、手元の<code dir="auto">claude -p</code>（Claude Codeを、プロンプトを直接渡して結果を標準出力に返す形で動かすコマンド）などを通じて、AIの提供元に送られます。<code dir="auto">tegami-agent</code>は、MCPサーバー（AIが外部のデータや機能を共通の形式で呼び出すための仕組み）としても動きます。</p>
 <table>
@@ -244,8 +245,8 @@
 </tr>
 <tr>
 <td>相手の同意は求められない</td>
-<td>AIの権限は4段（AIの使用、AIモデル、AI友だち、友だち）で制御し、判断はすべて端末に記録する</td>
+<td>AIの権限を、全体、モデル、AI、友だちの4段で制御し、判断はすべて端末に記録する</td>
 </tr>
 </tbody>
 </table>
-<p>AIとの会話も、NIP-17の封筒です。トークの全員の同意を求める仕組みと、相手が「自分の文を相手のAIに読ませない」を選べる仕組みは、実装済みですが、本番にはまだ出していません（初期設定は無効）。受信者が自分の端末で復号した発言をAIに渡す行為までは、暗号の仕組みでは防げません。</p></div><footer class="sl-flex astro-ddtxxk7k"><div class="meta sl-flex astro-ddtxxk7k"></div><div class="pagination-links print:hidden astro-b5raizh3" dir="ltr"><a href="/ja/developers/compare/" rel="prev" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg><span class="astro-b5raizh3">前へ<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">開発者向けの比較</span></span></a></div></footer></div></div></main></div></div></div></div></body></html>
+<p>AIとの会話も、NIP-17の封筒です。トークにAIを呼ぶ前に全員の同意を求める仕組みは、実装済みですが、本番にはまだ出していません。相手が「自分の文を相手のAIに読ませない」を選べる仕組みは、本番で動いています。受信者が自分の端末で復号した発言をAIに渡す行為までは、暗号の仕組みでは防げません。</p></div><footer class="sl-flex astro-ddtxxk7k"><div class="meta sl-flex astro-ddtxxk7k"></div><div class="pagination-links print:hidden astro-b5raizh3" dir="ltr"><a href="/ja/developers/compare/" rel="prev" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg><span class="astro-b5raizh3">前へ<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">開発者向けの比較</span></span></a></div></footer></div></div></main></div></div></div></div></body></html>

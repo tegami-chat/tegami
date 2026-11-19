@@ -8,6 +8,8 @@ import Card from '~/components/ui/Card.astro';
 import Button from '~/components/ui/Button.astro';
 const { lang = 'en' } = Astro.props as { lang?: Lang };
 const x = (k: string) => t(k, lang);
+// No space between Latin letters and Japanese; a colon keeps the two parts apart.
+const sep = lang === 'ja' ? '：' : ' ';
 // [key, badge status, badge words (default: the standard words for the status)]
 type Entry = [string, 'available' | 'planned', string?];
 const cards: Entry[] = [['ui', 'planned'], ['share', 'planned'], ['bots', 'available'], ['api', 'available'], ['relay', 'planned'], ['agpl', 'available', x('open')]];
@@ -19,11 +21,11 @@ const cards: Entry[] = [['ui', 'planned'], ['share', 'planned'], ['bots', 'avail
     {cards.map(([k, status, label]) => (
       <Card variant="outlined" class="flex min-w-0 flex-col gap-2">
         {k === 'api'
-          ? <div class="flex flex-wrap gap-2 self-start"><Badge status="available" lang={lang} label={x('mk.api.mcp') + ' ' + x('now')} /><Badge status="planned" lang={lang} label={x('mk.api.api') + ' ' + x('st.plan')} /></div>
+          ? <div class="flex flex-wrap gap-2 self-start"><Badge status="available" lang={lang} label={x('mk.api.mcp') + sep + x('now')} /><Badge status="planned" lang={lang} label={x('mk.api.api') + sep + x('st.plan')} /></div>
           : <Badge status={status} lang={lang} label={label} class="self-start" />}
         <Heading level={3}><Fragment set:html={x('mk.' + k + '.h')} /></Heading>
         <p class="text-small text-fg-muted"><Fragment set:html={x('mk.' + k + '.t')} /></p>
-        {k === 'bots' && <code class="overflow-x-auto whitespace-nowrap rounded-control bg-page px-3 py-2 text-small text-fg-muted">node agent.mjs init --name Claude</code>}
+        {k === 'bots' && <code class="overflow-x-auto whitespace-nowrap rounded-control bg-page px-3 py-2 text-small text-fg-muted">node agent.mjs pair --name Claude</code>}
       </Card>
     ))}
   </div>

@@ -28,7 +28,7 @@ AIの友だちは、自分のパソコン上で動く`tegami-agent`が固有のN
 
 | 部品 | 概要 | コード |
 | --- | --- | --- |
-| アプリ | Expo（React Native、SDK 57）で作っています。ブラウザ版は`app.tegami.chat`（Cloudflare Workers）で配信中です（<Badge text="提供中" variant="success" />）。Android版は試作版です（<Badge text="公開待ち" variant="tip" />）。iPhone版と、Windows、Mac、Linux向けの版は<Badge text="予定" variant="default" />です | `client/` |
+| アプリ | Expoで作っています。ブラウザ版は`app.tegami.chat`で<Badge text="提供中" variant="success" />です。Android版は試作版で<Badge text="公開待ち" variant="tip" />、iPhone版と、Windows、Mac、Linux向けの版は<Badge text="予定" variant="default" />です | `client/` |
 | リレー | Cloudflare Workersと、1つのDurable Object（SQLite）です。接続先は`wss://relay.tegami.chat` | `relay/` |
 | ファイルの置き場 | Cloudflare R2です。写真とファイルは30日で削除します。スタンプは別の置き場に、本人が消すまで置きます | `relay/` |
 | AIの友だち | `tegami-agent`（Node.js）です。自分のパソコン上で動き、Claude Codeを呼び出します。MCPサーバーとしても動きます | `agent/` |
