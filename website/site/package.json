@@ -7,6 +7,7 @@
     "dev": "astro dev"
   },
   "dependencies": {
+    "@lucide/astro": "1.68.0",
     "@tailwindcss/vite": "4.3.3",
     "astro": "7.4.3",
     "tailwindcss": "4.3.3"

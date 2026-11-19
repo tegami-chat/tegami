@@ -1,0 +1,10 @@
+---
+// The picture in the header band of a document page: one big icon with three small ones circling it.
+import Icon, { type IconName } from '~/components/ui/Icon.astro';
+export interface Props { main: IconName; around: [IconName, IconName, IconName] }
+const { main, around } = Astro.props;
+---
+<div class="orbit" aria-hidden="true">
+  <div class="orbit-main"><Icon name={main} class="h-16 w-16" stroke={1.5} /></div>
+  {around.map((n) => <span class="orbit-sat"><Icon name={n} class="h-5 w-5" /></span>)}
+</div>

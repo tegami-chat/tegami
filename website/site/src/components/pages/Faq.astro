@@ -1,22 +1,33 @@
 ---
-import Section from '~/components/ui/Section.astro';
-import SectionHeading from '~/components/ui/SectionHeading.astro';
+import DocPage from '~/components/ui/DocPage.astro';
+import DocSection from '~/components/ui/DocSection.astro';
+import Orbit from '~/components/ui/Orbit.astro';
 import Disclosure from '~/components/ui/Disclosure.astro';
+import type { IconName } from '~/components/ui/Icon.astro';
 import { t, type Lang } from '~/site';
 const { lang = 'en' } = Astro.props as { lang?: Lang };
 const x = (k: string) => t(k, lang);
-const items = ['free', 'read', 'phone', 'devices', 'friends', 'lost', 'multi', 'collect', 'ai', 'spam', 'shutdown', 'dev'];
+// The categories group the questions that were already there. The names are in dict.json (faq.cat.*).
+const cats: { id: string; icon: IconName; tone: 'accent' | 'violet' | 'solid' | 'quiet'; items: string[] }[] = [
+  { id: 'start', icon: 'sparkles', tone: 'accent', items: ['free', 'phone', 'devices', 'friends', 'ai'] },
+  { id: 'devices', icon: 'smartphone', tone: 'violet', items: ['lost', 'multi'] },
+  { id: 'safety', icon: 'shield', tone: 'solid', items: ['read', 'collect', 'spam'] },
+  { id: 'project', icon: 'code', tone: 'quiet', items: ['shutdown', 'dev'] },
+];
+const toc = cats.map((c) => ({ id: c.id, label: x('faq.cat.' + c.id) }));
 ---
-<main>
-  <Section id="faq" rhythm="page" width="prose">
-    <SectionHeading level={1} title={x('faq.h')} />
-    <div class="divide-y divide-line border-y border-line">
-      {items.map((k) => (
-        <Disclosure>
-          <Fragment slot="q"><Fragment set:html={x('faq.' + k + '.q')} /></Fragment>
-          <p><Fragment set:html={x('faq.' + k + '.a')} /></p>
-        </Disclosure>
-      ))}
-    </div>
-  </Section>
-</main>
+<DocPage lang={lang} title={x('faq.h')} toc={toc} icon="faq">
+  <Orbit slot="art" main="faq" around={['question', 'shield', 'smartphone']} />
+  {cats.map((c) => (
+    <DocSection id={c.id} title={x('faq.cat.' + c.id)} icon={c.icon} tone={c.tone}>
+      <div class="acc">
+        {c.items.map((k) => (
+          <Disclosure>
+            <Fragment slot="q"><Fragment set:html={x('faq.' + k + '.q')} /></Fragment>
+            <p><Fragment set:html={x('faq.' + k + '.a')} /></p>
+          </Disclosure>
+        ))}
+      </div>
+    </DocSection>
+  ))}
+</DocPage>

@@ -1,6 +1,7 @@
 ---
 // A table that scrolls sideways inside its own box. sticky keeps the first column in view while scrolling.
-export interface Props { sticky?: boolean; class?: string }
-const { sticky = false, class: cls } = Astro.props;
+// matrix = the comparison grid: a rounded box, light lines, and the column marked data-hl highlighted.
+export interface Props { sticky?: boolean; matrix?: boolean; class?: string }
+const { sticky = false, matrix = false, class: cls } = Astro.props;
 ---
-<div class:list={['table-wrap', cls]}><table data-sticky={sticky ? '' : undefined}><slot /></table></div>
+<div class:list={['table-wrap', matrix && 'matrix', cls]}><table data-sticky={sticky ? '' : undefined}><slot /></table></div>

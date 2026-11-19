@@ -1,0 +1,9 @@
+---
+// A small round sign for a cell of the comparison table: yes, partly, no, not confirmed.
+// The words in the cell say the same thing; the sign only helps the eye.
+import Icon, { type IconName } from '~/components/ui/Icon.astro';
+export interface Props { state: 'yes' | 'part' | 'no' | 'unknown'; class?: string }
+const { state, class: cls } = Astro.props;
+const GLYPH: Record<string, IconName> = { yes: 'check', part: 'minus', no: 'x', unknown: 'question' };
+---
+<span class:list={['mark', `mark-${state}`, cls]}><Icon name={GLYPH[state]} class="h-3 w-3" stroke={3} /></span>

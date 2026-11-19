@@ -1,0 +1,25 @@
+---
+// One section of a document page: an anchor id (the table of contents points at it), an icon tile, the h2, then the content.
+// card puts the whole section in a Card of that variant; compact makes the heading smaller (for sections that sit side by side).
+// With no title the section has an id only (the comparison table).
+import Card from '~/components/ui/Card.astro';
+import Heading from '~/components/ui/Heading.astro';
+import IconChip from '~/components/ui/IconChip.astro';
+import type { IconName } from '~/components/ui/Icon.astro';
+export interface Props {
+  id: string; title?: string; icon?: IconName; tone?: 'accent' | 'solid' | 'violet' | 'warn' | 'quiet';
+  card?: 'plain' | 'outlined' | 'muted' | 'accent' | 'soft' | 'violet' | 'note'; compact?: boolean; class?: string;
+}
+const { id, title, icon, tone = 'accent', card, compact = false, class: cls } = Astro.props;
+const Root = card ? Card : 'section';
+const rootProps = card ? { as: 'section', variant: card } : {};
+---
+<Root id={id} data-doc-section class:list={['doc-section', cls]} {...rootProps}>
+  {title && (
+    <div class:list={['flex items-center gap-3', compact ? 'mb-3' : 'mb-4']}>
+      {icon && <IconChip name={icon} tone={tone} size={compact ? 'sm' : 'md'} />}
+      <Heading level={2} style={compact ? 'subsection' : 'section'}><Fragment set:html={title} /></Heading>
+    </div>
+  )}
+  <slot />
+</Root>

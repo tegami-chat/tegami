@@ -1,0 +1,28 @@
+---
+// A Lucide icon (ISC licence, @lucide/astro, pinned in package.json). Only the icons listed here are bundled.
+// The icon is a picture: it is hidden from screen readers, and the words next to it carry the meaning.
+// The size comes from the class (h-5 w-5 and so on); the colour is the text colour around it.
+import {
+  Activity, ArrowDown, ArrowRight, ArrowRightLeft, Banknote, Bot, BookOpenText, Building, ChartNoAxesColumn, Check, ChevronDown, CircleQuestionMark,
+  Clock, Code, Database, ExternalLink, Eye, EyeOff, FileLock, FingerprintPattern, GitCommitHorizontal, HeartHandshake, Image, Info, KeyRound, Link,
+  List, Lock, Megaphone, MessageCircleQuestionMark, Minus, Phone, PhoneCall, QrCode, Scale, Server, ShieldCheck, Smartphone, Sparkles,
+  TriangleExclamationPoint, UserLock, UserX, Users, Video, Wifi, X,
+} from '@lucide/astro';
+export type IconName =
+  | 'activity' | 'arrow-down' | 'arrow-right' | 'arrow-right-left' | 'banknote' | 'bot' | 'book' | 'building' | 'chart' | 'check' | 'chevron-down' | 'question'
+  | 'clock' | 'code' | 'database' | 'external' | 'eye' | 'eye-off' | 'file-lock' | 'fingerprint' | 'commit' | 'handshake' | 'image' | 'info' | 'key' | 'link'
+  | 'list' | 'lock' | 'megaphone' | 'faq' | 'minus' | 'phone' | 'phone-call' | 'qr' | 'scale' | 'server' | 'shield' | 'smartphone' | 'sparkles'
+  | 'warning' | 'user-lock' | 'user-x' | 'users' | 'video' | 'wifi' | 'x';
+const ICONS: Record<IconName, any> = {
+  activity: Activity, 'arrow-down': ArrowDown, 'arrow-right': ArrowRight, 'arrow-right-left': ArrowRightLeft, banknote: Banknote, bot: Bot, book: BookOpenText, building: Building,
+  chart: ChartNoAxesColumn, check: Check, 'chevron-down': ChevronDown, question: CircleQuestionMark, clock: Clock, code: Code, database: Database, external: ExternalLink,
+  eye: Eye, 'eye-off': EyeOff, 'file-lock': FileLock, fingerprint: FingerprintPattern, commit: GitCommitHorizontal, handshake: HeartHandshake, image: Image, info: Info, key: KeyRound,
+  link: Link, list: List, lock: Lock, megaphone: Megaphone, faq: MessageCircleQuestionMark, minus: Minus, phone: Phone, 'phone-call': PhoneCall, qr: QrCode, scale: Scale,
+  server: Server, shield: ShieldCheck, smartphone: Smartphone, sparkles: Sparkles, warning: TriangleExclamationPoint, 'user-lock': UserLock, 'user-x': UserX, users: Users,
+  video: Video, wifi: Wifi, x: X,
+};
+export interface Props { name: IconName; class?: string; stroke?: number }
+const { name, class: cls = 'h-5 w-5', stroke = 2 } = Astro.props;
+const Glyph = ICONS[name];
+---
+<Glyph class:list={['shrink-0', cls]} stroke-width={stroke} aria-hidden="true" focusable="false" />

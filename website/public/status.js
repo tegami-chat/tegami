@@ -74,15 +74,14 @@
       const ms = Math.round(performance.now() - t0);
       if (!res.ok) throw new Error(String(res.status));
       const j = await res.json();
-      $('banner').className = 'flex items-center gap-3 rounded-box border border-accent/30 bg-accent-soft px-5 py-4';
-      $('dot').className = 'h-3 w-3 shrink-0 rounded-pill bg-accent';
+      // The colours and the pulse come from data-state (see global.css).
+      $('banner').dataset.state = 'up';
       $('state').textContent = S.up;
       $('rtt').textContent = ms + ' ms';
       $('nips').textContent = (j.supported_nips || []).map((n) => String(n).padStart(2, '0')).join(', ');
       setCommit(j.version);
     } catch {
-      $('banner').className = 'flex items-center gap-3 rounded-box border border-danger/40 bg-danger-soft px-5 py-4';
-      $('dot').className = 'h-3 w-3 shrink-0 rounded-pill bg-danger';
+      $('banner').dataset.state = 'down';
       $('state').textContent = S.down;
       $('rtt').textContent = '—';
     }
@@ -128,13 +127,19 @@
     const keys = ['envelopes', 'files', 'logins', 'keys'];
     $('rows').innerHTML = shown.map((w) => `<tr class="border-t border-line">
       <td class="py-2.5 pr-3">${weekRange(w.week)}</td>${keys.map((k, i) => `<td class="${i === 3 ? 'py-2.5 pl-3' : 'px-3 py-2.5'} text-right">${show(w[k])}</td>`).join('')}</tr>`).join('');
-    $('cards').innerHTML = shown.map((w) => `<li class="border-t border-line py-3 text-small">
+    $('cards').innerHTML = shown.map((w) => `<li class="border-t border-line py-3 text-small first:border-t-0">
       <div class="font-semibold">${weekRange(w.week)}</div>
       <dl class="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1 tabular-nums">${keys.map((k) => `<div><dt class="text-caption text-fg-muted">${S.cols[k]}</dt><dd class="font-semibold">${show(w[k])}</dd></div>`).join('')}</dl></li>`).join('');
     $('more').hidden = list.length <= 8;
     $('more').textContent = all ? S.less : S.more;
+    if (has) {
+      // The newest finished week as four numbers.
+      const last = weeks[weeks.length - 1];
+      keys.forEach((k) => { $('stat-' + k).textContent = show(last[k]); });
+      document.querySelectorAll('[data-stat-week]').forEach((el) => { el.textContent = weekRange(last.week); });
+    }
     if (has && !$('charts').children.length) {
-      $('charts').innerHTML = Object.entries(S.tabs).map(([m, label]) => `<section class="rounded-box border border-line p-4"><h3 class="text-body font-bold">${label}</h3><svg data-chart="${m}" class="mt-2 w-full" viewBox="0 0 600 200" role="img" aria-label="${S.cols[m]}"></svg></section>`).join('');
+      $('charts').innerHTML = Object.entries(S.tabs).map(([m, label], i) => `<section class="chart-card ${i === 0 ? 'lg:col-span-2' : ''}"><h3 class="text-subsection">${label}</h3><svg data-chart="${m}" class="mt-3 w-full" viewBox="0 0 600 200" role="img" aria-label="${S.cols[m]}"></svg></section>`).join('');
     }
     if (has) draw();
   }

@@ -1,87 +1,114 @@
 ---
-import Section from '~/components/ui/Section.astro';
-import SectionHeading from '~/components/ui/SectionHeading.astro';
+import DocPage from '~/components/ui/DocPage.astro';
+import DocSection from '~/components/ui/DocSection.astro';
+import Orbit from '~/components/ui/Orbit.astro';
 import Prose from '~/components/ui/Prose.astro';
 import Card from '~/components/ui/Card.astro';
+import Button from '~/components/ui/Button.astro';
+import Icon from '~/components/ui/Icon.astro';
+import IconChip from '~/components/ui/IconChip.astro';
 import { t, link, type Lang } from '~/site';
 const { lang = 'en' } = Astro.props as { lang?: Lang };
 const x = (k: string) => t(k, lang);
-const toc = ['seal', 'server', 'account', 'lost', 'photos', 'calls', 'strangers', 'ai', 'count', 'notyet', 'check'];
+const ids = ['seal', 'server', 'account', 'lost', 'photos', 'calls', 'strangers', 'ai', 'count', 'notyet', 'check'];
+const toc = ids.map((id) => ({ id, label: x('sec.' + id + '.h') }));
 ---
-<main>
-  <Section rhythm="page" width="prose">
-    <SectionHeading level={1} title={x('sec.h')} lead={x('sec.t')} />
-    <Card as="nav" variant="muted" aria-label="On this page"><ol class="grid gap-x-6 gap-y-2 text-small sm:grid-cols-2">
-      {toc.map((id, i) => (
-        <li><a href={'#' + id} class="hover:underline"><span class="mr-2 text-fg-muted">{i + 1}</span><span><Fragment set:html={x('sec.' + id + '.h')} /></span></a></li>
-      ))}
-    </ol></Card>
-    <div class="mt-6">
-    <Section rhythm="compact" divided id="seal" width="none"><Prose>
-      <h2><Fragment set:html={x('sec.seal.h')} /></h2>
-      <p><Fragment set:html={x('sec.seal.1')} /></p>
-    </Prose></Section>
-    <Section rhythm="compact" divided id="server" width="none"><Prose>
-      <h2><Fragment set:html={x('sec.server.h')} /></h2>
-      <h3><Fragment set:html={x('sec.server.1')} /></h3>
-      <ul>
-        <li><Fragment set:html={x('sec.server.2.1')} /></li>
-        <li><Fragment set:html={x('sec.server.2.2')} /></li>
-        <li><Fragment set:html={x('sec.server.2.3')} /></li>
-        <li><Fragment set:html={x('sec.server.2.4')} /></li>
-      </ul>
-      <h3><Fragment set:html={x('sec.server.3')} /></h3>
-      <ul>
-        <li><Fragment set:html={x('sec.server.4.1')} /></li>
-        <li><Fragment set:html={x('sec.server.4.2')} /></li>
-      </ul>
-      <p><Fragment set:html={x('sec.server.5')} /></p>
-    </Prose></Section>
-    <Section rhythm="compact" divided id="account" width="none"><Prose>
-      <h2><Fragment set:html={x('sec.account.h')} /></h2>
-      <p><Fragment set:html={x('sec.account.1')} /></p>
-      <p><Fragment set:html={x('sec.account.2')} /></p>
-    </Prose></Section>
-    <Section rhythm="compact" divided id="lost" width="none"><Prose>
-      <h2><Fragment set:html={x('sec.lost.h')} /></h2>
-      <p><Fragment set:html={x('sec.lost.1')} /></p>
-      <p><Fragment set:html={x('sec.lost.2')} /></p>
-    </Prose></Section>
-    <Section rhythm="compact" divided id="photos" width="none"><Prose>
-      <h2><Fragment set:html={x('sec.photos.h')} /></h2>
-      <p><Fragment set:html={x('sec.photos.1')} /></p>
-    </Prose></Section>
-    <Section rhythm="compact" divided id="calls" width="none"><Prose>
-      <h2><Fragment set:html={x('sec.calls.h')} /></h2>
-      <p><Fragment set:html={x('sec.calls.1')} /></p>
-    </Prose></Section>
-    <Section rhythm="compact" divided id="strangers" width="none"><Prose>
-      <h2><Fragment set:html={x('sec.strangers.h')} /></h2>
-      <p><Fragment set:html={x('sec.strangers.1')} /></p>
-    </Prose></Section>
-    <Section rhythm="compact" divided id="ai" width="none"><Prose>
-      <h2><Fragment set:html={x('sec.ai.h')} /></h2>
-      <p><Fragment set:html={x('sec.ai.1')} /></p>
-      <p><Fragment set:html={x('sec.ai.2')} /></p>
-      <p><Fragment set:html={x('sec.ai.3')} /></p>
-    </Prose></Section>
-    <Section rhythm="compact" divided id="count" width="none"><Prose>
-      <h2><Fragment set:html={x('sec.count.h')} /></h2>
-      <p><Fragment set:html={x('sec.count.1')} /></p>
-    </Prose></Section>
-    <Section rhythm="compact" divided id="notyet" width="none"><Prose>
-      <h2><Fragment set:html={x('sec.notyet.h')} /></h2>
-      <ul>
-        <li><Fragment set:html={x('sec.notyet.1.1')} /></li>
-        <li><Fragment set:html={x('sec.notyet.1.2')} /></li>
-        <li><Fragment set:html={x('sec.notyet.1.3')} /></li>
-        <li><Fragment set:html={x('sec.notyet.1.4')} /></li>
-      </ul>
-    </Prose></Section>
-    <Section rhythm="compact" divided id="check" width="none"><Prose>
-      <h2><Fragment set:html={x('sec.check.h')} /></h2>
-      <p><Fragment set:html={x('sec.check.1')} /></p>
-    </Prose></Section>
+<DocPage lang={lang} title={x('sec.h')} lead={x('sec.t')} toc={toc} icon="shield" numbered>
+  <Orbit slot="art" main="shield" around={['lock', 'key', 'eye-off']} />
+
+  <!-- 1. Two phones with a lock between them: the whole idea in one picture. -->
+  <DocSection id="seal" title={x('sec.seal.h')} icon="lock">
+    <Card variant="outlined" class="p-6">
+      <div class="flex items-center gap-3" aria-hidden="true">
+        <IconChip name="smartphone" size="lg" tone="quiet" />
+        <span class="seal-line"></span>
+        <IconChip name="lock" size="lg" tone="solid" />
+        <span class="seal-line"></span>
+        <IconChip name="smartphone" size="lg" tone="quiet" />
+      </div>
+      <p class="mt-6 text-lead"><Fragment set:html={x('sec.seal.1')} /></p>
+    </Card>
+  </DocSection>
+
+  <!-- 2. What the server sees and does not see: two columns. -->
+  <DocSection id="server" title={x('sec.server.h')} icon="server">
+    <div class="grid gap-4 sm:grid-cols-2">
+      <Card variant="soft">
+        <h3 class="flex items-center gap-2 text-subsection text-accent"><Icon name="eye-off" class="h-5 w-5" /><Fragment set:html={x('sec.server.1')} /></h3>
+        <ul class="iconlist mt-4">
+          {['2.1', '2.2', '2.3', '2.4'].map((n) => <li><Icon name="check" class="h-4 w-4 text-accent" stroke={3} /><span><Fragment set:html={x('sec.server.' + n)} /></span></li>)}
+        </ul>
+      </Card>
+      <Card variant="outlined">
+        <h3 class="flex items-center gap-2 text-subsection text-fg-muted"><Icon name="eye" class="h-5 w-5" /><Fragment set:html={x('sec.server.3')} /></h3>
+        <ul class="iconlist mt-4">
+          {['4.1', '4.2'].map((n) => <li><Icon name="eye" class="h-4 w-4 text-fg-muted" /><span><Fragment set:html={x('sec.server.' + n)} /></span></li>)}
+        </ul>
+      </Card>
     </div>
-  </Section>
-</main>
+    <p class="mt-4 flex items-start gap-3 text-fg-muted"><Icon name="clock" class="mt-1 h-5 w-5 text-fg-muted" /><span><Fragment set:html={x('sec.server.5')} /></span></p>
+  </DocSection>
+
+  <!-- 3. The account is a key: two small tiles. -->
+  <DocSection id="account" title={x('sec.account.h')} icon="key" tone="violet">
+    <div class="grid gap-4 sm:grid-cols-2">
+      <Card variant="muted"><IconChip name="key" tone="violet" /><p class="mt-3 text-fg-muted"><Fragment set:html={x('sec.account.1')} /></p></Card>
+      <Card variant="muted"><IconChip name="fingerprint" tone="violet" /><p class="mt-3 text-fg-muted"><Fragment set:html={x('sec.account.2')} /></p></Card>
+    </div>
+  </DocSection>
+
+  <!-- 4. Losing a device: a small flow of two ways back. -->
+  <DocSection id="lost" title={x('sec.lost.h')} icon="smartphone" tone="warn">
+    <Card variant="outlined">
+      <ol class="steps">
+        <li><IconChip name="key" tone="warn" /><p class="pt-2 text-fg-muted"><Fragment set:html={x('sec.lost.1')} /></p></li>
+        <li><IconChip name="qr" tone="accent" /><p class="pt-2 text-fg-muted"><Fragment set:html={x('sec.lost.2')} /></p></li>
+      </ol>
+    </Card>
+  </DocSection>
+
+  <!-- 5 and 6. Photos and calls side by side; 7. strangers across the full width. -->
+  <div class="grid gap-4 sm:grid-cols-2">
+    <DocSection id="photos" title={x('sec.photos.h')} icon="image" compact card="muted">
+      <p class="text-fg-muted"><Fragment set:html={x('sec.photos.1')} /></p>
+    </DocSection>
+    <DocSection id="calls" title={x('sec.calls.h')} icon="phone-call" compact card="muted">
+      <p class="text-fg-muted"><Fragment set:html={x('sec.calls.1')} /></p>
+    </DocSection>
+  </div>
+  <DocSection id="strangers" title={x('sec.strangers.h')} icon="users" tone="violet" card="violet" class="p-6">
+    <p class="text-fg-muted"><Fragment set:html={x('sec.strangers.1')} /></p>
+  </DocSection>
+
+  <!-- 8. AI: the main sentence, then two promises. -->
+  <DocSection id="ai" title={x('sec.ai.h')} icon="bot" tone="violet">
+    <p class="text-lead text-fg-muted"><Fragment set:html={x('sec.ai.1')} /></p>
+    <Card variant="muted" class="mt-4">
+      <ul class="iconlist text-fg-muted">
+        <li><IconChip name="user-lock" size="sm" tone="violet" /><span class="pt-0.5"><Fragment set:html={x('sec.ai.2')} /></span></li>
+        <li><IconChip name="bot" size="sm" tone="violet" /><span class="pt-0.5"><Fragment set:html={x('sec.ai.3')} /></span></li>
+      </ul>
+    </Card>
+  </DocSection>
+
+  <!-- 9. No tracking. -->
+  <DocSection id="count" title={x('sec.count.h')} icon="chart">
+    <Prose><p><Fragment set:html={x('sec.count.1')} /></p></Prose>
+  </DocSection>
+
+  <!-- 10. What is still missing: an honest note, in amber, not red. -->
+  <DocSection id="notyet" title={x('sec.notyet.h')} icon="warning" tone="warn" card="note" class="p-6">
+    <ul class="iconlist">
+      {['1.1', '1.2', '1.3', '1.4'].map((n) => <li><Icon name="info" class="h-5 w-5 text-warn" /><span class="text-fg"><Fragment set:html={x('sec.notyet.' + n)} /></span></li>)}
+    </ul>
+  </DocSection>
+
+  <!-- 11. Check it yourself: the closing card. -->
+  <DocSection id="check" title={x('sec.check.h')} icon="code" tone="solid" card="soft" class="p-6 sm:p-8">
+    <Prose><p class="text-lead"><Fragment set:html={x('sec.check.1')} /></p></Prose>
+    <div class="mt-6 flex flex-wrap gap-3">
+      <Button href="https://github.com/tegami-chat/tegami" size="sm" external lang={lang}><Fragment set:html={x('ft.src')} /></Button>
+      <Button href={link('/privacy', lang)} variant="secondary" size="sm"><Fragment set:html={x('ft.privacy')} /></Button>
+    </div>
+  </DocSection>
+</DocPage>

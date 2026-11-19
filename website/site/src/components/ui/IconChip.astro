@@ -1,0 +1,9 @@
+---
+// A tile with an icon in it: the marker of a section, a list item or a step. tone picks the colour pair, size the tile.
+import Icon, { type IconName } from '~/components/ui/Icon.astro';
+export interface Props { name: IconName; tone?: 'accent' | 'solid' | 'violet' | 'warn' | 'quiet'; size?: 'sm' | 'md' | 'lg'; class?: string }
+const { name, tone = 'accent', size = 'md', class: cls } = Astro.props;
+const SIZE = { sm: 'chip-sm', md: '', lg: 'chip-lg' };
+const ICON = { sm: 'h-4 w-4', md: 'h-5 w-5', lg: 'h-7 w-7' };
+---
+<span class:list={['chip', `chip-${tone}`, SIZE[size], cls]}><Icon name={name} class={ICON[size]} /></span>

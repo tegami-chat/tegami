@@ -1950,5 +1950,29 @@
  "badge.discussing": {
   "en": "Under discussion",
   "ja": "検討中"
+ },
+ "doc.toc": {
+  "en": "On this page",
+  "ja": "目次"
+ },
+ "cmp.tbl": {
+  "en": "Comparison table",
+  "ja": "比較表"
+ },
+ "faq.cat.start": {
+  "en": "Getting started",
+  "ja": "はじめる"
+ },
+ "faq.cat.devices": {
+  "en": "Devices and accounts",
+  "ja": "端末とアカウント"
+ },
+ "faq.cat.safety": {
+  "en": "Safety and privacy",
+  "ja": "安全とプライバシー"
+ },
+ "faq.cat.project": {
+  "en": "The project and the code",
+  "ja": "運営と技術"
  }
 }

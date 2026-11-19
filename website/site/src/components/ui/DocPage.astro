@@ -1,0 +1,41 @@
+---
+// The layout of a document page (/how /status /compare /faq): a header band with the title, the lead and a picture,
+// then the text column and, from 64rem, a sticky table of contents on the right. Below 64rem the table of contents is a
+// block that opens and closes at the top of the page. doc-toc.js marks the section being read (aria-current).
+// toc = the sections: id is the section's anchor, label is HTML from dict.json. The picture goes in the art slot.
+import Section from '~/components/ui/Section.astro';
+import Container from '~/components/ui/Container.astro';
+import SectionHeading from '~/components/ui/SectionHeading.astro';
+import IconChip from '~/components/ui/IconChip.astro';
+import Icon, { type IconName } from '~/components/ui/Icon.astro';
+import { t, type Lang } from '~/site';
+export interface Props { lang: Lang; title: string; lead?: string; toc: { id: string; label: string }[]; icon: IconName; numbered?: boolean }
+const { lang, title, lead, toc, icon, numbered = false } = Astro.props;
+const label = t('doc.toc', lang);
+---
+<main>
+  <Section tone="muted" rhythm="page" width="wide" class="doc-cols items-center" bordered>
+    <div>
+      <IconChip name={icon} size="lg" tone="solid" class="doc-icon-mobile" />
+      <SectionHeading level={1} title={title} lead={lead} flush />
+    </div>
+    <div class="doc-art"><slot name="art" /></div>
+  </Section>
+  <Container width="wide" class="doc-cols pad-page">
+    <details class="doc-toc-m" data-doc-toc>
+      <summary><Icon name="list" class="h-4 w-4" />{label}</summary>
+      <nav aria-label={label}><ol>
+        {toc.map((s, i) => <li><a href={'#' + s.id}>{numbered && <span class="num">{i + 1}</span>}<span><Fragment set:html={s.label} /></span></a></li>)}
+      </ol></nav>
+    </details>
+    <div class="min-w-0 space-y-16"><slot /></div>
+    <aside class="doc-aside">
+      <nav class="doc-toc" aria-label={label} data-doc-toc>
+        <p class="doc-toc-title"><Icon name="list" class="h-4 w-4" />{label}</p>
+        <ol>
+          {toc.map((s, i) => <li><a href={'#' + s.id}>{numbered && <span class="num">{i + 1}</span>}<span><Fragment set:html={s.label} /></span></a></li>)}
+        </ol>
+      </nav>
+    </aside>
+  </Container>
+</main>

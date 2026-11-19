@@ -37,6 +37,8 @@
   --container-narrow: 48rem;
   --container-content: 64rem;
   --container-wide: 72rem;
+  /* The table of contents on the right of a document page (DocPage). */
+  --container-toc: 15rem;
 }
 
 /* ---- Semantic colours. Pages use these names only; each has a light and a dark value. ---- */
@@ -139,6 +141,8 @@
 :lang(ja) h1, :lang(ja) h2, :lang(ja) h3, :lang(ja) th, :lang(ja) td, :lang(ja) summary, :lang(ja) li { word-break: auto-phrase; }
 :lang(ja) p { word-break: auto-phrase; text-wrap: pretty; }
 h1, h2, h3 { text-wrap: balance; }
+/* Cells of the comparison matrix are narrow: let the Japanese break between any characters so that no column grows wide. */
+:lang(ja) .matrix td, :lang(ja) .matrix th { word-break: normal; }
 
 /* Moving between pages must not shift or flash. Keep the scrollbar's room even on a short page,
    paint the page colour on the root before the body, and let the browser cross-fade the page change
@@ -180,6 +184,123 @@ html.dark { background-color: #101311; color-scheme: dark; }
   .table-wrap [data-sticky] th:first-child { background: var(--c-surface-muted); }
   .table-wrap a { color: var(--c-accent); text-decoration: underline; text-underline-offset: 2px; }
   .table-wrap code { background: var(--c-surface-muted); border-radius: 4px; padding: 1px 5px; font-size: 0.88em; }
+}
+
+/* ---- DocPage: the layout of /how /status /compare /faq. A header band, then the text column and the table of contents on the right. ---- */
+@layer components {
+  /* Two columns from 64rem: the text column (the narrow width) and the table of contents. Both the header and the body use it, so they line up. */
+  .doc-cols { display: grid; gap: 2rem; }
+  @media (width >= 64rem) { .doc-cols { grid-template-columns: minmax(0, var(--container-narrow)) var(--container-toc); column-gap: 4rem; justify-content: center; } }
+  .doc-hero { border-bottom: 1px solid var(--c-line); background: var(--c-surface-muted); overflow: hidden; }
+  .doc-art { display: none; }
+  @media (width >= 64rem) { .doc-art { display: flex; justify-content: center; } }
+  .chip.doc-icon-mobile { margin-bottom: 1.5rem; }
+  @media (width >= 64rem) { .chip.doc-icon-mobile { display: none; } }
+  .doc-aside { display: none; }
+  @media (width >= 64rem) { .doc-aside { display: block; } }
+  .doc-section { scroll-margin-top: 5rem; }
+
+  /* The table of contents. The current section is marked with aria-current by doc-toc.js. */
+  .doc-toc { position: sticky; top: 5.5rem; max-height: calc(100vh - 7rem); overflow-y: auto; }
+  .doc-toc-title { font-size: 0.75rem; line-height: 1rem; font-weight: 600; color: var(--c-fg-muted); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+  .doc-toc ol { border-left: 1px solid var(--c-line); }
+  .doc-toc a, .doc-toc-m a { display: flex; gap: 0.5rem; margin-left: -1px; padding: 0.375rem 0.75rem; border-left: 2px solid transparent; font-size: 0.875rem; line-height: 1.25rem; color: var(--c-fg-muted); transition: color 0.15s, background-color 0.15s; }
+  .doc-toc a:hover, .doc-toc-m a:hover { color: var(--c-fg); background: var(--c-hover); }
+  .doc-toc a[aria-current='true'], .doc-toc-m a[aria-current='true'] { border-left-color: var(--c-accent); color: var(--c-accent); font-weight: 600; }
+  .doc-toc .num, .doc-toc-m .num { color: var(--c-fg-muted); font-variant-numeric: tabular-nums; min-width: 1.25em; }
+  .doc-toc-m { border: 1px solid var(--c-line); border-radius: var(--radius-box); background: var(--c-surface); box-shadow: var(--shadow-card); }
+  .doc-toc-m summary { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; font-weight: 600; font-size: 0.875rem; list-style: none; }
+  .doc-toc-m summary::-webkit-details-marker { display: none; }
+  .doc-toc-m[open] summary { border-bottom: 1px solid var(--c-line); }
+  .doc-toc-m ol { padding: 0.5rem 0; }
+  .doc-toc-m a { margin-left: 0; padding: 0.5rem 1rem; }
+  @media (width >= 64rem) { .doc-toc-m { display: none; } }
+
+  /* The picture in the header band: a big icon with three small ones circling it. */
+  .orbit { position: relative; width: 14rem; height: 14rem; }
+  .orbit::before { content: ''; position: absolute; inset: 1.25rem; border: 2px dashed var(--c-line-strong); border-radius: 9999px; }
+  .orbit-main { position: absolute; inset: 3.5rem; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-box); background: var(--c-accent); color: var(--c-on-accent); box-shadow: var(--shadow-pop); }
+  .orbit-sat { position: absolute; display: flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border-radius: 9999px; background: var(--c-surface); border: 1px solid var(--c-line-strong); color: var(--c-accent-2); box-shadow: var(--shadow-card); }
+  .orbit-sat:nth-of-type(1) { top: 0.25rem; left: 2.5rem; }
+  .orbit-sat:nth-of-type(2) { top: 5.5rem; right: -0.25rem; }
+  .orbit-sat:nth-of-type(3) { bottom: 0.5rem; left: 1.5rem; }
+
+  /* A square tile with an icon: the marker of a section or a list item. */
+  .chip { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: var(--radius-control); width: 2.5rem; height: 2.5rem; }
+  .chip-lg { width: 3.5rem; height: 3.5rem; border-radius: var(--radius-box); }
+  .chip-sm { width: 1.75rem; height: 1.75rem; }
+  .chip-accent { background: var(--c-accent-soft); color: var(--c-accent); }
+  .chip-solid { background: var(--c-accent); color: var(--c-on-accent); }
+  .chip-violet { background: var(--c-accent-2-soft); color: var(--c-accent-2); }
+  .chip-warn { background: var(--c-warn-soft); color: var(--c-warn); }
+  .chip-quiet { background: var(--c-quiet-soft); color: var(--c-quiet); }
+
+  /* A list whose items start with an icon. */
+  .iconlist { display: grid; gap: 0.75rem; }
+  .iconlist li { display: flex; gap: 0.75rem; align-items: flex-start; }
+  .iconlist li > svg { margin-top: 0.2rem; }
+
+  /* Steps joined by a dashed line (/how "when you lose your device"). */
+  .steps > li { position: relative; display: flex; gap: 1rem; padding-bottom: 1.5rem; }
+  .steps > li:last-child { padding-bottom: 0; }
+  .steps > li:not(:last-child)::before { content: ''; position: absolute; left: 1.25rem; top: 2.75rem; bottom: 0.25rem; border-left: 2px dashed var(--c-line-strong); }
+
+  /* /how: the lock between two phones. */
+  .seal-line { flex: 1; border-top: 2px dashed var(--c-accent); opacity: 0.5; min-width: 1rem; }
+}
+
+/* ---- Table: the comparison matrix (/compare). The Tegami column is marked with data-hl. ---- */
+@layer components {
+  .table-wrap.matrix { border: 1px solid var(--c-line); border-radius: var(--radius-box); background: var(--c-surface); box-shadow: var(--shadow-card); }
+  .matrix table { min-width: 40rem; font-size: 0.875rem; }
+  .matrix th, .matrix td { border: 0; border-top: 1px solid var(--c-line); padding: 0.75rem 0.625rem; }
+  .matrix [data-sticky] td:first-child, .matrix [data-sticky] th:first-child { min-width: 0; }
+  .matrix tbody th { width: 7.5rem; }
+  .matrix thead th { border-top: 0; background: transparent; color: var(--c-fg-muted); font-weight: 600; padding-block: 1rem; }
+  .matrix tbody th { background: var(--c-surface); font-weight: 600; }
+  .matrix [data-sticky] td:first-child, .matrix [data-sticky] th:first-child, .matrix [data-sticky] thead th:first-child { background: var(--c-surface); }
+  .matrix [data-hl] { background: var(--c-accent-soft); box-shadow: inset 2px 0 0 var(--c-accent), inset -2px 0 0 var(--c-accent); }
+  .matrix thead th[data-hl] { background: var(--c-accent); color: var(--c-on-accent); border-top-left-radius: var(--radius-control); border-top-right-radius: var(--radius-control); box-shadow: none; }
+  .matrix tbody tr:last-child td[data-hl] { border-bottom: 2px solid var(--c-accent); }
+  .matrix td[data-hl] { color: var(--c-fg); font-weight: 600; }
+  .cell { display: flex; gap: 0.5rem; align-items: flex-start; }
+  .mark { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; border-radius: 9999px; margin-top: 0.1rem; }
+  .mark-yes { background: var(--c-accent-soft); color: var(--c-accent); }
+  .mark-part { background: var(--c-warn-soft); color: var(--c-warn); }
+  .mark-no { background: var(--c-danger-soft); color: var(--c-danger); }
+  .mark-unknown { background: var(--c-quiet-soft); color: var(--c-quiet); }
+  .matrix td[data-hl] .mark-yes { background: var(--c-accent); color: var(--c-on-accent); }
+}
+
+/* ---- /status: the live card, the numbers and the charts. status.js sets data-state on the card. ---- */
+@layer components {
+  .status-hero { display: grid; gap: 1.5rem; padding: 1.5rem; border: 1px solid var(--c-line); border-radius: var(--radius-box); background: var(--c-surface); box-shadow: var(--shadow-card); }
+  @media (width >= 40rem) { .status-hero { grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 2rem; } }
+  .status-hero[data-state='up'] { border-color: color-mix(in oklab, var(--c-accent) 40%, transparent); background: var(--c-accent-soft); }
+  .status-hero[data-state='down'] { border-color: color-mix(in oklab, var(--c-danger) 50%, transparent); background: var(--c-danger-soft); }
+  .status-dot { width: 1rem; height: 1rem; border-radius: 9999px; background: var(--c-line-strong); flex-shrink: 0; }
+  [data-state='up'] .status-dot { background: var(--c-accent); animation: status-pulse 2s ease-out infinite; }
+  [data-state='down'] .status-dot { background: var(--c-danger); }
+  @keyframes status-pulse { from { box-shadow: 0 0 0 0 color-mix(in oklab, var(--c-accent) 55%, transparent); } to { box-shadow: 0 0 0 0.75rem transparent; } }
+  @media (prefers-reduced-motion: reduce) { [data-state='up'] .status-dot { animation: none; } }
+  .stat { display: flex; flex-direction: column; gap: 0.25rem; padding: 1rem; border-radius: var(--radius-box); background: var(--c-surface); border: 1px solid var(--c-line); box-shadow: var(--shadow-card); }
+  .stat-value { font-size: 1.875rem; line-height: 2.25rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.025em; }
+  .stat-label { font-size: 0.75rem; line-height: 1rem; color: var(--c-fg-muted); font-weight: 600; }
+  .stat-week { font-size: 0.75rem; line-height: 1rem; color: var(--c-fg-muted); font-variant-numeric: tabular-nums; }
+  .chart-card { border: 1px solid var(--c-line); border-radius: var(--radius-box); background: var(--c-surface); box-shadow: var(--shadow-card); padding: 1.25rem; }
+  .art-bars { display: flex; align-items: flex-end; gap: 0.5rem; height: 9rem; padding: 1rem 1.25rem; border-radius: var(--radius-box); background: var(--c-surface); border: 1px solid var(--c-line-strong); box-shadow: var(--shadow-pop); }
+  .art-bars > span { width: 1.25rem; border-radius: 0.25rem 0.25rem 0 0; background: var(--c-accent); }
+  .art-bars > .h1 { height: 30%; } .art-bars > .h2 { height: 50%; } .art-bars > .h3 { height: 40%; } .art-bars > .h4 { height: 75%; } .art-bars > .h5 { height: 60%; } .art-bars > .h6 { height: 100%; }
+}
+
+/* ---- /faq: an accordion row. ---- */
+@layer components {
+  .acc { border: 1px solid var(--c-line); border-radius: var(--radius-box); background: var(--c-surface); box-shadow: var(--shadow-card); overflow: hidden; }
+  .acc > details + details { border-top: 1px solid var(--c-line); }
+  .acc summary { list-style: none; }
+  .acc summary::-webkit-details-marker { display: none; }
+  .acc summary:focus-visible { outline: 2px solid var(--c-accent); outline-offset: -2px; }
+  .acc details[open] { background: var(--c-surface-muted); }
 }
 
 /* ---- The retention lists on /privacy: one row = a title and three labelled values. ---- */
