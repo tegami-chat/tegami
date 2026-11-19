@@ -2,11 +2,11 @@
 // The top page, section by section. The words are in content/dict.json.
 // The section "How Tegami is different" (home/DiffScenes.astro) is off the top page since 2026-11-19.
 // To bring it back, import DiffScenes and place it right after Pillars.
+// The section "Make Tegami yours" (home/MakeSection.astro) was taken off on 2026-11-20. To bring it back, import MakeSection and place it right after AiSection.
 import Hero from '~/components/home/Hero.astro';
 import Pillars from '~/components/home/Pillars.astro';
 import FeatureList from '~/components/home/FeatureList.astro';
 import AiSection from '~/components/home/AiSection.astro';
-import MakeSection from '~/components/home/MakeSection.astro';
 import DonationSection from '~/components/home/DonationSection.astro';
 import FinalCta from '~/components/home/FinalCta.astro';
 import type { Lang } from '~/site';
@@ -18,7 +18,6 @@ const { lang = 'en' } = Astro.props as { lang?: Lang };
   <Pillars lang={lang} />
   <FeatureList lang={lang} />
   <AiSection lang={lang} />
-  <MakeSection lang={lang} />
   <DonationSection lang={lang} />
   <FinalCta lang={lang} />
 </main>

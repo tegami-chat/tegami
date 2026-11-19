@@ -27,7 +27,6 @@ const DRAFT_LINKS: Record<string, string> = {
   'Tegamiの開発者向け_技術仕様.html': '/developers',
   'Tegamiの開発者向け_よくある質問.html': '/developers/faq',
   'Tegamiの比較.html': '/compare',
-  'Tegamiのロードマップ案_2026-11-14.html': '/roadmap',
   'Tegamiのよくある質問_2026-11-16.html': '/faq',
   'Tegamiのプライバシーポリシー案_2026-11-14.html': '/privacy',
   'Tegamiの運営者情報案_2026-11-17.html': '/about',
@@ -45,7 +44,8 @@ export const t = (key: string, lang: Lang): string => {
 };
 
 // The /compare page was taken off on 2026-11-19. To bring it back: add 'compare' to PAGES, restore PATH and META entries (compare: '/compare'), the Footer link and the Compare entry in PageView.astro. Compare.astro and its dict keys are kept.
-export const PAGES = ['index', 'how', 'faq', 'about', 'roadmap', 'status', 'privacy', 'donate'] as const;
+// The /roadmap page was taken off on 2026-11-20. To bring it back: add 'roadmap' to PAGES, restore the PATH and META entries (roadmap: '/roadmap'), the 'Tegamiのロードマップ案_2026-11-14.html' link entry, the Footer link and the Roadmap entry in PageView.astro. Roadmap.astro and its dict keys are kept.
+export const PAGES = ['index', 'how', 'faq', 'about', 'status', 'privacy', 'donate'] as const;
 export type PageName = (typeof PAGES)[number];
 
 const PATH: Record<PageName, string> = {
@@ -53,7 +53,6 @@ const PATH: Record<PageName, string> = {
   how: '/how',
   faq: '/faq',
   about: '/about',
-  roadmap: '/roadmap',
   status: '/status',
   privacy: '/privacy',
   donate: '/donate',
@@ -73,10 +72,6 @@ export const META: Record<PageName, Record<Lang, { title: string; desc: string }
   how: {
     en: { title: 'Security | Tegami', desc: "What protects your messages, what we can and can't see, and what isn't done yet." },
     ja: { title: '安全の仕組み | Tegami', desc: 'メッセージを守る仕組みと、運営者に見えるもの、見えないもの、まだ足りないこと。' },
-  },
-  roadmap: {
-    en: { title: 'Roadmap | Tegami', desc: "What we've built, and what's next." },
-    ja: { title: 'ロードマップ | Tegami', desc: 'できたこと、これから作ること。' },
   },
   privacy: {
     en: { title: 'Privacy policy | Tegami', desc: 'What Tegami keeps, why, and for how long.' },

@@ -36,8 +36,8 @@
   "ja": "AIを自由に使う。"
  },
  "p2.t": {
-  "en": "Connect your own AI as a friend in your chat list, and let it read and send messages through MCP (the API is planned). You're just as free to not use AI at all, or to keep other people's AIs from reading your messages.",
-  "ja": "自分のAIを、友だちとしてつなげられます。MCP（AIとツールをつなぐ仕組み）を使えば、AIがメッセージを読んだり送ったりできます（APIは予定です）。AIを使わないことも、相手のAIに自分の文を読ませないことも、あなたの自由です。"
+  "en": "Connect your own AI as a friend in your chat list, and let it read and send messages through MCP. You're just as free to not use AI at all, or to keep other people's AIs from reading your messages.",
+  "ja": "自分のAIを、友だちとしてつなげられます。MCP（AIとツールをつなぐ仕組み）を使えば、AIがメッセージを読んだり送ったりできます。AIを使わないことも、相手のAIに自分の文を読ませないことも、あなたの自由です。"
  },
  "p3.h": {
   "en": "No one else can read them.",
@@ -172,8 +172,8 @@
   "ja": "自分でカスタマイズする"
  },
  "ai.own.t": {
-  "en": "Connect your own program that writes the replies, and you have your own bot. An API for connecting programs directly is planned.",
-  "ja": "返事を書く自分のプログラムをつなげば、自分だけのボットを作れます。プログラムから直接つなぐAPIは予定です。"
+  "en": "Connect your own program that writes the replies, and you have your own bot.",
+  "ja": "返事を書く自分のプログラムをつなげば、自分だけのボットを作れます。"
  },
  "mk.h": {
   "en": "Make Tegami yours.",

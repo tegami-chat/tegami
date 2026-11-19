@@ -18,7 +18,7 @@ const columns: { title: string; items: Item[] }[] = [
     { text: x('nav.faq'), href: link('/faq', lang) },
   ] },
   { title: x('ft.project'), items: [
-    { text: x('roadmap'), href: link('/roadmap', lang) },
+    // The roadmap page was taken off on 2026-11-20. To bring it back, restore this line and the 'roadmap' entries in site.ts and PageView.astro.
     { text: x('ft.docs'), href: link('/developers', lang) },
     { text: x('ft.src'), href: GH, ext: true },
     { text: x('ft.issues'), href: GH + '/issues', ext: true },
