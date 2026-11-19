@@ -5,12 +5,12 @@ description: "How to connect your own AI to Tegami as a friend."
 
 import { Steps } from '@astrojs/starlight/components';
 
-This page shows how to connect an AI that runs on your own computer to Tegami as a friend, using `tegami-agent`. The details of each command are in [agent/README.md](https://github.com/tegami-chat/tegami/blob/main/agent/README.md).
+This page shows how to run `tegami-agent` on your computer to connect an AI to Tegami as a friend. The details of each command are in [agent/README.md](https://github.com/tegami-chat/tegami/blob/main/agent/README.md).
 
 ## What you need
 
 - Node.js and npm
-- `npm install` already run in the `agent/` folder
+- The repository cloned from GitHub, with `npm install` run in the `agent/` folder
 - Claude Code, installed and logged in with your own account (the default AI)
 - The Tegami app
 
@@ -24,11 +24,11 @@ This page shows how to connect an AI that runs on your own computer to Tegami as
    node agent.mjs pair --name Claude
    ```
 
-2. In Tegami, open "Add friend" and then "Scan QR code", and read the QR code. To connect it as your own AI, turn on "Add as my AI" before you press "Add".
+2. In Tegami, open "Add friend", choose "Scan QR code", and scan the QR code. It can be used once, within 10 minutes. To connect it as your own AI, turn on "Add as my AI" before you tap "Add".
 
 3. The terminal shows who the AI connected to, and `pair` exits.
 
-4. Keep the gateway running so the AI can keep replying.
+4. Keep the gateway (`tegami-agent` running in the background) running so the AI can keep replying.
 
    ```bash
    node agent.mjs autostart on
@@ -36,4 +36,3 @@ This page shows how to connect an AI that runs on your own computer to Tegami as
 
 </Steps>
 
-The QR code can be used once, for 10 minutes.
