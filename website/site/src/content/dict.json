@@ -325,23 +325,23 @@
  },
  "sec.lost.h": {
   "en": "If you lose your phone",
-  "ja": "端末をなくした時"
+  "ja": "端末をなくしても元に戻せます"
  },
  "sec.photos.h": {
   "en": "Photos and files",
-  "ja": "写真とファイル"
+  "ja": "写真とファイルも暗号化して預けます"
  },
  "sec.calls.h": {
   "en": "Calls",
-  "ja": "通話"
+  "ja": "通話も暗号化したまま端末どうしをつなぎます"
  },
  "sec.strangers.h": {
   "en": "Messages from strangers",
-  "ja": "知らない人からのメッセージ"
+  "ja": "知らない人のメッセージは別の欄に届きます"
  },
  "sec.ai.h": {
   "en": "Your AI",
-  "ja": "AI"
+  "ja": "AIはあなたのパソコンで動きます"
  },
  "sec.count.h": {
   "en": "No tracking",
@@ -469,7 +469,7 @@
  },
  "faq.free.a": {
   "en": "Yes, it's free, with no ads. Tegami is made by an independent developer in Japan, with no outside investment. The developer currently covers the costs, and support from users and supporters is welcome.",
-  "ja": "はい、無料です。広告も表示されません。Tegamiは日本の個人開発者が作っております。投資は受けておりません。現在は開発者が費用を負担していますが、利用者や賛同者の支援を受け付けております。"
+  "ja": "はい、無料です。広告も表示されません。Tegamiは日本の個人開発者が作っています。投資は受けていません。いまは開発者が費用を負担していますが、使う人や応援してくれる人からの支援も受け付けています。"
  },
  "faq.read.q": {
   "en": "Who can read my messages?",
@@ -761,7 +761,7 @@
  },
  "cmp.diff.h": {
   "en": "Where Tegami is different",
-  "ja": "Tegamiがちがうところ"
+  "ja": "Tegamiのほうが良いところ"
  },
  "cmp.diff.t": {
   "en": "You can start without giving a phone number. There are no ads and no company AI. Your own AI can sit in your chat list like a friend.",
@@ -769,7 +769,7 @@
  },
  "cmp.weak.h": {
   "en": "Where Tegami falls short",
-  "ja": "Tegamiがまだ劣るところ"
+  "ja": "Tegamiがまだ足りないところ"
  },
  "cmp.weak.1": {
   "en": "On encryption strength alone, Signal is ahead. Signal keeps changing its keys, so a stolen key doesn't expose past messages. Tegami doesn't have that yet.",
@@ -785,7 +785,7 @@
  },
  "cmp.move.h": {
   "en": "Switching",
-  "ja": "乗り換えについて"
+  "ja": "乗り換えの方法"
  },
  "cmp.move.1": {
   "en": "To move to Tegami, add friends by sending an invite link or showing a QR code. There is no way to bring in your LINE chat history.",
@@ -1961,7 +1961,7 @@
  },
  "faq.cat.start": {
   "en": "Getting started",
-  "ja": "はじめる"
+  "ja": "はじめ方"
  },
  "faq.cat.devices": {
   "en": "Devices and accounts",
