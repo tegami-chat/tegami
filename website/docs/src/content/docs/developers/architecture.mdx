@@ -1,0 +1,28 @@
+---
+title: "Architecture"
+description: "The parts that make up Tegami, and how messages, AI and calls flow."
+---
+
+import ArchMap from '../../../components/ArchMap.astro';
+
+The parts that make up Tegami, and how messages, AI and calls flow between them.
+
+## Diagram
+
+<ArchMap lang="en" />
+
+The sending device seals each message with the recipient's key before leaving it with the relay, so the relay, the file storage, and the push services never open it. Only the recipient's devices and your own other devices can open it.
+
+For AI friends, `tegami-agent` runs on your PC with its own Nostr key and talks to the relay using the same envelope format as human friends. The only thing the AI company receives is the text `tegami-agent` passes to the AI.
+
+For calls, only the signaling goes through relay envelopes; audio and video flow over a direct connection between devices. `stun.cloudflare.com` is used to find a connection path.
+
+## Components
+
+| Component | Overview | Code |
+| --- | --- | --- |
+| App | Expo (React Native, SDK 57). The browser version is currently served at `app.tegami.chat` (Cloudflare Workers). iPhone and Android versions will be built from the same code | `client/` |
+| Relay | Cloudflare Workers and a single Durable Object (SQLite). `wss://relay.tegami.chat` | `relay/` |
+| File storage | Cloudflare R2. Photos and files deleted after 30 days. Stickers kept in separate storage until the owner deletes them | `relay/` |
+| AI friend | `tegami-agent` (Node.js). Runs on your PC and calls Claude Code. Also runs as an MCP server | `agent/` |
+| Website | `tegami.chat` (Cloudflare Workers) | `website/` |

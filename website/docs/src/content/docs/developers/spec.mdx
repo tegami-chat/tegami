@@ -1,23 +1,13 @@
 ---
 title: "Technical spec"
-description: "Crypto building blocks, relay limits, HTTP endpoints and Tegami event kinds."
+description: "Crypto building blocks, NIPs in use, relay limits, HTTP endpoints and Tegami event kinds."
 ---
 
-import { Badge } from '@astrojs/starlight/components';
+import { Aside, Badge } from '@astrojs/starlight/components';
 
 Crypto building blocks, relay limits, HTTP endpoints and Tegami's own event kinds.
 
-Status labels such as "Available" are explained in the [overview](/developers/#what-the-status-labels-mean-3).
-
-## Overall architecture
-
-| Component | Overview | Code |
-| --- | --- | --- |
-| App | Expo (React Native, SDK 57). The browser version is currently served at `app.tegami.chat` (Cloudflare Workers). iPhone and Android versions will be built from the same code | `client/` |
-| Relay | Cloudflare Workers and a single Durable Object (SQLite). `wss://relay.tegami.chat` | `relay/` |
-| File storage | Cloudflare R2. Photos and files deleted after 30 days. Stickers kept in separate storage until the owner deletes them | `relay/` |
-| AI friend | `tegami-agent` (Node.js). Runs on your PC and calls Claude Code. Also runs as an MCP server | `agent/` |
-| Website | `tegami.chat` (Cloudflare Workers) | `website/` |
+Status labels such as "Available" are explained in the [overview](/developers/#what-the-status-labels-mean).
 
 ## Cryptography
 
@@ -30,6 +20,31 @@ Status labels such as "Available" are explained in the [overview](/developers/#w
 | Device transfer | Envelope encrypted with NIP-44 to a throwaway key, with a 10-minute NIP-40 expiry. The throwaway secret key is included only after the `#` in the link |
 | Notifications | Web Push (VAPID). Payload encrypted per device with RFC 8291 (aes128gcm) |
 | Calls | WebRTC (DTLS-SRTP). Signaling in NIP-17 envelopes (custom kind 25050, 1-minute expiry) |
+
+## NIPs in use
+
+<Aside type="tip" title="Now">
+
+| NIP | Usage |
+| --- | --- |
+| NIP-17, NIP-59 | One-to-one and group messages. Text uses kind 14, photos and files use kind 15, wrapped in a seal (kind 13) and gift wrap (kind 1059) |
+| NIP-44 | Encryption of seals and gift wraps, and of device transfer data |
+| NIP-42 | Authentication (login) to the relay. Both reads and writes require an authenticated key |
+| NIP-40 | Expiring envelopes (1 minute for call signals, 10 minutes for device transfer and AI draft requests) |
+| NIP-98 | Signatures for HTTP endpoints (registration, notifications, recovery backups, reports, admin operations) |
+| NIP-05, NIP-11 | Identifier for the official account (hello@tegami.chat), plus relay info and the running version |
+| Blossom (kind 24242 signatures) | Storage for photos and files (`/upload` and `/<sha256>`). Data is stored and fetched by the sha256 of the encrypted bytes. `/stamp` for stickers is a Tegami-specific extension |
+
+Where no NIP covers what we need, we use our own kinds, only inside encrypted envelopes: icon (10100), sticker list (10101), call signaling (25050), and AI draft requests and replies (25060, 25061).
+
+</Aside>
+
+<Aside type="note" title="Next">
+
+-   <Badge text="Available" variant="success" />  We added more custom kinds: sync between your own devices (10102), group member changes (10103), consent to invite an AI into a chat (10104), and exchanges with AI (25062 to 25070). In this version the app does not use 10104 or the AI-to-AI messages (25066, 25067) yet.
+-   <Badge text="Under discussion" variant="caution" />  If the proposals for key rotation and protecting keys with passkeys (NIP pull requests #2137 and #2519) are merged, we will consider adopting them.
+
+</Aside>
 
 ## What the relay accepts
 
@@ -55,7 +70,7 @@ HTTP endpoints (photo, file, and sticker operations require a kind 24242 signatu
 | `POST /turn` | Short-lived TURN credentials for calls, for registered keys only. Nothing about the request is kept | <Badge text="Available" variant="success" /> |
 | `DELETE /account` | Delete the account. The relay removes the envelopes, stamps, notification endpoints and registration it holds for the key | <Badge text="Available" variant="success" /> |
 
-## Tegami's custom kinds
+## Tegami event kinds
 
 All are used only in the encrypted part inside a gift wrap. The relay only sees kind 1059.
 

@@ -1,0 +1,73 @@
+---
+title: "Notifications, calls and media"
+description: "How notifications, calls, photos and files work."
+---
+
+import { Aside, Badge } from '@astrojs/starlight/components';
+
+How notifications, calls, photos and files work.
+
+Status labels such as "Available" are explained in the [overview](/developers/#what-the-status-labels-mean).
+
+## Notifications
+
+<Aside type="tip" title="Now">
+
+We use Web Push. Your device signs its notification endpoint and notification keys with your key and leaves them with the relay. When an envelope arrives, the relay sends a payload encrypted per device (RFC 8291). It contains only the type (message or call), the recipient account, and a count; never the sender or message text. However, to tell calls apart, only envelopes that ring the other person carry a `t=call` tag, so the relay knows that an envelope was a call.
+
+</Aside>
+
+<Aside type="caution" title="Not yet">
+
+You cannot mute notifications per chat. Neither the relay nor the part of the device that receives notifications knows which chat an envelope belongs to. Also, in the iPhone browser version, incoming calls do not show full screen like a regular phone call.
+
+</Aside>
+
+<Aside type="note" title="Next">
+
+-   <Badge text="Decided" variant="note" />  When we build the iPhone app, we will add full-screen incoming calls (Apple's CallKit).
+
+</Aside>
+
+## Calls
+
+<Aside type="tip" title="Now">
+
+One-to-one voice and video calls over WebRTC. Signaling such as ringing and answering goes through the relay in encrypted envelopes that expire after 1 minute, and STUN (`stun.cloudflare.com`) is used to find a connection path. When a direct path is not possible, or when you choose "Always relay calls," the call goes through a TURN relay server. Audio and video stay encrypted.
+
+</Aside>
+
+<Aside type="caution" title="Not yet">
+
+Calls that connect directly show the other person your IP address, unless you choose "Always relay calls." There are no group calls.
+
+</Aside>
+
+<Aside type="note" title="Next">
+
+-   <Badge text="Available" variant="success" />  Calls can now use Cloudflare's TURN server.
+-   <Badge text="Available" variant="success" />  If you choose "Always relay calls," the other person can no longer see your IP address.
+-   <Badge text="Available" variant="success" />  You can also set up your own TURN server.
+
+</Aside>
+
+## Photos and files
+
+<Aside type="tip" title="Now">
+
+Each one is encrypted with a new AES-GCM key and then stored in the relay's storage (Cloudflare R2). The key goes inside the encrypted message, so only the recipient gets it. Data in storage is deleted after 30 days, but stays on the recipient's device. Photos are shrunk to 1600px on the long side before sending, and the file size limit is 10MB after encryption. Stickers are different: their key is derived from the image and your account's secret key (so your own devices produce the same ciphertext), and they stay in separate storage until you delete them.
+
+</Aside>
+
+<Aside type="caution" title="Not yet">
+
+There is no option to send at original quality.
+
+</Aside>
+
+<Aside type="note" title="Next">
+
+-   <Badge text="Decided" variant="note" />  Senders will be able to choose between sending a smaller version or the original quality.
+-   <Badge text="Under discussion" variant="caution" />  We have not decided whether sending at original quality will be a paid feature.
+
+</Aside>

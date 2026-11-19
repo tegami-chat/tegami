@@ -1,0 +1,45 @@
+---
+title: "自分のリレーを立てる"
+description: "Tegamiのリレーを自分で立てる方法。"
+---
+
+import { Aside, Badge, Steps } from '@astrojs/starlight/components';
+
+Tegamiのリレーを自分で立てる方法です。
+
+「提供中」などの状態の表示の意味は、[概要](/ja/developers/#状態の表示の意味)にあります。
+
+リレーのコードは`relay/`で公開していて、Cloudflare WorkersとDurable Objectの上で動きます。ただし、いまのアプリは公式のリレー`wss://relay.tegami.chat`にしかつながりません。自分のリレーを使うには、接続先を環境変数`EXPO_PUBLIC_TEGAMI_RELAYS`で変えて、アプリを自分でビルドする必要があります。会社や学校が自分のリレーを動かせるようにする予定です。
+
+## 手順
+
+<Steps>
+
+1. リレーのコードを取得します。コードは[`relay/`](https://github.com/tegami-chat/tegami/tree/main/relay)で公開しています。
+2. `relay/`フォルダで`npm run dev`を実行すると、手元の`ws://localhost:8787`でリレーが起動します（`relay/package.json`と`relay/wrangler.jsonc`の記載）。
+3. 本番に置く時は、Cloudflare WorkersとDurable Objectの上で動かします。Durable Objectと、写真とスタンプのR2のバケットの設定は[`relay/wrangler.jsonc`](https://github.com/tegami-chat/tegami/blob/main/relay/wrangler.jsonc)に、公式のリレーを置く道具は[`relay/scripts/deploy.mjs`](https://github.com/tegami-chat/tegami/blob/main/relay/scripts/deploy.mjs)にあります。
+4. アプリを自分でビルドし、環境変数`EXPO_PUBLIC_TEGAMI_RELAYS`で接続先を自分のリレーに変えます。
+
+</Steps>
+
+リレーの仕組みの全体は[リレー](/ja/developers/relay/)にあります。
+
+## 自分のリレーの現状
+
+<Aside type="tip" title="いま">
+
+リレーのコードは公開しているため、自分で立ち上げて動かせます。
+
+</Aside>
+
+<Aside type="caution" title="まだ">
+
+ただし、現在のTegamiのアプリは公式リレーにしかつながらないため、立てたリレーを使うにはアプリを改造する必要があります。
+
+</Aside>
+
+<Aside type="note" title="これから">
+
+-   <Badge text="決定済み" variant="note" /> 会社や学校が独自のリレーを置けるようにします。登録のルールは置いた側が決められ、「誰でも」「招待券だけ」「許可した鍵だけ」から選べるようにします。
+
+</Aside>

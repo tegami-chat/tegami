@@ -1,6 +1,6 @@
 # 開発者向けドキュメント（Astro Starlight）
 
-tegami.chat の /developers と /ja/developers の7ページを作る Starlight のプロジェクトです。
+tegami.chat の /developers と /ja/developers の開発者向けドキュメント（15ページ）を作る Starlight のプロジェクトです。左のサイドバーは「はじめに」「仕組み」「ガイド」「リファレンス」「比較とよくある質問」の5つの組に分けています。
 
 ## 作り直す1つのコマンド
 
@@ -19,7 +19,9 @@ tegami.chat の /developers と /ja/developers の7ページを作る Starlight 
 - `astro.config.mjs` に、サイドバーの順番と日本語の名前、ヘッダーの設定がある。
 - `src\components\SocialIcons.astro` がヘッダーの「ホーム、安全の仕組み、よくある質問」へのリンク。
 - `src\components\ArchMap.astro` と `src\diagrams\arch.*.svg` が概要の構成図。
-- ページを足す時は、両言語に mdx を足し、`astro.config.mjs` のサイドバーに1行足す。
+- ページを足す時は、両言語に mdx を足し、`astro.config.mjs` のサイドバーの組に1行足す。
+- 古い `/developers/protocol` は `public\_redirects` で `/developers/nostr` に転送している（日本語も同じ）。
+- サイトのフッターの開発者向けリンクは `website\src\_layout.html` と `build.mjs` の `DRAFT_LINKS` にある。
 
 ## CSP
 

@@ -1,23 +1,13 @@
 ---
 title: "技術仕様"
-description: "暗号の部品、リレーの上限、HTTPの口、Tegami独自のkind。"
+description: "暗号の部品、使っているNIP、リレーの上限、HTTPエンドポイント、Tegami独自のkind。"
 ---
 
-import { Badge } from '@astrojs/starlight/components';
+import { Aside, Badge } from '@astrojs/starlight/components';
 
 使う暗号、リレーの上限、HTTPエンドポイント、Tegami独自のkind。
 
-「提供中」などの状態の表示の意味は、[概要](/ja/developers/#状態の表示の意味-3)にあります。
-
-## 全体の構成
-
-| コンポーネント | 概要 | コード |
-| --- | --- | --- |
-| アプリ | Expo（React Native、SDK 57）。いまはブラウザ版を`app.tegami.chat`（Cloudflare Workers）で配信中。iPhone版とAndroid版も同じコードから作る予定 | `client/` |
-| リレー | Cloudflare Workersと1つのDurable Object（SQLite）。`wss://relay.tegami.chat` | `relay/` |
-| ファイルの置き場 | Cloudflare R2。写真とファイルは30日で削除。スタンプは別の置き場で、本人が消すまで保持 | `relay/` |
-| AIの友だち | `tegami-agent`（Node.js）。自分のパソコン上で動き、Claude Codeを呼び出す。MCPサーバーとしても動作 | `agent/` |
-| サイト | `tegami.chat`（Cloudflare Workers） | `website/` |
+「提供中」などの状態の表示の意味は、[概要](/ja/developers/#状態の表示の意味)にあります。
 
 ## 暗号仕様
 
@@ -30,6 +20,31 @@ import { Badge } from '@astrojs/starlight/components';
 | 端末の引き継ぎ | 使い捨ての鍵宛てにNIP-44で暗号化し、NIP-40で10分の期限を付けた封筒を使用。使い捨ての秘密鍵はリンクの`#`より後ろにのみ含める |
 | 通知 | Web Push（VAPID）。中身は端末ごとにRFC 8291（aes128gcm）で暗号化 |
 | 通話 | WebRTC（DTLS-SRTP）。合図はNIP-17の封筒（独自のkind 25050、期限1分） |
+
+## 使っているNIP
+
+<Aside type="tip" title="いま">
+
+| NIP | 使い方 |
+| --- | --- |
+| NIP-17、NIP-59 | 1対1およびグループのメッセージ。文字はkind 14、写真とファイルはkind 15を用い、署名つきの内側の層（kind 13）と封筒（kind 1059）の二重に包む |
+| NIP-44 | 内側の層と封筒の暗号化、および端末引き継ぎデータの暗号化 |
+| NIP-42 | リレーへの認証（ログイン）。読み書きともに認証済みの鍵のみ許可 |
+| NIP-40 | 期限付きの封筒（通話の合図は1分、引き継ぎとAIへの下書きの依頼は10分） |
+| NIP-98 | HTTPエンドポイント（登録、通知、復旧用のバックアップ、通報、管理操作）への署名 |
+| NIP-05、NIP-11 | 公式アカウントの識別子（hello@tegami.chat）、およびリレー情報と稼働バージョン |
+| Blossom（kind 24242の署名） | 写真とファイルのストレージ（`/upload`と`/<sha256>`）。暗号化した後のデータのsha256で預けて取り出す。スタンプ用の`/stamp`はTegami独自の拡張 |
+
+NIPに規定のない部分は、暗号化した封筒の中だけで使う独自のkindで実装しています。具体的には、アイコン（10100）、スタンプ一覧（10101）、通話のシグナリング（25050）、AIへの下書き依頼と応答（25060、25061）です。
+
+</Aside>
+
+<Aside type="note" title="これから">
+
+-   <Badge text="提供中" variant="success" /> 自分の端末どうしの同期（10102）、グループメンバーの変更（10103）、AIをトークに招く同意（10104）、AIとのやり取り（25062〜25070）の独自kindを追加しました。この版のアプリは、10104と、AIどうしのやり取り（25066、25067）をまだ使いません。
+-   <Badge text="検討中" variant="caution" /> 鍵のローテーションやパスキーで鍵を守る提案（NIPのプルリクエスト#2137と#2519）が採用されたら、仕様に合わせるかを検討します。
+
+</Aside>
 
 ## リレーが受け付けるもの
 

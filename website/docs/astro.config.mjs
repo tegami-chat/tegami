@@ -41,13 +41,51 @@ export default defineConfig({
       },
       social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/tegami-chat/tegami' }],
       sidebar: [
-        { slug: 'developers', label: 'Overview', translations: { ja: '概要' } },
-        { slug: 'developers/protocol', label: 'Nostr, encryption and keys', translations: { ja: 'Nostrと暗号と鍵' } },
-        { slug: 'developers/relay', label: 'Relay, push and calls', translations: { ja: 'リレーと通知と通話' } },
-        { slug: 'developers/ai', label: 'AI', translations: { ja: 'AI' } },
-        { slug: 'developers/spec', label: 'Technical spec', translations: { ja: '技術仕様' } },
-        { slug: 'developers/compare', label: 'Comparison for developers', translations: { ja: '開発者向けの比較' } },
-        { slug: 'developers/faq', label: 'Developer FAQ', translations: { ja: '開発者向けのよくある質問' } },
+        {
+          label: 'Getting started',
+          translations: { ja: 'はじめに' },
+          items: [
+            { slug: 'developers', label: 'Overview', translations: { ja: '概要' } },
+            { slug: 'developers/architecture', label: 'Architecture', translations: { ja: '全体の構成' } },
+            { slug: 'developers/differences', label: 'How Tegami differs', translations: { ja: 'よくある構成との違い' } },
+          ],
+        },
+        {
+          label: 'Concepts',
+          translations: { ja: '仕組み' },
+          items: [
+            { slug: 'developers/nostr', label: 'Nostr', translations: { ja: 'Nostrとの関係' } },
+            { slug: 'developers/encryption', label: 'Encryption', translations: { ja: '暗号化' } },
+            { slug: 'developers/keys', label: 'Keys', translations: { ja: '鍵' } },
+            { slug: 'developers/relay', label: 'Relay', translations: { ja: 'リレー' } },
+            { slug: 'developers/notifications-calls', label: 'Notifications, calls and media', translations: { ja: '通知、通話、写真' } },
+            { slug: 'developers/ai', label: 'AI', translations: { ja: 'AI' } },
+          ],
+        },
+        {
+          label: 'Guides',
+          translations: { ja: 'ガイド' },
+          items: [
+            { slug: 'developers/self-host-relay', label: 'Run your own relay', translations: { ja: '自分のリレーを立てる' } },
+            { slug: 'developers/connect-ai', label: 'Connect your own AI', translations: { ja: '自分のAIをつなぐ' } },
+            { slug: 'developers/contributing', label: 'Contributing', translations: { ja: '開発に参加する' } },
+          ],
+        },
+        {
+          label: 'Reference',
+          translations: { ja: 'リファレンス' },
+          items: [
+            { slug: 'developers/spec', label: 'Technical spec', translations: { ja: '技術仕様' } },
+          ],
+        },
+        {
+          label: 'Comparison and FAQ',
+          translations: { ja: '比較とよくある質問' },
+          items: [
+            { slug: 'developers/compare', label: 'Comparison for developers', translations: { ja: '開発者向けの比較' } },
+            { slug: 'developers/faq', label: 'Developer FAQ', translations: { ja: '開発者向けのよくある質問' } },
+          ],
+        },
       ],
       components: { SocialIcons: './src/components/SocialIcons.astro' },
       customCss: ['./src/styles/custom.css'],

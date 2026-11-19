@@ -1,0 +1,45 @@
+---
+title: "Run your own relay"
+description: "How to run your own Tegami relay."
+---
+
+import { Aside, Badge, Steps } from '@astrojs/starlight/components';
+
+How to run your own Tegami relay.
+
+Status labels such as "Available" are explained in the [overview](/developers/#what-the-status-labels-mean).
+
+The relay code is in `relay/` and runs on Cloudflare Workers with a Durable Object. The current app only connects to the official relay (`wss://relay.tegami.chat`), so to use your own you need to build the app yourself with `EXPO_PUBLIC_TEGAMI_RELAYS` pointing at it. We have decided to let companies and schools run their own relays.
+
+## Steps
+
+<Steps>
+
+1. Get the relay code. It is public in [`relay/`](https://github.com/tegami-chat/tegami/tree/main/relay).
+2. Run `npm run dev` in the `relay/` folder to start the relay on your machine at `ws://localhost:8787` (see `relay/package.json` and `relay/wrangler.jsonc`).
+3. To run it in production, use Cloudflare Workers with a Durable Object. The Durable Object and the R2 buckets for photos and stamps are set in [`relay/wrangler.jsonc`](https://github.com/tegami-chat/tegami/blob/main/relay/wrangler.jsonc), and the tool that deploys the official relay is [`relay/scripts/deploy.mjs`](https://github.com/tegami-chat/tegami/blob/main/relay/scripts/deploy.mjs).
+4. Build the app yourself, with `EXPO_PUBLIC_TEGAMI_RELAYS` pointing at your relay.
+
+</Steps>
+
+For how the relay works as a whole, see [Relay](/developers/relay/).
+
+## Where things stand for your own relay
+
+<Aside type="tip" title="Now">
+
+The relay code is public, so you can set it up and run it yourself.
+
+</Aside>
+
+<Aside type="caution" title="Not yet">
+
+However, the Tegami app currently connects only to the official relay, so you would need to modify the app to use your own.
+
+</Aside>
+
+<Aside type="note" title="Next">
+
+-   <Badge text="Decided" variant="note" />  Companies and schools will be able to run their own relays. Whoever runs a relay sets its registration rules, choosing from "anyone," "invite code only," or "approved keys only."
+
+</Aside>

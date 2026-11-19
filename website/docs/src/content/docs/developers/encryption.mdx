@@ -1,0 +1,99 @@
+---
+title: "Encryption"
+description: "How messages are encrypted, what the server can see, forward secrecy, groups, and the browser version."
+---
+
+import { Aside, Badge } from '@astrojs/starlight/components';
+
+How messages are encrypted, what the server can see, forward secrecy, groups, and the weak point of the browser version.
+
+Status labels such as "Available" are explained in the [overview](/developers/#what-the-status-labels-mean).
+
+## What the server can see
+
+<Aside type="tip" title="Now">
+
+The relay cannot read message contents. All the relay can see is:
+
+-   The recipient's public key on each envelope (the gift wrap's `p` tag), the time it arrived, and its size
+-   The keys logged in and connected, and the IP address they connect from
+-   Tags on the outside of the envelope: whether it is a call (`t=call`), whether it should not trigger a notification (`t=quiet`), and its expiry (`expiration`)
+-   Beyond envelopes: who invited whom at registration (deleted after 90 days), the keys that stored stickers and their sizes, and the contents of reports (deleted after 90 days)
+
+A gift wrap hides the sender by itself, but because the Tegami relay requires login for writes too, at the moment it accepts an envelope it knows which key sent it to which key. However, the relay code does not store the sender's key (in `relay/src/index.ts`, the `events` table has no sender column). The one exception: envelopes sent by people who registered without an invite code are stored with a marker, so the app shows them only when the sender is already a friend.
+
+</Aside>
+
+<Aside type="caution" title="Not yet">
+
+There is no way for anyone outside to verify that the running relay is the same as the published code. The relay reports its running commit in `/stats` and in the NIP-11 `version`, but that is only our own claim.
+
+</Aside>
+
+<Aside type="note" title="Next">
+
+-   <Badge text="Under discussion" variant="caution" />  We have not yet decided how to let outsiders verify that the running relay matches the published code.
+
+</Aside>
+
+## Forward secrecy
+
+<Aside type="tip" title="Now">
+
+No. NIP-44 derives its encryption key from the long-term keys of the sender and the recipient, so if a secret key is stolen, envelopes still on the relay (up to 30 days) and messages stored on devices can be decrypted later. Only the outer gift wrap layer uses a fresh throwaway key each time. Tegami protects your secret key by encrypting it with a passkey (or, where PRF is not supported, with a non-extractable key on the device), making the key itself harder to steal.
+
+</Aside>
+
+<Aside type="caution" title="Not yet">
+
+Compared with schemes like Signal or MLS that keep rotating keys, this is a weakness.
+
+</Aside>
+
+<Aside type="note" title="Next">
+
+-   <Badge text="Under discussion" variant="caution" />  We have not decided whether to move to a scheme that keeps rotating keys.
+
+</Aside>
+
+## Group encryption
+
+<Aside type="tip" title="Now">
+
+As the NIP-17 spec describes, we build a separate envelope for each member. For example, one message to a group of you plus 5 others becomes 6 envelopes, including your own copy. The relay cannot tell who is in the same group.
+
+</Aside>
+
+<Aside type="caution" title="Not yet">
+
+The number of envelopes grows with group size, so this does not suit large groups. We do not use MLS.
+
+</Aside>
+
+<Aside type="note" title="Next">
+
+-   <Badge text="Available" variant="success" />  Groups now have a stable identifier, and adding, removing, and leaving members, name and icon changes, and admin changes are sent to everyone as changes carrying the signature (seal) of the person who made them. You can choose between groups with admins and neutral groups.
+-   <Badge text="Under discussion" variant="caution" />  We would also like to build spaces where many people can gather, like Discord servers.
+
+</Aside>
+
+## The browser version and malicious JavaScript
+
+<Aside type="tip" title="Now">
+
+Yes. This is a weakness shared by every encrypted app that runs in a browser: if the source that serves it (`app.tegami.chat` on Cloudflare) is tampered with, it could serve code that steals keys. That is why Tegami sets a strict CSP that limits where code can load from, and includes no third-party analytics scripts at all.
+
+</Aside>
+
+<Aside type="caution" title="Not yet">
+
+There is no way to verify that the files we serve were built from the public repository (reproducible builds plus verification).
+
+</Aside>
+
+<Aside type="note" title="Next">
+
+-   <Badge text="Decided" variant="note" />  We will ship apps for iPhone, Android, Windows, Mac, and Linux. Versions distributed through app stores are fixed, which makes this weakness smaller.
+-   <Badge text="Coming soon" variant="tip" />  The Android app runs on a test device (emulator) as far as showing the chat list.
+
+</Aside>

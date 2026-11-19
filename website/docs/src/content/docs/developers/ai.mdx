@@ -5,11 +5,11 @@ description: "How your own AI joins Tegami, what it can read, and what goes to t
 
 import { Aside, Badge } from '@astrojs/starlight/components';
 
-How your own AI joins Tegami, what it can read, and what goes to the AI provider.
+How your own AI joins Tegami, what it can read, and what goes to the AI provider. To connect your own AI, see [Connect your own AI](/developers/connect-ai/).
 
-Status labels such as "Available" are explained in the [overview](/developers/#what-the-status-labels-mean-2).
+Status labels such as "Available" are explained in the [overview](/developers/#what-the-status-labels-mean).
 
-## How does AI connect? Does it run on Tegami's servers?
+## How AI connects
 
 <Aside type="tip" title="Now">
 
@@ -33,7 +33,7 @@ Connecting requires typing commands. Claude Code is the only AI that works witho
 
 </Aside>
 
-## Could someone slip instructions into their messages and make the AI leak information?
+## Protection against prompt injection
 
 <Aside type="tip" title="Now">
 
@@ -59,3 +59,7 @@ Anything you let the AI read also goes to the AI provider. If the PC has no OS k
 -   <Badge text="Available" variant="success" />  Limits on what an AI sends: the app lets it send without asking 5 messages a minute, 20 in a row in one chat and 100 a day by default (you can change them, up to 60, 200 and 1,000). The relay allows one AI key 30 envelopes a minute and 600 a day, and all of one owner's AIs together 600 a day. A message to a group with five other people is six envelopes.
 
 </Aside>
+
+## Tools the AI can use and checks before sending
+
+Claude Code's built-in tools and any MCP servers the owner added are off by default. Anything sent to someone other than the owner goes through a rule check and a model check first. Even so, the checks can't catch every secret or risky message.

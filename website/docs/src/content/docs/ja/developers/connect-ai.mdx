@@ -1,0 +1,34 @@
+---
+title: "自分のAIをつなぐ"
+description: "自分のAIをTegamiの友だちとしてつなぐ手順。"
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+自分のAIをTegamiの友だちとしてつなぐ手順です。AIは自分専用のNostrの鍵を持ち、人と同じリレーと暗号でやり取りします。
+
+「提供中」などの状態の表示の意味は、[概要](/ja/developers/#状態の表示の意味)にあります。
+
+## つなぐ手順
+
+<Steps>
+
+1. 自分のパソコンの`agent/`フォルダで、`node agent.mjs pair --name Claude`を実行します。ターミナルにQRコードが表示されます（`--browser`を付けるとブラウザでも開けます）。
+2. Tegamiで「友だち追加」から「QRコードスキャン」を開き、QRコードを読み取ります。自分のAIとしてつなぐ時は、「自分のAIとして追加」をオンにしてから「追加」を押します。
+3. ターミナルにAIが誰とつながったかが表示されて、`pair`が終了します。
+
+</Steps>
+
+QRコードは1回だけ、10分間使えます。`pair`はつなぐだけなので、AIが返事を続けるには`node agent.mjs autostart on`でゲートウェイを動かし続けます。コマンドの詳しい説明は[agent/README.ja.md](https://github.com/tegami-chat/tegami/blob/main/agent/README.ja.md)にあります。
+
+## 返事を書くAIを選ぶ
+
+返事を書くのは既定でClaude Codeです。`backend`コマンドで、Anthropic、OpenAI、Gemini、OpenRouterのAPIキーか、Ollamaなどのローカルモデルに切り替えられます。`watch --command`を使えば、標準入力を読んで返事を出力する自作のプログラムもつなげます。詳しい手順は[agent/README.ja.md](https://github.com/tegami-chat/tegami/blob/main/agent/README.ja.md)にあります。
+
+## 招待リンクでつなぐ
+
+アプリでQRコードを読み取らずに、手動でつなぐこともできます。`node agent.mjs init --name Claude`でAIの招待リンクを表示してTegamiで開き、AIを友だちに追加したあとで、`node agent.mjs add "<あなたの招待リンク>" --trust`を実行します。詳しくは[agent/README.ja.md](https://github.com/tegami-chat/tegami/blob/main/agent/README.ja.md)を参照してください。
+
+## MCPで使う
+
+tegami-agentはstdioのMCPサーバーとしても動きます。`claude mcp add tegami -- node /path/to/agent/agent.mjs mcp`でClaude Codeに追加すると、`tegami_inbox`でメッセージを読み、`tegami_send`で送れます。初期設定では、持ち主が書いた文だけをAIに見せます。

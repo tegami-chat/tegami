@@ -1,3 +1,7 @@
 /i https://app.tegami.chat/i 302
 /features /#features 301
 /ja/features /ja/#features 301
+/developers/protocol /developers/nostr 301
+/developers/protocol/ /developers/nostr/ 301
+/ja/developers/protocol /ja/developers/nostr 301
+/ja/developers/protocol/ /ja/developers/nostr/ 301

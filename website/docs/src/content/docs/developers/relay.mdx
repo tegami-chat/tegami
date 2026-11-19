@@ -1,17 +1,15 @@
 ---
-title: "Relay, push and calls"
-description: "The rules of the Tegami relay, and how notifications, calls and photos work."
+title: "Relay"
+description: "What the Tegami relay runs on, who can register, and what it counts."
 ---
 
 import { Aside, Badge } from '@astrojs/starlight/components';
 
-The rules of the Tegami relay, and how notifications, calls and photos work.
+What the Tegami relay runs on, who can register, and what it counts. To run a relay yourself, see [Run your own relay](/developers/self-host-relay/).
 
-Status labels such as "Available" are explained in the [overview](/developers/#what-the-status-labels-mean-1).
+Status labels such as "Available" are explained in the [overview](/developers/#what-the-status-labels-mean).
 
-## Relay
-
-### What does the relay run on?
+## What the relay runs on
 
 <Aside type="tip" title="Now">
 
@@ -31,7 +29,7 @@ There is only one relay, run by Tegami.
 
 </Aside>
 
-### How does registration work? Can anyone use Tegami?
+## Registration and who can use it
 
 <Aside type="tip" title="Now">
 
@@ -51,27 +49,7 @@ There is no identity verification badge (a mark of authenticity).
 
 </Aside>
 
-### Can I run my own relay?
-
-<Aside type="tip" title="Now">
-
-The relay code is public, so you can set it up and run it yourself.
-
-</Aside>
-
-<Aside type="caution" title="Not yet">
-
-However, the Tegami app currently connects only to the official relay, so you would need to modify the app to use your own.
-
-</Aside>
-
-<Aside type="note" title="Next">
-
--   <Badge text="Decided" variant="note" />  Companies and schools will be able to run their own relays. Whoever runs a relay sets its registration rules, choosing from "anyone," "invite code only," or "approved keys only."
-
-</Aside>
-
-### What usage do you count?
+## Usage counting
 
 <Aside type="tip" title="Now">
 
@@ -82,70 +60,5 @@ The relay keeps daily totals (envelopes received, number and size of files store
 <Aside type="note" title="Next">
 
 -   <Badge text="Decided" variant="note" />  We will never add analytics that track what people do.
-
-</Aside>
-
-## Notifications, calls, photos
-
-### How are notifications delivered?
-
-<Aside type="tip" title="Now">
-
-We use Web Push. Your device signs its notification endpoint and notification keys with your key and leaves them with the relay. When an envelope arrives, the relay sends a payload encrypted per device (RFC 8291). It contains only the type (message or call), the recipient account, and a count; never the sender or message text. However, to tell calls apart, only envelopes that ring the other person carry a `t=call` tag, so the relay knows that an envelope was a call.
-
-</Aside>
-
-<Aside type="caution" title="Not yet">
-
-You cannot mute notifications per chat. Neither the relay nor the part of the device that receives notifications knows which chat an envelope belongs to. Also, in the iPhone browser version, incoming calls do not show full screen like a regular phone call.
-
-</Aside>
-
-<Aside type="note" title="Next">
-
--   <Badge text="Decided" variant="note" />  When we build the iPhone app, we will add full-screen incoming calls (Apple's CallKit).
-
-</Aside>
-
-### How do calls work?
-
-<Aside type="tip" title="Now">
-
-One-to-one voice and video calls over WebRTC. Signaling such as ringing and answering goes through the relay in encrypted envelopes that expire after 1 minute, and STUN (`stun.cloudflare.com`) is used to find a connection path. When a direct path is not possible, or when you choose "Always relay calls," the call goes through a TURN relay server. Audio and video stay encrypted.
-
-</Aside>
-
-<Aside type="caution" title="Not yet">
-
-Calls that connect directly show the other person your IP address, unless you choose "Always relay calls." There are no group calls.
-
-</Aside>
-
-<Aside type="note" title="Next">
-
--   <Badge text="Available" variant="success" />  Calls can now use Cloudflare's TURN server.
--   <Badge text="Available" variant="success" />  If you choose "Always relay calls," the other person can no longer see your IP address.
--   <Badge text="Available" variant="success" />  You can also set up your own TURN server.
-
-</Aside>
-
-### How are photos and files handled?
-
-<Aside type="tip" title="Now">
-
-Each one is encrypted with a new AES-GCM key and then stored in the relay's storage (Cloudflare R2). The key goes inside the encrypted message, so only the recipient gets it. Data in storage is deleted after 30 days, but stays on the recipient's device. Photos are shrunk to 1600px on the long side before sending, and the file size limit is 10MB after encryption. Stickers are different: their key is derived from the image and your account's secret key (so your own devices produce the same ciphertext), and they stay in separate storage until you delete them.
-
-</Aside>
-
-<Aside type="caution" title="Not yet">
-
-There is no option to send at original quality.
-
-</Aside>
-
-<Aside type="note" title="Next">
-
--   <Badge text="Decided" variant="note" />  Senders will be able to choose between sending a smaller version or the original quality.
--   <Badge text="Under discussion" variant="caution" />  We have not decided whether sending at original quality will be a paid feature.
 
 </Aside>
