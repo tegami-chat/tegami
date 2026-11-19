@@ -249,6 +249,13 @@ export function flushAtRest(): Promise<void> {
   return cur ? flush(cur) : Promise.resolve();
 }
 
+// A page being hidden or closed may not run a timer again: start the writes at once, so a
+// message just sent or received is not lost with the tab.
+globalThis.addEventListener?.('pagehide', () => void flushAtRest());
+globalThis.document?.addEventListener?.('visibilitychange', () => {
+  if (globalThis.document?.visibilityState === 'hidden') void flushAtRest();
+});
+
 /**
  * Closes the open account: its unwritten changes are written (with `discard`, thrown away: the
  * account is being removed), and its key and memory are dropped.
