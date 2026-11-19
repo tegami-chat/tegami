@@ -1,0 +1,42 @@
+---
+import { SITE, METADATA } from 'astrowind:config';
+import type { MetaData } from '~/types';
+import { getCanonical } from '~/utils/permalinks';
+
+export interface Props extends MetaData {
+  lang?: 'en' | 'ja';
+  alternates?: { en: string; ja: string };
+}
+
+const {
+  title,
+  canonical = String(getCanonical(String(Astro.url.pathname))),
+  description,
+  lang = 'en',
+  alternates,
+} = Astro.props;
+
+const pageTitle = title || METADATA?.title?.default || '';
+const abs = (p: string) => String(new URL(p, SITE.site));
+---
+
+<title>{pageTitle}</title>
+{description && <meta name="description" content={description} />}
+<link rel="canonical" href={canonical} />
+{
+  alternates && (
+    <>
+      <link rel="alternate" hreflang="en" href={abs(alternates.en)} />
+      <link rel="alternate" hreflang="ja" href={abs(alternates.ja)} />
+      <link rel="alternate" hreflang="x-default" href={abs(alternates.en)} />
+    </>
+  )
+}
+<meta property="og:title" content={pageTitle} />
+{description && <meta property="og:description" content={description} />}
+<meta property="og:url" content={canonical} />
+<meta property="og:site_name" content={SITE?.name} />
+<meta property="og:type" content="website" />
+<meta property="og:locale" content={lang === 'ja' ? 'ja_JP' : 'en_US'} />
+<meta name="robots" content="index, follow" />
+<link rel="icon" href="/icon.svg" type="image/svg+xml" />

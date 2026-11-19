@@ -1,0 +1,49 @@
+---
+import HeroText from '~/components/widgets/HeroText.astro';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import { t, type Lang } from '~/site';
+
+const { lang = 'en' } = Astro.props as { lang?: Lang };
+const x = (k: string) => t(k, lang);
+const apps = [['line', 'LINE'], ['wa', 'WhatsApp'], ['sig', 'Signal'], ['tg', 'Telegram'], ['teg', 'Tegami']];
+const rows = ['price', 'signup', 'read', 'ads', 'ai', 'who'];
+---
+
+<HeroText title={x('cmp.h')} subtitle={x('cmp.t')} />
+<WidgetWrapper containerClass="max-w-4xl pt-4 md:pt-4 lg:pt-4">
+  <div class="prose max-w-none dark:prose-invert prose-a:text-primary">
+    <div class="overflow-x-auto">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            {apps.map(([, name]) => <th>{name}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {
+            rows.map((r) => (
+              <tr>
+                <th scope="row" set:html={x(`cmp.${r}`)} />
+                {apps.map(([id]) => <td set:html={x(`cmp.${r}.${id}`)} />)}
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+    <p class="text-sm" set:html={x('cmp.unconf')} />
+    <h2 set:html={x('cmp.diff.h')} />
+    <p set:html={x('cmp.diff.t')} />
+    <h2 set:html={x('cmp.weak.h')} />
+    <p set:html={x('cmp.weak.1')} />
+    <p set:html={x('cmp.weak.2')} />
+    <p set:html={x('cmp.weak.3')} />
+    <h2 set:html={x('cmp.move.h')} />
+    <p set:html={x('cmp.move.1')} />
+    <p set:html={x('cmp.move.2')} />
+    <h2 set:html={x('cmp.store.h')} />
+    <p set:html={x('cmp.store.1')} />
+    <p class="text-sm" set:html={x('cmp.note')} />
+  </div>
+</WidgetWrapper>

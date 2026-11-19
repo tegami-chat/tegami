@@ -1,0 +1,1 @@
+var e=()=>document.querySelectorAll(`aw-language-menu details[open]`);document.addEventListener(`click`,t=>{e().forEach(e=>{e.contains(t.target)||e.removeAttribute(`open`)})}),document.addEventListener(`keydown`,t=>{t.key===`Escape`&&e().forEach(e=>e.removeAttribute(`open`))});

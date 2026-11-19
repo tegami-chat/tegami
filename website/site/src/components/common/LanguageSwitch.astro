@@ -1,0 +1,60 @@
+---
+import { Icon } from 'astro-icon/components';
+
+export interface Props {
+  lang: 'en' | 'ja';
+  alternates: { en: string; ja: string };
+  class?: string;
+}
+
+const { lang, alternates, class: className = '' } = Astro.props;
+const item = 'block px-4 py-2 text-sm whitespace-nowrap hover:bg-gray-100 dark:hover:bg-gray-700';
+---
+
+<aw-language-menu class:list={['relative', className]}>
+  <details>
+    <summary
+      class="list-none cursor-pointer text-muted dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm p-2.5 inline-flex items-center"
+      aria-label={lang === 'ja' ? '言語' : 'Language'}
+    >
+      <Icon name="tabler:language" class="w-6 h-6 lg:w-5 lg:h-5" />
+    </summary>
+    <div
+      class="absolute right-0 z-50 bottom-full mb-2 lg:bottom-auto lg:mt-2 lg:top-full w-36 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+    >
+      <a
+        href={alternates.en}
+        hreflang="en"
+        lang="en"
+        class:list={[item, lang === 'en' ? 'font-semibold text-primary dark:text-blue-200' : '']}
+        aria-current={lang === 'en' ? 'true' : undefined}>English</a
+      >
+      <a
+        href={alternates.ja}
+        hreflang="ja"
+        lang="ja"
+        class:list={[item, lang === 'ja' ? 'font-semibold text-primary dark:text-blue-200' : '']}
+        aria-current={lang === 'ja' ? 'true' : undefined}>日本語</a
+      >
+    </div>
+  </details>
+</aw-language-menu>
+
+<style>
+  aw-language-menu {
+    display: block;
+  }
+</style>
+
+<script>
+  // Close the menu on a click outside it, or on Escape.
+  const open = () => document.querySelectorAll<HTMLDetailsElement>('aw-language-menu details[open]');
+  document.addEventListener('click', (e) => {
+    open().forEach((d) => {
+      if (!d.contains(e.target as Node)) d.removeAttribute('open');
+    });
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') open().forEach((d) => d.removeAttribute('open'));
+  });
+</script>

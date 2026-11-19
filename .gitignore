@@ -8,3 +8,5 @@ client/expo-env.d.ts
 website/docs/node_modules/
 website/docs/dist/
 website/docs/.astro/
+website/site/dist/
+website/site/.astro/

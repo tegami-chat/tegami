@@ -8,7 +8,7 @@ tegami.chat の /developers と /ja/developers の開発者向けドキュメン
 
 1. Tailwind でサイトの CSS を作り、他のページを書き出す。
 2. `docs\node_modules` が無ければ `npm ci` を実行する。
-3. `docs` で `npm run build` を実行する（`astro build` のあとに `scripts\inline-hashes.mjs`）。
+3. `docs` で `npm run build` を実行する（`astro build` のあとに `..\scripts\inline-hashes.mjs`）。
 4. `docs\dist` の `developers`、`ja\developers`、`_astro`、`pagefind` を `public` に写す。
 
 `docs\dist` は Git に入れません。`public` に写された結果は Git に入ります。
@@ -21,7 +21,7 @@ tegami.chat の /developers と /ja/developers の開発者向けドキュメン
 - `src\components\ArchMap.astro` と `src\diagrams\arch.*.svg` が概要の構成図。
 - ページを足す時は、両言語に mdx を足し、`astro.config.mjs` のサイドバーの組に1行足す。
 - 古い `/developers/protocol` は `public\_redirects` で `/developers/nostr` に転送している（日本語も同じ）。
-- サイトのフッターの開発者向けリンクは `website\src\_layout.html` と `build.mjs` の `DRAFT_LINKS` にある。
+- サイトのフッターの開発者向けリンクは `website\site\src\site.ts` の `footerData` にある。
 
 ## CSP
 
@@ -29,7 +29,7 @@ tegami.chat の /developers と /ja/developers の開発者向けドキュメン
 
 - `build.inlineStylesheets: 'never'` で CSS を別ファイルにする。
 - `security.csp` が、バンドルしたスクリプトとスタイルのハッシュを各ページの meta に書く。
-- Starlight が出す `style=""` と、ハッシュされないインラインのスクリプトは、`scripts\inline-hashes.mjs` がビルド後の HTML から集めて `src\inline-hashes.json` に書く。一覧が変わった時は、もう一度ビルドする。
+- Starlight が出す `style=""` と、ハッシュされないインラインのスクリプトは、`..\scripts\inline-hashes.mjs` がビルド後の HTML から集めて `src\inline-hashes.json` に書く。一覧が変わった時は、もう一度ビルドする。
 - `public\_headers` に `/developers*`、`/ja/developers*`（ヘッダーの CSP を外し、meta の CSP に任せる）と、`/pagefind/*`（検索のワーカーに `connect-src 'self'` と `wasm-unsafe-eval` を許す）のブロックがある。
 
 ## 版

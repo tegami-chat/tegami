@@ -1,0 +1,82 @@
+
+  <p>How we protect your messages, what we can and can't see, and what isn't done yet.</p>
+  <nav aria-label="On this page"><ol>
+    <li><a href="#seal"><span>Only you and your friend can read your messages</span></a></li>
+    <li><a href="#server"><span>What our server can and can't see</span></a></li>
+    <li><a href="#account"><span>No phone number, no password</span></a></li>
+    <li><a href="#lost"><span>If you lose your phone</span></a></li>
+    <li><a href="#photos"><span>Photos and files</span></a></li>
+    <li><a href="#calls"><span>Calls</span></a></li>
+    <li><a href="#strangers"><span>Messages from strangers</span></a></li>
+    <li><a href="#ai"><span>Your AI</span></a></li>
+    <li><a href="#count"><span>No tracking</span></a></li>
+    <li><a href="#notyet"><span>What isn't done yet</span></a></li>
+    <li><a href="#check"><span>Check it yourself</span></a></li>
+  </ol></nav>
+  <div>
+    <section id="seal">
+      <h2>Only you and your friend can read your messages</h2>
+      <p>Every message is encrypted before it leaves your phone or computer. Only your friend's devices and your own can read it. Not even the people who run Tegami can.</p>
+    </section>
+    <section id="server">
+      <h2>What our server can and can't see</h2>
+      <h3>It can't see</h3>
+      <ul>
+        <li>What your messages say</li>
+        <li>What is in your photos and files</li>
+        <li>Your name and picture</li>
+        <li>Who your friends are</li>
+      </ul>
+      <h3>It can see</h3>
+      <ul>
+        <li>Which account a message is for, when it arrived and how big it is</li>
+        <li>Which account is connected, and the IP address it connects from</li>
+      </ul>
+      <p>The server needs these to deliver messages. It deletes messages after 30 days and doesn't keep a record of who sent them.</p>
+    </section>
+    <section id="account">
+      <h2>No phone number, no password</h2>
+      <p>Your account is a key made on your own device. We don't ask for a phone number or an email address.</p>
+      <p>Your key is protected by a passkey, so you open Tegami with Face ID, a fingerprint or Windows Hello. There is no password to steal or leak.</p>
+    </section>
+    <section id="lost">
+      <h2>If you lose your phone</h2>
+      <p>Make a recovery code in Settings and keep it somewhere safe. With it, you can bring back your account, friends and groups on a new device. Your chat history doesn't come back. Without the code, no one can bring your account back, not even us.</p>
+      <p>Still have your old phone? Use the transfer link in Settings to move to the new one. Your chat history moves with it.</p>
+    </section>
+    <section id="photos">
+      <h2>Photos and files</h2>
+      <p>Each photo or file is encrypted with its own key before it's uploaded, so we can't see what's in it. Uploads are deleted from our server after 30 days. Your friend keeps their copy on their device.</p>
+    </section>
+    <section id="calls">
+      <h2>Calls</h2>
+      <p>Voice and video calls go straight between your devices, encrypted. Because the devices connect directly, the person you call can see your IP address, which can show roughly where you are. Turn on "Always relay calls" under "Call relay" in Settings, and the other person won't see your IP address.</p>
+    </section>
+    <section id="strangers">
+      <h2>Messages from strangers</h2>
+      <p>Messages from people you don't know go to a separate box. Messages from people who joined without an invite are not shown anywhere, including the strangers box, until you add them as a friend, and they do not trigger notifications. You can block and report anyone. If you attach messages to a report, we can read only the ones you attached.</p>
+    </section>
+    <section id="ai">
+      <h2>Your AI</h2>
+      <p>Your AI runs on your own computer, not on our servers. If you use an AI company's service, whatever you let your AI read also goes to that company. Everything an AI can do starts switched off, and it only does what you allow.</p>
+      <p>The people you chat with can also choose not to let other people's AIs read what they write.</p>
+      <p>The official Tegami app marks messages written by an AI. The model name shown next to an AI is what that AI says about itself. Apps modified from Tegami's code may leave out the mark.</p>
+    </section>
+    <section id="count">
+      <h2>No tracking</h2>
+      <p>There is no analytics or tracking, in the app or on this website. We only count totals, and publish the weekly numbers on the <a href="/status">status page</a>.</p>
+    </section>
+    <section id="notyet">
+      <h2>What isn't done yet</h2>
+      <ul>
+        <li>If someone steals your key, they could also read past messages still on the server or on your device. That's why your key is locked with a passkey.</li>
+        <li>No outside security audit yet.</li>
+        <li>The browser version loads its code each time you open it, so whoever serves it could swap in different code without you noticing.</li>
+        <li>You can't talk with people on other Nostr apps yet.</li>
+      </ul>
+    </section>
+    <section id="check">
+      <h2>Check it yourself</h2>
+      <p>All of Tegami's code is public under AGPL-3.0, so anyone can check what this page says. The details are on the <a href="/developers">developer pages</a>, and what we keep and for how long is in the <a href="/privacy">privacy policy</a>.</p>
+    </section>
+  </div>

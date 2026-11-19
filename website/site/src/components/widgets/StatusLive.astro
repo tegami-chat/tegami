@@ -1,0 +1,76 @@
+---
+// The live part of the status page: does the relay answer, and the weekly usage numbers.
+// The numbers are filled in by public/status.js, which reads the relay's public documents in the visitor's browser.
+// The ids below are the ones that script looks for.
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import { t, link, type Lang } from '~/site';
+
+export interface Props {
+  lang?: Lang;
+}
+const { lang = 'en' } = Astro.props;
+---
+
+<WidgetWrapper containerClass="max-w-3xl py-0 md:py-0 lg:py-0">
+  <div id="sample-bar" hidden class="mb-6 rounded-lg bg-amber-300 px-4 py-2 text-center text-sm font-semibold text-amber-950" set:html={t('st.sample', lang)} />
+  <div id="banner" class="mt-10 flex items-center gap-3 rounded-2xl border border-gray-200 px-5 py-4 dark:border-slate-700">
+    <span id="dot" class="h-3 w-3 shrink-0 rounded-full bg-gray-300"></span>
+    <span id="state" class="text-lg font-bold"></span>
+  </div>
+  <dl class="mt-3 grid gap-x-6 gap-y-1 text-sm text-muted sm:grid-cols-2">
+    <div class="flex flex-wrap gap-x-2"><dt set:html={t('st.now.rtt', lang)} /><dd class="tabular-nums text-default" id="rtt">—</dd></div>
+    <div class="flex flex-wrap gap-x-2"><dt set:html={t('st.now.at', lang)} /><dd class="tabular-nums text-default" id="checked">—</dd></div>
+  </dl>
+
+  <section class="mt-12 border-t border-gray-200 py-8 dark:border-slate-700">
+    <h2 class="text-2xl font-bold" set:html={t('st.use.h', lang)} />
+    <p class="mt-1 text-sm text-muted tabular-nums" id="period"></p>
+    <p class="mt-3 text-sm text-muted" set:html={t('st.use.env', lang)} />
+    <p class="mt-2 text-sm text-muted" set:html={t('st.use.note', lang)} />
+    <div id="empty" hidden class="mt-4 rounded-xl border border-dashed border-gray-300 p-8 text-center text-muted dark:border-slate-700"></div>
+    <div id="chart-box" class="mt-4">
+      <div id="charts" class="space-y-6"></div>
+      <div class="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted">
+        <span class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-sm bg-forest-600 dark:bg-forest-300"></span><span set:html={t('st.lg.n', lang)} /></span>
+        <span class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-sm bg-forest-600/35 dark:bg-forest-300/35"></span><span set:html={t('st.lg.u', lang)} /></span>
+      </div>
+    </div>
+    <div id="table-wide" class="mt-4 hidden">
+      <table class="w-full text-sm tabular-nums">
+        <thead>
+          <tr class="text-left text-muted">
+            <th class="py-2 pr-3 font-medium" set:html={t('st.c.week', lang)} />
+            <th class="px-3 py-2 text-right font-medium" set:html={t('st.k.envelopes', lang)} />
+            <th class="px-3 py-2 text-right font-medium" set:html={t('st.k.files', lang)} />
+            <th class="px-3 py-2 text-right font-medium" set:html={t('st.k.logins', lang)} />
+            <th class="py-2 pl-3 text-right font-medium" set:html={t('st.k.keys', lang)} />
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <ul id="cards" class="mt-4 sm:hidden"></ul>
+    <button id="more" type="button" hidden class="mt-3 w-full rounded-full border border-gray-300 py-2.5 text-sm font-semibold dark:border-slate-700"></button>
+  </section>
+
+  <section class="border-t border-gray-200 py-8 dark:border-slate-700">
+    <h2 class="text-2xl font-bold" set:html={t('st.how.h', lang)} />
+    <p class="mt-3 text-muted" set:html={t('st.how.t0', lang)} />
+    <p class="mt-3 text-muted" set:html={t('st.how.t1', lang)} />
+    <p class="mt-3 text-muted" set:html={t('st.how.t2', lang)} />
+  </section>
+
+  <section class="border-t border-gray-200 py-8 dark:border-slate-700">
+    <h2 class="text-2xl font-bold" set:html={t('st.links.h', lang)} />
+    <ul class="mt-3 space-y-2">
+      <li><a href="https://relay.tegami.chat/stats" target="_blank" rel="noopener" class="font-semibold text-primary underline" set:html={t('st.links.json', lang)} /></li>
+      <li><a href="https://github.com/tegami-chat/tegami/blob/main/relay/src/stats.ts" target="_blank" rel="noopener" class="font-semibold text-primary underline" set:html={t('st.links.code', lang)} /></li>
+      <li><a href={link('/how', lang)} class="font-semibold text-primary underline" set:html={t('st.links.how', lang)} /></li>
+    </ul>
+    <p class="mt-6 text-xs text-muted">
+      <span set:html={t('st.tech.ver', lang)} />: <span id="commit">—</span><br />
+      <span set:html={t('st.tech.nips', lang)} />: <span id="nips" class="tabular-nums">—</span>
+    </p>
+  </section>
+</WidgetWrapper>
+<script is:inline src="/status.js" defer></script>

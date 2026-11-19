@@ -1,0 +1,32 @@
+---
+// A text page: a title, then the long text under the template's `prose` styling.
+// The text is a ready-made HTML fragment in content/prose/ (one per page and language).
+import HeroText from '~/components/widgets/HeroText.astro';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import { fixLinks, type Lang } from '~/site';
+
+const files = import.meta.glob('../../content/prose/*.html', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+
+export interface Props {
+  name: 'how' | 'privacy' | 'about';
+  lang: Lang;
+  title: string;
+  /** Take the first paragraph of the text as the line under the title. */
+  lead?: boolean;
+}
+const { name, lang, title, lead = false } = Astro.props;
+let html = fixLinks(files[`../../content/prose/${name}.${lang}.html`], lang);
+let subtitle: string | undefined;
+if (lead) {
+  const m = /^\s*<p>([\s\S]*?)<\/p>/.exec(html);
+  if (m) {
+    subtitle = m[1];
+    html = html.slice(m[0].length);
+  }
+}
+---
+
+<HeroText title={title} subtitle={subtitle} />
+<WidgetWrapper containerClass="max-w-3xl pt-4 md:pt-4 lg:pt-4">
+  <div class="prose prose-lg max-w-none dark:prose-invert prose-headings:font-heading prose-a:text-primary" set:html={html} />
+</WidgetWrapper>

@@ -1,0 +1,10 @@
+---
+import HeroText from '~/components/widgets/HeroText.astro';
+import StatusLive from '~/components/widgets/StatusLive.astro';
+import { t, type Lang } from '~/site';
+
+const { lang = 'en' } = Astro.props as { lang?: Lang };
+---
+
+<HeroText title={t('st.h', lang)} subtitle={t('st.t', lang)} />
+<StatusLive lang={lang} />

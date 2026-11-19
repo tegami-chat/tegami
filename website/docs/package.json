@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "astro build && node scripts/inline-hashes.mjs",
+    "build": "astro build && node ../scripts/inline-hashes.mjs",
     "dev": "astro dev"
   },
   "dependencies": {

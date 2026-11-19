@@ -1,0 +1,42 @@
+---
+// Colors and fonts of the site. The template reads these variables; Tegami's own colors (forest green, Nostr purple) are set here.
+---
+
+<style is:global>
+  :root {
+    --aw-font-sans: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;
+    --aw-font-serif: var(--aw-font-sans);
+    --aw-font-heading: var(--aw-font-sans);
+
+    --aw-color-primary: #106c4a;
+    --aw-color-secondary: #0b5a3d;
+    --aw-color-accent: #7c2eda;
+
+    --aw-color-text-heading: rgb(0 0 0);
+    --aw-color-text-default: rgb(16 16 16);
+    --aw-color-text-muted: rgb(16 16 16 / 66%);
+    --aw-color-bg-page: rgb(255 255 255);
+
+    --aw-color-bg-page-dark: #101311;
+
+    ::selection {
+      background-color: #e3f0e8;
+    }
+  }
+
+  .dark {
+    --aw-color-primary: #1d8a62;
+    --aw-color-secondary: #106c4a;
+    --aw-color-accent: #c9a2ff;
+
+    --aw-color-text-heading: rgb(247, 248, 248);
+    --aw-color-text-default: rgb(229 236 246);
+    --aw-color-text-muted: rgb(229 236 246 / 66%);
+    --aw-color-bg-page: #101311;
+
+    ::selection {
+      background-color: black;
+      color: snow;
+    }
+  }
+</style>

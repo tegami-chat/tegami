@@ -1,0 +1,23 @@
+---
+import HeroText from '~/components/widgets/HeroText.astro';
+import Features from '~/components/widgets/Features.astro';
+import { t, type Lang } from '~/site';
+
+const { lang = 'en' } = Astro.props as { lang?: Lang };
+const x = (k: string) => t(k, lang);
+// [status label, items]. The status is "done", "built" (written, not out yet), "now" or "plan".
+const groups: Array<[string, string[]]> = [
+  ['rm.done', ['basics', 'calls', 'e2e', 'move', 'accounts', 'ai', 'safety', 'signup', 'qr']],
+  ['rm.built', ['aigroup']],
+  ['rm.now', ['address', 'mobile']],
+  ['rm.plan', ['vanish', 'desktop', 'api', 'screens', 'relay', 'nostr', 'export']],
+];
+const items = groups.flatMap(([status, keys]) => keys.map((k) => ({ tag: x(status), title: x(`rm.${k}.h`), description: x(`rm.${k}.t`) })));
+---
+
+<HeroText
+  title={x('rm.h')}
+  subtitle={x('rm.t')}
+  callToAction={{ variant: 'link', text: x('rm.issue'), href: 'https://github.com/tegami-chat/tegami/issues', target: '_blank', rel: 'noopener' }}
+/>
+<Features subtitle={x('rm.note')} items={items} columns={2} />

@@ -1,216 +1,42 @@
-// Builds tegami.chat from src/*.html.
+// Builds tegami.chat into public/.
 //
-// Each page in src/ holds the English text in the HTML and the Japanese text in a
-// `const JA = {...}` table (keyed by data-i18n). This script writes one static page
-// per language, with no translation script:
-//   public/index.html, public/how.html, ...        English, at /, /how, ...
-//   public/ja/index.html, public/ja/how.html, ...  Japanese, at /ja/, /ja/how, ...
-// Then it compiles Tailwind into public/tegami.css (no CDN, so the CSP stays strict).
+// Two Astro projects, one command:
+//   site/  The pages for users (/, /how, /faq, /about, /compare, /roadmap, /status, /privacy and the /ja/ copies).
+//          Built from the AstroWind template. See site/README.md.
+//   docs/  The developer pages (/developers/..., /ja/developers/...). Built from Astro Starlight. See docs/README.md.
 //
-// The developer pages (/developers/..., /ja/developers/...) are not built here. They are an Astro Starlight
-// site in docs/ (see docs/README.md). This script builds it too and copies the result into public/.
+// Each project builds into its own dist/ folder, and this script copies the result into public/.
+// It replaces only the files the builds make. /.well-known, _headers and _redirects in public/ are never touched.
 //
 // Run: node build.mjs   (in this folder; the one command that rebuilds the whole site)
-import { readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync, rmSync, cpSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdirSync, copyFileSync, existsSync, rmSync, cpSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 
-const SITE = 'https://tegami.chat';
-// Each page: its source, its address in each language, and which top menu item it belongs to.
-const page = (name, path, nav) => ({
-  src: `src/${name}.html`,
-  path: { en: path, ja: path === '/' ? '/ja/' : '/ja' + path },
-  out: { en: `public${path === '/' ? '/index' : path}.html`, ja: `public/ja${path === '/' ? '/index' : path}.html` },
-  nav,
-});
-const docPage = (path) => ({ path: { en: path, ja: '/ja' + path } });
-const PAGES = {
-  index: page('index', '/', ''),
-  how: page('how', '/how', 'nav.how'),
-  // Pages of the Starlight docs in docs/: address only, no source here.
-  developers: docPage('/developers'),
-  'dev-architecture': docPage('/developers/architecture'),
-  'dev-protocol': docPage('/developers/nostr'),
-  'dev-encryption': docPage('/developers/encryption'),
-  'dev-keys': docPage('/developers/keys'),
-  'dev-relay': docPage('/developers/relay'),
-  'dev-ai': docPage('/developers/ai'),
-  'dev-compare': docPage('/developers/compare'),
-  'dev-spec': docPage('/developers/spec'),
-  'dev-faq': docPage('/developers/faq'),
-  compare: page('compare', '/compare', ''),
-  roadmap: page('roadmap', '/roadmap', ''),
-  faq: page('faq', '/faq', 'nav.faq'),
-  privacy: page('privacy', '/privacy', ''),
-  about: page('about', '/about', ''),
-  status: page('status', '/status', 'nav.status'),
-};
-// The draft file names the sources link to, and which page each one is.
-const DRAFT_LINKS = {
-  'TegamiのLP案_2026-11-14.html': 'index',
-  'Tegamiの仕組み案_2026-11-14.html': 'how',
-  'Tegamiの開発者向け_2026-11-16.html': 'developers',
-  'Tegamiの開発者向け_全体の構成.html': 'dev-architecture',
-  'Tegamiの開発者向け_Nostrと暗号.html': 'dev-protocol',
-  'Tegamiの開発者向け_暗号化.html': 'dev-encryption',
-  'Tegamiの開発者向け_鍵.html': 'dev-keys',
-  'Tegamiの開発者向け_リレー.html': 'dev-relay',
-  'Tegamiの開発者向け_AI.html': 'dev-ai',
-  'Tegamiの開発者向け_比較.html': 'dev-compare',
-  'Tegamiの開発者向け_技術仕様.html': 'dev-spec',
-  'Tegamiの開発者向け_よくある質問.html': 'dev-faq',
-  'Tegamiの比較.html': 'compare',
-  'Tegamiのロードマップ案_2026-11-14.html': 'roadmap',
-  'Tegamiのよくある質問_2026-11-16.html': 'faq',
-  'Tegamiのプライバシーポリシー案_2026-11-14.html': 'privacy',
-  'Tegamiの運営者情報案_2026-11-17.html': 'about',
-  'Tegamiの稼働状況と利用統計案_2026-11-15.html': 'status',
-};
-const META = {
-  faq: {
-    en: { title: 'FAQ | Tegami', desc: 'Questions people ask first about Tegami.' },
-    ja: { title: 'よくある質問 | Tegami', desc: 'Tegamiについて、よく聞かれること。' },
-  },
-  compare: {
-    en: { title: 'Compare apps | Tegami', desc: 'Tegami next to LINE, WhatsApp, Signal and Telegram.' },
-    ja: { title: 'ほかのアプリとの比較 | Tegami', desc: 'LINE、WhatsApp、Signal、Telegramと並べた、Tegamiの比較。' },
-  },
-  index: {
-    en: { title: 'Tegami: your chats belong to you', desc: 'An open-source messaging app built on Nostr. No ads, no tracking, and bring your own AI.' },
-    ja: { title: 'Tegami: トークはあなたのもの', desc: 'Nostrで動く、オープンソースのメッセージアプリ。広告も追跡もなく、いつものAIを連れてこられます。' },
-  },
-  how: {
-    en: { title: 'Security | Tegami', desc: 'What protects your messages, what we can and can\'t see, and what isn\'t done yet.' },
-    ja: { title: '安全の仕組み | Tegami', desc: 'メッセージを守る仕組みと、運営者に見えるもの、見えないもの、まだ足りないこと。' },
-  },
-  roadmap: {
-    en: { title: 'Roadmap | Tegami', desc: 'What we\'ve built, and what\'s next.' },
-    ja: { title: 'ロードマップ | Tegami', desc: 'できたこと、これから作ること。' },
-  },
-  privacy: {
-    en: { title: 'Privacy policy | Tegami', desc: 'What Tegami keeps, why, and for how long.' },
-    ja: { title: 'プライバシーポリシー | Tegami', desc: 'Tegamiが何を、なぜ、どれだけの期間預かるか。' },
-  },
-  about: {
-    en: { title: 'About us | Tegami', desc: 'Who runs Tegami, and how to contact us.' },
-    ja: { title: '運営者情報 | Tegami', desc: 'Tegamiの運営者と連絡先。' },
-  },
-  status: {
-    en: { title: 'Status and stats | Tegami', desc: 'Whether the Tegami relay is responding, and weekly usage statistics.' },
-    ja: { title: '稼働状況と利用統計 | Tegami', desc: 'Tegamiのリレーの稼働状況と、週ごとの利用統計。' },
-  },
-};
-const LANG_ON = 'block px-4 py-2 text-sm font-semibold text-forest-600 dark:text-forest-300';
-const LANG_OFF = 'block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-white/5';
-
-// The header and footer every page shares, and their Japanese words.
-const LAYOUT = readFileSync('src/_layout.html', 'utf8');
-const HEADER = LAYOUT.slice(LAYOUT.indexOf('<header'), LAYOUT.indexOf('</header>') + 9);
-const FOOTER = LAYOUT.slice(LAYOUT.indexOf('<footer'), LAYOUT.indexOf('</footer>') + 9);
-const jaTable = (html) => Object.fromEntries([...html.matchAll(/^ {2}'([\w.]+)': '([^\n]*)',$/gm)].map((x) => [x[1], x[2]]));
-const LAYOUT_JA = jaTable(LAYOUT);
-// The current page's menu item changes colour only, never weight, so the menu does not shift between pages.
-const NAV_ON = ' text-neutral-900 dark:text-white';
-
-const EXT_ICON = '<svg viewBox="0 0 24 24" class="ml-1 inline-block h-[0.85em] w-[0.85em] align-[-0.1em]" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>';
-const esc = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-
-// Replace the inner HTML of every element carrying data-i18n="key" with dict[key].
-function translate(html, dict) {
-  const re = /data-i18n="([\w.]+)"/g;
-  const hits = [];
-  let m;
-  while ((m = re.exec(html))) hits.push({ key: m[1], at: m.index });
-  for (const { key, at } of hits.reverse()) {
-    if (!(key in dict)) continue;
-    const open = html.lastIndexOf('<', at);
-    const tag = /^<([a-z0-9]+)/i.exec(html.slice(open))[1];
-    const start = html.indexOf('>', at) + 1;
-    let depth = 1;
-    let i = start;
-    const tagRe = new RegExp(`<(/?)${tag}\\b[^>]*>`, 'gi');
-    tagRe.lastIndex = start;
-    let t;
-    while ((t = tagRe.exec(html))) {
-      depth += t[1] ? -1 : 1;
-      if (depth === 0) { i = t.index; break; }
-    }
-    if (depth !== 0) throw new Error(`no closing </${tag}> for ${key}`);
-    html = html.slice(0, start) + dict[key] + html.slice(i);
-  }
-  return html;
+const run = (dir, cmd) => execSync(cmd, { cwd: dir, stdio: 'inherit' });
+for (const dir of ['site', 'docs']) {
+  if (!existsSync(`${dir}/node_modules`)) run(dir, 'npm ci');
+  run(dir, 'npm run build');
 }
 
-function build(name, lang) {
-  const page = PAGES[name];
-  let html = readFileSync(page.src, 'utf8');
-  html = html.replace(/<header[\s\S]*?<\/header>/, HEADER).replace(/<footer[\s\S]*?<\/footer>/, FOOTER);
-  const ja = { ...jaTable(html), ...LAYOUT_JA };
-  if (lang === 'ja') html = translate(html, ja);
-
-  // drop the draft-only scripts: Tailwind CDN + config, theme bootstrap, translation table
-  html = html.replace(/<script>\n\(function \(\) \{\n {2}var t;.*?<\/script>\n/s, '');
-  html = html.replace(/<script src="https:\/\/cdn\.tailwindcss\.com[^"]*"><\/script>\n<script>\ntailwind\.config = .*?<\/script>\n/s, '');
-  html = html.replace(/<style>\n {2}:lang\(ja\).*?<\/style>\n/s, '');
-  html = html.replace(/\n<script>\n\/\/ 言葉の切り替え。.*?<\/script>\n/s, '\n<script src="/site.js"></script>\n');
-
-  // head: language, title, description, alternates, stylesheet
-  const meta = META[name][lang];
-  const url = SITE + page.path[lang];
-  const head = [
-    `<title>${esc(meta.title)}</title>`,
-    `<meta name="description" content="${esc(meta.desc)}">`,
-    `<meta property="og:title" content="${esc(meta.title)}">`,
-    `<meta property="og:description" content="${esc(meta.desc)}">`,
-    `<meta property="og:url" content="${url}">`,
-    `<link rel="canonical" href="${url}">`,
-    `<link rel="alternate" hreflang="en" href="${SITE + page.path.en}">`,
-    `<link rel="alternate" hreflang="ja" href="${SITE + page.path.ja}">`,
-    `<link rel="alternate" hreflang="x-default" href="${SITE + page.path.en}">`,
-    `<link rel="icon" href="/icon.svg" type="image/svg+xml">`,
-    `<link rel="stylesheet" href="/tegami.css">`,
-    `<script src="/theme.js"></script>`,
-  ].join('\n');
-  html = html.replace(/<html lang="[^"]*">/, `<html lang="${lang}">`);
-  html = html.replace(/<title>.*?<\/title>/, head);
-
-  // links between pages
-  for (const [draft, target] of Object.entries(DRAFT_LINKS)) {
-    html = html.replace(new RegExp(`href="${draft}(#[\\w-]+)?"`, 'g'), (_, hash) => `href="${PAGES[target].path[lang]}${hash ?? ''}"`);
-  }
-  // language menu: link to this page in each language, mark the current one
-  html = html.replace(/<a href="\?lang=(en|ja)"([^>]*?) data-lang="(en|ja)" class="[^"]*">/g,
-    (_, l, attrs, l2) => `<a href="${page.path[l]}"${attrs} data-lang="${l2}" class="${l === lang ? LANG_ON : LANG_OFF}"${l === lang ? ' aria-current="true"' : ''}>`);
-  // the menu item for this page
-  if (page.nav) html = html.replace(new RegExp(`(<a href="[^"]*" class="[^"]*)(" data-nav="${page.nav.replace('.', '\.')}")`, 'g'), `$1${NAV_ON}" aria-current="page$2`);
-  // the pages' own scripts
-  html = html.replace('<script src="status.js"></script>', '<script src="/status.js"></script>');
-  html = html.replace('<script src="diff.js"></script>', '<script src="/diff.js"></script>');
-  // text that differs by language and sits in attributes, where data-i18n cannot reach
-  const TOK = lang === 'ja'
-    ? { soon: '準備中', browser: 'ブラウザで始める', avail: '使える場所' }
-    : { soon: 'Coming soon', browser: 'Open in your browser', avail: 'Where Tegami runs' };
-  html = html.replace(/@(soon|browser|avail)@/g, (_, k) => TOK[k]);
-  // every link that opens in a new tab gets the external-link icon and a hidden note for screen readers
-  html = html.replace(/(<a\b[^>]*\btarget="_blank"[^>]*>)([\s\S]*?)(<\/a>)/g, (_, open, inner, close) => {
-    const icon = /\bdata-noext\b/.test(open) ? '' : EXT_ICON;
-    return open + inner + icon + `<span class="sr-only">${lang === 'ja' ? '（新しいタブで開きます）' : ' (opens in a new tab)'}</span>` + close;
-  });
-  // A status label sits right before its sentence. Give text-only readers a break between them (a status that stands alone in a table cell needs none).
-  const SEP = `<span class="sr-only">${lang === 'ja' ? '：' : ': '}</span>`;
-  html = html.replace(/(<span class="tag [^"]*"[^>]*>[^<]*<\/span>)(?!<\/td>)/g, `$1${SEP}`);
-  html = html.replace(/(<div class="ph (?:now|not|next)"><b[^>]*>[^<]*<\/b>)/g, `$1${SEP}`);
-  // anchors on the home page from other pages already point to /#x; on the home page keep #x
-  writeFileSync(page.out[lang], html);
+// The user pages must not need any inline script or style (the header policy allows only 'self').
+// scripts/inline-hashes.mjs lists the ones it finds; for site/ the list has to stay empty.
+const inline = JSON.parse(readFileSync('site/src/inline-hashes.json', 'utf8'));
+if (inline.style.length || inline.script.length) {
+  throw new Error('site/ now has inline scripts or styles. The page policy (script-src \'self\'; style-src \'self\') would block them. Move them into files.');
 }
 
-for (const name of Object.keys(PAGES)) if (PAGES[name].src) for (const lang of ['en', 'ja']) build(name, lang);
-copyFileSync('src/icon.svg', 'public/icon.svg');
-for (const f of ['status.js', 'diff.js', 'site.js', 'theme.js']) copyFileSync('src/' + f, 'public/' + f);
-execSync('npx --yes tailwindcss@3.4.16 -c tailwind.config.cjs -i src/input.css -o public/tegami.css --minify', { stdio: 'inherit' });
+// User pages. Astro writes the Japanese top page as ja.html; it is served at /ja/, so it becomes ja/index.html.
+mkdirSync('public/ja', { recursive: true });
+for (const f of readdirSync('site/dist').filter((f) => f.endsWith('.html'))) {
+  copyFileSync(`site/dist/${f}`, f === 'ja.html' ? 'public/ja/index.html' : `public/${f}`);
+}
+for (const f of readdirSync('site/dist/ja').filter((f) => f.endsWith('.html'))) copyFileSync(`site/dist/ja/${f}`, `public/ja/${f}`);
+// Their scripts, styles and the page scripts (the animation, the status check and the theme setup).
+rmSync('public/_site', { recursive: true, force: true });
+cpSync('site/dist/_site', 'public/_site', { recursive: true });
+for (const f of ['icon.svg', 'diff.js', 'status.js', 'theme-init.js']) copyFileSync(`site/dist/${f}`, `public/${f}`);
 
-// The developer docs (Astro Starlight in docs/): build, then replace the docs' files in public/.
-if (!existsSync('docs/node_modules')) execSync('npm ci', { cwd: 'docs', stdio: 'inherit' });
-execSync('npm run build', { cwd: 'docs', stdio: 'inherit' });
+// The developer docs: replace the docs' files in public/.
 for (const d of ['developers', 'ja/developers', '_astro', 'pagefind']) {
   rmSync('public/' + d, { recursive: true, force: true });
   cpSync('docs/dist/' + d, 'public/' + d, { recursive: true });

@@ -1,0 +1,31 @@
+---
+// One user page in one language, with the shared header and footer.
+import PageLayout from '~/layouts/PageLayout.astro';
+import Index from '~/components/pages/Index.astro';
+import Faq from '~/components/pages/Faq.astro';
+import Roadmap from '~/components/pages/Roadmap.astro';
+import Compare from '~/components/pages/Compare.astro';
+import Status from '~/components/pages/Status.astro';
+import ProsePage from '~/components/pages/ProsePage.astro';
+import { META, pathOf, t, type Lang, type PageName } from '~/site';
+
+export interface Props {
+  name: PageName;
+  lang: Lang;
+}
+const { name, lang } = Astro.props;
+const meta = META[name][lang];
+const alternates = { en: pathOf(name, 'en'), ja: pathOf(name, 'ja') };
+const canonical = new URL(pathOf(name, lang), 'https://tegami.chat').toString();
+---
+
+<PageLayout metadata={{ title: meta.title, description: meta.desc, canonical }} lang={lang} alternates={alternates}>
+  {name === 'index' && <Index lang={lang} />}
+  {name === 'how' && <ProsePage name="how" lang={lang} title={t('sec.h', lang)} lead />}
+  {name === 'faq' && <Faq lang={lang} />}
+  {name === 'about' && <ProsePage name="about" lang={lang} title={t('op.h', lang)} />}
+  {name === 'compare' && <Compare lang={lang} />}
+  {name === 'roadmap' && <Roadmap lang={lang} />}
+  {name === 'status' && <Status lang={lang} />}
+  {name === 'privacy' && <ProsePage name="privacy" lang={lang} title={t('pv.h', lang)} />}
+</PageLayout>

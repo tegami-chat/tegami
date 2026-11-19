@@ -1,0 +1,19 @@
+---
+// The pages other than the top page: /how and /ja/how, and so on.
+// With build.format "file" they are written as how.html and ja/how.html.
+import PageView from '~/components/pages/PageView.astro';
+import { PAGES, type Lang } from '~/site';
+
+export function getStaticPaths() {
+  return (['en', 'ja'] as Lang[]).flatMap((lang) =>
+    PAGES.filter((name) => name !== 'index').map((name) => ({
+      params: { path: (lang === 'ja' ? 'ja/' : '') + name },
+      props: { name, lang },
+    }))
+  );
+}
+
+const { name, lang } = Astro.props;
+---
+
+<PageView name={name} lang={lang} />

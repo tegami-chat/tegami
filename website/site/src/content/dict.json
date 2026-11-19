@@ -1,0 +1,1942 @@
+{
+ "beta": {
+  "en": "Beta",
+  "ja": "ベータ版"
+ },
+ "hero.kicker": {
+  "en": "Open-source messaging app. <span class=\"text-nostr-600 dark:text-nostr-300\">Built on Nostr.</span>",
+  "ja": "<span class=\"text-nostr-600 dark:text-nostr-300\">Nostrで動く</span>、オープンソースのメッセージアプリ"
+ },
+ "hero.h1a": {
+  "en": "Your chats<br class=\"sm:hidden\"> belong <span class=\"text-forest-600 dark:text-forest-300\">to you.</span>",
+  "ja": "トークは<br class=\"sm:hidden\"><span class=\"text-forest-600 dark:text-forest-300\">あなたのもの。</span>"
+ },
+ "hero.h1b": {
+  "en": "Bring your<br class=\"sm:hidden\"> <span class=\"text-forest-600 dark:text-forest-300\">own AI.</span>",
+  "ja": "AIの<br class=\"sm:hidden\"><span class=\"text-forest-600 dark:text-forest-300\">持ち込み自由。</span>"
+ },
+ "cta.browser": {
+  "en": "Open in your browser",
+  "ja": "ブラウザで始める"
+ },
+ "how.cta": {
+  "en": "How it keeps you safe",
+  "ja": "安全の仕組みを見る"
+ },
+ "soon.label": {
+  "en": "Coming soon",
+  "ja": "準備中"
+ },
+ "p1.h": {
+  "en": "Free from the platform.",
+  "ja": "プラットフォームから自由に。"
+ },
+ "p1.t": {
+  "en": "No creepy ads, no news you didn't ask for, no games, no unwanted features. None of it. And your personal data is never sold for corporate marketing.",
+  "ja": "気持ち悪い広告も、見たくないニュースも、やりたくないゲームも、いらない機能も、全部ありません。あなたの個人情報を企業のマーケティングに売ることはありません。"
+ },
+ "p2.h": {
+  "en": "Use AI your way.",
+  "ja": "AIを自由に使う。"
+ },
+ "p2.t": {
+  "en": "Connect your own AI as a friend in your chat list and work with your messages freely via MCP (the API is planned). You're just as free to not use AI at all, or to keep other people's AIs from reading your messages.",
+  "ja": "自分のAIを、友だちとしてつなげられます。MCP（AIとツールをつなぐ仕組み）で、メッセージを自由に扱えます（APIは予定です）。AIを使わないことも、相手のAIに自分の文を読ませないことも、あなたの自由です。"
+ },
+ "p3.h": {
+  "en": "No one else can read them.",
+  "ja": "誰にも覗かれない。"
+ },
+ "p3.t": {
+  "en": "Messages are encrypted on your device before they're sent, and saved on your device. They stay encrypted on Tegami's servers, so not even we can read them.",
+  "ja": "メッセージは端末の中で暗号化してから送り、端末に保存します。Tegamiのサーバーを通る間も暗号化したままなので、運営者にも読めません。"
+ },
+ "diff.h": {
+  "en": "How Tegami is different",
+  "ja": "よくあるアプリとの違い"
+ },
+ "diff.t": {
+  "en": "Seven everyday worries, typical apps on the left and Tegami on the right.",
+  "ja": "毎日気になる7つのことを、よくあるアプリとTegamiで左右に並べて比べます。"
+ },
+ "feat.h": {
+  "en": "Everything you use every day.",
+  "ja": "いつもの機能は<br class=\"sm:hidden\">ぜんぶあります。"
+ },
+ "feat.one": {
+  "en": "One-on-one chats",
+  "ja": "1対1のトーク"
+ },
+ "feat.group": {
+  "en": "Group chats",
+  "ja": "グループトーク"
+ },
+ "feat.photo": {
+  "en": "Photos and videos",
+  "ja": "写真と動画"
+ },
+ "feat.voice": {
+  "en": "Voice calls",
+  "ja": "音声通話"
+ },
+ "feat.video": {
+  "en": "Video calls",
+  "ja": "ビデオ通話"
+ },
+ "feat.sticker": {
+  "en": "Stickers",
+  "ja": "スタンプ"
+ },
+ "feat.vmsg": {
+  "en": "Voice messages",
+  "ja": "音声メッセージ"
+ },
+ "feat.file": {
+  "en": "Files",
+  "ja": "ファイル"
+ },
+ "feat.search": {
+  "en": "Search",
+  "ja": "検索"
+ },
+ "feat.devices": {
+  "en": "Phone and computer at once",
+  "ja": "スマホとパソコンで同時利用"
+ },
+ "feat.move": {
+  "en": "Move to a new phone",
+  "ja": "機種変更の引き継ぎ"
+ },
+ "feat.block": {
+  "en": "Block and report",
+  "ja": "ブロックと通報"
+ },
+ "feat.ai": {
+  "en": "Chat with your AI",
+  "ja": "自分のAIとトーク"
+ },
+ "feat.accounts": {
+  "en": "Multiple accounts",
+  "ja": "複数のアカウント"
+ },
+ "feat.export": {
+  "en": "Export your chats anytime",
+  "ja": "トーク履歴をいつでも書き出し"
+ },
+ "ai.h": {
+  "en": "AI, your way.",
+  "ja": "AIを自由に。"
+ },
+ "ai.pick.h": {
+  "en": "Pick any AI",
+  "ja": "好きなAIを選べる"
+ },
+ "ai.pick.t": {
+  "en": "Claude, Gemini, OpenAI models, or an AI that runs on your own computer. You choose which one.",
+  "ja": "ClaudeやGemini、OpenAIのモデルのほか、自分のパソコンで動くAIも使えます。どのAIにするかは、あなたが選びます。"
+ },
+ "ai.talk.h": {
+  "en": "Talk with your AI",
+  "ja": "AIと話す"
+ },
+ "ai.talk.t": {
+  "en": "Your AI shows up in your chat list, just like a friend. While tegami-agent is running on your computer, you can message it from anywhere.",
+  "ja": "あなたのAIが、友だちと同じようにトーク一覧に並びます。AIをつなぐプログラムがパソコンで動いている間は、外出先からでも話しかけられます。"
+ },
+ "st.built": {
+  "en": "Coming soon",
+  "ja": "公開待ち"
+ },
+ "ai.join.h": {
+  "en": "Bring AI into a chat",
+  "ja": "AIをトークに呼ぶ"
+ },
+ "ai.join.t": {
+  "en": "Invite an AI into a group to summarize, look things up or take notes. It joins only when everyone agrees.",
+  "ja": "グループにAIを呼んで、話の要約や調べもの、メモを任せられるようになります。AIが加わるのは、メンバー全員が同意した時だけです。"
+ },
+ "ai.each.h": {
+  "en": "Let AIs talk to each other",
+  "ja": "AI同士でやり取りさせる"
+ },
+ "ai.each.t": {
+  "en": "When you both allow it, your AI and a friend's AI can sort out plans and pass details to each other.",
+  "ja": "あなたと友だちの両方が許可すれば、2人のAIどうしで予定を合わせたり、情報を伝え合ったりできるようになります。"
+ },
+ "ai.many.h": {
+  "en": "Use many AIs",
+  "ja": "複数のAIを使う"
+ },
+ "ai.many.t": {
+  "en": "Add as many AIs as you like, each with its own name, icon and role.",
+  "ja": "AIはいくつでも追加でき、1人ずつ名前とアイコン、役割を決められます。"
+ },
+ "ai.own.h": {
+  "en": "Make it your own",
+  "ja": "自分でカスタマイズする"
+ },
+ "ai.own.t": {
+  "en": "Tegami supports MCP, so you can build your own bots and automations. The API is planned.",
+  "ja": "自分だけのボットや、決まった作業を自動でこなす仕組みを作れます。プログラムから直接つなぐAPIは予定です。"
+ },
+ "mk.h": {
+  "en": "Make Tegami yours.",
+  "ja": "Tegamiを自分仕様に。"
+ },
+ "mk.t": {
+  "en": "Tegami is meant to be changed by the people who use it. Today you can plug in your own AI and bots. Ways to change how it looks and works are planned. Even a modified app can still talk with your friends on Tegami.",
+  "ja": "Tegamiは、使う人が好きなように変えられるアプリを目指しています。いま使えるのは、AIやボットをつなぐ機能です。見た目や使い勝手を変える機能は、これから作ります。アプリを作り変えても、Tegamiの友だちとそのまま話せます。"
+ },
+ "st.plan": {
+  "en": "Planned",
+  "ja": "予定"
+ },
+ "mk.ui.h": {
+  "en": "Rebuild the screens",
+  "ja": "画面を作り替える"
+ },
+ "mk.ui.t": {
+  "en": "Change how Tegami looks and works, or have your AI build a screen just for you.",
+  "ja": "見た目や動きを変えたり、AIに自分専用の画面を作ってもらったりできるようになります。"
+ },
+ "mk.share.h": {
+  "en": "Share what you make",
+  "ja": "作ったものを共有する"
+ },
+ "mk.share.t": {
+  "en": "Share the screens and tools you build with others.",
+  "ja": "自分で作った画面や便利な機能を、ほかの人と共有できるようになります。"
+ },
+ "now": {
+  "en": "Available",
+  "ja": "提供中"
+ },
+ "mk.bots.h": {
+  "en": "Plug in your AI and bots",
+  "ja": "AIやボットをつなぐ"
+ },
+ "mk.bots.t": {
+  "en": "Give an AI or bot on your computer its own Tegami account, and chat with it like anyone else.",
+  "ja": "パソコンで動くAIやボットに、Tegamiのアカウントを持たせられます。ほかの友だちと同じようにトークできます。"
+ },
+ "mk.api.tag": {
+  "en": "MCP available, API planned",
+  "ja": "MCPは提供中、APIは予定"
+ },
+ "mk.api.h": {
+  "en": "API and MCP",
+  "ja": "APIとMCP"
+ },
+ "mk.api.t": {
+  "en": "MCP is a common way to connect AI to apps. With it, your AI can read and send Tegami messages through tegami-agent. The Tegami API is planned.",
+  "ja": "MCPは、AIとアプリをつなぐ共通の決まりです。TegamiはMCPに対応しているので、あなたのAIがメッセージを読んだり送ったりできます。プログラムから直接つなぐAPIは予定です。"
+ },
+ "mk.relay.h": {
+  "en": "Run your own server",
+  "ja": "自前のサーバーを動かす"
+ },
+ "mk.relay.t": {
+  "en": "Companies, schools and communities will be able to run their own server.",
+  "ja": "会社や学校、地域の集まりで、自分たち専用のサーバーを持てるようになります。"
+ },
+ "open": {
+  "en": "Open source",
+  "ja": "オープンソース"
+ },
+ "mk.agpl.h": {
+  "en": "AGPL-3.0",
+  "ja": "AGPL-3.0"
+ },
+ "mk.agpl.t": {
+  "en": "Anyone can read the code and improve it. Apps built from Tegami's code have to publish their code, too.",
+  "ja": "誰でもコードを読んで、直したり良くしたりできます。Tegamiのコードを使ったアプリも、コードを公開する決まりです。"
+ },
+ "mk.dev": {
+  "en": "Read the developer docs →",
+  "ja": "開発者向けの説明を読む →"
+ },
+ "don.h": {
+  "en": "Keeping Tegami independent.",
+  "ja": "Tegamiの独立を守るために。"
+ },
+ "don.t": {
+  "en": "Tegami is made by an independent developer in Japan. No investors, no ads, and your data is never for sale. Right now the developer covers the costs. If you'd like Tegami to keep going without ads, your donation helps.",
+  "ja": "Tegamiは、日本の個人開発者が作っています。投資家も広告もなく、あなたの情報を売ることもありません。運営の費用は、いまは開発者の負担です。広告に頼らずに続けるため、寄付で支えてもらえるとうれしいです。"
+ },
+ "don.server.h": {
+  "en": "Servers",
+  "ja": "サーバー"
+ },
+ "don.server.t": {
+  "en": "Carrying your messages",
+  "ja": "メッセージを届けるために"
+ },
+ "don.notify.h": {
+  "en": "Notifications",
+  "ja": "通知"
+ },
+ "don.notify.t": {
+  "en": "Making sure you never miss a message",
+  "ja": "メッセージを見逃さないために"
+ },
+ "don.photo.h": {
+  "en": "Photo storage",
+  "ja": "写真の保管"
+ },
+ "don.photo.t": {
+  "en": "Sending pictures and videos",
+  "ja": "写真や動画を送るために"
+ },
+ "don.dev.h": {
+  "en": "Development",
+  "ja": "開発"
+ },
+ "don.dev.t": {
+  "en": "Building new features and apps",
+  "ja": "新しい機能とアプリのために"
+ },
+ "don.amz.h": {
+  "en": "Amazon gift card (Japan, email delivery)",
+  "ja": "Amazonギフトカード（Eメールタイプ）"
+ },
+ "don.amz.t": {
+  "en": "Send to",
+  "ja": "宛先は"
+ },
+ "don.note": {
+  "en": "Donations come with no rewards, cannot be refunded, and are not tax-deductible. They go to the individual developer, not to a company or a nonprofit.",
+  "ja": "寄付には特典がありません。返金はできません。寄付金控除の対象になりません。寄付を受け取るのは開発者個人で、会社やNPOではありません。"
+ },
+ "end.h": {
+  "en": "Your chats belong to you.<br>Bring your own AI.",
+  "ja": "トークはあなたのもの。<br>AIの持ち込み自由。"
+ },
+ "sec.h": {
+  "en": "How Tegami keeps you safe",
+  "ja": "安全の仕組み"
+ },
+ "sec.t": {
+  "en": "How we protect your messages, what we can and can't see, and what isn't done yet.",
+  "ja": "あなたのメッセージをどう守っているか、運営者に何が見えるか、まだ足りないところはどこかを説明します。"
+ },
+ "sec.seal.h": {
+  "en": "Only you and your friend can read your messages",
+  "ja": "メッセージを読めるのはあなたと相手だけ"
+ },
+ "sec.server.h": {
+  "en": "What our server can and can't see",
+  "ja": "サーバーに見えるものと見えないもの"
+ },
+ "sec.account.h": {
+  "en": "No phone number, no password",
+  "ja": "電話番号もパスワードもいりません"
+ },
+ "sec.lost.h": {
+  "en": "If you lose your phone",
+  "ja": "端末をなくした時"
+ },
+ "sec.photos.h": {
+  "en": "Photos and files",
+  "ja": "写真とファイル"
+ },
+ "sec.calls.h": {
+  "en": "Calls",
+  "ja": "通話"
+ },
+ "sec.strangers.h": {
+  "en": "Messages from strangers",
+  "ja": "知らない人からのメッセージ"
+ },
+ "sec.ai.h": {
+  "en": "Your AI",
+  "ja": "AI"
+ },
+ "sec.count.h": {
+  "en": "No tracking",
+  "ja": "あなたの行動を追跡しません"
+ },
+ "sec.notyet.h": {
+  "en": "What isn't done yet",
+  "ja": "まだ足りないところ"
+ },
+ "sec.check.h": {
+  "en": "Check it yourself",
+  "ja": "自分で確かめられます"
+ },
+ "sec.seal.1": {
+  "en": "Every message is encrypted before it leaves your phone or computer. Only your friend's devices and your own can read it. Not even the people who run Tegami can.",
+  "ja": "メッセージは、あなたの端末から送り出す前に暗号化します。読めるのは、相手の端末とあなた自身の端末だけです。Tegamiの運営者にも読めません。"
+ },
+ "sec.server.1": {
+  "en": "It can't see",
+  "ja": "見えないもの"
+ },
+ "sec.server.2.1": {
+  "en": "What your messages say",
+  "ja": "メッセージの中身"
+ },
+ "sec.server.2.2": {
+  "en": "What is in your photos and files",
+  "ja": "写真やファイルの中身"
+ },
+ "sec.server.2.3": {
+  "en": "Your name and picture",
+  "ja": "あなたの名前とアイコン"
+ },
+ "sec.server.2.4": {
+  "en": "Who your friends are",
+  "ja": "あなたの友だちが誰か"
+ },
+ "sec.server.3": {
+  "en": "It can see",
+  "ja": "見えるもの"
+ },
+ "sec.server.4.1": {
+  "en": "Which account a message is for, when it arrived and how big it is",
+  "ja": "メッセージの宛先のアカウント、届いた時刻、データの大きさ"
+ },
+ "sec.server.4.2": {
+  "en": "Which account is connected, and the IP address it connects from",
+  "ja": "サーバーにつないでいるアカウントと、接続元のIPアドレス"
+ },
+ "sec.server.5": {
+  "en": "The server needs these to deliver messages. It deletes messages after 30 days and doesn't keep a record of who sent them.",
+  "ja": "メッセージを届けるのに、サーバーにはこれらの情報が必要です。サーバーで預かったメッセージは30日で消します。誰が送ったかは記録に残しません。"
+ },
+ "sec.account.1": {
+  "en": "Your account is a key made on your own device. We don't ask for a phone number or an email address.",
+  "ja": "Tegamiのアカウントは、あなたの端末の中で作る暗号の鍵です。電話番号もメールアドレスも聞きません。"
+ },
+ "sec.account.2": {
+  "en": "Your key is protected by a passkey, so you open Tegami with Face ID, a fingerprint or Windows Hello. There is no password to steal or leak.",
+  "ja": "鍵はパスキーという本人確認の仕組みで守ります。Tegamiを開く時は、Face IDや指紋認証、Windows Helloを使います。パスワードが無いので、盗まれたり漏れたりする心配もありません。"
+ },
+ "sec.lost.1": {
+  "en": "Make a recovery code in Settings and keep it somewhere safe. With it, you can bring back your account, friends and groups on a new device. Your chat history doesn't come back. Without the code, no one can bring your account back, not even us.",
+  "ja": "もしもの時のために、設定で復旧コードを作り、安全な場所に控えておいてください。復旧コードがあれば、新しい端末でアカウントと友だち、グループを元に戻せます。トークの履歴は戻りません。復旧コードが無いと、Tegamiの運営者にも戻せません。"
+ },
+ "sec.lost.2": {
+  "en": "Still have your old phone? Use the transfer link in Settings to move to the new one. Your chat history moves with it.",
+  "ja": "古い端末がまだ手元にあるなら、設定の引き継ぎ用のリンクで新しい端末に移れます。この方法なら、トークの履歴も一緒に移ります。"
+ },
+ "sec.photos.1": {
+  "en": "Each photo or file is encrypted with its own key before it's uploaded, so we can't see what's in it. Uploads are deleted from our server after 30 days. Your friend keeps their copy on their device.",
+  "ja": "写真とファイルは、1つずつ別の鍵で暗号化してからサーバーに預けます。運営者には中身が見えません。サーバーで預かったデータは30日で消しますが、受け取った人の端末には残ります。"
+ },
+ "sec.calls.1": {
+  "en": "Voice and video calls go straight between your devices, encrypted. Because the devices connect directly, the person you call can see your IP address, which can show roughly where you are. Turn on \"Always relay calls\" under \"Call relay\" in Settings, and the other person won't see your IP address.",
+  "ja": "音声通話とビデオ通話では、暗号化したまま端末どうしを直接つなぎます。直接つなぐため、通話の相手にあなたのIPアドレスが伝わり、おおよその地域が分かることがあります。設定の「通話の中継」で「通話を常に中継する」をオンにすると、相手にIPアドレスは伝わりません。"
+ },
+ "sec.strangers.1": {
+  "en": "Messages from people you don't know go to a separate box. Messages from people who joined without an invite are not shown anywhere, including the strangers box, until you add them as a friend, and they do not trigger notifications. You can block and report anyone. If you attach messages to a report, we can read only the ones you attached.",
+  "ja": "知らない人からのメッセージは、「知らない人から」の欄に分けて届きます。招待なしで登録した人からのメッセージは、友だちに追加するまで「知らない人から」の欄を含めてどこにも表示されず、通知も鳴りません。どの相手もブロックや通報ができます。通報にメッセージを添えた時は、添えたメッセージだけを運営者が読みます。"
+ },
+ "sec.ai.1": {
+  "en": "Your AI runs on your own computer, not on our servers. If you use an AI company's service, whatever you let your AI read also goes to that company. Everything an AI can do starts switched off, and it only does what you allow.",
+  "ja": "AIは、Tegamiのサーバーではなく、あなたのパソコンで動きます。AIの会社のサービスを使う時は、AIに読ませたメッセージがその会社にも送られます。AIにできることは最初はすべてオフで、あなたが許可した機能だけが動きます。"
+ },
+ "sec.ai.2": {
+  "en": "The people you chat with can also choose not to let other people's AIs read what they write.",
+  "ja": "あなたもトークの相手も、自分のメッセージをほかの人のAIに読ませないように設定できます。"
+ },
+ "sec.ai.3": {
+  "en": "The official Tegami app marks messages written by an AI. The model name shown next to an AI is what that AI says about itself. Apps modified from Tegami's code may leave out the mark.",
+  "ja": "公式のアプリでは、AIが書いたメッセージに印が付きます。AIの横に出るモデルの名前は、AI自身が名乗っているものです。Tegamiのコードを改造したアプリでは、印が付かないことがあります。"
+ },
+ "sec.count.1": {
+  "en": "There is no analytics or tracking, in the app or on this website. We only count totals, and publish the weekly numbers on the <a href=\"Tegamiの稼働状況と利用統計案_2026-11-15.html\" class=\"underline\">status page</a>.",
+  "ja": "アプリにもこのサイトにも、アクセス解析や追跡の仕組みは入れていません。数えるのは全体の合計だけで、毎週の数を<a href=\"Tegamiの稼働状況と利用統計案_2026-11-15.html\" class=\"underline\">稼働状況のページ</a>で公開しています。"
+ },
+ "sec.notyet.1.1": {
+  "en": "If someone steals your key, they could also read past messages still on the server or on your device. That's why your key is locked with a passkey.",
+  "ja": "鍵を盗まれると、サーバーや端末に残っている過去のメッセージまで読まれるおそれがあります。鍵が盗まれにくいように、パスキーで守っています。"
+ },
+ "sec.notyet.1.2": {
+  "en": "No outside security audit yet.",
+  "ja": "外部の専門家による安全性の監査は、まだ受けていません。"
+ },
+ "sec.notyet.1.3": {
+  "en": "The browser version loads its code each time you open it, so whoever serves it could swap in different code without you noticing.",
+  "ja": "ブラウザ版は、開くたびにサーバーからプログラムを読み込みます。配る側がプログラムを差し替えても、使う人には分かりません。"
+ },
+ "sec.notyet.1.4": {
+  "en": "You can't talk with people on other Nostr apps yet.",
+  "ja": "TegamiはNostrという共通の仕組みで動いています。ただし、Nostrを使うほかのアプリの人とは、まだやり取りできません。"
+ },
+ "sec.check.1": {
+  "en": "All of Tegami's code is public under AGPL-3.0, so anyone can check what this page says. The details are on the <a href=\"Tegamiの開発者向け_2026-11-16.html\" class=\"underline\">developer pages</a>, and what we keep and for how long is in the <a href=\"Tegamiのプライバシーポリシー案_2026-11-14.html\" class=\"underline\">privacy policy</a>.",
+  "ja": "Tegamiのコードは、AGPL-3.0というライセンスで、すべて公開しています。このページに書いたことは、誰でもコードを読んで確かめられます。詳しい作りは<a href=\"Tegamiの開発者向け_2026-11-16.html\" class=\"underline\">開発者向けの説明</a>に、預かる情報と期間は<a href=\"Tegamiのプライバシーポリシー案_2026-11-14.html\" class=\"underline\">プライバシーポリシー</a>に書いています。"
+ },
+ "faq.h": {
+  "en": "Frequently asked questions",
+  "ja": "よくある質問"
+ },
+ "faq.free.q": {
+  "en": "Is it free? Who pays for it?",
+  "ja": "無料ですか？ 費用は誰が出しているのですか？"
+ },
+ "faq.free.a": {
+  "en": "Yes, it's free, with no ads. Tegami is made by an independent developer in Japan, with no outside investment. The developer currently covers the costs, and support from users and supporters is welcome.",
+  "ja": "はい、無料です。広告も表示されません。Tegamiは日本の個人開発者が作っております。投資は受けておりません。現在は開発者が費用を負担していますが、利用者や賛同者の支援を受け付けております。"
+ },
+ "faq.read.q": {
+  "en": "Who can read my messages?",
+  "ja": "メッセージを読めるのは誰ですか？"
+ },
+ "faq.read.a": {
+  "en": "Only you and the people you send them to. Messages are encrypted on your device, so not even Tegami can read them. There are two exceptions. If you allow an AI to read a chat, that AI can read it, and what it reads also goes to the company behind it. You can choose not to let other people’s AIs read your messages. If you attach messages to a report, the operator can read the ones you attached.",
+  "ja": "あなたと、トークの相手だけです。メッセージは端末の中で暗号化されるので、Tegamiにも読めません。例外は2つあります。AIに読ませる許可を出したトークは、そのAIが読めます。AIに読ませたものは、そのAIの会社にも渡ります。自分の文を相手のAIに読ませない設定もあります。通報にメッセージを添えたときは、添えたメッセージを運営者が読めます。"
+ },
+ "faq.phone.q": {
+  "en": "Do I need a phone number or email?",
+  "ja": "電話番号やメールアドレスは必要ですか？"
+ },
+ "faq.phone.a": {
+  "en": "No. Just pick a name and start.",
+  "ja": "必要ありません。名前を決めるだけで始められます。"
+ },
+ "faq.devices.q": {
+  "en": "Which devices can I use?",
+  "ja": "どの端末で使えますか？"
+ },
+ "faq.devices.a": {
+  "en": "Any web browser, on your phone or computer, today. Apps for iPhone and Android are in development, and apps for Windows, Mac and Linux are planned.",
+  "ja": "現在はスマホやパソコンのブラウザからすぐに使えます。iPhoneとAndroidのアプリは開発中で、Windows、Mac、Linux向けのアプリは予定です。"
+ },
+ "faq.friends.q": {
+  "en": "How do I add friends?",
+  "ja": "友だちはどうやって追加しますか？"
+ },
+ "faq.friends.a": {
+  "en": "Send your invite link, or show your QR code. Your friends need Tegami too.",
+  "ja": "招待リンクを送るか、QRコードを見せるだけです。友だちにもTegamiを入れてもらう必要があります。"
+ },
+ "faq.lost.q": {
+  "en": "What if I lose my phone?",
+  "ja": "スマホをなくしたらどうなりますか？"
+ },
+ "faq.lost.a": {
+  "en": "Make a recovery code in Settings, and you can bring your account, friends and groups back on a new device. Your chat history does not come back. Without it, no one, not even Tegami, can restore it.",
+  "ja": "設定で復旧コードを作っておけば、新しい端末でアカウント、友だち、グループを戻せます。会話の履歴は戻りません。復旧コードがないと、Tegamiの運営者でも戻せません。"
+ },
+ "faq.multi.q": {
+  "en": "Can I use it on my phone and computer at the same time?",
+  "ja": "スマホとパソコンで同時に使えますか？"
+ },
+ "faq.multi.a": {
+  "en": "Yes. Use the transfer link in Settings to use the same account on another device at the same time. Your earlier chats move over too, newest first. If there are very many, the oldest stay on the old device. Photos and files open on the new device only while they are still stored on the server.",
+  "ja": "はい。設定の引き継ぎ用のリンクで、別の端末でも同じアカウントを同時に使えます。それまでの会話も、新しいものから先に移ります。とても多い時は、古い会話が元の端末に残ります。写真とファイルは、サーバーに残っている間だけ、新しい端末で開けます。"
+ },
+ "faq.collect.q": {
+  "en": "What does Tegami collect?",
+  "ja": "Tegamiは何を記録していますか？"
+ },
+ "faq.collect.a": {
+  "en": "The statistics count only totals, like how many messages were delivered in a week, and never anyone's activity. The weekly numbers are public on the <a href=\"Tegamiの稼働状況と利用統計案_2026-11-15.html\" class=\"underline\">status page</a>. We also keep records of sign-ups, invites and reports for a set time. The kinds and periods are in the <a href=\"Tegamiのプライバシーポリシー案_2026-11-14.html\" class=\"underline\">privacy policy</a>.",
+  "ja": "統計として数えているのは、1週間に届いたメッセージの数など、全体の合計だけです。誰が何をしたかは統計に入れません。週ごとの数は<a href=\"Tegamiの稼働状況と利用統計案_2026-11-15.html\" class=\"underline\">稼働状況のページ</a>で公開しています。このほか、登録、招待、通報の記録を、決めた期間だけ預かります。種類と期間は<a href=\"Tegamiのプライバシーポリシー案_2026-11-14.html\" class=\"underline\">プライバシーポリシー</a>に書いています。"
+ },
+ "faq.ai.q": {
+  "en": "How do I connect my AI?",
+  "ja": "自分のAIはどうやってつなぎますか？"
+ },
+ "faq.ai.a": {
+  "en": "Run a command for the small tegami-agent program on your computer, and a QR code appears. Scan it with the app from Add friend, and your AI shows up in your chat list. There is another way too: show the AI's invite link and open it in the app.",
+  "ja": "パソコンで小さなプログラム（tegami-agent）のコマンドを実行すると、QRコードが出ます。アプリの「友だち追加」で読み取ると、あなたのAIがトーク一覧に並びます。別の方法として、AIの招待リンクを表示して、アプリで開くこともできます。"
+ },
+ "faq.spam.q": {
+  "en": "What about unwanted messages?",
+  "ja": "迷惑なメッセージへの対策はありますか？"
+ },
+ "faq.spam.a": {
+  "en": "Messages from strangers land in a separate box, and you can block and report anyone.",
+  "ja": "知らない人からのメッセージは「知らない人から」の欄にまとまります。どの相手でもブロックと通報ができます。"
+ },
+ "faq.shutdown.q": {
+  "en": "What if Tegami shuts down?",
+  "ja": "もしTegamiが終了したらどうなりますか？"
+ },
+ "faq.shutdown.a": {
+  "en": "The code is public, so someone with the skills can run their own server and keep Tegami going. But the app cannot yet connect to a different server, and you cannot yet move your account to another Nostr app. You can export your chats anytime.",
+  "ja": "コードを公開しているので、技術のある人は自分でサーバーを立てて、Tegamiを動かし続けられます。ただし、いまのアプリを別のサーバーにつなぐ機能や、ほかのNostrアプリへアカウントを移す機能は、まだありません。トーク履歴は、いつでも書き出せます。"
+ },
+ "faq.dev.q": {
+  "en": "Where are the technical details?",
+  "ja": "技術的な説明はどこにありますか？"
+ },
+ "faq.dev.a": {
+  "en": "On the <a href=\"Tegamiの開発者向け_2026-11-16.html\" class=\"underline\">developer page</a>: which parts of Nostr Tegami uses, what the relay can see, how keys are kept, and the full spec. The code is on <a href=\"https://github.com/tegami-chat/tegami\" class=\"underline\" target=\"_blank\" rel=\"noopener\">GitHub</a>.",
+  "ja": "<a href=\"Tegamiの開発者向け_2026-11-16.html\" class=\"underline\">開発者向けのページ</a>に、TegamiがNostrのどこを使っているか、リレーに何が見えるか、鍵をどう守るか、技術仕様までをまとめています。コードは<a href=\"https://github.com/tegami-chat/tegami\" class=\"underline\" target=\"_blank\" rel=\"noopener\">GitHub</a>で公開しています。"
+ },
+ "op.h": {
+  "en": "About the operator",
+  "ja": "運営者情報"
+ },
+ "op.1.k": {
+  "en": "Service",
+  "ja": "サービス名"
+ },
+ "op.1.v": {
+  "en": "Tegami (messaging app)",
+  "ja": "Tegami（メッセージアプリ）"
+ },
+ "op.2.k": {
+  "en": "Operator",
+  "ja": "運営者"
+ },
+ "op.2.v": {
+  "en": "Yoshihiro Azuma",
+  "ja": "Yoshihiro Azuma"
+ },
+ "op.4.k": {
+  "en": "Contact",
+  "ja": "連絡先"
+ },
+ "op.4.v": {
+  "en": "<a href=\"mailto:hello@tegami.chat\">hello@tegami.chat</a>",
+  "ja": "<a href=\"mailto:hello@tegami.chat\">hello@tegami.chat</a>"
+ },
+ "op.5.k": {
+  "en": "Website",
+  "ja": "サイト"
+ },
+ "op.5.v": {
+  "en": "<a href=\"https://tegami.chat/\">tegami.chat</a>",
+  "ja": "<a href=\"https://tegami.chat/ja/\">tegami.chat</a>"
+ },
+ "op.6.k": {
+  "en": "Source code",
+  "ja": "ソースコード"
+ },
+ "op.6.v": {
+  "en": "<a href=\"https://github.com/tegami-chat/tegami\">github.com/tegami-chat/tegami</a> (AGPL-3.0)",
+  "ja": "<a href=\"https://github.com/tegami-chat/tegami\">github.com/tegami-chat/tegami</a>（AGPL-3.0）"
+ },
+ "cmp.h": {
+  "en": "How Tegami compares",
+  "ja": "ほかのアプリとの比較"
+ },
+ "cmp.t": {
+  "en": "We put Tegami next to LINE, WhatsApp, Signal and Telegram on the things people ask about most. Based on each company's official pages, checked on November 16, 2026.",
+  "ja": "LINE、WhatsApp、Signal、Telegramと並べて、使う時に気になる点を比べました。各社の公式の説明を2026年11月16日に確かめた内容です。"
+ },
+ "cmp.price": {
+  "en": "Price",
+  "ja": "料金"
+ },
+ "cmp.price.line": {
+  "en": "Free, with paid plans",
+  "ja": "無料。有料のプランもあります"
+ },
+ "cmp.price.wa": {
+  "en": "Free",
+  "ja": "無料"
+ },
+ "cmp.price.sig": {
+  "en": "Free",
+  "ja": "無料"
+ },
+ "cmp.price.tg": {
+  "en": "Free, with paid Premium",
+  "ja": "無料。有料のPremiumもあります"
+ },
+ "cmp.price.teg": {
+  "en": "Free",
+  "ja": "無料"
+ },
+ "cmp.signup": {
+  "en": "Needed to sign up",
+  "ja": "始めるのに必要なもの"
+ },
+ "cmp.signup.line": {
+  "en": "Phone number",
+  "ja": "電話番号"
+ },
+ "cmp.signup.wa": {
+  "en": "Phone number",
+  "ja": "電話番号"
+ },
+ "cmp.signup.sig": {
+  "en": "Phone number",
+  "ja": "電話番号"
+ },
+ "cmp.signup.tg": {
+  "en": "Phone number",
+  "ja": "電話番号"
+ },
+ "cmp.signup.teg": {
+  "en": "Nothing",
+  "ja": "なし"
+ },
+ "cmp.read": {
+  "en": "Can the company read your chats?",
+  "ja": "運営者がトークを読めるか"
+ },
+ "cmp.read.line": {
+  "en": "No, but some features such as group calls are not covered",
+  "ja": "読めません。ただし、グループ通話などは対象外です"
+ },
+ "cmp.read.wa": {
+  "en": "No (unconfirmed)",
+  "ja": "読めません（未確認）"
+ },
+ "cmp.read.sig": {
+  "en": "No",
+  "ja": "読めません"
+ },
+ "cmp.read.tg": {
+  "en": "Regular chats can be opened on its servers. Only Secret Chats are closed to it",
+  "ja": "シークレットチャット以外は読める仕組みです"
+ },
+ "cmp.read.teg": {
+  "en": "No",
+  "ja": "読めません"
+ },
+ "cmp.ads": {
+  "en": "Ads",
+  "ja": "広告"
+ },
+ "cmp.ads.line": {
+  "en": "At the top of the chat list",
+  "ja": "トーク一覧の上に出ます"
+ },
+ "cmp.ads.wa": {
+  "en": "In the Updates tab",
+  "ja": "アップデートのタブに出ます"
+ },
+ "cmp.ads.sig": {
+  "en": "None",
+  "ja": "ありません"
+ },
+ "cmp.ads.tg": {
+  "en": "In public channels and other public places",
+  "ja": "公開チャンネルなどに出ます"
+ },
+ "cmp.ads.teg": {
+  "en": "None",
+  "ja": "ありません"
+ },
+ "cmp.ai": {
+  "en": "The company's own AI",
+  "ja": "運営者のAI"
+ },
+ "cmp.ai.line": {
+  "en": "Yes",
+  "ja": "あります"
+ },
+ "cmp.ai.wa": {
+  "en": "Yes",
+  "ja": "あります"
+ },
+ "cmp.ai.sig": {
+  "en": "None found in official docs (unconfirmed)",
+  "ja": "公式の説明には見当たりません（未確認）"
+ },
+ "cmp.ai.tg": {
+  "en": "Yes",
+  "ja": "あります"
+ },
+ "cmp.ai.teg": {
+  "en": "None. You can add your own AI as a friend",
+  "ja": "ありません。自分のAIを友だちとして追加できます"
+ },
+ "cmp.who": {
+  "en": "Run by",
+  "ja": "運営"
+ },
+ "cmp.who.line": {
+  "en": "LY Corporation",
+  "ja": "LINEヤフー株式会社"
+ },
+ "cmp.who.wa": {
+  "en": "Meta",
+  "ja": "Meta"
+ },
+ "cmp.who.sig": {
+  "en": "A US nonprofit",
+  "ja": "アメリカの非営利団体"
+ },
+ "cmp.who.tg": {
+  "en": "Telegram Messenger Inc.",
+  "ja": "Telegram Messenger Inc."
+ },
+ "cmp.who.teg": {
+  "en": "An independent developer in Japan",
+  "ja": "日本の個人開発者"
+ },
+ "cmp.unconf": {
+  "en": "\"Unconfirmed\" marks things we could not fully confirm, because the official help pages could not be opened.",
+  "ja": "「未確認」は、公式のヘルプのページを開けず、完全には確かめられなかった内容です。"
+ },
+ "cmp.diff.h": {
+  "en": "Where Tegami is different",
+  "ja": "Tegamiがちがうところ"
+ },
+ "cmp.diff.t": {
+  "en": "You can start without giving a phone number. There are no ads and no company AI. Your own AI can sit in your chat list like a friend.",
+  "ja": "電話番号を渡さずに始められます。広告も、運営者のAIもありません。自分のAIを、友だちと同じようにトーク一覧に並べられます。"
+ },
+ "cmp.weak.h": {
+  "en": "Where Tegami falls short",
+  "ja": "Tegamiがまだ劣るところ"
+ },
+ "cmp.weak.1": {
+  "en": "On encryption strength alone, Signal is ahead. Signal keeps changing its keys, so a stolen key doesn't expose past messages. Tegami doesn't have that yet.",
+  "ja": "暗号の強さでは、Signalの方が上です。Signalは鍵を次々に新しくするので、鍵が盗まれても過去のメッセージを守れます。Tegamiには、まだこの仕組みがありません。"
+ },
+ "cmp.weak.2": {
+  "en": "Tegami runs only in the browser for now. Apps for iPhone and Android are in development, and apps for computers are planned.",
+  "ja": "いまはブラウザでしか使えません。iPhoneとAndroidのアプリは開発中で、パソコンのアプリは予定です。"
+ },
+ "cmp.weak.3": {
+  "en": "Far fewer people use Tegami than LINE or WhatsApp, so your friends need to install it too.",
+  "ja": "LINEやWhatsAppにくらべて、使っている人がまだ少ないアプリです。友だちにもTegamiを始めてもらう必要があります。"
+ },
+ "cmp.move.h": {
+  "en": "Switching",
+  "ja": "乗り換えについて"
+ },
+ "cmp.move.1": {
+  "en": "To move to Tegami, add friends by sending an invite link or showing a QR code. There is no way to bring in your LINE chat history.",
+  "ja": "Tegamiに移る時は、招待リンクを送るか、QRコードを見せて友だちを追加します。LINEのトーク履歴をTegamiに取り込む機能はありません。"
+ },
+ "cmp.move.2": {
+  "en": "You can export your Tegami chat history to a file from Settings at any time. Moving your Tegami account to another app isn't possible yet.",
+  "ja": "Tegamiのトーク履歴は、設定からいつでもファイルに書き出せます。ただし、Tegamiのアカウントをほかのアプリに移す機能は、まだありません。"
+ },
+ "cmp.store.h": {
+  "en": "Where your chats are kept",
+  "ja": "トークの保存先"
+ },
+ "cmp.store.1": {
+  "en": "Tegami keeps your chats on your device. The server holds messages for up to 30 days, then deletes them.",
+  "ja": "Tegamiのトークは、あなたの端末に保存します。サーバーはメッセージを30日だけ預かり、その後に消します。"
+ },
+ "cmp.note": {
+  "en": "Other apps' policies can change. If you spot a mistake, please tell us in a <a href=\"https://github.com/tegami-chat/tegami/issues\" target=\"_blank\" rel=\"noopener\" class=\"underline\">GitHub issue</a>. A more detailed comparison is on the <a href=\"Tegamiの開発者向け_比較.html\" class=\"underline\">developer page</a>.",
+  "ja": "各社の説明は変わることがあります。間違いを見つけたら、<a href=\"https://github.com/tegami-chat/tegami/issues\" target=\"_blank\" rel=\"noopener\" class=\"underline\">GitHubのIssue</a>で教えてください。詳しい比較は<a href=\"Tegamiの開発者向け_比較.html\" class=\"underline\">開発者向けの比較</a>にあります。"
+ },
+ "rm.h": {
+  "en": "Roadmap",
+  "ja": "ロードマップ"
+ },
+ "rm.t": {
+  "en": "What we've built, and what's next.",
+  "ja": "できたこと、これから作ること。"
+ },
+ "rm.note": {
+  "en": "We release what can be taken back first. Anything that can't be taken back comes last.",
+  "ja": "あとから取り消せる機能から順に公開し、取り消せない機能は最後に作ります。"
+ },
+ "rm.issue": {
+  "en": "Suggest a feature on GitHub",
+  "ja": "GitHubで機能を提案する"
+ },
+ "rm.done": {
+  "en": "Available",
+  "ja": "提供中"
+ },
+ "rm.basics.h": {
+  "en": "Everyday messaging",
+  "ja": "いつものメッセージ機能"
+ },
+ "rm.basics.t": {
+  "en": "One-on-one and group chats, photos, videos, files, voice messages, stickers, replies and search.",
+  "ja": "1対1とグループのトーク、写真、動画、ファイル、音声メッセージ、スタンプ、リプライ、検索。"
+ },
+ "rm.calls.h": {
+  "en": "Voice and video calls",
+  "ja": "音声通話とビデオ通話"
+ },
+ "rm.calls.t": {
+  "en": "Call anyone in your chat list. You get a notification when someone calls.",
+  "ja": "トーク一覧の相手に電話をかけられます。着信の通知も届きます。"
+ },
+ "rm.e2e.h": {
+  "en": "Encryption and passkeys",
+  "ja": "暗号化とパスキー"
+ },
+ "rm.e2e.t": {
+  "en": "Messages are encrypted on your device. Your account is protected by a passkey, with no password.",
+  "ja": "メッセージは端末の中で暗号化されます。アカウントはパスワードではなく、顔認証や指紋認証で開くパスキーで守ります。"
+ },
+ "rm.move.h": {
+  "en": "Recovery code and new phones",
+  "ja": "復旧コードと機種変更"
+ },
+ "rm.move.t": {
+  "en": "Bring your account back with a recovery code, or move it to another device in a few taps.",
+  "ja": "復旧コードでアカウントを戻せて、数タップで別の端末へ引き継げます。"
+ },
+ "rm.accounts.h": {
+  "en": "Multiple accounts",
+  "ja": "複数のアカウント"
+ },
+ "rm.accounts.t": {
+  "en": "Use several accounts on one device and switch between them.",
+  "ja": "1つの端末で複数のアカウントを使い分けられます。"
+ },
+ "rm.ai.h": {
+  "en": "Your AI as a friend",
+  "ja": "自分のAIを友だちに"
+ },
+ "rm.ai.t": {
+  "en": "A small program (tegami-agent) lets the AI on your computer join your chat list. Works with MCP.",
+  "ja": "パソコンで小さなプログラム（tegami-agent）を動かすと、自分のAIをトーク一覧に並べられます。AIとツールをつなぐ仕組みのMCPにも対応しています。"
+ },
+ "rm.safety.h": {
+  "en": "Block, report and a box for strangers",
+  "ja": "「知らない人から」の欄、ブロック、通報"
+ },
+ "rm.safety.t": {
+  "en": "Messages from people you don't know wait in a separate box. Block and report anyone.",
+  "ja": "知らない人からのメッセージは「知らない人から」の欄にまとまります。誰でもブロックと通報ができます。"
+ },
+ "rm.signup.h": {
+  "en": "Open sign-up with invites",
+  "ja": "招待で広がる登録"
+ },
+ "rm.signup.t": {
+  "en": "Anyone can join. Messages from people who joined without an invite are not shown anywhere, including the strangers box, until you add them as a friend, and they do not trigger notifications. Messages sent after you add them as a friend are shown.",
+  "ja": "誰でも登録できます。招待なしで登録した人からのメッセージは、友だちに追加するまで「知らない人から」の欄を含めてどこにも表示されず、通知も鳴りません。友だちに追加したあとに届くメッセージから表示されます。"
+ },
+ "rm.qr.h": {
+  "en": "Connect your AI with a QR code",
+  "ja": "QRコードでAIとつなぐ"
+ },
+ "rm.qr.t": {
+  "en": "Run one command on your computer and scan the QR code it shows with the app. Your AI is added as a friend.",
+  "ja": "パソコンでコマンドを1つ実行し、表示されるQRコードをアプリで読みます。それだけで、AIを友だちに追加できます。"
+ },
+ "rm.built": {
+  "en": "Coming soon",
+  "ja": "公開待ち"
+ },
+ "rm.aigroup.h": {
+  "en": "AI in group chats",
+  "ja": "グループにAIを呼ぶ"
+ },
+ "rm.aigroup.t": {
+  "en": "Invite an AI into a group once everyone agrees, and let AIs talk to each other when you allow it. The code is written, but this version does not allow it. It will come in a later version.",
+  "ja": "全員の同意でAIをグループに呼べます。許可すればAI同士でもやり取りできます。コードは書き終えていますが、この版では使えません。後の版で使えるようにします。"
+ },
+ "rm.now": {
+  "en": "In development",
+  "ja": "開発中"
+ },
+ "rm.address.h": {
+  "en": "Your own address",
+  "ja": "自分のアドレス"
+ },
+ "rm.address.t": {
+  "en": "An easy-to-share address like name@tegami.chat.",
+  "ja": "name@tegami.chatのような、人に伝えやすいアドレスを持てます。"
+ },
+ "rm.mobile.h": {
+  "en": "iPhone and Android apps",
+  "ja": "iPhoneとAndroidのアプリ"
+ },
+ "rm.mobile.t": {
+  "en": "Native apps with a real ringing screen for calls.",
+  "ja": "普通の電話と同じ着信の画面が出る、スマホのアプリです。"
+ },
+ "rm.plan": {
+  "en": "Planned",
+  "ja": "予定"
+ },
+ "rm.vanish.h": {
+  "en": "Disappearing messages",
+  "ja": "消えるメッセージ"
+ },
+ "rm.vanish.t": {
+  "en": "Choose to send a message that disappears after a while.",
+  "ja": "時間がたつと消えるメッセージを、選んで送れます。"
+ },
+ "rm.desktop.h": {
+  "en": "Windows, Mac and Linux apps",
+  "ja": "パソコンのアプリ"
+ },
+ "rm.desktop.t": {
+  "en": "Desktop apps you can keep open all day.",
+  "ja": "Windows、Mac、Linuxで、一日中開いておけるアプリです。"
+ },
+ "rm.api.h": {
+  "en": "Tegami API",
+  "ja": "TegamiのAPI"
+ },
+ "rm.api.t": {
+  "en": "Read and send messages from your own programs.",
+  "ja": "自分のプログラムから、メッセージを読んだり送ったりできます。"
+ },
+ "rm.screens.h": {
+  "en": "Build your own screens",
+  "ja": "自分の画面を作る"
+ },
+ "rm.screens.t": {
+  "en": "Make the screens you like on top of Tegami, without handing over your secret key, and share them.",
+  "ja": "秘密の鍵を渡さずに、Tegamiの上に好きな画面を作り、人と共有できます。"
+ },
+ "rm.relay.h": {
+  "en": "Run your own server",
+  "ja": "自前のサーバーを動かす"
+ },
+ "rm.relay.t": {
+  "en": "Companies, schools and communities can run their own server, and you can choose which ones to use.",
+  "ja": "会社や学校、コミュニティが自分たちのサーバーを持てます。使うサーバーも選べます。"
+ },
+ "rm.nostr.h": {
+  "en": "Talk with other Nostr apps",
+  "ja": "ほかのNostrアプリとつながる"
+ },
+ "rm.nostr.t": {
+  "en": "Choose to receive messages from people on other Nostr apps.",
+  "ja": "ほかのNostrアプリ（同じ仕組みを使う別のアプリ）の人からのメッセージも、設定で選べば受け取れるようにします。"
+ },
+ "rm.export.h": {
+  "en": "Take your account anywhere",
+  "ja": "アカウントを持ち出す"
+ },
+ "rm.export.t": {
+  "en": "Export your account and move to another Nostr app. This comes last, because it can't be undone.",
+  "ja": "アカウントを書き出して、ほかのNostrアプリへ移れます。戻せない機能なので最後に作ります。"
+ },
+ "st.sample": {
+  "en": "Sample data, not live statistics",
+  "ja": "サンプルの数値です（実際の統計ではありません）"
+ },
+ "st.h": {
+  "en": "Status and usage",
+  "ja": "稼働状況と利用統計"
+ },
+ "st.t": {
+  "en": "The status of the Tegami relay, the server that passes messages along, and weekly usage statistics. All figures are totals across all users. We don't count usage per account.",
+  "ja": "メッセージを中継するサーバー（リレー）の稼働状況と、週ごとの利用統計を公開しています。数値はすべて利用者全体の合計で、アカウントごとの利用状況は集計していません。"
+ },
+ "st.now.rtt": {
+  "en": "Response time (from your browser)",
+  "ja": "応答時間（お使いの端末から計測）"
+ },
+ "st.now.at": {
+  "en": "Last checked",
+  "ja": "最終確認日時"
+ },
+ "st.use.h": {
+  "en": "Weekly usage",
+  "ja": "週ごとの利用統計"
+ },
+ "st.use.env": {
+  "en": "An envelope is one encrypted message on its way. Each message makes one envelope for every recipient and one copy for the sender, so a message to one person is two envelopes.",
+  "ja": "封筒は、暗号化したメッセージを届けるための入れ物です。メッセージ1通につき、受信者ごとに1つと、送信者の控えに1つ作られます。そのため、1対1のメッセージ1通は封筒2つになります。"
+ },
+ "st.use.note": {
+  "en": "Only weeks that are over are shown. A week starts on Monday at 00:00 UTC. To keep quiet weeks from pointing to anyone, every figure is rounded up to a multiple of 10, and 0 to 9 is shown as \"under 10\".",
+  "ja": "集計が終わった週だけを表示しています。週は協定世界時（UTC）の月曜0時、日本時間の月曜9時に始まります。利用が少ない週の数値から個人を推測されないよう、数値はすべて10の倍数に切り上げ、0から9は、この画面では「10未満」と表示します（公開している統計のデータでは0です）。"
+ },
+ "st.lg.n": {
+  "en": "10 or more",
+  "ja": "10以上"
+ },
+ "st.lg.u": {
+  "en": "Under 10",
+  "ja": "10未満"
+ },
+ "st.c.week": {
+  "en": "Week (UTC)",
+  "ja": "期間（UTC）"
+ },
+ "st.k.envelopes": {
+  "en": "Envelopes",
+  "ja": "封筒の数"
+ },
+ "st.k.files": {
+  "en": "Files",
+  "ja": "ファイルの数"
+ },
+ "st.k.logins": {
+  "en": "Logins",
+  "ja": "ログインの回数"
+ },
+ "st.k.keys": {
+  "en": "Accounts per day (est.)",
+  "ja": "1日あたりのアカウント数（推定）"
+ },
+ "st.how.h": {
+  "en": "How we count",
+  "ja": "集計の方法"
+ },
+ "st.how.t0": {
+  "en": "Each day, the relay counts the envelopes it accepted, the number of files, the number of logins, and an estimate of how many accounts logged in.",
+  "ja": "リレーは1日ごとに、受け付けた封筒の数、ファイルの数と容量、ログインの回数、ログインしたアカウントの推定数を集計しています。"
+ },
+ "st.how.t1": {
+  "en": "The number of accounts is estimated with a random value that is made and thrown away every day, so the statistics can't show which accounts were active (the method is called HyperLogLog). For the same reason, the account figure is the average per day, not a weekly total. Envelopes, files and logins are weekly totals. We don't collect message contents, or which screens you open in the app.",
+  "ja": "アカウントの数は、毎日作り直して捨てる乱数を使って推定するため、統計からはどのアカウントが利用したかは分かりません（HyperLogLogという手法です）。同じ理由で、アカウントの数だけは、週の合計ではなく1日あたりの平均です。封筒、ファイル、ログインは1週間の合計です。メッセージの内容や、アプリでどの画面を開いたかは集計していません。"
+ },
+ "st.how.t2": {
+  "en": "For what the relay stores and for how long, see \"What the relay keeps\" in our <a href=\"Tegamiのプライバシーポリシー案_2026-11-14.html\" class=\"font-semibold text-forest-700 underline dark:text-forest-300\">privacy policy</a>.",
+  "ja": "リレーが保存している情報の種類と保存期間は、<a href=\"Tegamiのプライバシーポリシー案_2026-11-14.html\" class=\"font-semibold text-forest-700 underline dark:text-forest-300\">プライバシーポリシー</a>の「リレーが保存する情報」をご覧ください。"
+ },
+ "st.links.h": {
+  "en": "Related links",
+  "ja": "関連リンク"
+ },
+ "st.links.json": {
+  "en": "Published statistics (JSON)",
+  "ja": "公開している統計データ（JSON）"
+ },
+ "st.links.code": {
+  "en": "Source code of the counter (GitHub)",
+  "ja": "集計のソースコード（GitHub）"
+ },
+ "st.links.how": {
+  "en": "How Tegami keeps you safe",
+  "ja": "Tegamiの安全の仕組み"
+ },
+ "st.tech.ver": {
+  "en": "Relay version",
+  "ja": "リレーのバージョン"
+ },
+ "st.tech.nips": {
+  "en": "Supported NIPs",
+  "ja": "対応しているNIP"
+ },
+ "pv.h": {
+  "en": "Privacy policy",
+  "ja": "プライバシーポリシー"
+ },
+ "pv.pre": {
+  "en": "This privacy policy (\"this policy\") explains how Yoshihiro Azuma (\"the operator\", \"we\") handles user information in the messaging app Tegami (\"the service\").",
+  "ja": "Yoshihiro Azuma（以下「運営者」といいます）は、メッセージアプリ「Tegami」（以下「本サービス」といいます）における利用者の情報の取扱いについて、次のとおりプライバシーポリシー（以下「本ポリシー」といいます）を定めます。"
+ },
+ "pv.scope.h": {
+  "en": "1. Scope",
+  "ja": "1. 適用範囲"
+ },
+ "pv.scope.1": {
+  "en": "tegami.chat (website)",
+  "ja": "tegami.chat（サイト）"
+ },
+ "pv.scope.2": {
+  "en": "app.tegami.chat (web app)",
+  "ja": "app.tegami.chat（ブラウザ版のアプリ）"
+ },
+ "pv.scope.3": {
+  "en": "relay.tegami.chat (relay)",
+  "ja": "relay.tegami.chat（リレー）"
+ },
+ "pv.scope.4": {
+  "en": "The iPhone and Android apps, once released",
+  "ja": "今後公開するiPhone版とAndroid版のアプリ"
+ },
+ "pv.scope.p": {
+  "en": "Relays and apps that other people run with Tegami's open-source code are not covered. Neither is an AI friend you run on your own computer, nor how the AI service it uses handles information. What the official app passes to your AI friend is described in section 7.",
+  "ja": "本サービスのオープンソースのコードを使って第三者が運営するリレーやアプリは、本ポリシーの対象外です。利用者が自分のパソコンで動かすAIの友だちと、AIの友だちが利用するAIサービスでの情報の取扱いも、本ポリシーの対象外です。本サービスの公式のアプリがAIの友だちへ渡す情報については、第7節で定めます。"
+ },
+ "pv.cant.h": {
+  "en": "2. What the operator can't see",
+  "ja": "2. 運営者が閲覧できない情報"
+ },
+ "pv.cant.p": {
+  "en": "Messages are encrypted on your device before they are sent. Only the sender's and recipients' devices hold the keys needed to decrypt them. As a result, the operator cannot see the following:",
+  "ja": "メッセージは利用者の端末で暗号化されてから送信されます。復号に必要な鍵は、送信者と受信者の端末にのみ保存されます。そのため、運営者は次の情報を閲覧できません。"
+ },
+ "pv.cant.1": {
+  "en": "The text of messages",
+  "ja": "メッセージの本文"
+ },
+ "pv.cant.2": {
+  "en": "The contents of photos, videos, files, voice messages and stamps",
+  "ja": "写真、動画、ファイル、音声メッセージ、スタンプの中身"
+ },
+ "pv.cant.3": {
+  "en": "Who sent a message (it cannot be told from what the relay keeps; the relay knows which key is logged in at the moment it accepts a message, but does not store it)",
+  "ja": "メッセージの送信者（保存した記録からは分かりません。リレーはメッセージを受け付ける瞬間にログインしている鍵を知りますが、保存しません）"
+ },
+ "pv.cant.4": {
+  "en": "Your list of friends",
+  "ja": "友だちの一覧"
+ },
+ "pv.cant.5": {
+  "en": "Your name and icon",
+  "ja": "利用者の名前とアイコン"
+ },
+ "pv.cant.6": {
+  "en": "Call audio and video",
+  "ja": "通話の声と映像"
+ },
+ "pv.cant.7": {
+  "en": "Your secret key (which remains encrypted even when sent outside your device)",
+  "ja": "秘密鍵（端末の外へ送信される際も、必ず暗号化されています）"
+ },
+ "pv.cant.ex": {
+  "en": "Exceptions: the operator can see the text and the sender of messages attached to a report. The relay also keeps who invited whom for 90 days, and which account keeps which stamps (the stamp images stay encrypted). Messages you send with \"Send feedback to Tegami\" are addressed to the operator, so the operator reads them.",
+  "ja": "ただし、通報に添付されたメッセージについては、本文と送信者を運営者が閲覧できます。また、誰が誰を招待したかの記録は、リレーに90日間保存されます。どのアカウントがどのスタンプを保存しているかも、リレーに記録されます（スタンプの画像は暗号化されたままです）。「Tegamiへの意見」から送ったメッセージは、運営者宛てのメッセージとして運営者が読みます。"
+ },
+ "pv.keep.h": {
+  "en": "3. What the relay keeps",
+  "ja": "3. リレーが保存する情報"
+ },
+ "pv.keep.p": {
+  "en": "The relay is the server that delivers messages. The information it collects and stores is as follows.",
+  "ja": "リレーは、メッセージを配信するサーバーです。リレーが取得し保存する情報は、次のとおりです。"
+ },
+ "pv.k.1.t": {
+  "en": "Registered accounts",
+  "ja": "登録したアカウント"
+ },
+ "pv.k.l1": {
+  "en": "What",
+  "ja": "取得する情報"
+ },
+ "pv.k.1.1": {
+  "en": "Public key, whether the account was registered with an invite, registration date and time, and whether the account is suspended",
+  "ja": "公開鍵、招待の有無、登録日時、利用停止の有無"
+ },
+ "pv.k.l2": {
+  "en": "Purpose",
+  "ja": "利用目的"
+ },
+ "pv.k.1.2": {
+  "en": "To allow only registered accounts to send messages, and to suspend abusive accounts",
+  "ja": "登録済みのアカウントのみがメッセージを送信できるようにするため。不正なアカウントの利用を停止するため"
+ },
+ "pv.k.l3": {
+  "en": "How long",
+  "ja": "保存期間"
+ },
+ "pv.k.1.3": {
+  "en": "Until the account is deleted",
+  "ja": "アカウントの削除まで"
+ },
+ "pv.k.2.t": {
+  "en": "Message envelopes",
+  "ja": "メッセージの封筒"
+ },
+ "pv.k.2.1": {
+  "en": "The encrypted message (an \"envelope\": each message makes one for every recipient and one copy for the sender), the recipient's public key, the arrival time, and the data size. Envelopes sent by an account that registered without an invite also get a mark so that the app shows them only when the sender is already a friend (the sender's public key is not stored)",
+  "ja": "暗号化されたメッセージ（以下「封筒」といいます。メッセージ1通につき、受信者ごとに1つと、送信者の控えに1つ作られます）、宛先の公開鍵、受信日時、データサイズ。招待券なしで登録したアカウントが送った封筒には、友だち以外のときは表示しないための印も付けて保存します（送信者の公開鍵は保存しません）"
+ },
+ "pv.k.2.2": {
+  "en": "To deliver messages later when a device is off or offline",
+  "ja": "端末の電源が切れている時やオフラインの時に、後からメッセージを配信するため"
+ },
+ "pv.k.2.3": {
+  "en": "30 days. Envelopes with an expiry (moving an account to a new device, requests to and answers from your AI for reply drafts, the friend list, and call signals) are handed out only until they expire. After that, the relay deletes them when the next envelope arrives or in its daily cleanup, whichever comes first, so they are gone within a day at the latest",
+  "ja": "30日間。期限つきの封筒（新しい端末への移行、AIへの下書きの依頼と返事、友だちの一覧、通話の合図）は、期限までだけ配ります。期限を過ぎた封筒は、遅くとも1日以内に削除します"
+ },
+ "pv.k.3.t": {
+  "en": "Photos, videos, files, voice messages, and chat history transferred to a new device",
+  "ja": "写真、動画、ファイル、音声メッセージ、新しい端末へ移す会話の履歴"
+ },
+ "pv.k.3.1": {
+  "en": "Encrypted data. The uploader is not recorded",
+  "ja": "暗号化されたデータ。アップロードした利用者は記録しません"
+ },
+ "pv.k.3.2": {
+  "en": "To deliver them to recipients, or to the device you move to",
+  "ja": "受信者や、移した先の端末に配信するため"
+ },
+ "pv.k.3.3": {
+  "en": "30 days. After deletion, copies may remain in the browser cache of a device that received them, for up to 30 days",
+  "ja": "30日間。削除した後も、受け取った端末のブラウザのキャッシュに、最大30日間残る場合があります"
+ },
+ "pv.k.st.t": {
+  "en": "Stamps",
+  "ja": "スタンプ"
+ },
+ "pv.k.st.1": {
+  "en": "The encrypted stamp image, the public key of the account that keeps it, its size, and when it was stored",
+  "ja": "暗号化されたスタンプの画像、そのスタンプを保存しているアカウントの公開鍵、データサイズ、保存日時"
+ },
+ "pv.k.st.2": {
+  "en": "So you can send the same stamp again and use it on all your devices, and so only the account that keeps a stamp can delete it",
+  "ja": "同じスタンプを繰り返し送信し、利用者のすべての端末で使えるようにするため。スタンプを保存したアカウントだけが削除できるようにするため"
+ },
+ "pv.k.st.3": {
+  "en": "Until you delete the stamp. After deletion, copies may remain in caches for up to one day",
+  "ja": "利用者がスタンプを削除するまで。削除後も、配信のための一時的な保存に最大1日残る場合があります"
+ },
+ "pv.k.4.t": {
+  "en": "Invite records",
+  "ja": "招待の記録"
+ },
+ "pv.k.4.1": {
+  "en": "Who invited whom",
+  "ja": "誰が誰を招待したか"
+ },
+ "pv.k.4.2": {
+  "en": "To suspend accounts that engage in abuse, along with the accounts they invited",
+  "ja": "不正行為を行った利用者と、その利用者が招待した利用者の利用を停止するため"
+ },
+ "pv.k.4.3": {
+  "en": "90 days",
+  "ja": "90日間"
+ },
+ "pv.k.ai.t": {
+  "en": "AI registrations",
+  "ja": "AIの登録"
+ },
+ "pv.k.ai.1": {
+  "en": "For an AI account that registers itself as an AI: its public key, the public key of its owner (from the card the owner signed), when it registered, how many envelopes each AI account and each owner sent per day (kept under the owner's public key), and the daily limit the operator set for a particular owner, only if the operator changed it",
+  "ja": "AIとして登録したAIのアカウントの公開鍵、そのAIの持ち主の公開鍵（持ち主が署名した証明から取得します）、登録した日時、AIのアカウントごと、持ち主ごとの1日の封筒の送信数（持ち主の公開鍵ごとに数えます）、運営者が持ち主ごとに変えた場合に限り、その持ち主の1日の送信の上限"
+ },
+ "pv.k.ai.2": {
+  "en": "To limit how much an AI sends, per AI account and per owner, even when a modified app or tool skips the limits on the device, and to stop the owner's AI accounts when the operator stops the owner or the owner deletes their account",
+  "ja": "改造したアプリやツールが端末の上限を守らない場合でも、AIが送信する量をAIのアカウントごと、持ち主ごとに制限するため。また、運営者が持ち主の利用を停止した場合や持ち主がアカウントを削除した場合に、その持ち主のAIのアカウントも停止するため"
+ },
+ "pv.k.ai.3": {
+  "en": "The registration as an AI: until the AI account is deleted. If the owner deletes their account, the registration stays, stopped, with the owner's public key. The daily send counts: 2 days. The limit the operator set for an owner: no end date",
+  "ja": "AIとしての登録は、AIのアカウントの削除まで。持ち主がアカウントを削除した場合は、持ち主の公開鍵つきで、止めた状態のまま残ります。1日の送信数は2日間。運営者が持ち主ごとに変えた上限は、期限を設けていません"
+ },
+ "pv.k.dl.t": {
+  "en": "Deleted accounts",
+  "ja": "削除したアカウント"
+ },
+ "pv.k.dl.1": {
+  "en": "The public key of the deleted account and when it was deleted",
+  "ja": "削除したアカウントの公開鍵と、削除した日時"
+ },
+ "pv.k.dl.2": {
+  "en": "So the same public key cannot register again (an account suspended for abuse cannot come back by deleting itself), and so the relay does not keep envelopes sent to it",
+  "ja": "同じ公開鍵で再び登録できないようにするため（利用を停止されたアカウントが、自分で削除して登録し直すことを防ぐため）。また、削除したアカウント宛ての封筒をリレーに保存しないようにするため"
+ },
+ "pv.k.dl.3": {
+  "en": "Indefinitely",
+  "ja": "無期限"
+ },
+ "pv.k.5.t": {
+  "en": "Reports",
+  "ja": "通報"
+ },
+ "pv.k.5.1": {
+  "en": "The public keys of the reporting and reported accounts, and the reason for the report. If the reporter chooses, up to 20 messages from the reported user, decrypted on the reporter's device. The reported user is not notified",
+  "ja": "通報した利用者と通報された利用者の公開鍵、通報の理由。通報者が選択した場合は、通報された利用者のメッセージ20件まで（通報者の端末で復号したもの）。通報されたことは、通報された利用者に通知しません"
+ },
+ "pv.k.5.2": {
+  "en": "To stop abuse",
+  "ja": "不正行為を防止するため"
+ },
+ "pv.k.5.3": {
+  "en": "90 days",
+  "ja": "90日間"
+ },
+ "pv.k.6.t": {
+  "en": "Notification addresses",
+  "ja": "通知の宛先"
+ },
+ "pv.k.6.1": {
+  "en": "Your device’s notification address, the keys to encrypt notifications to it, and the public key of the account using it",
+  "ja": "端末の通知の宛先、通知の暗号化に使う鍵、その端末で利用するアカウントの公開鍵"
+ },
+ "pv.k.6.2": {
+  "en": "To tell you about new messages and calls",
+  "ja": "新着メッセージと着信を通知するため"
+ },
+ "pv.k.6.3": {
+  "en": "Until you turn notifications off",
+  "ja": "通知をオフにするまで"
+ },
+ "pv.k.7.t": {
+  "en": "Recovery backups",
+  "ja": "復旧用バックアップ"
+ },
+ "pv.k.7.1": {
+  "en": "A backup of your account, encrypted with your recovery code. The relay cannot tell which account it belongs to",
+  "ja": "復旧コードで暗号化したアカウントのバックアップ。どのアカウントのものかは、リレーでは識別できません"
+ },
+ "pv.k.7.2": {
+  "en": "To restore your account if you lose your device",
+  "ja": "端末の紛失時などにアカウントを復元するため"
+ },
+ "pv.k.7.3": {
+  "en": "Until you delete it",
+  "ja": "利用者が削除するまで"
+ },
+ "pv.k.8.t": {
+  "en": "Usage statistics",
+  "ja": "利用状況の統計"
+ },
+ "pv.k.8.1": {
+  "en": "Daily counts of envelopes, files and their total size, logins, and the estimated number of accounts that logged in. Public keys are not stored",
+  "ja": "1日ごとの、封筒の数、ファイルの数と容量、ログインの回数、ログインしたアカウントの推定数。公開鍵は保存しません"
+ },
+ "pv.k.8.2": {
+  "en": "To understand how Tegami is used and how many servers we need",
+  "ja": "利用状況を把握し、サーバーの規模を決めるため"
+ },
+ "pv.k.8.3": {
+  "en": "6 months. Only the operator can see the daily counts. What we publish is the total for each week that is over, rounded up to a multiple of 10 (0 to 9 shown as 0). The last 24 weeks are public at <a href=\"https://relay.tegami.chat/stats\">relay.tegami.chat/stats</a>",
+  "ja": "6か月間。1日ごとの数は運営者だけが見られます。公開するのは、終わった週ごとの合計を10の倍数に切り上げた数（0から9は0）で、直近24週分を<a href=\"https://relay.tegami.chat/stats\">relay.tegami.chat/stats</a>で公開しています"
+ },
+ "pv.k.9.t": {
+  "en": "Error reports",
+  "ja": "エラーの報告"
+ },
+ "pv.k.9.1": {
+  "en": "The error message, where in the code it occurred, the app version, and the device and browser type. Quoted text and long strings are removed on your device before sending. Keys and chat messages are not included. Sent only if you turn this on in settings (off by default)",
+  "ja": "エラーメッセージ、発生箇所、アプリのバージョン、端末とブラウザの種類。引用符で囲まれた文字列などは、端末で削除してから送信します。鍵とメッセージは含まれません。設定で有効にした場合のみ送信します（初期設定は無効）"
+ },
+ "pv.k.9.2": {
+  "en": "To fix bugs",
+  "ja": "不具合を修正するため"
+ },
+ "pv.k.9.3": {
+  "en": "Not stored by the relay. Up to 7 days in Cloudflare’s logs",
+  "ja": "リレーには保存しません。Cloudflareのログに最大7日間保存されます"
+ },
+ "pv.k.10.t": {
+  "en": "IP addresses",
+  "ja": "IPアドレス"
+ },
+ "pv.k.10.1": {
+  "en": "The address you connect from",
+  "ja": "接続元のIPアドレス"
+ },
+ "pv.k.10.2": {
+  "en": "To limit the number of connections and the amount of data sent from a single network, and to verify that you are not a bot when you register without an invite",
+  "ja": "1つのネットワークからの接続数と送信量を制限するため。招待なしの登録時に、自動プログラムでないことを確認するため"
+ },
+ "pv.k.10.3": {
+  "en": "Held in memory only, and never saved to disk. It stays in memory for rate limiting and is cleared when the number of entries grows large",
+  "ja": "メモリにだけ置き、ディスクには保存しません。流量を制限するためにメモリに残り、件数が増えると消えます"
+ },
+ "pv.dev.h": {
+  "en": "4. What stays on your device",
+  "ja": "4. 端末に保存される情報"
+ },
+ "pv.dev.p": {
+  "en": "The following are saved only on your device.",
+  "ja": "次の情報は、利用者の端末内にのみ保存されます。"
+ },
+ "pv.dev.1": {
+  "en": "Messages, photos, videos, files, voice messages and stamps",
+  "ja": "メッセージ、写真、動画、ファイル、音声メッセージ、スタンプ"
+ },
+ "pv.dev.2": {
+  "en": "Friends, groups, names and icons",
+  "ja": "友だち、グループ、名前とアイコン"
+ },
+ "pv.dev.3": {
+  "en": "Your secret key, encrypted with your passkey or a key inside your browser",
+  "ja": "秘密鍵（パスキーまたはブラウザ内の鍵で暗号化して保存します）"
+ },
+ "pv.dev.p2": {
+  "en": "Clearing your browser's site data deletes Tegami's data on that device. You can export your message history from settings.",
+  "ja": "ブラウザのサイトデータを削除すると、その端末の本サービスのデータも削除されます。メッセージの履歴は、設定画面から書き出すことができます。"
+ },
+ "pv.co.h": {
+  "en": "5. Companies that handle data",
+  "ja": "5. 情報を取り扱う外部の事業者"
+ },
+ "pv.co.p": {
+  "en": "Tegami uses the services below. None of them can read your encrypted messages.",
+  "ja": "本サービスは、次の外部事業者のサービスを利用しています。いずれの事業者も、暗号化されたメッセージを閲覧することはできません。"
+ },
+ "pv.c.1.t": {
+  "en": "Cloudflare, Inc.",
+  "ja": "Cloudflare, Inc."
+ },
+ "pv.c.l1": {
+  "en": "Country",
+  "ja": "国"
+ },
+ "pv.c.1.1": {
+  "en": "United States",
+  "ja": "アメリカ"
+ },
+ "pv.c.l2": {
+  "en": "Purpose",
+  "ja": "利用目的"
+ },
+ "pv.c.1.2": {
+  "en": "Runs the website, the app, the relay and file storage",
+  "ja": "サイト、アプリ、リレー、ファイル保存の運用"
+ },
+ "pv.c.l3": {
+  "en": "What it receives",
+  "ja": "送信される情報"
+ },
+ "pv.c.1.3": {
+  "en": "Your IP address when you connect, and the data handled by the relay. Messages (except those attached to reports), files and recovery backups remain encrypted",
+  "ja": "接続時のIPアドレスと、リレーが保存する情報。通報に添付されたメッセージを除き、メッセージ、ファイル、復旧用バックアップは暗号化されたまま保存されます"
+ },
+ "pv.c.2.t": {
+  "en": "Cloudflare, Inc.",
+  "ja": "Cloudflare, Inc."
+ },
+ "pv.c.2.1": {
+  "en": "United States",
+  "ja": "アメリカ"
+ },
+ "pv.c.2.2": {
+  "en": "Verifies that you are not a bot when you register without an invite (Turnstile)",
+  "ja": "招待なしの登録時に、自動プログラムでないことを確認（Turnstile）"
+ },
+ "pv.c.2.3": {
+  "en": "Your IP address and information about your browser",
+  "ja": "IPアドレスとブラウザの情報"
+ },
+ "pv.c.3.t": {
+  "en": "Cloudflare, Inc.",
+  "ja": "Cloudflare, Inc."
+ },
+ "pv.c.3.1": {
+  "en": "United States",
+  "ja": "アメリカ"
+ },
+ "pv.c.3.2": {
+  "en": "Finds a connection path between devices during calls (STUN), and relays the audio and video when the devices cannot connect directly or when \"Always relay calls\" is on (TURN)",
+  "ja": "通話時に、端末間の接続経路を確立（STUN）。端末間で直接つながらない場合や、「通話を常に中継する」を有効にした場合に、音声と映像を中継（TURN）"
+ },
+ "pv.c.3.3": {
+  "en": "Your IP address. When relaying: the IP addresses of both devices, when the call took place, and the amount of data. The audio and video stay encrypted while relayed. If you set \"Your own server\" in settings, your device does not send this information to Cloudflare",
+  "ja": "IPアドレス。中継する場合は、両方の端末のIPアドレス、通話の日時、データ量。音声と映像は暗号化されたまま中継されます。設定の「自分のサーバー」を指定した場合、利用者の端末からCloudflareへは送信されません"
+ },
+ "pv.c.4.t": {
+  "en": "Apple, Google, Mozilla, Microsoft",
+  "ja": "Apple、Google、Mozilla、Microsoft"
+ },
+ "pv.c.4.1": {
+  "en": "United States",
+  "ja": "アメリカ"
+ },
+ "pv.c.4.2": {
+  "en": "Deliver notifications to your device",
+  "ja": "端末への通知の配信"
+ },
+ "pv.c.4.3": {
+  "en": "Your notification address and when a notification was sent. The notification content is encrypted so only your device can decrypt it. It contains only whether it is a message or a call, which account it is for, and the number of new messages",
+  "ja": "通知の宛先と送信日時。通知の内容は暗号化され、利用者の端末でのみ開けます。内容は、メッセージか着信かの区別、宛先のアカウント、新着件数のみです"
+ },
+ "pv.co.us": {
+  "en": "Cloudflare's servers are located in the United States and other countries. The United States has no comprehensive federal privacy law like Japan's, and some US laws allow the government to order companies to hand over data. Japan's Personal Information Protection Commission publishes <a href=\"https://www.ppc.go.jp/personalinfo/legal/kaiseihogohou/#gaikoku\">an overview of the US legal system</a>.",
+  "ja": "Cloudflareのサーバーは、アメリカとほかの国にあります。アメリカには日本の個人情報保護法のような包括的な連邦法がなく、政府が会社に情報の提出を命じられる法律があります。アメリカの制度は、<a href=\"https://www.ppc.go.jp/personalinfo/legal/kaiseihogohou/#gaikoku\">個人情報保護委員会がまとめています</a>。"
+ },
+ "pv.call.h": {
+  "en": "6. Calls",
+  "ja": "6. 通話"
+ },
+ "pv.call.p1": {
+  "en": "Call audio and video are encrypted between the two devices (DTLS-SRTP).",
+  "ja": "通話の音声と映像は、端末間で暗号化されます（DTLS-SRTP）。"
+ },
+ "pv.call.p2": {
+  "en": "Calls usually go directly between the devices. When the devices cannot connect directly, or when \"Always relay calls\" is on, the call may go through Cloudflare's relay server (TURN). The relay server only forwards the encrypted audio and video and cannot see or hear them.",
+  "ja": "通話は、通常は端末間で直接送受信されます。端末間で直接つながらない場合や、「通話を常に中継する」を有効にした場合は、Cloudflareの中継サーバー（TURN）を経由することがあります。中継サーバーは、暗号化された音声と映像を転送するだけで、内容を閲覧できません。"
+ },
+ "pv.call.p3": {
+  "en": "The relay server receives the IP addresses of both devices, when the call took place, and the amount of data. Tegami's relay gives your app short-lived credentials for the relay server and does not record whom it gave them to. From Cloudflare, the operator receives only totals of the data relayed, by time and by Cloudflare data center, not a record of each call or any IP addresses. How long Cloudflare keeps this information is governed by <a href=\"https://www.cloudflare.com/privacypolicy/\">Cloudflare's privacy policy</a>.",
+  "ja": "中継サーバーには、両方の端末のIPアドレス、通話の日時、データ量が伝わります。リレーは、中継サーバーを利用するための一時的な認証情報をアプリに渡すだけで、誰に渡したかを記録しません。運営者がCloudflareから受け取るのは、時間帯とCloudflareのデータセンターごとのデータ量の集計だけで、通話ごとの記録やIPアドレスは受け取りません。Cloudflareでの保存期間は、<a href=\"https://www.cloudflare.com/privacypolicy/\">Cloudflareのプライバシーポリシー</a>に従います。"
+ },
+ "pv.call.p4": {
+  "en": "In a call that connects directly, the other person can see your IP address. If you turn on \"Always relay calls\" in settings, the other person cannot see your IP address. When this setting is on and no relay server is available, the call does not connect.",
+  "ja": "直接つながる通話では、通話の相手に利用者のIPアドレスが伝わります。設定の「通話を常に中継する」を有効にすると、相手にIPアドレスが伝わりません。この設定を有効にしている場合、中継サーバーを利用できないときは、通話をつなぎません。"
+ },
+ "pv.call.p5": {
+  "en": "If you set your own relay server under \"Your own server\" in settings, your device does not use Cloudflare's servers to find a path for the call or to relay it. The server you set receives the IP addresses of both devices and similar information. If the other person uses Tegami's server, their side of the call may still pass your IP address to Cloudflare. The signals that ring and set up a call go through the relay as encrypted envelopes, like messages. The server's address, username and password are stored only on that device.",
+  "ja": "設定の「自分のサーバー」で利用者自身の中継サーバーを指定した場合、利用者の端末は、通話の経路の確立と中継にCloudflareのサーバーを使いません。指定したサーバーには、両方の端末のIPアドレスなどが伝わります。相手がTegamiのサーバーを使っている場合は、相手側の中継によって、利用者のIPアドレスがCloudflareに伝わることがあります。呼び出しの合図は、メッセージと同じく暗号化された封筒としてリレーを経由します。指定したサーバーのアドレス、ユーザー名、パスワードは、その端末にのみ保存されます。"
+ },
+ "pv.ai.h": {
+  "en": "7. What we pass to your AI friends",
+  "ja": "7. AIの友だちへ渡す情報"
+ },
+ "pv.ai.p1": {
+  "en": "An AI friend is a program you run on your own computer. Messages with it also pass through the relay in encrypted envelopes.",
+  "ja": "AIの友だちは、利用者が自分のパソコンで動かすプログラムです。AIの友だちとのメッセージも、暗号化された封筒としてリレーを経由します。"
+ },
+ "pv.ai.p2": {
+  "en": "The official Tegami app passes the following to your AI friend only when you allow it in the AI permission settings. All AI permissions are off by default.",
+  "ja": "本サービスの公式のアプリは、利用者がAIの権限の設定で許可した場合に限り、次の情報をAIの友だちへ渡します。AIの権限は、初期設定ではすべて無効です。"
+ },
+ "pv.ai.1": {
+  "en": "Reply drafts: up to the 30 most recent text messages in one 1:1 chat with a friend, including your own (each cut to 2,000 characters), and your name and your friend's name as your device knows them (each up to 60 characters). Photos, videos, files, voice messages and calls are not passed",
+  "ja": "返信の下書き：友だちとの1対1のトークの文字のメッセージのうち、新しいものから30通まで（利用者自身のメッセージを含みます。1通あたり2,000文字まで）。あわせて、端末に登録されている利用者の名前と友だちの名前（それぞれ60文字まで）を渡します。写真、動画、ファイル、音声メッセージ、通話は渡しません"
+ },
+ "pv.ai.2": {
+  "en": "Your friend list: your friends' names and public keys. Other people's AIs and people you have blocked are not included",
+  "ja": "友だちの一覧：友だちの名前と公開鍵。ほかの人のAIと、ブロックした相手は含みません"
+ },
+ "pv.ai.3": {
+  "en": "Chats you invite an AI into: messages in that chat or group, only while everyone in it has agreed. This feature is not available yet, so nothing is shared now",
+  "ja": "AIを呼んだトークとグループ：そのトークのメッセージ。参加者全員が同意している間に限ります。この機能はまだ使えないため、いまは何も渡しません"
+ },
+ "pv.ai.p3": {
+  "en": "This information is encrypted for your own AI friend's public key. The envelopes for reply drafts and the friend list are handed out for 10 minutes only. After that, the relay deletes them when the next envelope arrives or in its daily cleanup, whichever comes first, so they are gone within a day at the latest. The operator cannot see what is passed.",
+  "ja": "渡す情報は、利用者自身のAIの友だちの公開鍵宛てに暗号化します。返信の下書きと友だちの一覧を渡す封筒は、10分間だけ配ります。10分を過ぎた封筒は、遅くとも1日以内にリレーから削除します。運営者は、渡した情報の中身を閲覧できません。"
+ },
+ "pv.ai.p4": {
+  "en": "The official app does not pass the following to AI friends:",
+  "ja": "本サービスの公式のアプリは、次のメッセージをAIの友だちへ渡しません。"
+ },
+ "pv.ai.n1": {
+  "en": "Messages from people who are not your friends",
+  "ja": "友だちではない人からのメッセージ"
+ },
+ "pv.ai.n2": {
+  "en": "Messages from people who have chosen not to let other people's AIs read what they write",
+  "ja": "「自分の文を相手のAIに読ませない」を選んでいる人のメッセージ"
+ },
+ "pv.ai.n3": {
+  "en": "Messages marked \"Don't let AI read\"",
+  "ja": "「AIに読ませない」の印が付いたメッセージ"
+ },
+ "pv.ai.p5": {
+  "en": "What your AI friend receives is saved on the computer it runs on, and may be sent to the AI service you use (such as Anthropic, OpenAI or Google). From there, it is handled under your agreement with that service and that service's privacy policy. If you use a model that runs on your own computer, it is not sent outside your computer. The operator is not involved in how that computer or the AI service handles the information. Once sent, the messages are no longer protected by Tegami's encryption.",
+  "ja": "AIの友だちが受け取った情報は、AIの友だちが動くパソコンに保存され、利用者が利用するAIサービス（Anthropic、OpenAI、Googleなど）に送信されることがあります。送信された情報は、利用者とAIサービスとの間の契約と、AIサービスのプライバシーポリシーに従って取り扱われます。利用者のパソコンで動くモデルを使う場合は、パソコンの外へ送信されません。運営者は、AIの友だちが動くパソコンとAIサービスでの情報の取扱いに関与しません。送信後のメッセージは、本サービスの暗号化による保護の対象外となります。"
+ },
+ "pv.ai.p6": {
+  "en": "Apps modified from Tegami's code may not follow the rules in this section. If the other person uses a modified app, your messages may reach their AI even if you have chosen not to let AI read them. Nothing can stop a recipient from copying a message by hand.",
+  "ja": "本サービスのコードを改造したアプリは、本節の定めに従わないことがあります。相手が改造したアプリを使っている場合、「自分の文を相手のAIに読ませない」を選んでいても、利用者のメッセージが相手のAIへ渡ることがあります。また、受信者が手作業でメッセージを書き写すことは防げません。"
+ },
+ "pv.never.h": {
+  "en": "8. What we never do",
+  "ja": "8. 運営者が行わないこと"
+ },
+ "pv.never.1": {
+  "en": "Sell your personal information",
+  "ja": "個人情報の販売"
+ },
+ "pv.never.2": {
+  "en": "Show ads",
+  "ja": "広告の表示"
+ },
+ "pv.never.3": {
+  "en": "Track you (we do not use analytics in the app or on the website)",
+  "ja": "利用者の行動の追跡（アプリとサイトにアクセス解析を導入していません）"
+ },
+ "pv.never.4": {
+  "en": "Use cookies on tegami.chat",
+  "ja": "tegami.chatでのCookieの利用"
+ },
+ "pv.never.5": {
+  "en": "Share personal information with third parties without your consent, except when required by law",
+  "ja": "法令に基づく場合を除き、本人の同意を得ずに個人情報を第三者へ提供すること"
+ },
+ "pv.gov.h": {
+  "en": "9. Requests from police and other authorities",
+  "ja": "9. 警察などの公的機関からの照会"
+ },
+ "pv.gov.p1": {
+  "en": "We only respond to requests that we are legally required to comply with under Japanese law. We can only provide the information listed in section 3. Except for messages attached to reports, we cannot provide the text of messages because we cannot read it.",
+  "ja": "運営者は、日本の法令に基づき応じる義務がある照会にのみ応じます。提供できるのは「3. リレーが保存する情報」に記載した情報に限られます。通報に添付されたメッセージを除き、メッセージの本文は運営者も閲覧できないため、提供できません。"
+ },
+ "pv.gov.p2": {
+  "en": "We will publish the number of requests each year. As of November 15, 2026, there have been none.",
+  "ja": "照会を受けた件数は、毎年公開します。2026年11月15日時点の件数は0件です。"
+ },
+ "pv.del.h": {
+  "en": "10. Requests about your personal data",
+  "ja": "10. 保有個人データの開示等の請求"
+ },
+ "pv.del.self": {
+  "en": "What you can do yourself:",
+  "ja": "利用者自身でできる操作"
+ },
+ "pv.del.a.1": {
+  "en": "Turn notifications off: the relay deletes your notification address and keys",
+  "ja": "通知をオフにすると、リレーは通知の宛先と鍵を削除します"
+ },
+ "pv.del.a.2": {
+  "en": "Tap \"Delete recovery code\" in settings: the relay deletes your recovery backup",
+  "ja": "設定の「復旧コードを削除」を押すと、リレーは復旧用バックアップを削除します"
+ },
+ "pv.del.a.3": {
+  "en": "Envelopes and files other than stamps are deleted automatically after 30 days",
+  "ja": "封筒と、スタンプ以外のファイルは、30日後に自動で削除されます"
+ },
+ "pv.del.a.4": {
+  "en": "Delete a stamp: the relay deletes the stamp image and the record of who kept it",
+  "ja": "スタンプを削除すると、リレーはスタンプの画像と保存の記録を削除します"
+ },
+ "pv.del.a.5": {
+  "en": "Tap \"Delete account\" in settings: the relay deletes the envelopes waiting for the account, its stamps, its notification addresses, its registration and its invite code, and the data on that device is deleted too. If that device has the recovery code, the recovery backup is deleted first",
+  "ja": "設定の「アカウントを削除」を押すと、リレーはそのアカウント宛ての封筒、スタンプ、通知の宛先、アカウントの登録、招待コードを削除します。あわせて、操作した端末のデータも削除します。その端末に復旧コードがある場合は、復旧用バックアップも先に削除します"
+ },
+ "pv.del.a.6": {
+  "en": "Even after the account is deleted, the following remain: the public key and when it was deleted, so the same key cannot register again; envelopes, files and transferred chat history already sent (deleted automatically after 30 days); reports and the records of whom the account invited (deleted automatically after 90 days); a recovery backup made on another device (deleted when you tap \"Delete recovery code\" on that device); the registration of each AI the account owned, kept stopped with the owner's public key so that it cannot send, and the daily send limit the operator set for that owner, if there is one; and the data on your other devices (deleted when you tap \"Remove from this device\" on each)",
+  "ja": "アカウントを削除した後も、次の情報は残ります。同じ公開鍵で再び登録できないようにするための公開鍵と削除した日時。ほかの利用者に送った封筒、ファイル、移した会話の履歴（30日後に自動で削除）。通報の記録と、そのアカウントが招待した記録（90日後に自動で削除）。ほかの端末で作った復旧コードの復旧用バックアップ（その端末で「復旧コードを削除」を押すと削除）。そのアカウントが持ち主だったAIの登録（AIが送信できないよう、持ち主の公開鍵つきで止めた状態のまま残ります）と、運営者が持ち主に設定した1日の送信の上限。ほかの端末のデータ（それぞれの端末で「この端末から削除」を押すと削除）"
+ },
+ "pv.del.a.7": {
+  "en": "\"Remove from this device\" in settings deletes the data on that device. If notifications are on, it also deletes that device's notification address from the relay. It deletes nothing else on the relay",
+  "ja": "設定の「この端末から削除」は、その端末のデータを削除します。通知を許可している場合は、リレーにあるその端末の通知の宛先も削除します。リレーのそれ以外の情報は削除しません"
+ },
+ "pv.del.ask": {
+  "en": "To ask for the purpose of use of information linked to your public key (such as registration, invite and report records, notification addresses, or stamps), or to request its disclosure, correction, addition, deletion, suspension of use, or cessation of sharing with third parties, email <a href=\"mailto:hello@tegami.chat\">hello@tegami.chat</a> with your account's public key. We disclose information by email.",
+  "ja": "公開鍵に結び付いた情報（登録、招待、通報の記録、通知の宛先、スタンプなど）について、利用目的の通知、開示、訂正、追加、削除、利用の停止、第三者への提供の停止を求める場合は、アカウントの公開鍵を記載して<a href=\"mailto:hello@tegami.chat\">hello@tegami.chat</a>までご連絡ください。開示は電子メールで行います。"
+ },
+ "pv.del.b.1": {
+  "en": "To verify your identity, the operator will send a Tegami message to that public key",
+  "ja": "本人確認のため、運営者がその公開鍵宛てに本サービスでメッセージを送信します"
+ },
+ "pv.del.b.2": {
+  "en": "If you have lost your device, or if you are making a request as a legal representative (such as a parent or guardian) or an authorized agent, please say so in your email. We will let you know how to verify your identity",
+  "ja": "端末を紛失した場合や、法定代理人または代理人が請求する場合は、その旨をメールに記載してください。運営者から確認の方法をご案内します"
+ },
+ "pv.del.b.3": {
+  "en": "Records needed to prevent abuse, such as a record that an account was suspended, may not be deleted",
+  "ja": "不正行為の防止に必要な記録（運営者が利用を停止した記録など）は、削除できない場合があります"
+ },
+ "pv.del.b.4": {
+  "en": "Files other than stamps, and recovery backups, are not linked to your public key, so we cannot identify them from your public key. Stamps are linked to your public key, so requests for disclosure and deletion include them",
+  "ja": "スタンプ以外のファイルと復旧用バックアップは、公開鍵と結び付いていないため、公開鍵から特定することはできません。スタンプは公開鍵と結び付いているため、開示と削除の請求の対象になります"
+ },
+ "pv.del.b.5": {
+  "en": "We use your email only to handle your request, and delete it within a year after we finish",
+  "ja": "いただいたメールは請求への対応にのみ利用し、対応完了から1年以内に削除します"
+ },
+ "pv.del.b.6": {
+  "en": "There is no fee for making a request",
+  "ja": "手数料は無料です"
+ },
+ "pv.kid.h": {
+  "en": "11. Children",
+  "ja": "11. 子どもの利用"
+ },
+ "pv.kid.p1": {
+  "en": "Tegami doesn't check anyone's age. Children under 13 should use Tegami with a parent or guardian.",
+  "ja": "本サービスは、利用者の年齢を確認していません。13歳未満の方は、保護者の方と一緒にご利用ください。"
+ },
+ "pv.kid.p2": {
+  "en": "In the European Union, children under 16 need a parent or guardian's consent to turn on notifications or error reports. If their country sets a lower age, that age applies.",
+  "ja": "欧州連合では、16歳未満の方が通知やエラーの報告を有効にするには、保護者の同意が必要です。居住国がより低い年齢を定めている場合は、その年齢未満の方が対象となります。"
+ },
+ "pv.safe.h": {
+  "en": "12. How we protect your data",
+  "ja": "12. 安全管理措置"
+ },
+ "pv.safe.1": {
+  "en": "Messages, photos, videos, files, voice messages, stamps and recovery backups are encrypted on your device before they are sent, except messages attached to reports",
+  "ja": "メッセージ、写真、動画、ファイル、音声メッセージ、スタンプ、復旧用バックアップは、端末で暗号化してから送信します（通報に添付されたメッセージを除く）"
+ },
+ "pv.safe.2": {
+  "en": "All connections to the website, the app and the relay are encrypted",
+  "ja": "サイト、アプリ、リレーとの通信は、すべて暗号化しています"
+ },
+ "pv.safe.3": {
+  "en": "The relay only accepts messages in encrypted envelopes",
+  "ja": "リレーは、暗号化された封筒のみを受け付けます"
+ },
+ "pv.safe.4": {
+  "en": "The relay gives each logged-in account only the envelopes addressed to it",
+  "ja": "リレーは、ログインしたアカウントに対し、そのアカウント宛ての封筒のみを配信します"
+ },
+ "pv.safe.5": {
+  "en": "Administrative actions, such as suspending an account, can only be carried out when signed with the operator's key",
+  "ja": "アカウントの利用停止などの運営上の操作は、運営者の鍵による署名がある場合のみ実行できます"
+ },
+ "pv.safe.6": {
+  "en": "Data stored on the relay is automatically deleted once its storage period expires",
+  "ja": "リレーが保存する情報は、保存期間の経過後に自動で削除します"
+ },
+ "pv.safe.7": {
+  "en": "All code is public on <a href=\"https://github.com/tegami-chat/tegami\">GitHub</a>. You can check what the relay stores in <a href=\"https://github.com/tegami-chat/tegami/tree/main/relay/src\">relay/src</a>. However, there is not yet a way to verify from the outside that the running relay uses that exact code",
+  "ja": "コードはすべて<a href=\"https://github.com/tegami-chat/tegami\">GitHub</a>で公開しています。リレーが保存する情報は<a href=\"https://github.com/tegami-chat/tegami/tree/main/relay/src\">relay/src</a>で確認できます。ただし、稼働中のリレーが公開コードと同一であるかを外部から検証する仕組みは、まだありません"
+ },
+ "pv.safe.8": {
+  "en": "Only the operator handles the operator's administrative key and report records",
+  "ja": "運営者の管理用の鍵と通報の記録は、運営者のみが取り扱います"
+ },
+ "pv.eu.h": {
+  "en": "13. If you live in the European Union",
+  "ja": "13. 欧州連合にお住まいの方へ"
+ },
+ "pv.eu.p1": {
+  "en": "The operator complies with the European Union's General Data Protection Regulation (GDPR). The legal bases for processing your data are:",
+  "ja": "運営者は、欧州連合の一般データ保護規則に従います。情報を取り扱う法的根拠は、次のとおりです。"
+ },
+ "pv.eu.1": {
+  "en": "Necessary to provide the service: registering your public key, delivering messages and files, connecting calls, storing stamps, and storing recovery backups",
+  "ja": "サービスの提供に必要な取扱い：公開鍵の登録、メッセージとファイルの送受信、通話の接続、スタンプの保管、復旧用バックアップの保管"
+ },
+ "pv.eu.2": {
+  "en": "Legitimate interests: preventing abuse (including keeping deleted accounts from registering again), limiting the number of connections and the amount of data sent, and compiling usage statistics",
+  "ja": "運営者の正当な利益：不正行為の防止（削除したアカウントの再登録の防止を含む）、接続数と送信量の制限、利用状況の統計"
+ },
+ "pv.eu.3": {
+  "en": "Your consent: notifications and error reports. You can withdraw consent in settings at any time. Withdrawing does not affect the lawfulness of processing before withdrawal",
+  "ja": "利用者の同意：通知とエラーの報告。設定からいつでも同意を撤回できます。撤回前の取扱いの適法性には影響しません"
+ },
+ "pv.eu.p2": {
+  "en": "Using the service requires a public key and your IP address while connected, and registering also requires an invite or bot verification. We do not make automated decisions about you or build profiles. The European Commission recognizes Japan as providing an adequate level of data protection.",
+  "ja": "本サービスの利用には、公開鍵と接続中のIPアドレスが必要です。登録には、招待または自動プログラムでないことの確認も必要です。自動化された意思決定やプロファイリングは行いません。欧州委員会は、日本の個人情報保護の水準が十分であると認めています。"
+ },
+ "pv.eu.p3": {
+  "en": "You have the right to access, correct, delete and export your data, to restrict or object to how it is processed, and to lodge a complaint with the data protection authority in your country.",
+  "ja": "欧州連合にお住まいの方は、情報の開示、訂正、削除、取扱いの制限、データポータビリティ、取扱いへの異議を求める権利を有します。また、居住国のデータ保護監督機関に苦情を申し立てることができます。"
+ },
+ "pv.ca.h": {
+  "en": "14. If you live in California",
+  "ja": "14. カリフォルニア州にお住まいの方へ"
+ },
+ "pv.ca.p": {
+  "en": "Tegami doesn't track you across websites and has no ads or analytics from other companies. A Do Not Track setting in your browser therefore doesn't change anything Tegami does.",
+  "ja": "本サービスは、サイトをまたいだ追跡を行わず、他社の広告やアクセス解析も導入していません。そのため、ブラウザのDo Not Trackの設定によって本サービスの動作が変わることはありません。"
+ },
+ "pv.chg.h": {
+  "en": "15. Changes to this policy",
+  "ja": "15. 本ポリシーの変更"
+ },
+ "pv.chg.p1": {
+  "en": "When this policy changes, we add the date of the change at the end. The full <a href=\"https://github.com/tegami-chat/tegami/commits/main/website/src/privacy.html\">change history</a> is on GitHub. Important changes are announced in advance on tegami.chat and Tegami's official accounts.",
+  "ja": "変更した際は、末尾に改定日を追記します。<a href=\"https://github.com/tegami-chat/tegami/commits/main/website/src/privacy.html\">変更の履歴</a>はGitHubで確認できます。重要な変更は、事前にtegami.chatと本サービスの公式アカウントでお知らせします。"
+ },
+ "pv.chg.p2": {
+  "en": "If the Japanese and English versions differ, the Japanese version applies.",
+  "ja": "日本語版と英語版の内容に相違がある場合は、日本語版が優先します。"
+ },
+ "pv.ask.h": {
+  "en": "16. Contact",
+  "ja": "16. お問い合わせ窓口"
+ },
+ "pv.ask.p": {
+  "en": "If you have questions, requests or complaints about how we handle personal information, please contact us below. We use your email only to respond to your inquiry.",
+  "ja": "個人情報の取扱いに関する問い合わせ、請求、苦情は、次の窓口で受け付けます。いただいたメールは、対応のためにのみ利用します。"
+ },
+ "pv.op.1.k": {
+  "en": "Operator",
+  "ja": "運営者"
+ },
+ "pv.op.1.v": {
+  "en": "Yoshihiro Azuma",
+  "ja": "Yoshihiro Azuma"
+ },
+ "pv.op.2.k": {
+  "en": "Address",
+  "ja": "所在地"
+ },
+ "pv.op.2.v": {
+  "en": "We will provide it without delay on request.",
+  "ja": "求めがあれば遅滞なく回答します。"
+ },
+ "pv.op.3.k": {
+  "en": "Contact",
+  "ja": "連絡先"
+ },
+ "pv.op.3.v": {
+  "en": "<a href=\"mailto:hello@tegami.chat\">hello@tegami.chat</a>",
+  "ja": "<a href=\"mailto:hello@tegami.chat\">hello@tegami.chat</a>"
+ },
+ "pv.date": {
+  "en": "Established: November 15, 2026<br>Last revised: November 18, 2026",
+  "ja": "制定日：2026年11月15日<br>最終改定日：2026年11月18日"
+ },
+ "nav.how": {
+  "en": "Security",
+  "ja": "安全の仕組み"
+ },
+ "nav.status": {
+  "en": "Status and stats",
+  "ja": "稼働状況と利用統計"
+ },
+ "nav.faq": {
+  "en": "FAQ",
+  "ja": "よくある質問"
+ },
+ "nav.menu": {
+  "en": "Menu",
+  "ja": "メニュー"
+ },
+ "ft.tag": {
+  "en": "Your chats belong to you.<br>Bring your own AI.",
+  "ja": "トークはあなたのもの。<br>AIの持ち込み自由。"
+ },
+ "ft.os.browser": {
+  "en": "Browser",
+  "ja": "ブラウザ"
+ },
+ "ft.os.iphone": {
+  "en": "iPhone",
+  "ja": "iPhone"
+ },
+ "ft.os.android": {
+  "en": "Android",
+  "ja": "Android"
+ },
+ "ft.os.windows": {
+  "en": "Windows",
+  "ja": "Windows"
+ },
+ "ft.os.mac": {
+  "en": "Mac",
+  "ja": "Mac"
+ },
+ "ft.os.linux": {
+  "en": "Linux",
+  "ja": "Linux"
+ },
+ "ft.users": {
+  "en": "For users",
+  "ja": "利用者の方へ"
+ },
+ "ft.compare": {
+  "en": "Compare apps",
+  "ja": "他アプリとの比較"
+ },
+ "ft.devs": {
+  "en": "For developers",
+  "ja": "開発者の方へ"
+ },
+ "ft.ov": {
+  "en": "Overview",
+  "ja": "概要"
+ },
+ "dp.arch": {
+  "en": "Architecture",
+  "ja": "全体の構成"
+ },
+ "dp.enc": {
+  "en": "Encryption",
+  "ja": "暗号化"
+ },
+ "dp.keys": {
+  "en": "Keys",
+  "ja": "鍵"
+ },
+ "dp.relay": {
+  "en": "Relay",
+  "ja": "リレー"
+ },
+ "dp.ai": {
+  "en": "AI",
+  "ja": "AI"
+ },
+ "dp.spec": {
+  "en": "Technical spec",
+  "ja": "技術仕様"
+ },
+ "ft.devcompare": {
+  "en": "Developer comparison",
+  "ja": "開発者向けの比較"
+ },
+ "ft.devfaq": {
+  "en": "Developer FAQ",
+  "ja": "開発者向けのよくある質問"
+ },
+ "ft.project": {
+  "en": "Project",
+  "ja": "プロジェクト"
+ },
+ "roadmap": {
+  "en": "Roadmap",
+  "ja": "ロードマップ"
+ },
+ "ft.src": {
+  "en": "Source code (GitHub)",
+  "ja": "ソースコード（GitHub）"
+ },
+ "ft.issues": {
+  "en": "Report a bug",
+  "ja": "不具合を報告する"
+ },
+ "ft.community": {
+  "en": "Community",
+  "ja": "コミュニティ"
+ },
+ "ft.privacy": {
+  "en": "Privacy policy",
+  "ja": "プライバシーポリシー"
+ },
+ "ft.about": {
+  "en": "About us",
+  "ja": "運営者情報"
+ }
+}

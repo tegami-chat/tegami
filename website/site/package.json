@@ -1,0 +1,20 @@
+{
+  "name": "tegami-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "astro build && node ../scripts/inline-hashes.mjs",
+    "dev": "astro dev"
+  },
+  "dependencies": {
+    "astro": "7.4.3",
+    "astro-icon": "1.1.5",
+    "@iconify-json/tabler": "1.2.38",
+    "@tailwindcss/typography": "0.5.20",
+    "@tailwindcss/vite": "4.3.3",
+    "tailwindcss": "4.3.3",
+    "tailwind-merge": "3.6.0",
+    "js-yaml": "4.3.2",
+    "lodash.merge": "4.6.2"
+  }
+}

@@ -1,0 +1,14 @@
+---
+import HeroText from '~/components/widgets/HeroText.astro';
+import FAQs from '~/components/widgets/FAQs.astro';
+import { t, type Lang } from '~/site';
+
+const { lang = 'en' } = Astro.props as { lang?: Lang };
+const items = ['free', 'read', 'phone', 'devices', 'friends', 'lost', 'multi', 'collect', 'ai', 'spam', 'shutdown', 'dev'].map((k) => ({
+  title: t(`faq.${k}.q`, lang),
+  description: t(`faq.${k}.a`, lang),
+}));
+---
+
+<HeroText title={t('faq.h', lang)} />
+<FAQs items={items} />
