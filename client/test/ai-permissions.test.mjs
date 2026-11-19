@@ -25,6 +25,9 @@ globalThis.localStorage = {
 
 // Most tests here check the gate with every stage open; the stage itself is tested at the end.
 process.env.EXPO_PUBLIC_TEGAMI_AI_STAGE = '3';
+// The log is kept encrypted (src/lib/at-rest.ts): open an account first, as the app does.
+const A = await import('../src/lib/at-rest.ts');
+await A.openAtRest('main', new Uint8Array(32).fill(1));
 const P = await import('../src/lib/ai-permissions.ts');
 const { checkAi, gateAi, setAiSwitch, getAiPermissions, stopAllAi } = P;
 
@@ -101,7 +104,7 @@ test('sending without asking needs sending with asking', () => {
 test('the gate writes every decision to the log', () => {
   assert.equal(gateAi({ ai: AI, model: MODEL, action: 'read', friend: TEST_B }, isFriend), true);
   assert.equal(gateAi({ ai: AI, model: MODEL, action: 'read', friend: STRANGER }, isFriend), false);
-  const log = JSON.parse(store.get('tegami.ai.log'));
+  const log = JSON.parse(A.sealedRaw('tegami.ai.log'));
   assert.equal(log.length, 2);
   assert.deepEqual([log[0].allowed, log[1].allowed, log[1].stoppedBy], [true, false, 'stranger']);
 });
@@ -110,7 +113,7 @@ test('the log keeps which messages were handed over, only when allowed', () => {
   const range = { count: 3, from: 100, to: 200 };
   gateAi({ ai: AI, model: MODEL, action: 'read', friend: TEST_B, range }, isFriend);
   gateAi({ ai: AI, model: MODEL, action: 'read', friend: STRANGER, range }, isFriend);
-  const log = JSON.parse(store.get('tegami.ai.log'));
+  const log = JSON.parse(A.sealedRaw('tegami.ai.log'));
   assert.deepEqual(log.at(-2).range, range);
   assert.equal(log.at(-1).range, undefined);
 });
@@ -180,10 +183,10 @@ test('settings from another device: unknown or broken values are dropped, the lo
     friends: { [TEST_B]: { read: true, draft: 1 } },
   });
   assert.deepEqual(clean, { all: { read: true }, models: { [MODEL]: { read: false } }, ais: {}, friends: { [TEST_B]: { read: true } }, peerAis: {} });
-  const logBefore = store.get('tegami.ai.log');
+  const logBefore = A.sealedRaw('tegami.ai.log');
   P.replaceAiPermissions(clean);
   assert.equal(check({ action: 'read', friend: TEST_B }), 'model');
-  assert.equal(store.get('tegami.ai.log'), logBefore);
+  assert.equal(A.sealedRaw('tegami.ai.log'), logBefore);
 });
 
 test('an older bundle without settings turns every AI off', () => {
@@ -231,12 +234,12 @@ test('a time limit: on until then, off afterwards, and the sweep turns it off an
   setAiSwitch({ layer: 'friend', id: TEST_B }, 'read', { until: NOW + 60 });
   assert.equal(at({ action: 'read', friend: TEST_B }), null);
   assert.equal(at({ action: 'read', friend: TEST_B }, NOW + 61), 'expired');
-  const before = JSON.parse(store.get('tegami.ai.log')).length;
+  const before = JSON.parse(A.sealedRaw('tegami.ai.log')).length;
   P.expireAiSwitches(NOW + 4000);
   assert.equal(getAiPermissions().all.contacts, false);
   assert.equal(getAiPermissions().friends[TEST_B].read, false);
   assert.equal(getAiPermissions().all.read, true);
-  const log = JSON.parse(store.get('tegami.ai.log')).slice(before);
+  const log = JSON.parse(A.sealedRaw('tegami.ai.log')).slice(before);
   assert.deepEqual(log.map((e) => [e.action, e.stoppedBy, e.expired.layer]), [['contacts', 'expired', 'all'], ['read', 'expired', 'friend']]);
 });
 
@@ -401,7 +404,7 @@ test('permissions given for a while end when something about the AI changes (end
     peerAis: { [`${AI}>${PEER}`]: { until: later }, [`${AI2}>${PEER}`]: { until: later } },
   });
   const before = P.getAiPermissions;
-  const logBefore = JSON.parse(store.get([...store.keys()].find((k) => k.endsWith('ai.log')) ?? '[]') ?? '[]').length;
+  const logBefore = JSON.parse(A.sealedRaw('tegami.ai.log') ?? '[]').length;
   assert.deepEqual(P.endAiGrants(AI, 'unmarked'), [PEER]);
   const p = before();
   // The time-limited switch is off now; ずっと and 毎回確認 stay as the user set them.
@@ -411,7 +414,7 @@ test('permissions given for a while end when something about the AI changes (end
   assert.deepEqual(p.ais[AI2], { read: { until: later } });
   assert.ok(p.peerAis[`${AI2}>${PEER}`]);
   // Each ended permission is in the log with the reason.
-  const log = JSON.parse(store.get([...store.keys()].find((k) => k.endsWith('ai.log'))));
+  const log = JSON.parse(A.sealedRaw('tegami.ai.log'));
   const ended = log.slice(logBefore).filter((e) => e.ended === 'unmarked');
   assert.deepEqual(ended.map((e) => e.action).sort(), ['otherAi', 'read']);
   // Nothing left to end: nothing changes and nothing is logged.

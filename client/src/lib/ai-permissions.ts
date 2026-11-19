@@ -28,7 +28,7 @@
 import { useSyncExternalStore } from 'react';
 
 import { findMoney, findSecret } from './ai-screen';
-import { k, load, save } from './storage';
+import { k, load, rawOf, save } from './storage';
 
 /** Actions, from the least to the most power. */
 export const AI_ACTIONS = ['contacts', 'read', 'draft', 'send', 'autosend', 'otherAi'] as const;
@@ -159,14 +159,6 @@ const now = () => Math.floor(Date.now() / 1000);
 
 let cache: { key: string; raw: string | null; value: AiPermissions } | null = null;
 const listeners = new Set<() => void>();
-
-function rawOf(key: string) {
-  try {
-    return globalThis.localStorage?.getItem(key) ?? null;
-  } catch {
-    return null;
-  }
-}
 
 /** Read again whenever the stored text changed, so a switch turned off in another tab stops the gate here too. */
 export function getAiPermissions(): AiPermissions {
@@ -606,12 +598,7 @@ let logCache: { key: string; raw: string | null; value: AiLogEntry[] } | null = 
 
 function getLog(): AiLogEntry[] {
   const key = k('ai.log');
-  let raw: string | null = null;
-  try {
-    raw = globalThis.localStorage?.getItem(key) ?? null;
-  } catch {
-    raw = null;
-  }
+  const raw = rawOf(key);
   if (logCache?.key !== key || logCache.raw !== raw) logCache = { key, raw, value: load<AiLogEntry[]>(key, []) };
   return logCache.value;
 }
