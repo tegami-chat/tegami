@@ -252,8 +252,8 @@
   "ja": "Tegamiの独立を守るために。"
  },
  "don.t": {
-  "en": "Tegami is made by an independent developer in Japan. No investors, no ads, and your data is never for sale. Right now the developer covers the costs. If you'd like Tegami to keep going without ads, your donation helps.",
-  "ja": "Tegamiは、日本の個人開発者が作っています。投資家も広告もなく、あなたの情報を売ることもありません。運営の費用は、いまは開発者の負担です。広告に頼らずに続けるため、寄付で支えてもらえるとうれしいです。"
+  "en": "Tegami is made by an independent developer in Japan. We don't take investment, and we never sell your personal data. To keep going without ads, we'd be grateful if those who support what we're doing could help with a donation.",
+  "ja": "Tegamiは日本の個人開発者が作っています。投資は受け付けておらず、個人情報を売ることもありません。広告に頼らず続けていくため、賛同いただける方に寄付で支えていただけますと幸いです。"
  },
  "don.server.h": {
   "en": "Servers",
