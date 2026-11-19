@@ -73,7 +73,7 @@ try {
     // ---------- with the system's store ----------
     const D = newHome();
     const a = agentIn(D);
-    a.init({ name: 'テストAI', model: 'test' });
+    a.init({ name: '試験のAI', model: 'test' });
     a.addContact({ pubkey: person.pk, name: 'テストA', trusted: true });
     a.receive(wrapTo(a, '秘密の話です'));
     a.state.peerAis = { [bytesToHex(generateSecretKey())]: { until: 0, name: 'テストBのAI' } };
@@ -92,7 +92,7 @@ try {
     // ---------- moving plain records over ----------
     const P = newHome();
     const p0 = agentIn(P);
-    p0.init({ name: 'テストAI', model: 'test' });
+    p0.init({ name: '試験のAI', model: 'test' });
     writeFileSync(join(P, 'contacts.json'), JSON.stringify([{ pubkey: person.pk, name: '古い名前', trusted: true }]));
     writeFileSync(join(P, 'messages.json'), JSON.stringify([
       { id: '1', from: person.pk, peer: person.pk, at: now - 40 * day, text: '四十日前の文' },
@@ -113,7 +113,7 @@ try {
     // ---------- the store does not open (a locked keyring) ----------
     const L = newHome();
     const l0 = agentIn(L);
-    l0.init({ name: 'テストAI', model: 'test' });
+    l0.init({ name: '試験のAI', model: 'test' });
     const keyFile = readFileSync(join(L, 'key.json'), 'utf8');
     writeFileSync(join(L, 'key.json'), JSON.stringify({ ...JSON.parse(keyFile), store: 'locked-test', data: 'x', account: 'x' }));
     const { value: l1, said } = quiet(() => {
@@ -129,7 +129,7 @@ try {
   process.env.TEGAMI_SECRET_STORE = 'plain';
   const N = newHome();
   const n0 = agentIn(N);
-  n0.init({ name: 'テストAI', model: 'test' });
+  n0.init({ name: '試験のAI', model: 'test' });
   n0.addContact({ pubkey: person.pk, name: 'テストA', trusted: true });
   writeFileSync(join(N, 'messages.json'), JSON.stringify([{ id: '9', from: person.pk, peer: person.pk, at: now, text: '前からの平文' }]));
   const { value: n1, said: noted } = quiet(() => {

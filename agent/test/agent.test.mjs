@@ -118,7 +118,7 @@ const relay = process.env.RELAY ? null : spawn(process.execPath, [join(ROOT, '..
 await new Promise((r) => setTimeout(r, 800));
 let watch;
 try {
-  const out = cli('init', '--name', 'テストAI', '--model', 'Echo');
+  const out = cli('init', '--name', '試験のAI', '--model', 'Echo');
   const invite = out.match(/https:\/\/app\.tegami\.chat\/i#\S+/)?.[0] ?? '';
   check('init prints an invite link with name and model', invite.includes('n=') && invite.includes('m=Echo'));
   const agentPk = nip19.decode(invite.match(/npub1[0-9a-z]+/)[0]).data;
@@ -374,7 +374,7 @@ try {
     const rumor = nip59.createRumor({ kind: 14, content: text, tags: everyone.filter((x) => x !== from.pk).map((x) => ['p', x]) }, from.sk);
     await Promise.any(from.pool.publish([RELAY], nip59.createWrap(nip59.createSeal(rumor, from.sk, agentPk), agentPk), { onauth: async (t) => finalizeEvent(t, from.sk) }));
   };
-  await groupNote(owner, { t: 'invite', name: 'テストAI', model: 'Echo' });
+  await groupNote(owner, { t: 'invite', name: '試験のAI', model: 'Echo' });
   await groupNote(friend, { t: 'answer', yes: true });
   await new Promise((r) => setTimeout(r, 1000));
   await groupSay(owner, 'まだ全員ではない');
@@ -401,7 +401,7 @@ try {
     const rumor = nip59.createRumor({ kind: 10104, content: JSON.stringify({ ...data, members: pair, ai: agentPk }), tags: [...pair.filter((x) => x !== from.pk), agentPk].map((x) => ['p', x]) }, from.sk);
     await Promise.any(from.pool.publish([RELAY], nip59.createWrap(nip59.createSeal(rumor, from.sk, agentPk), agentPk), { onauth: async (t) => finalizeEvent(t, from.sk) }));
   };
-  await pairNote(owner, { t: 'invite', name: 'テストAI' });
+  await pairNote(owner, { t: 'invite', name: '試験のAI' });
   await new Promise((r) => setTimeout(r, 800));
   const pairRoom = pair.join(',');
   const notYet = await mcp.callTool({ name: 'tegami_send', arguments: { to: pairRoom, text: 'まだ' } });

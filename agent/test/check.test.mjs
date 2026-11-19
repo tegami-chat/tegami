@@ -137,7 +137,7 @@ try {
   const HOME = newHome();
   const env = { ...process.env, TEGAMI_AGENT_HOME: HOME, TEGAMI_RELAYS: RELAY, TEGAMI_SECRET_STORE: 'plain' };
   const cli = (...args) => execFileSync(process.execPath, [join(ROOT, 'agent.mjs'), ...args], { env, encoding: 'utf8' });
-  const ai = nip19.decode(cli('init', '--name', 'テストAI').match(/npub1[0-9a-z]+/)[0]).data;
+  const ai = nip19.decode(cli('init', '--name', '試験のAI').match(/npub1[0-9a-z]+/)[0]).data;
   const user = () => {
     const sk = generateSecretKey();
     const pk = getPublicKey(sk);
