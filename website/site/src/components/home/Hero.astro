@@ -9,20 +9,33 @@ import PlatformPills from '~/components/PlatformPills.astro';
 const { lang = 'en' } = Astro.props as { lang?: Lang };
 const x = (k: string) => t(k, lang);
 ---
-<!-- For everyone, on the phone -->
-<Section rhythm="page" trim="end" class="text-center">
-  <Logo id="tg-hero" size="hero" />
-  <Badge status="available" lang={lang} label={x('beta')} />
-  <p class="mt-3 text-small font-medium text-fg-muted"><Fragment set:html={x('hero.kicker')} /></p>
-  <Heading level={1} style="display" class="mt-4">
-    <span class="block"><Fragment set:html={x('hero.h1a')} /></span>
-    <span class="mt-4 block"><Fragment set:html={x('hero.h1b')} /></span>
-  </Heading>
+<!-- For everyone, on the phone: the words on the left, the computer chat with the AI's "send?" check over its corner on the right -->
+<Section rhythm="page" trim="end" class="grid items-center gap-12 text-center lg:grid-cols-2 lg:text-left">
+  <div>
+    <Logo id="tg-hero" size="hero" class="lg:mx-0" />
+    <Badge status="available" lang={lang} label={x('beta')} />
+    <p class="mt-3 text-small font-medium text-fg-muted"><Fragment set:html={x('hero.kicker')} /></p>
+    <Heading level={1} style="display" class="mt-4">
+      <span class="block"><Fragment set:html={x('hero.h1a')} /></span>
+      <span class="mt-4 block"><Fragment set:html={x('hero.h1b')} /></span>
+    </Heading>
 
-  <div class="mt-8 flex flex-wrap justify-center gap-3">
-    <Button href="https://app.tegami.chat/" external lang={lang}><Fragment set:html={x('cta.browser')} /></Button>
-    <Button href={link('/how', lang)} variant="secondary"><Fragment set:html={x('how.cta')} /></Button>
+    <div class="mt-8 flex flex-wrap justify-center gap-3 lg:justify-start">
+      <Button href="https://app.tegami.chat/" external lang={lang}><Fragment set:html={x('cta.browser')} /></Button>
+      <Button href={link('/how', lang)} variant="secondary"><Fragment set:html={x('how.cta')} /></Button>
+    </div>
+
+    <div class="mt-4 flex justify-center lg:justify-start"><PlatformPills lang={lang} /></div>
   </div>
 
-  <div class="mt-4"><PlatformPills lang={lang} centered /></div>
+  <div class="shot-stack">
+    <div class="shot-window">
+      <div class="shot-window-bar"><i></i><i></i><i></i></div>
+      <img src="/shots/pc-chat-light.webp" width="1440" height="900" alt={x('hero.alt.pc')} class="shot-light" />
+      <img src="/shots/pc-chat-dark.webp" width="1440" height="900" alt={x('hero.alt.pc')} class="shot-dark" />
+    </div>
+    <div class="shot-phone">
+      <img src="/shots/phone-ai-send.webp" width="780" height="1520" alt={x('hero.alt.send')} />
+    </div>
+  </div>
 </Section>

@@ -1978,5 +1978,33 @@
  "ft.docs": {
   "en": "Developer docs",
   "ja": "開発者向けドキュメント"
+ },
+ "hero.alt.pc": {
+  "en": "Tegami chat screen on a computer",
+  "ja": "パソコンで開いたTegamiのトーク画面"
+ },
+ "hero.alt.send": {
+  "en": "A dialog where the AI asks whether to send a message, with Send and Don’t send buttons",
+  "ja": "AIが「このメッセージを送ってよいか」を尋ねる画面。「送る」と「送らない」のボタンがある"
+ },
+ "ai.shot1": {
+  "en": "Just message it. It replies in the chat.",
+  "ja": "話しかければ、トークで返事が来ます。"
+ },
+ "ai.shot2": {
+  "en": "It asks before it sends. Nothing goes out until you tap Send.",
+  "ja": "AIが送る前に、あなたが確かめます。"
+ },
+ "ai.shot3": {
+  "en": "Into a group only if everyone agrees.",
+  "ja": "グループに呼べるのは、全員が同意した時だけ。"
+ },
+ "ai.alt.chat": {
+  "en": "A chat with an AI friend on a phone",
+  "ja": "スマホで、AIの友だちとトークしている画面"
+ },
+ "ai.alt.consent": {
+  "en": "A group chat where a member calls an AI and the other members are asked to agree",
+  "ja": "グループのトークで、メンバーがAIを呼び、全員に同意を求めている画面"
  }
 }

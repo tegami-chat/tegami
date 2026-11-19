@@ -36,6 +36,9 @@ for (const f of readdirSync('site/dist/ja').filter((f) => f.endsWith('.html'))) 
 // Their scripts, styles and the page scripts (the animation, the status check and the theme setup).
 rmSync('public/_site', { recursive: true, force: true });
 cpSync('site/dist/_site', 'public/_site', { recursive: true });
+// The pictures of the app on the top page.
+rmSync('public/shots', { recursive: true, force: true });
+cpSync('site/dist/shots', 'public/shots', { recursive: true });
 for (const f of ['icon.svg', 'diff.js', 'status.js', 'doc-toc.js', 'theme-init.js', 'site.js']) copyFileSync(`site/dist/${f}`, `public/${f}`);
 
 // The developer docs: replace the docs' files in public/.
