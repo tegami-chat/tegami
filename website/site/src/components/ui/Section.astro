@@ -1,0 +1,26 @@
+---
+// A band of the page. rhythm sets the vertical padding (page = top of a reading page, default = a section of the top page,
+// compact = one entry of a list). tone sets the background (muted = paper, inverse = dark in both modes).
+// width none = no column of its own (the section sits inside another container). trim drops the padding at one end.
+import Container from '~/components/ui/Container.astro';
+export interface Props {
+  rhythm?: 'page' | 'default' | 'compact';
+  tone?: 'default' | 'muted' | 'inverse';
+  width?: 'prose' | 'content' | 'wide' | 'none';
+  id?: string;
+  divided?: boolean;
+  bordered?: boolean;
+  trim?: 'start' | 'end';
+  class?: string;
+  [key: string]: unknown;
+}
+const { rhythm = 'default', tone = 'default', width = 'content', id, divided = false, bordered = false, trim, class: cls, ...rest } = Astro.props;
+const TONE = { default: '', muted: 'bg-surface-muted', inverse: 'tone-inverse' };
+const PAD = { page: 'pad-page', default: 'pad-section', compact: 'pad-compact' };
+const inner = [PAD[rhythm], trim === 'start' && 'pt-0!', trim === 'end' && 'pb-0!', divided && 'border-t border-line', cls];
+---
+<section id={id} class:list={[TONE[tone], id && 'scroll-mt-16', bordered && 'border-y border-line']} {...rest}>
+  {width === 'none'
+    ? <div class:list={inner}><slot /></div>
+    : <Container width={width} class:list={inner}><slot /></Container>}
+</section>

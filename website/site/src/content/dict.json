@@ -1942,5 +1942,13 @@
  "mk.api.api": {
   "en": "API",
   "ja": "API"
+ },
+ "badge.decided": {
+  "en": "Decided",
+  "ja": "決定済み"
+ },
+ "badge.discussing": {
+  "en": "Under discussion",
+  "ja": "検討中"
  }
 }

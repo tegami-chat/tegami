@@ -1,0 +1,13 @@
+---
+// A box. plain = a coloured surface, outlined = surface with a border and a faint shadow, muted = paper colour,
+// accent = the highlighted tile. tile = the small one-line version (a feature in a grid); every other card has the same padding.
+export interface Props { variant?: 'plain' | 'outlined' | 'muted' | 'accent'; tile?: boolean; as?: string; class?: string; [key: string]: unknown }
+const { variant = 'plain', tile = false, as: Tag = 'div', class: cls, ...rest } = Astro.props;
+const VARIANT = {
+  plain: 'bg-surface',
+  outlined: 'border border-line bg-surface shadow-card',
+  muted: 'bg-surface-muted',
+  accent: 'bg-accent text-on-accent dark:bg-accent-soft dark:text-accent',
+};
+---
+<Tag class:list={['rounded-box', tile ? 'px-4 py-3 font-medium' : 'p-5', VARIANT[variant], cls]} {...rest}><slot /></Tag>

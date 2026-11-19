@@ -13,6 +13,8 @@ import { readFileSync, readdirSync, mkdirSync, copyFileSync, existsSync, rmSync,
 import { execSync } from 'node:child_process';
 
 const run = (dir, cmd) => execSync(cmd, { cwd: dir, stdio: 'inherit' });
+// The design guard: the user pages may only use the design tokens and the primitives (site/DESIGN.md).
+run('site', 'node scripts/check-design.mjs');
 for (const dir of ['site', 'docs']) {
   if (!existsSync(`${dir}/node_modules`)) run(dir, 'npm ci');
   run(dir, 'npm run build');

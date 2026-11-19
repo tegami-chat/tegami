@@ -1,36 +1,45 @@
 ---
-import ExtMark from '~/components/ExtMark.astro';
-import { t, link, type Lang } from '~/site';
+import Section from '~/components/ui/Section.astro';
+import SectionHeading from '~/components/ui/SectionHeading.astro';
+import Prose from '~/components/ui/Prose.astro';
+import Table from '~/components/ui/Table.astro';
+import { t, type Lang } from '~/site';
 const { lang = 'en' } = Astro.props as { lang?: Lang };
 const x = (k: string) => t(k, lang);
+const rows = ['price', 'signup', 'read', 'ads', 'ai', 'who'];
+const apps = ['LINE', 'WhatsApp', 'Signal', 'Telegram', 'Tegami'];
+const cols = ['line', 'wa', 'sig', 'tg', 'teg'];
 ---
 <main>
-  <section id="compare" class="mx-auto max-w-3xl px-4 py-14 md:py-20">
-    <h1 class="text-4xl font-bold tracking-tight sm:text-5xl"><Fragment set:html={x('cmp.h')} /></h1>
-    <p class="mt-4 text-lg text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('cmp.t')} /></p>
-    <div class="mt-8">
-<div class="cmp"><div class="wrap"><table>
-<tr><th></th><th>LINE</th><th>WhatsApp</th><th>Signal</th><th>Telegram</th><th>Tegami</th></tr>
-<tr><td class="font-semibold"><Fragment set:html={x('cmp.price')} /></td><td><Fragment set:html={x('cmp.price.line')} /></td><td><Fragment set:html={x('cmp.price.wa')} /></td><td><Fragment set:html={x('cmp.price.sig')} /></td><td><Fragment set:html={x('cmp.price.tg')} /></td><td><Fragment set:html={x('cmp.price.teg')} /></td></tr>
-<tr><td class="font-semibold"><Fragment set:html={x('cmp.signup')} /></td><td><Fragment set:html={x('cmp.signup.line')} /></td><td><Fragment set:html={x('cmp.signup.wa')} /></td><td><Fragment set:html={x('cmp.signup.sig')} /></td><td><Fragment set:html={x('cmp.signup.tg')} /></td><td><Fragment set:html={x('cmp.signup.teg')} /></td></tr>
-<tr><td class="font-semibold"><Fragment set:html={x('cmp.read')} /></td><td><Fragment set:html={x('cmp.read.line')} /></td><td><Fragment set:html={x('cmp.read.wa')} /></td><td><Fragment set:html={x('cmp.read.sig')} /></td><td><Fragment set:html={x('cmp.read.tg')} /></td><td><Fragment set:html={x('cmp.read.teg')} /></td></tr>
-<tr><td class="font-semibold"><Fragment set:html={x('cmp.ads')} /></td><td><Fragment set:html={x('cmp.ads.line')} /></td><td><Fragment set:html={x('cmp.ads.wa')} /></td><td><Fragment set:html={x('cmp.ads.sig')} /></td><td><Fragment set:html={x('cmp.ads.tg')} /></td><td><Fragment set:html={x('cmp.ads.teg')} /></td></tr>
-<tr><td class="font-semibold"><Fragment set:html={x('cmp.ai')} /></td><td><Fragment set:html={x('cmp.ai.line')} /></td><td><Fragment set:html={x('cmp.ai.wa')} /></td><td><Fragment set:html={x('cmp.ai.sig')} /></td><td><Fragment set:html={x('cmp.ai.tg')} /></td><td><Fragment set:html={x('cmp.ai.teg')} /></td></tr>
-<tr><td class="font-semibold"><Fragment set:html={x('cmp.who')} /></td><td><Fragment set:html={x('cmp.who.line')} /></td><td><Fragment set:html={x('cmp.who.wa')} /></td><td><Fragment set:html={x('cmp.who.sig')} /></td><td><Fragment set:html={x('cmp.who.tg')} /></td><td><Fragment set:html={x('cmp.who.teg')} /></td></tr>
-</table></div></div>
-<p class="mt-3 text-sm text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('cmp.unconf')} /></p>
-    </div>
-    <h2 class="mt-12 text-2xl font-bold"><Fragment set:html={x('cmp.diff.h')} /></h2>
-    <p class="mt-3 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('cmp.diff.t')} /></p>
-    <h2 class="mt-12 text-2xl font-bold"><Fragment set:html={x('cmp.weak.h')} /></h2>
-    <p class="mt-3 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('cmp.weak.1')} /></p>
-    <p class="mt-3 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('cmp.weak.2')} /></p>
-    <p class="mt-3 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('cmp.weak.3')} /></p>
-    <h2 class="mt-12 text-2xl font-bold"><Fragment set:html={x('cmp.move.h')} /></h2>
-    <p class="mt-3 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('cmp.move.1')} /></p>
-    <p class="mt-3 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('cmp.move.2')} /></p>
-    <h2 class="mt-12 text-2xl font-bold"><Fragment set:html={x('cmp.store.h')} /></h2>
-    <p class="mt-3 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('cmp.store.1')} /></p>
-    <p class="mt-12 text-sm text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('cmp.note')} /></p>
-  </section>
+  <Section id="compare" rhythm="page" width="prose">
+    <SectionHeading level={1} title={x('cmp.h')} lead={x('cmp.t')} />
+    <Prose>
+      <Table sticky>
+        <thead><tr><th></th>{apps.map((a) => <th>{a}</th>)}</tr></thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr><td class="emphasis"><Fragment set:html={x('cmp.' + r)} /></td>{cols.map((c) => <td><Fragment set:html={x('cmp.' + r + '.' + c)} /></td>)}</tr>
+          ))}
+        </tbody>
+      </Table>
+      <p class="text-small"><Fragment set:html={x('cmp.unconf')} /></p>
+
+      <h2><Fragment set:html={x('cmp.diff.h')} /></h2>
+      <p><Fragment set:html={x('cmp.diff.t')} /></p>
+
+      <h2><Fragment set:html={x('cmp.weak.h')} /></h2>
+      <p><Fragment set:html={x('cmp.weak.1')} /></p>
+      <p><Fragment set:html={x('cmp.weak.2')} /></p>
+      <p><Fragment set:html={x('cmp.weak.3')} /></p>
+
+      <h2><Fragment set:html={x('cmp.move.h')} /></h2>
+      <p><Fragment set:html={x('cmp.move.1')} /></p>
+      <p><Fragment set:html={x('cmp.move.2')} /></p>
+
+      <h2><Fragment set:html={x('cmp.store.h')} /></h2>
+      <p><Fragment set:html={x('cmp.store.1')} /></p>
+
+      <p class="mt-12 text-small"><Fragment set:html={x('cmp.note')} /></p>
+    </Prose>
+  </Section>
 </main>

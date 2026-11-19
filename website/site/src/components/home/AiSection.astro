@@ -1,40 +1,25 @@
 ---
-import { t, link, type Lang } from '~/site';
+import { t, type Lang } from '~/site';
+import Section from '~/components/ui/Section.astro';
+import SectionHeading from '~/components/ui/SectionHeading.astro';
+import Heading from '~/components/ui/Heading.astro';
+import Badge from '~/components/ui/Badge.astro';
 
 const { lang = 'en' } = Astro.props as { lang?: Lang };
 const x = (k: string) => t(k, lang);
+// [key, shows the "coming soon" badge]
+const items: [string, boolean][] = [['pick', false], ['talk', false], ['join', true], ['each', true], ['many', false], ['own', false]];
 ---
-  <!-- What you can do with AI -->
-  <section id="ai" class="scroll-mt-16 py-20 md:py-24">
-    <div class="mx-auto max-w-5xl px-4">
-      <h2 class="text-3xl font-bold sm:text-4xl"><Fragment set:html={x('ai.h')} /></h2>
-      <div class="mt-10 grid gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
-        <div>
-          <h3 class="font-bold"><Fragment set:html={x('ai.pick.h')} /></h3>
-          <p class="mt-1 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('ai.pick.t')} /></p>
-        </div>
-        <div>
-          <h3 class="font-bold"><Fragment set:html={x('ai.talk.h')} /></h3>
-          <p class="mt-1 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('ai.talk.t')} /></p>
-        </div>
-        <div>
-          <span class="mb-1.5 inline-block rounded-full bg-[#2b2140] px-2.5 text-xs text-nostr-300"><Fragment set:html={x('st.built')} /></span>
-          <h3 class="font-bold"><Fragment set:html={x('ai.join.h')} /></h3>
-          <p class="mt-1 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('ai.join.t')} /></p>
-        </div>
-        <div>
-          <span class="mb-1.5 inline-block rounded-full bg-[#2b2140] px-2.5 text-xs text-nostr-300"><Fragment set:html={x('st.built')} /></span>
-          <h3 class="font-bold"><Fragment set:html={x('ai.each.h')} /></h3>
-          <p class="mt-1 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('ai.each.t')} /></p>
-        </div>
-        <div>
-          <h3 class="font-bold"><Fragment set:html={x('ai.many.h')} /></h3>
-          <p class="mt-1 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('ai.many.t')} /></p>
-        </div>
-        <div>
-          <h3 class="font-bold"><Fragment set:html={x('ai.own.h')} /></h3>
-          <p class="mt-1 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('ai.own.t')} /></p>
-        </div>
+<!-- What you can do with AI -->
+<Section id="ai">
+  <SectionHeading title={x('ai.h')} />
+  <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+    {items.map(([k, coming]) => (
+      <div>
+        {coming && <Badge status="coming" lang={lang} class="mb-2" />}
+        <Heading level={3}><Fragment set:html={x('ai.' + k + '.h')} /></Heading>
+        <p class="mt-2 text-fg-muted"><Fragment set:html={x('ai.' + k + '.t')} /></p>
       </div>
-    </div>
-  </section>
+    ))}
+  </div>
+</Section>

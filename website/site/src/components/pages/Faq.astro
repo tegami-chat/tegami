@@ -1,62 +1,22 @@
 ---
-import ExtMark from '~/components/ExtMark.astro';
-import { t, link, type Lang } from '~/site';
+import Section from '~/components/ui/Section.astro';
+import SectionHeading from '~/components/ui/SectionHeading.astro';
+import Disclosure from '~/components/ui/Disclosure.astro';
+import { t, type Lang } from '~/site';
 const { lang = 'en' } = Astro.props as { lang?: Lang };
 const x = (k: string) => t(k, lang);
+const items = ['free', 'read', 'phone', 'devices', 'friends', 'lost', 'multi', 'collect', 'ai', 'spam', 'shutdown', 'dev'];
 ---
 <main>
-  <!-- FAQ -->
-  <section id="faq" class="mx-auto max-w-3xl px-4 py-14 md:py-20">
-    <h1 class="text-4xl font-bold tracking-tight sm:text-5xl"><Fragment set:html={x('faq.h')} /></h1>
-    <div class="mt-8 divide-y divide-neutral-200 border-y border-neutral-200 dark:divide-night-line dark:border-night-line">
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span><Fragment set:html={x('faq.free.q')} /></span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('faq.free.a')} /></p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span><Fragment set:html={x('faq.read.q')} /></span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('faq.read.a')} /></p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span><Fragment set:html={x('faq.phone.q')} /></span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('faq.phone.a')} /></p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span><Fragment set:html={x('faq.devices.q')} /></span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('faq.devices.a')} /></p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span><Fragment set:html={x('faq.friends.q')} /></span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('faq.friends.a')} /></p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span><Fragment set:html={x('faq.lost.q')} /></span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('faq.lost.a')} /></p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span><Fragment set:html={x('faq.multi.q')} /></span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('faq.multi.a')} /></p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span><Fragment set:html={x('faq.collect.q')} /></span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('faq.collect.a')} /></p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span><Fragment set:html={x('faq.ai.q')} /></span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('faq.ai.a')} /></p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span><Fragment set:html={x('faq.spam.q')} /></span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('faq.spam.a')} /></p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span><Fragment set:html={x('faq.shutdown.q')} /></span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('faq.shutdown.a')} /></p>
-      </details>
-      <details class="group py-4">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span><Fragment set:html={x('faq.dev.q')} /></span><span class="text-xl text-neutral-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-        <p class="mt-2 text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('faq.dev.a')} /></p>
-      </details>
+  <Section id="faq" rhythm="page" width="prose">
+    <SectionHeading level={1} title={x('faq.h')} />
+    <div class="divide-y divide-line border-y border-line">
+      {items.map((k) => (
+        <Disclosure>
+          <Fragment slot="q"><Fragment set:html={x('faq.' + k + '.q')} /></Fragment>
+          <p><Fragment set:html={x('faq.' + k + '.a')} /></p>
+        </Disclosure>
+      ))}
     </div>
-  </section>
+  </Section>
 </main>

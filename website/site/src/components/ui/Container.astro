@@ -1,0 +1,9 @@
+---
+// The one horizontal rule: a centred column of one of three widths, with the same side padding everywhere.
+// prose = reading pages, content = the top page and the roadmap, wide = header and footer.
+// flush = no side padding, for a column inside another container.
+export interface Props { width?: 'prose' | 'content' | 'wide'; flush?: boolean; class?: string; [key: string]: unknown }
+const { width = 'content', flush = false, class: cls, ...rest } = Astro.props;
+const W = { prose: 'max-w-narrow', content: 'max-w-content', wide: 'max-w-wide' };
+---
+<div class:list={['mx-auto w-full', W[width], !flush && 'pad-gutter', cls]} {...rest}><slot /></div>

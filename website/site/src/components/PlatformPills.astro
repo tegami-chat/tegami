@@ -10,11 +10,11 @@ const x = (k: string) => t(k, lang);
 const others: [string, string][] = [['iphone', 'rm.now'], ['android', 'rm.now'], ['windows', 'rm.plan'], ['mac', 'rm.plan'], ['linux', 'rm.plan']];
 const label = lang === 'ja' ? '使える場所' : 'Where Tegami runs';
 const title = lang === 'ja' ? 'ブラウザで始める' : 'Open in your browser';
-const pill = 'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs';
+const pill = 'inline-flex items-center gap-2 rounded-pill border px-2.5 py-1 text-caption';
 ---
-<ul class:list={['flex flex-wrap gap-1.5', centered && 'justify-center']} aria-label={label}>
-  <li><a href="https://app.tegami.chat/" class={`${pill} border-forest-600/50 text-neutral-700 hover:border-forest-600 hover:text-forest-600 dark:border-forest-300/50 dark:text-neutral-200 dark:hover:border-forest-300 dark:hover:text-forest-300`} title={title} target="_blank" rel="noopener"><svg viewBox="0 0 24 24" class="h-4 w-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none" aria-hidden="true" set:html={PLATFORM_ICONS.browser.svg} /><span>{x('ft.os.browser')}</span><span class="font-semibold text-forest-600 dark:text-forest-300">{x('now')}</span><span class="sr-only">{lang === 'ja' ? '（新しいタブで開きます）' : ' (opens in a new tab)'}</span></a></li>
+<ul class:list={['flex flex-wrap gap-2', centered && 'justify-center']} aria-label={label}>
+  <li><a href="https://app.tegami.chat/" class={`${pill} border-accent/50 text-fg hover:border-accent hover:text-accent`} title={title} target="_blank" rel="noopener"><svg viewBox="0 0 24 24" class="h-4 w-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none" aria-hidden="true" set:html={PLATFORM_ICONS.browser.svg} /><span>{x('ft.os.browser')}</span><span class="font-semibold text-accent">{x('now')}</span><span class="sr-only">{lang === 'ja' ? '（新しいタブで開きます）' : ' (opens in a new tab)'}</span></a></li>
   {others.map(([id, st]) => (
-    <li><span class={`${pill} cursor-default border-dashed border-neutral-200 text-neutral-500 dark:border-night-line dark:text-neutral-400`}><svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true" set:html={PLATFORM_ICONS[id].svg} /><span>{x('ft.os.' + id)}</span><span>{x(st)}</span></span></li>
+    <li><span class={`${pill} cursor-default border-dashed border-line text-fg-muted`}><svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true" set:html={PLATFORM_ICONS[id].svg} /><span>{x('ft.os.' + id)}</span><span>{x(st)}</span></span></li>
   ))}
 </ul>

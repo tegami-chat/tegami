@@ -1,0 +1,18 @@
+---
+// A status label. The words come from dict.json so they match on every page; label overrides them for a few special cases.
+import { t, type Lang } from '~/site';
+export type Status = 'available' | 'coming' | 'dev' | 'planned' | 'decided' | 'discussing';
+export interface Props { status: Status; lang: Lang; label?: string; icon?: boolean; class?: string }
+const { status, lang, label, icon = false, class: cls } = Astro.props;
+const WORDS: Record<Status, string> = { available: 'now', coming: 'st.built', dev: 'rm.now', planned: 'rm.plan', decided: 'badge.decided', discussing: 'badge.discussing' };
+const LOOK: Record<Status, string> = {
+  available: 'bg-accent-soft text-accent',
+  decided: 'bg-accent-soft text-accent',
+  coming: 'bg-accent-2-soft text-accent-2',
+  discussing: 'bg-accent-2-soft text-accent-2',
+  dev: 'bg-warn-soft text-warn',
+  planned: 'bg-quiet-soft text-quiet',
+};
+const MARK: Record<Status, string> = { available: '✓', decided: '✓', coming: '◆', discussing: '◆', dev: '●', planned: '○' };
+---
+<span class:list={['inline-flex items-center gap-1.5 rounded-pill px-2.5 py-0.5 text-caption font-medium', LOOK[status], cls]}>{icon && <span aria-hidden="true">{MARK[status]}</span>}<span set:html={label ?? t(WORDS[status], lang)} /></span>

@@ -74,15 +74,15 @@
       const ms = Math.round(performance.now() - t0);
       if (!res.ok) throw new Error(String(res.status));
       const j = await res.json();
-      $('banner').className = 'mt-10 flex items-center gap-3 rounded-2xl border border-forest-600/30 bg-forest-50 px-5 py-4 dark:border-forest-300/30 dark:bg-forest-950';
-      $('dot').className = 'h-3 w-3 shrink-0 rounded-full bg-forest-600 dark:bg-forest-300';
+      $('banner').className = 'flex items-center gap-3 rounded-box border border-accent/30 bg-accent-soft px-5 py-4';
+      $('dot').className = 'h-3 w-3 shrink-0 rounded-pill bg-accent';
       $('state').textContent = S.up;
       $('rtt').textContent = ms + ' ms';
       $('nips').textContent = (j.supported_nips || []).map((n) => String(n).padStart(2, '0')).join(', ');
       setCommit(j.version);
     } catch {
-      $('banner').className = 'mt-10 flex items-center gap-3 rounded-2xl border border-red-300 bg-red-50 px-5 py-4 dark:border-red-400/40 dark:bg-red-950/40';
-      $('dot').className = 'h-3 w-3 shrink-0 rounded-full bg-red-500';
+      $('banner').className = 'flex items-center gap-3 rounded-box border border-danger/40 bg-danger-soft px-5 py-4';
+      $('dot').className = 'h-3 w-3 shrink-0 rounded-pill bg-danger';
       $('state').textContent = S.down;
       $('rtt').textContent = '—';
     }
@@ -126,15 +126,15 @@
     const list = weeks.slice().reverse();
     const shown = all ? list : list.slice(0, 8);
     const keys = ['envelopes', 'files', 'logins', 'keys'];
-    $('rows').innerHTML = shown.map((w) => `<tr class="border-t border-neutral-200 dark:border-night-line">
+    $('rows').innerHTML = shown.map((w) => `<tr class="border-t border-line">
       <td class="py-2.5 pr-3">${weekRange(w.week)}</td>${keys.map((k, i) => `<td class="${i === 3 ? 'py-2.5 pl-3' : 'px-3 py-2.5'} text-right">${show(w[k])}</td>`).join('')}</tr>`).join('');
-    $('cards').innerHTML = shown.map((w) => `<li class="border-t border-neutral-200 py-3 text-sm dark:border-night-line">
+    $('cards').innerHTML = shown.map((w) => `<li class="border-t border-line py-3 text-small">
       <div class="font-semibold">${weekRange(w.week)}</div>
-      <dl class="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1 tabular-nums">${keys.map((k) => `<div><dt class="text-xs text-neutral-600 dark:text-neutral-400">${S.cols[k]}</dt><dd class="font-semibold">${show(w[k])}</dd></div>`).join('')}</dl></li>`).join('');
+      <dl class="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1 tabular-nums">${keys.map((k) => `<div><dt class="text-caption text-fg-muted">${S.cols[k]}</dt><dd class="font-semibold">${show(w[k])}</dd></div>`).join('')}</dl></li>`).join('');
     $('more').hidden = list.length <= 8;
     $('more').textContent = all ? S.less : S.more;
     if (has && !$('charts').children.length) {
-      $('charts').innerHTML = Object.entries(S.tabs).map(([m, label]) => `<section class="rounded-xl border border-neutral-200 p-4 dark:border-night-line"><h3 class="text-base font-bold">${label}</h3><svg data-chart="${m}" class="mt-2 w-full" viewBox="0 0 600 200" role="img" aria-label="${S.cols[m]}"></svg></section>`).join('');
+      $('charts').innerHTML = Object.entries(S.tabs).map(([m, label]) => `<section class="rounded-box border border-line p-4"><h3 class="text-body font-bold">${label}</h3><svg data-chart="${m}" class="mt-2 w-full" viewBox="0 0 600 200" role="img" aria-label="${S.cols[m]}"></svg></section>`).join('');
     }
     if (has) draw();
   }

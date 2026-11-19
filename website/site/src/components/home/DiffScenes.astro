@@ -1,12 +1,14 @@
 ---
-import { t, link, type Lang } from '~/site';
+import { t, type Lang } from '~/site';
+import Section from '~/components/ui/Section.astro';
+import SectionHeading from '~/components/ui/SectionHeading.astro';
+import Container from '~/components/ui/Container.astro';
 
 const { lang = 'en' } = Astro.props as { lang?: Lang };
 const x = (k: string) => t(k, lang);
 ---
-  <!-- How Tegami is different: typical apps on the left, Tegami on the right -->
-  <div class="border-y border-neutral-200 dark:border-night-line">
-<section id="diff" data-mode="" class="mx-auto max-w-5xl scroll-mt-16 px-4 py-16 md:py-20">
+<!-- How Tegami is different: typical apps on the left, Tegami on the right. The animation itself (diff.js) is a content-specific visual. -->
+<Section id="diff" data-mode="" bordered>
   <svg width="0" height="0" class="absolute" aria-hidden="true">
     <defs>
       <g id="env">
@@ -38,9 +40,7 @@ const x = (k: string) => t(k, lang);
       </g>
     </defs>
   </svg>
-  <h2 class="text-center text-3xl font-bold sm:text-4xl"><Fragment set:html={x('diff.h')} /></h2>
-  <p class="mx-auto mt-3 max-w-2xl text-center text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('diff.t')} /></p>
-  <div id="chips" class="mx-auto mt-8 flex max-w-3xl flex-wrap justify-center gap-2" role="tablist"></div>
+  <SectionHeading title={x('diff.h')} lead={x('diff.t')} align="center" />
+  <Container width="prose" flush id="chips" class="flex flex-wrap justify-center gap-2" role="tablist"></Container>
   <div id="scenes" class="mt-8"></div>
-</section>
-  </div>
+</Section>

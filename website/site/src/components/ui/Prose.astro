@@ -1,0 +1,6 @@
+---
+// Body text: paragraphs, lists, h2 and h3, links, definition lists. One rhythm for every reading page (rules in global.css).
+export interface Props { class?: string; [key: string]: unknown }
+const { class: cls, ...rest } = Astro.props;
+---
+<div class:list={['prose', cls]} {...rest}><slot /></div>

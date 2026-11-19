@@ -1,5 +1,6 @@
-/* tegami.chat user pages: Tailwind CSS 4 with our own colours and fonts.
-   The classes come from the pages in this folder and from the two scripts that draw into them (diff.js, status.js). */
+/* tegami.chat user pages: Tailwind CSS 4 with our own design tokens. See ../../DESIGN.md.
+   The classes come from the pages in this folder and from the two scripts that draw into them (diff.js, status.js).
+   Rule: pages compose the primitives in components/ui; a new value goes into this file first. */
 @import 'tailwindcss';
 @source '../../public/diff.js';
 @source '../../public/status.js';
@@ -7,6 +8,7 @@
 /* Dark mode follows the "dark" class on <html> (set before paint by theme-init.js). */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ---- Raw palette (the hex values the site was designed with) ---- */
 @theme {
   --color-forest-50: #e3f0e8;
   --color-forest-300: #7fd7a8;
@@ -21,11 +23,116 @@
   --color-night-card: #1c221f;
   --color-night-line: #2c3430;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;
+
+  /* Radius: three values. control = menu items and small boxes, box = cards and panels, pill = buttons and badges. */
+  --radius-control: 0.5rem;
+  --radius-box: 1rem;
+  --radius-pill: 9999px;
+
+  /* Shadow: two values. card = a card resting on the page, pop = something floating (menus, the app icon). */
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-pop: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  /* Container widths: three. narrow = reading pages (the prop is width="prose"), content = the top page and the roadmap, wide = header and footer. */
+  --container-narrow: 48rem;
+  --container-content: 64rem;
+  --container-wide: 72rem;
 }
+
+/* ---- Semantic colours. Pages use these names only; each has a light and a dark value. ---- */
+@theme inline {
+  --color-page: var(--c-page);
+  --color-surface: var(--c-surface);
+  --color-surface-muted: var(--c-surface-muted);
+  --color-fg: var(--c-fg);
+  --color-fg-muted: var(--c-fg-muted);
+  --color-line: var(--c-line);
+  --color-line-strong: var(--c-line-strong);
+  --color-hover: var(--c-hover);
+  --color-accent: var(--c-accent);
+  --color-accent-strong: var(--c-accent-strong);
+  --color-accent-soft: var(--c-accent-soft);
+  --color-on-accent: var(--c-on-accent);
+  --color-accent-2: var(--c-accent-2);
+  --color-accent-2-soft: var(--c-accent-2-soft);
+  --color-warn: var(--c-warn);
+  --color-warn-soft: var(--c-warn-soft);
+  --color-quiet: var(--c-quiet);
+  --color-quiet-soft: var(--c-quiet-soft);
+  --color-danger: var(--c-danger);
+  --color-danger-soft: var(--c-danger-soft);
+}
+:root {
+  --c-page: #fff;
+  --c-surface: #fff;
+  --c-surface-muted: var(--color-paper);
+  --c-fg: #171717;
+  --c-fg-muted: #525252;
+  --c-line: #e5e5e5;
+  --c-line-strong: #d4d4d4;
+  --c-hover: #f5f5f5;
+  --c-accent: var(--color-forest-600);
+  --c-accent-strong: var(--color-forest-700);
+  --c-accent-soft: var(--color-forest-50);
+  --c-on-accent: #fff;
+  --c-accent-2: var(--color-nostr-600);
+  --c-accent-2-soft: #f1e9fc;
+  --c-warn: #b45309;
+  --c-warn-soft: #fffbeb;
+  --c-quiet: #525252;
+  --c-quiet-soft: #f5f5f5;
+  --c-danger: #ef4444;
+  --c-danger-soft: #fef2f2;
+}
+/* The dark values. .tone-inverse (a section that is dark in both modes) uses the same set. */
+.dark, .tone-inverse {
+  --c-page: #101311;
+  --c-surface: var(--color-night-card);
+  --c-surface-muted: var(--color-paper-dark);
+  --c-fg: #f5f5f5;
+  --c-fg-muted: #a3a3a3;
+  --c-line: var(--color-night-line);
+  --c-line-strong: var(--color-night-line);
+  --c-hover: rgb(255 255 255 / 0.05);
+  --c-accent: var(--color-forest-300);
+  --c-accent-strong: rgb(127 215 168 / 0.9);
+  --c-accent-soft: var(--color-forest-950);
+  --c-on-accent: var(--color-forest-950);
+  --c-accent-2: var(--color-nostr-300);
+  --c-accent-2-soft: #2b2140;
+  --c-warn: #fcd34d;
+  --c-warn-soft: rgb(69 26 3 / 0.6);
+  --c-quiet: #d4d4d4;
+  --c-quiet-soft: rgb(255 255 255 / 0.1);
+  --c-danger: #f87171;
+  --c-danger-soft: rgb(69 10 10 / 0.4);
+}
+.tone-inverse { --c-page: var(--color-night); background-color: var(--c-page); color: var(--c-fg); }
+.dark .tone-inverse { --c-page: #0a0d0b; border-block: 1px solid var(--c-line); }
+
+/* ---- Type scale: the only font sizes a page may use. No uppercase anywhere. ---- */
+@utility text-display { font-size: 2.5rem; line-height: 1.15; font-weight: 700; letter-spacing: -0.025em; @media (width >= 40rem) { font-size: 3.75rem; } }
+@utility text-title { font-size: 2.25rem; line-height: 2.5rem; font-weight: 700; letter-spacing: -0.025em; @media (width >= 40rem) { font-size: 3rem; line-height: 1; } }
+@utility text-section { font-size: 1.5rem; line-height: 2rem; font-weight: 700; letter-spacing: 0; @media (width >= 40rem) { font-size: 1.875rem; line-height: 2.25rem; } }
+@utility text-subsection { font-size: 1.125rem; line-height: 1.75rem; font-weight: 700; letter-spacing: 0; }
+@utility text-lead { font-size: 1.125rem; line-height: 1.75rem; font-weight: 400; letter-spacing: 0; }
+@utility text-body { font-size: 1rem; line-height: 1.625; font-weight: 400; letter-spacing: 0; }
+@utility text-small { font-size: 0.875rem; line-height: 1.25rem; font-weight: 400; letter-spacing: 0; }
+@utility text-caption { font-size: 0.75rem; line-height: 1rem; font-weight: 400; letter-spacing: 0; }
+/* Emphasis inside a line: one weight, the strong colour. */
+@utility emphasis { font-weight: 600; color: var(--c-fg); }
+
+/* ---- Layout rhythm ---- */
+/* The vertical padding of a section: page = the top of a reading page, section = a section of the top page, compact = one entry in a list of entries. */
+@utility pad-page { padding-block: 3.5rem; @media (width >= 48rem) { padding-block: 5rem; } }
+@utility pad-section { padding-block: 5rem; @media (width >= 48rem) { padding-block: 6rem; } }
+@utility pad-compact { padding-block: 2rem; }
+/* The side padding of every container. */
+@utility pad-gutter { padding-inline: 1rem; }
 
 /* Tailwind 4 draws borders in the text colour and buttons with an arrow; keep the look the pages were designed with. */
 @layer base {
-  *, ::after, ::before, ::backdrop, ::file-selector-button { border-color: var(--color-gray-200); }
+  *, ::after, ::before, ::backdrop, ::file-selector-button { border-color: var(--c-line); }
   button:not(:disabled), [role='button']:not(:disabled), summary { cursor: pointer; }
 }
 
@@ -40,7 +147,52 @@ html { scrollbar-gutter: stable; background-color: #fff; }
 html.dark { background-color: #101311; color-scheme: dark; }
 @view-transition { navigation: auto; }
 
-/* The animated comparison (diff.js). */
+/* ---- Prose: the body text of the reading pages (/how /faq /privacy /about /compare /status). One rhythm for every page. ---- */
+@layer components {
+  .prose { color: var(--c-fg-muted); font-size: 1rem; line-height: 1.625; }
+  .prose > * + * { margin-top: 1rem; }
+  .prose h2 { @apply text-section; color: var(--c-fg); margin-top: 3.5rem; }
+  .prose h3 { @apply text-subsection; color: var(--c-fg); margin-top: 1.5rem; }
+  .prose > :first-child { margin-top: 0; }
+  .prose h2 + *, .prose h3 + * { margin-top: 0.75rem; }
+  .prose ul, .prose ol { padding-left: 1.5rem; }
+  .prose ul { list-style: disc; }
+  .prose ol { list-style: decimal; }
+  .prose li + li { margin-top: 0.5rem; }
+  .prose a { color: var(--c-accent); text-decoration: underline; text-underline-offset: 2px; }
+  .prose strong { color: var(--c-fg); font-weight: 600; }
+  .prose code { background: var(--c-surface-muted); border-radius: 4px; padding: 1px 5px; font-size: 0.88em; }
+  .prose dl { display: grid; grid-template-columns: auto 1fr; gap: 0.75rem 1.5rem; }
+  .prose dt { @apply emphasis; }
+  .prose small, .prose .small { @apply text-small; }
+  /* When a compact entry sits inside the prose, the heading is the first thing in it, so no space above. */
+  .prose .entry > :first-child { margin-top: 0; }
+}
+
+/* ---- Table: scrolls sideways inside its own box; the first column can stay in view (data-sticky). ---- */
+@layer components {
+  .table-wrap { overflow-x: auto; }
+  .table-wrap table { border-collapse: collapse; width: 100%; font-size: 0.9rem; line-height: 1.625; }
+  .table-wrap th, .table-wrap td { border: 1px solid var(--c-line); padding: 0.375rem 0.5rem; text-align: left; vertical-align: top; }
+  .table-wrap td { color: var(--c-fg); }
+  .table-wrap th { background: var(--c-surface-muted); color: var(--c-fg); }
+  .table-wrap [data-sticky] td:first-child, .table-wrap [data-sticky] th:first-child { position: sticky; left: 0; z-index: 1; min-width: 6.5em; background: var(--c-surface); box-shadow: 1px 0 0 var(--c-line); }
+  .table-wrap [data-sticky] th:first-child { background: var(--c-surface-muted); }
+  .table-wrap a { color: var(--c-accent); text-decoration: underline; text-underline-offset: 2px; }
+  .table-wrap code { background: var(--c-surface-muted); border-radius: 4px; padding: 1px 5px; font-size: 0.88em; }
+}
+
+/* ---- The retention lists on /privacy: one row = a title and three labelled values. ---- */
+@layer components {
+  .data-row { display: grid; gap: 0.75rem; padding: 1rem; font-size: 0.875rem; line-height: 1.25rem; }
+  .data-row > * { margin: 0 !important; }
+  .data-row p { color: var(--c-fg-muted); }
+  .data-row > p:first-child { @apply emphasis; }
+  .data-row span.label { display: block; font-size: 0.75rem; line-height: 1rem; font-weight: 600; color: var(--c-fg-muted); }
+  @media (width >= 40rem) { .data-row { grid-template-columns: 1fr 1.4fr 1.2fr 1fr; } }
+}
+
+/* ---- The animated comparison (diff.js). ---- */
 .flow text { font-family: inherit; }
 .flow [data-a] { opacity: 0; }
 .flow [data-a][data-keep] { opacity: 1; }
@@ -49,15 +201,3 @@ html.dark { background-color: #101311; color-scheme: dark; }
 .cap { opacity: .45; transition: opacity .3s; }
 .cap.on { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .cap { opacity: 1; } }
-
-/* The comparison table (/compare). It scrolls sideways inside its own box; on a phone the first column stays in view. */
-.cmp { --card:#fff; --line:#e5e5e5; --code:#f2efe6; --accent:#106c4a; line-height: 1.8; }
-.dark .cmp { --card:#1c221f; --line:#2c3430; --code:#252c28; --accent:#7fd7a8; }
-.cmp a { color:var(--accent); text-decoration:underline; text-underline-offset:2px; }
-.cmp code { background:var(--code); border-radius:4px; padding:1px 5px; font-size:.88em; }
-.cmp table { border-collapse:collapse; width:100%; font-size:.9rem; }
-.cmp th, .cmp td { border:1px solid var(--line); padding:6px 8px; text-align:left; vertical-align:top; }
-.cmp th { background:var(--code); }
-.cmp .wrap { overflow-x:auto; }
-@media (max-width:640px) { .cmp .wrap td:first-child, .cmp .wrap th:first-child { position:sticky; left:0; z-index:1; background:var(--card); box-shadow:1px 0 0 var(--line); min-width:6.5em; } .cmp .wrap th:first-child { background:var(--code); } }
-

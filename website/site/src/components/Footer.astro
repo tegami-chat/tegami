@@ -2,6 +2,7 @@
 import Logo from '~/components/Logo.astro';
 import PlatformPills from '~/components/PlatformPills.astro';
 import ExtMark from '~/components/ExtMark.astro';
+import Container from '~/components/ui/Container.astro';
 import { t, link, type Lang } from '~/site';
 
 export interface Props { lang: Lang }
@@ -39,25 +40,25 @@ const columns: { title: string; items: Item[] }[] = [
     { text: 'Nostr', href: 'https://njump.me/npub1zptpqkxhr98glpt4rqv9945f3hd3q82wghaqth4gwqtmzmtjutsse5a98k', ext: true },
   ] },
 ];
-const hov = 'hover:text-neutral-900 dark:hover:text-white';
+const hov = 'hover:text-fg';
 ---
-<footer class="border-t border-neutral-200 text-sm text-neutral-500 dark:border-night-line dark:text-neutral-400">
-  <div class="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-2 md:grid-cols-5">
+<footer class="border-t border-line text-small text-fg-muted">
+  <Container width="wide" class="grid gap-12 py-12 sm:grid-cols-2 md:grid-cols-5">
     <div class="sm:col-span-2 md:col-span-1">
-      <a href={link('/', lang)} class="flex items-center gap-2.5 text-base font-bold text-neutral-900 dark:text-neutral-100"><Logo id="tg-f" />Tegami</a>
+      <a href={link('/', lang)} class="flex items-center gap-2 text-body font-bold text-fg"><Logo id="tg-f" />Tegami</a>
       <p class="mt-3" set:html={x('ft.tag')} />
       <div class="mt-4"><PlatformPills lang={lang} /></div>
     </div>
     {columns.map((c) => (
       <div>
-        <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{c.title}</h3>
+        <h3 class="text-small emphasis">{c.title}</h3>
         <ul class="mt-3 space-y-2">
           {c.items.map((i) => <li><a href={i.href} class={hov} target={i.ext ? '_blank' : undefined} rel={i.ext ? 'noopener' : undefined}>{i.text}{i.ext && <ExtMark lang={lang} />}</a></li>)}
         </ul>
       </div>
     ))}
-  </div>
-  <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 border-t border-neutral-200 px-4 py-6 text-xs dark:border-night-line">
+  </Container>
+  <Container width="wide" class="flex flex-wrap items-center justify-between gap-4 border-t border-line py-6 text-caption">
     <div class="flex flex-wrap items-center gap-x-5 gap-y-2"><a href={link('/privacy', lang)} class={hov}>{x('ft.privacy')}</a><a href={link('/about', lang)} class={hov}>{x('ft.about')}</a><a href="mailto:hello@tegami.chat" class={hov}>hello@tegami.chat</a><span>© 2026 Tegami contributors. Licensed under <a href={GH + '/blob/main/LICENSE'} class={'underline ' + hov} target="_blank" rel="noopener">AGPL-3.0<ExtMark lang={lang} /></a>.</span></div>
-  </div>
+  </Container>
 </footer>

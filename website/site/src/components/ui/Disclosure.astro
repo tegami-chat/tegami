@@ -1,0 +1,8 @@
+---
+// One question that opens to its answer (a native details element, so it works without scripts).
+import Prose from '~/components/ui/Prose.astro';
+---
+<details class="group py-4">
+  <summary class="flex list-none items-center justify-between gap-4 emphasis"><span><slot name="q" /></span><span class="text-lead text-fg-muted transition group-open:rotate-45" aria-hidden="true">+</span></summary>
+  <Prose class="mt-3"><slot /></Prose>
+</details>

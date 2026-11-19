@@ -1,0 +1,13 @@
+---
+// A link that looks like a button. External links open in a new tab and carry the mark for screen readers.
+import ExtMark from '~/components/ExtMark.astro';
+import type { Lang } from '~/site';
+export interface Props { href: string; variant?: 'primary' | 'secondary'; size?: 'sm' | 'md'; external?: boolean; icon?: boolean; block?: boolean; lang?: Lang; class?: string; [key: string]: unknown }
+const { href, variant = 'primary', size = 'md', external = false, icon = true, block = false, lang = 'en', class: cls, ...rest } = Astro.props;
+const VARIANT = {
+  primary: 'bg-accent text-on-accent hover:bg-accent-strong',
+  secondary: 'border border-line-strong text-fg hover:bg-hover',
+};
+const SIZE = { sm: 'px-5 py-2 text-small', md: 'px-8 py-3.5 text-body' };
+---
+<a href={href} class:list={[block ? 'block text-center' : 'inline-block', 'whitespace-nowrap rounded-pill font-semibold', VARIANT[variant], SIZE[size], cls]} target={external ? '_blank' : undefined} rel={external ? 'noopener' : undefined} {...rest}><slot />{external && <ExtMark lang={lang} noicon={!icon} />}</a>
