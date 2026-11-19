@@ -1,5 +1,5 @@
 ---
-import { t, type Lang } from '~/site';
+import { t, link, type Lang } from '~/site';
 import Section from '~/components/ui/Section.astro';
 import Heading from '~/components/ui/Heading.astro';
 import Button from '~/components/ui/Button.astro';
@@ -12,4 +12,5 @@ const x = (k: string) => t(k, lang);
   <Heading level={2} style="title"><Fragment set:html={x('end.h')} /></Heading>
   <Button href="https://app.tegami.chat/" external lang={lang} class="mt-8"><Fragment set:html={x('cta.browser')} /></Button>
   <div class="mt-4"><PlatformPills lang={lang} /></div>
+  <p class="mt-8 text-small text-fg-muted"><Fragment set:html={x('end.oss')} />{lang === 'ja' ? '' : ' '}<a href={link('/developers', lang)} class="underline underline-offset-2 hover:text-fg"><Fragment set:html={x('mk.dev')} /></a></p>
 </Section>

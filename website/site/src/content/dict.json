@@ -303,6 +303,10 @@
   "en": "Your chats belong to you.<br>Bring your own AI.",
   "ja": "トークはあなたのもの。<br>AIの持ち込み自由。"
  },
+ "end.oss": {
+  "en": "Tegami is open source under AGPL-3.0.",
+  "ja": "TegamiはAGPL-3.0のオープンソースです。"
+ },
  "sec.h": {
   "en": "Security",
   "ja": "安全の仕組み"
