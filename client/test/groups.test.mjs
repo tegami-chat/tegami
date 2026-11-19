@@ -116,7 +116,7 @@ test('someone just added sees "added me"; a late older state moves the join time
 test('the lines the chat shows', () => {
   const name = (k) => ({ [A]: 'あきら', [B]: 'ぶんた', [C]: 'ちえ' })[k];
   assert.equal(changeText({ op: 'add', by: A, added: [B, C], removed: [], admins: [], name: '' }, name), 'あきらがぶんた、ちえをグループに追加しました。');
-  assert.equal(changeText({ op: 'remove', by: A, added: [], removed: [C], admins: [], name: '' }, name), 'あきらがちえを退会させました。');
+  assert.equal(changeText({ op: 'remove', by: A, added: [], removed: [C], admins: [], name: '' }, name), 'あきらがちえをグループから削除しました。');
   assert.equal(changeText({ op: 'leave', by: B, added: [], removed: [B], admins: [], name: '' }, name), 'ぶんたが退会しました。');
   assert.equal(changeText({ op: 'rename', by: A, added: [], removed: [], admins: [], name: '親戚' }, name), 'あきらがグループ名を「親戚」に変更しました。');
 });

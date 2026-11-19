@@ -227,7 +227,7 @@ export function changeText(c: GroupChange, nameOf: (pubkey: string) => string) {
   const list = (xs: string[]) => xs.map(nameOf).join('、');
   switch (c.op) {
     case 'create':
-      return `${by}がグループを作成しました。`;
+      return `${by}がグループを作りました。`;
     case 'leave':
       return `${by}が退会しました。`;
     case 'rename':
@@ -239,7 +239,7 @@ export function changeText(c: GroupChange, nameOf: (pubkey: string) => string) {
     default: {
       const parts: string[] = [];
       if (c.added.length) parts.push(`${by}が${list(c.added)}をグループに追加しました。`);
-      if (c.removed.length) parts.push(`${by}が${list(c.removed)}を退会させました。`);
+      if (c.removed.length) parts.push(`${by}が${list(c.removed)}をグループから削除しました。`);
       return parts.join('\n') || `${by}がグループを変更しました。`;
     }
   }

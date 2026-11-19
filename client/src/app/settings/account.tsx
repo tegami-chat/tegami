@@ -141,7 +141,7 @@ export default function AccountSettings() {
       {confirm === 'here' && (
         <Dialog
           title={`${accountLabel}をこの端末から削除しますか？`}
-          text="この端末のトーク履歴と設定が消えます。ほかの端末か復旧コードがないと、このアカウントには戻れません。"
+          text="この端末のトーク履歴と設定が消えます。ほかの端末か復旧コードがあれば、このアカウントに戻れます。"
           onClose={() => setConfirm(null)}
           buttons={[
             { label: 'キャンセル', variant: 'outlined', onPress: () => setConfirm(null) },
@@ -152,7 +152,7 @@ export default function AccountSettings() {
       {confirm === 'everywhere' && (
         <Dialog
           title={`${accountLabel}のアカウントを削除しますか？`}
-          text="トーク履歴、友だち、スタンプ、復旧コードがすべて削除され、元に戻せません。ほかの端末でも、このアカウントは使えなくなります。"
+          text="トーク履歴、友だち、スタンプ、復旧コードがすべて消え、元に戻せません。ほかの端末でも、このアカウントは使えなくなります。"
           onClose={() => setConfirm(null)}
           buttons={[
             { label: 'キャンセル', variant: 'outlined', onPress: () => setConfirm(null) },
@@ -171,24 +171,24 @@ export default function AccountSettings() {
       <Text style={s.heading}>アカウントの守り方</Text>
       <Text style={s.value}>{protectedByPasskey ? 'パスキーで守っています' : 'このブラウザの中だけに保存しています'}</Text>
 
-      <Text style={s.heading}>別の端末</Text>
+      <Text style={s.heading}>ほかの端末</Text>
       {transfer ? (
         <View style={[s.card, s.transfer]}>
-          <Image source={{ uri: transfer.qr }} style={s.qr} accessibilityLabel="別の端末で読み取るQRコード" />
+          <Image source={{ uri: transfer.qr }} style={s.qr} accessibilityLabel="ほかの端末で読み取るQRコード" />
           <Text style={s.linkText} selectable>
             {transfer.link}
           </Text>
           <Pressable style={s.inlineBtn} onPress={shareLink} role="button">
             <Text style={s.action}>{copied ? 'コピーしました' : 'リンクをコピー'}</Text>
           </Pressable>
-          <Text style={s.warn}>{until} まで使えます。このリンクを開いた人は、あなたのアカウントを使えます。自分の端末だけで開いてください。</Text>
+          <Text style={s.warn}>{until}まで有効です。このリンクを開いた人は、あなたのアカウントを使えます。自分の端末だけで開いてください。</Text>
         </View>
       ) : (
         <Group>
-          <ActionRow label="別の端末でも使う" onPress={makeLink} />
+          <ActionRow label="ほかの端末でも使う" onPress={makeLink} />
         </Group>
       )}
-      {transferFailed && <Text style={s.note}>リンクを作成できませんでした。通信を確認して、もう一度お試しください。</Text>}
+      {transferFailed && <Text style={s.note}>リンクを作れませんでした。通信を確認して、もう一度お試しください。</Text>}
 
       <Text style={s.heading}>アカウントの復旧</Text>
       {newCode ? (
@@ -199,8 +199,8 @@ export default function AccountSettings() {
           <Pressable style={s.inlineBtn} onPress={copyCode} role="button">
             <Text style={s.action}>{codeCopied ? 'コピーしました' : 'コードをコピー'}</Text>
           </Pressable>
-          <Text style={s.warn}>このコードは今だけ表示されます。パスワード管理アプリか紙に保管してください。</Text>
-          <Text style={s.warn}>このコードは誰にも見せないでください。なくすと、Tegamiでも復旧できません。</Text>
+          <Text style={s.warn}>このコードを見られるのは今だけです。パスワード管理アプリか紙に保管してください。</Text>
+          <Text style={s.warn}>このコードは誰にも見せないでください。なくすと、Tegamiでもアカウントを戻せません。</Text>
           <Pressable style={s.inlineBtn} onPress={() => setNewCode(null)} role="button">
             <Text style={s.action}>保管しました</Text>
           </Pressable>
@@ -216,11 +216,11 @@ export default function AccountSettings() {
         </>
       ) : (
         <Group>
-          <ActionRow label="復旧コードを作成" onPress={makeCode} disabled={recoveryBusy} />
+          <ActionRow label="復旧コードを作る" onPress={makeCode} disabled={recoveryBusy} />
         </Group>
       )}
-      {recoveryBehind && !newCode && <Text style={s.note}>復旧コードの控えを更新できていません。通信を確認してください。</Text>}
-      {recoveryFailed === 'make' && <Text style={s.note}>復旧コードを作成できませんでした。通信を確認して、もう一度お試しください。</Text>}
+      {recoveryBehind && !newCode && <Text style={s.note}>友だちや設定の最近の変更を、復旧用にまだ保管できていません。通信を確認してください。</Text>}
+      {recoveryFailed === 'make' && <Text style={s.note}>復旧コードを作れませんでした。通信を確認して、もう一度お試しください。</Text>}
       {recoveryFailed === 'off' && <Text style={s.note}>復旧コードを削除できませんでした。通信を確認して、もう一度お試しください。</Text>}
 
       <Text style={s.heading}>アカウントの削除</Text>

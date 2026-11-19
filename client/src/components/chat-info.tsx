@@ -356,7 +356,7 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
       {dialog === 'myAi' && peer && (
         <Dialog
           title={`${personName(peer, contacts)}を自分のAIにしますか？`}
-          text="自分のPCで動かしているAIだけを選んでください。自分のAIは、AIの権限で許したことを、あなたの名前で頼めるようになります。"
+          text="自分のパソコンで動かしているAIだけを選んでください。自分のAIは、AIの権限で許したことを、あなたの名前で代わりにできるようになります。"
           stacked
           onClose={() => setDialog(null)}
           buttons={[

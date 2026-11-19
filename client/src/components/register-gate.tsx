@@ -75,7 +75,7 @@ export function RegisterGate() {
   if (registration === 'deleted') {
     return (
       <View style={s.fill}>
-        <Text style={s.text}>このアカウントは削除されました。</Text>
+        <Text style={s.text}>このアカウントは削除済みです。この端末からも削除してください。</Text>
         <Pressable role="button" onPress={() => void removeFromDevice()}>
           <Text style={s.action}>この端末から削除</Text>
         </Pressable>

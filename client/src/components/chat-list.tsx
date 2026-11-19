@@ -290,7 +290,7 @@ export function ChatList({ wide = false }: { wide?: boolean }) {
                 <>
                   {aiWidenedAt > 0 && (
                     <Pressable style={s.strangers} onPress={() => router.push('/ai' as Href)} role="button" testID="ai-widened">
-                      <Text style={s.strangersText}>ほかの端末でAIの権限が広がりました</Text>
+                      <Text style={s.strangersText}>ほかの端末でAIの権限が増えました。心当たりがなければ確認してください</Text>
                       <MaterialIcons name="chevron-right" size={22} color={c.muted} />
                     </Pressable>
                   )}

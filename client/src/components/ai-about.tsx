@@ -19,7 +19,7 @@ export function AiAbout({ id }: { id: string }) {
   const told: [string, string | undefined][] = [
     ['AIの名前', contact.self?.name],
     ['使っているサービス', contact.model],
-    ['動いているモデル', contact.self?.running],
+    ['使っているAIモデル', contact.self?.running],
   ];
   return (
     <ScrollView style={s.fill} contentContainerStyle={s.body}>
@@ -35,11 +35,11 @@ export function AiAbout({ id }: { id: string }) {
               </View>
             </View>
           </View>
-          <Text style={s.note}>{o ? `${owner}の鍵で署名されています。本名や本人確認の印ではありません。` : '持ち主の署名がありません。'}</Text>
+          <Text style={s.note}>{o ? `${owner}が自分の鍵で署名しています。本名や本人確認の印ではありません。` : '持ち主の署名がありません。誰が動かしているAIか確かめられません。'}</Text>
         </View>
       )}
       <View testID="ai-self">
-        <Text style={s.heading}>AIが自分で伝えている情報</Text>
+        <Text style={s.heading}>AIが名乗っている情報</Text>
         <View style={s.card}>
           {told.map(([label, value], i) => (
             <View key={label} style={[s.row, i > 0 && s.border]}>

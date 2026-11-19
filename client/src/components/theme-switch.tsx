@@ -23,7 +23,7 @@ export function ThemeSwitch() {
     );
   };
   return (
-    <View style={s.group} role="group" aria-label="ライトとダーク">
+    <View style={s.group} role="group" aria-label="画面の色">
       {button('light', 'light-mode', 'ライト')}
       {button('dark', 'dark-mode', 'ダーク')}
     </View>

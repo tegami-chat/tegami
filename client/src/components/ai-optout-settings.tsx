@@ -20,7 +20,7 @@ export function AiOptOutSettings() {
       <Group>
         <SwitchRow label="自分の文を相手のAIに読ませない" value={myNoAi} onChange={(on) => void setMyNoAi(on).catch(() => {})} />
       </Group>
-      <Text style={s.note}>オンにすると、友だちの公式のTegamiは、自分の文を下書きなどでAIに渡しません。改造したアプリでは守られません。</Text>
+      <Text style={s.note}>オンにすると、友だちの公式のTegamiは、あなたの文を下書きなどでAIに渡しません。改造したアプリには効きません。</Text>
       {!myNoAi && rooms.length > 0 && (
         <>
           <Text style={s.subheading}>AIに読ませないトーク</Text>
@@ -37,7 +37,7 @@ export function AiOptOutSettings() {
                     setRooms(noAiChats());
                   }}
                   role="button"
-                  aria-label={`${chatName(room, contacts, groups)}のAIに読ませないを解除`}>
+                  aria-label={`${chatName(room, contacts, groups)}の「AIに読ませない」を解除`}>
                   <Text style={s.action}>解除</Text>
                 </Pressable>
               </View>

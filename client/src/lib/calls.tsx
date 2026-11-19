@@ -31,7 +31,7 @@ const TURN_WAIT_MS = 1500;
  * the credentials and ends when there are none (lib/call-network.ts).
  */
 const RELAY_WAIT_MS = 8000;
-const RELAY_FAILED = '中継のサーバーを使えませんでした';
+const RELAY_FAILED = '通話の中継サーバーにつなげませんでした。時間をおいてかけ直すか、設定の「通話の中継」を確かめてください。';
 
 /** How long a call rings before it gives up. */
 export const RING_MS = 45_000;

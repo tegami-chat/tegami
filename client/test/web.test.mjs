@@ -830,12 +830,12 @@ async function main() {
 
       // A makes the link in settings.
       await a.page.goto(ORIGIN + '/settings/account');
-      await openIfLocked(a.page, '別の端末でも使う');
-      await a.page.getByText('別の端末でも使う').click();
-      await waitText(a.page, 'まで使えます');
+      await openIfLocked(a.page, 'ほかの端末でも使う');
+      await a.page.getByText('ほかの端末でも使う').click();
+      await waitText(a.page, 'まで有効です');
       const moveLink = (await text(a.page)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)?.[0];
       assert(moveLink, 'no link on the settings screen');
-      assert(await a.page.getByLabel('別の端末で読み取るQRコード').isVisible(), 'no QR code');
+      assert(await a.page.getByLabel('ほかの端末で読み取るQRコード').isVisible(), 'no QR code');
 
       // A second device opens it, gets the same account, name and friend.
       const a2 = await newUser(browser);
@@ -866,8 +866,8 @@ async function main() {
 
       // Pasting the link (an iPhone Home Screen app cannot be reached by scanning).
       const a3 = await newUser(browser, { prf: false });
-      await button(a3.page, '別の端末から受け取る').click();
-      await a3.page.getByPlaceholder('別の端末で作ったリンクを貼る').fill(moveLink);
+      await button(a3.page, 'ほかの端末から受け取る').click();
+      await a3.page.getByPlaceholder('ほかの端末で作ったリンクを貼る').fill(moveLink);
       await button(a3.page, '受け取る').click();
       await waitText(a3.page, 'えーさんのアカウントを受け取りました');
       await button(a3.page, 'この端末で使う').click();
@@ -934,9 +934,9 @@ async function main() {
         { peer: b.hex, at: oldAt },
       );
       await a.page.goto(ORIGIN + '/settings/account');
-      await waitText(a.page, '別の端末でも使う');
-      await a.page.getByText('別の端末でも使う').click();
-      await waitText(a.page, 'まで使えます');
+      await waitText(a.page, 'ほかの端末でも使う');
+      await a.page.getByText('ほかの端末でも使う').click();
+      await waitText(a.page, 'まで有効です');
       const moveLink = (await text(a.page)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)?.[0];
       assert(moveLink, 'no moving link');
       const a2 = await newUser(browser, { prf: false });
@@ -1161,11 +1161,11 @@ async function main() {
       await a.page.getByRole('checkbox', { name: 'ちえ' }).click();
       await shot(a.page, 'group-new', 'グループを作る画面（管理者だけがメンバーを変更できる）');
       await button(a.page, '作る').click();
-      await waitText(a.page, 'あきらがグループを作成しました。');
+      await waitText(a.page, 'あきらがグループを作りました。');
       await sendText(a, '前の話');
       await openGroup(b, '家族');
       await waitText(b.page, '前の話');
-      await waitText(b.page, 'あきらがグループを作成しました。');
+      await waitText(b.page, 'あきらがグループを作りました。');
 
       // A adds D.
       await button(a.page, 'メニュー').click();
@@ -1237,8 +1237,8 @@ async function main() {
       await button(a.page, '削除').click();
       await waitText(a.page, 'メンバー（3）');
       await openGroup(c, '親戚');
-      await waitText(c.page, 'あきらがちえを退会させました。');
-      await waitText(c.page, 'このグループのメンバーではありません');
+      await waitText(c.page, 'あきらがちえをグループから削除しました。');
+      await waitText(c.page, 'このグループのメンバーではないため、メッセージを送れません。');
       await shot(c.page, 'group-removed', '削除された人のトーク');
       assert(!(await c.page.getByPlaceholder('メッセージ').count()), 'C can still write');
       await openGroup(a, '親戚');
@@ -1275,7 +1275,7 @@ async function main() {
       await a.page.getByRole('checkbox', { name: 'ちえ' }).click();
       await a.page.getByRole('switch', { name: '管理者だけがメンバーを変更できる' }).click();
       await button(a.page, '作る').click();
-      await waitText(a.page, 'あきらがグループを作成しました。');
+      await waitText(a.page, 'あきらがグループを作りました。');
       await b.page.goto(ORIGIN + '/');
       await waitText(b.page, '部活');
       await b.page.getByText('部活', { exact: true }).first().click();
@@ -1486,9 +1486,9 @@ async function main() {
       await openSettings(a.page);
       await waitText(a.page, 'Tegamiのサーバー');
       await button(a.page, '通話の中継').click();
-      await waitText(a.page, '直接つながる通話では、相手にIPアドレスが見えます。');
+      await waitText(a.page, '直接つながる通話では、相手にIPアドレス（ネット上の住所）が見えます。');
       await a.page.getByRole('switch', { name: '通話を常に中継する' }).click();
-      await waitText(a.page, '相手にIPアドレスが見えません。');
+      await waitText(a.page, '相手にIPアドレス（ネット上の住所）が見えません。');
       await shot(a.page, 'call-network-relay', '設定の「通話の中継」：通話を常に中継するをオンにした画面');
 
       // Always relay, but the relay has no TURN: the call ends before it rings, and nothing goes direct.
@@ -1496,7 +1496,7 @@ async function main() {
       await a.page.goto(`${ORIGIN}/chat/${b.hex}`);
       await button(a.page, '通話').click();
       await button(a.page, '音声通話').click();
-      await waitText(a.page, '中継のサーバーを使えませんでした');
+      await waitText(a.page, '通話の中継サーバーにつなげませんでした');
       await noText(b.page, '応答', 4000);
       assert((await a.page.evaluate(() => window.__pcs.length)) === 0, 'a peer connection was made without TURN');
 
@@ -1636,9 +1636,9 @@ async function main() {
 
       // Turn recovery on: the code is shown once.
       await a.page.goto(ORIGIN + '/settings/account');
-      await openIfLocked(a.page, '復旧コードを作成');
-      await button(a.page, '復旧コードを作成').click();
-      await waitText(a.page, 'このコードは今だけ表示されます');
+      await openIfLocked(a.page, '復旧コードを作る');
+      await button(a.page, '復旧コードを作る').click();
+      await waitText(a.page, 'このコードを見られるのは今だけです');
       const code1 = (await a.page.getByTestId('recovery-code').innerText()).trim();
       assert(/^([2-9A-HJ-NP-Z]{4}-){6}[2-9A-HJ-NP-Z]{4}$/.test(code1), `code format: ${code1}`);
       let list = await backups();
@@ -1667,7 +1667,7 @@ async function main() {
 
       // The relay cannot be reached: after 3 failed refreshes in a row, settings says so
       // in one line; the next successful refresh takes the line away.
-      const BEHIND = '復旧コードの控えを更新できていません';
+      const BEHIND = '友だちや設定の最近の変更を、復旧用にまだ保管できていません';
       await a.page.goto(ORIGIN + '/settings/account');
       await openIfLocked(a.page, '復旧コードを削除');
       await waitText(a.page, '復旧コードを削除');
@@ -1735,7 +1735,7 @@ async function main() {
       await a.page.goto(ORIGIN + '/settings/account');
       await openIfLocked(a.page, 'コードを更新');
       await button(a.page, 'コードを更新').click();
-      await waitText(a.page, 'このコードは今だけ表示されます');
+      await waitText(a.page, 'このコードを見られるのは今だけです');
       const code2 = (await a.page.getByTestId('recovery-code').innerText()).trim();
       assert(code2 !== code1, 'the same code again');
       await until(async () => (await backups()).length === 1, 'the old backup was not deleted');
@@ -1745,7 +1745,7 @@ async function main() {
       // The restored device still has the old code: its next refresh finds the backup gone
       // and turns recovery off there instead of bringing the old code back.
       await r.u.page.goto(ORIGIN + '/settings/account');
-      await waitText(r.u.page, '復旧コードを作成');
+      await waitText(r.u.page, '復旧コードを作る');
       assert((await backups()).length === 1, 'the old code came back');
       assert((await tryCode(code1)).t.includes('コードが正しくありません'), 'the old code works again');
       await r.u.context.close();
@@ -1753,7 +1753,7 @@ async function main() {
       // Turning off deletes the backup; the code then fails.
       await button(a.page, '保管しました').click();
       await button(a.page, '復旧コードを削除').click();
-      await waitText(a.page, '復旧コードを作成');
+      await waitText(a.page, '復旧コードを作る');
       assert((await backups()).length === 0, 'the backup is still on the relay');
       assert((await tryCode(code2)).t.includes('コードが正しくありません'), 'the code works after turning off');
       for (const u of [a, b]) await u.context.close();
@@ -1822,8 +1822,8 @@ async function main() {
 
       // Moving to a new device: what was written before it was set up is not unread there.
       await a.page.goto(ORIGIN + '/settings/account');
-      await a.page.getByText('別の端末でも使う').click();
-      await waitText(a.page, 'まで使えます');
+      await a.page.getByText('ほかの端末でも使う').click();
+      await waitText(a.page, 'まで有効です');
       const moveLink = (await text(a.page)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)[0];
       const a2 = await newUser(browser, { prf: false });
       await a2.page.goto(moveLink);
@@ -2754,7 +2754,7 @@ async function main() {
       await p.getByTestId('ai-confirm').waitFor();
       await waitText(p, 'クロードが送ろうとしています');
       await waitText(p, '宛先');
-      await waitText(p, '写真、動画、ファイル、音声、リンク、お金の話に見える文は、毎回確かめてから送ります');
+      await waitText(p, '写真や動画、ファイル、音声、リンクを含む文や、お金の話に見える文は、送る前に確認の画面が出ます');
       await shot(p, 'ai-confirm-photo', 'AI が写真を確認なしで送ろうとした時の確認（宛先と中身を大きく出す）');
       await button(p, '送る').click();
       assert((await answer()) === true, 'sending the photo was not allowed');
@@ -2795,7 +2795,7 @@ async function main() {
       await p.waitForFunction(() => JSON.parse(localStorage.getItem('tegami.ai.permissions')).all.contacts === false, null, { timeout: 5000 });
       await p.getByText('AIの記録', { exact: true }).click();
       await waitText(p, '期間が終わったため、自動でオフに戻しました');
-      await waitText(p, '写真、動画、ファイル、音声、リンク、お金の話に見える文は確認：許可しました');
+      await waitText(p, '写真や動画、ファイル、音声、リンクを含む文や、お金の話に見える文は確認：許可しました');
       await waitText(p, '初めて話すほかの人のAI：許可しました');
       await waitText(p, 'クロード：ほかの人のAIと話す（テストCのAI）');
       assert(!(await p.getByText(/npub1/).count()), 'the log shows the other AI by its key');
@@ -2841,8 +2841,8 @@ async function main() {
 
       // The 10-minute link brings the settings, not the log.
       await p.goto(ORIGIN + '/settings/account');
-      await p.getByText('別の端末でも使う').click();
-      await waitText(p, 'まで使えます');
+      await p.getByText('ほかの端末でも使う').click();
+      await waitText(p, 'まで有効です');
       const moveLink = (await text(p)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)?.[0];
       assert(moveLink, 'no moving link');
       const a2 = await newUser(browser, { prf: false });
@@ -2860,8 +2860,8 @@ async function main() {
 
       // The recovery backup carries them, and follows a change made after the code was made.
       await p.goto(ORIGIN + '/settings/account');
-      await button(p, '復旧コードを作成').click();
-      await waitText(p, 'このコードは今だけ表示されます');
+      await button(p, '復旧コードを作る').click();
+      await waitText(p, 'このコードを見られるのは今だけです');
       const code = (await p.getByTestId('recovery-code').innerText()).trim();
       await button(p, '保管しました').click();
       const backupData = async () => (await (await fetch(`http://localhost:${RELAY_PORT}/_backups`)).json())[0]?.data;
@@ -2890,7 +2890,7 @@ async function main() {
       // Turn recovery off again so other tests see an empty relay.
       await p.goto(ORIGIN + '/settings/account');
       await button(p, '復旧コードを削除').click();
-      await waitText(p, '復旧コードを作成');
+      await waitText(p, '復旧コードを作る');
       for (const u of [a, b]) await u.context.close();
     });
 
@@ -3171,8 +3171,8 @@ async function main() {
 
         // テストB has a second device; turning the setting on reaches it and every friend.
         await bp.goto(ORIGIN + '/settings/account');
-        await bp.getByText('別の端末でも使う').click();
-        await waitText(bp, 'まで使えます');
+        await bp.getByText('ほかの端末でも使う').click();
+        await waitText(bp, 'まで有効です');
         const moveLink = (await text(bp)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)?.[0];
         assert(moveLink, 'no moving link');
         const b2 = await newUser(browser, { prf: false });
@@ -3279,12 +3279,12 @@ async function main() {
         await noText(bp, '持ち主：未確認', 500);
         // The details: what the signature proves, apart from what the AI says of itself.
         await button(bp, 'AIの詳しい情報').click();
-        await waitText(bp, 'あおいの鍵で署名されています。本名や本人確認の印ではありません。');
+        await waitText(bp, 'あおいが自分の鍵で署名しています。本名や本人確認の印ではありません。');
         await waitText(bp, 'claude-opus-5-5');
         const signed = await text(bp);
-        assert(signed.includes('署名で確かめた情報') && /持ち主\s*\S?\s*あおい/.test(signed) && signed.includes('あおいの鍵で署名されています。本名や本人確認の印ではありません。'), `the signed part: ${signed}`);
+        assert(signed.includes('署名で確かめた情報') && /持ち主\s*\S?\s*あおい/.test(signed) && signed.includes('あおいが自分の鍵で署名しています。本名や本人確認の印ではありません。'), `the signed part: ${signed}`);
         const self = signed;
-        assert(/AIの名前\s*クロード/.test(self) && /使っているサービス\s*Anthropic Claude/.test(self) && /動いているモデル\s*claude-opus-5-5/.test(self), `the AI's own info: ${self}`);
+        assert(/AIの名前\s*クロード/.test(self) && /使っているサービス\s*Anthropic Claude/.test(self) && /使っているAIモデル\s*claude-opus-5-5/.test(self), `the AI's own info: ${self}`);
         await shot(bp, 'ai-about', 'AIの詳しい情報の画面');
         // On あおい's own screen the AI is theirs: no owner line.
         await a.page.goto(`${ORIGIN}/chat/${aiHex}`);
@@ -3535,9 +3535,9 @@ async function main() {
       await befriend(a, b);
       const ai = await fakeAi(a);
       await a.page.goto(ORIGIN + '/settings/account');
-      await waitText(a.page, '別の端末でも使う');
-      await a.page.getByText('別の端末でも使う').click();
-      await waitText(a.page, 'まで使えます');
+      await waitText(a.page, 'ほかの端末でも使う');
+      await a.page.getByText('ほかの端末でも使う').click();
+      await waitText(a.page, 'まで有効です');
       const moveLink = (await text(a.page)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)?.[0];
       const a2 = await newUser(browser, { prf: false });
       await a2.page.goto(moveLink);
@@ -3551,7 +3551,7 @@ async function main() {
       await a.page.getByRole('switch', { name: 'トークを読む', exact: true }).click();
       await a2.page.goto(ORIGIN + '/');
       await a2.page.getByTestId('ai-widened').waitFor({ timeout: 20000 });
-      await waitText(a2.page, 'ほかの端末でAIの権限が広がりました');
+      await waitText(a2.page, 'ほかの端末でAIの権限が増えました。心当たりがなければ確認してください');
       await shot(a2.page, 'ai-widened', 'トーク一覧：ほかの端末でAIの権限が広がった時の1行');
       await a2.page.getByTestId('ai-widened').click();
       await waitText(a2.page, 'AIの使用');
@@ -3781,8 +3781,8 @@ async function main() {
       // Moving the account to another device brings the block list along.
       await button(a.page, '戻る').click();
       await a.page.getByRole('button', { name: 'アカウント', exact: true }).last().click();
-      await a.page.getByText('別の端末でも使う').click();
-      await waitText(a.page, 'まで使えます');
+      await a.page.getByText('ほかの端末でも使う').click();
+      await waitText(a.page, 'まで有効です');
       const moveLink = (await text(a.page)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)?.[0];
       assert(moveLink, 'no moving link');
       const a2 = await newUser(browser);
@@ -4338,8 +4338,8 @@ async function main() {
 
       // Opening the app moves the old stamp into the stamp storage, so the new device can fetch it.
       await a.page.goto(ORIGIN + '/settings/account');
-      await a.page.getByText('別の端末でも使う').click();
-      await waitText(a.page, 'まで使えます');
+      await a.page.getByText('ほかの端末でも使う').click();
+      await waitText(a.page, 'まで有効です');
       const moveLink = (await text(a.page)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)[0];
       const aList = await a.page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.stamps')));
       assert(aList.length === 2 && aList[0].url.endsWith(`/stamp/${made.sha256}`), `old stamp not moved into the stamp storage: ${JSON.stringify(aList)}`);
@@ -4359,7 +4359,7 @@ async function main() {
       await a2.page.getByTestId('stamp-item').first().waitFor({ timeout: 15000 });
       const gone = a2.page.getByTestId('stamp-item-unavailable');
       await gone.waitFor({ timeout: 15000 });
-      await shot(a2.page, 'stamp-moved', '別の端末に移したスタンプ（右は置き場から消えたもの）');
+      await shot(a2.page, 'stamp-moved', 'ほかの端末に移したスタンプ（右は置き場から消えたもの）');
       // The moved stamp is sent from the new device and reaches B.
       await a2.page.getByTestId('stamp-item').first().click();
       await b.page.getByTestId('stamp-message').first().waitFor({ timeout: 15000 });
@@ -4372,8 +4372,8 @@ async function main() {
 
       // The recovery code: the backup holds the stamps, and a restored device gets them.
       await a.page.goto(ORIGIN + '/settings/account');
-      await button(a.page, '復旧コードを作成').click();
-      await waitText(a.page, 'このコードは今だけ表示されます');
+      await button(a.page, '復旧コードを作る').click();
+      await waitText(a.page, 'このコードを見られるのは今だけです');
       const code = (await a.page.getByTestId('recovery-code').innerText()).trim();
       await button(a.page, '保管しました').click();
       const r = await newUser(browser, { prf: false });
@@ -4468,8 +4468,8 @@ async function main() {
 
       // A second device for A, through the link.
       await a.page.goto(ORIGIN + '/settings/account');
-      await a.page.getByText('別の端末でも使う').click();
-      await waitText(a.page, 'まで使えます');
+      await a.page.getByText('ほかの端末でも使う').click();
+      await waitText(a.page, 'まで有効です');
       const moveLink = (await text(a.page)).match(/http:\/\/localhost:\d+\/link#k=[A-Za-z0-9_-]+/)[0];
       const a2 = await newUser(browser, { prf: false });
       await a2.page.goto(moveLink);
@@ -4833,7 +4833,7 @@ async function main() {
       // After starting, the same switch is in the settings.
       await button(page, 'はじめる').click();
       await openSettings(page);
-      await waitText(page, 'ライトとダーク');
+      await waitText(page, '画面の色');
       await button(page, 'ダーク').click();
       const bg = await page.evaluate(() => localStorage.getItem('tegami.theme'));
       assert(bg === 'dark', `stored: ${bg}`);
@@ -5009,7 +5009,7 @@ async function main() {
       assert((await envelopesFor(hex)).length > 0, 'setup: no envelope waiting');
       // A recovery code (its backup is signed with a key from the code, not the account key).
       await a.page.goto(ORIGIN + '/settings/account');
-      await button(a.page, '復旧コードを作成').click();
+      await button(a.page, '復旧コードを作る').click();
       await button(a.page, '保管しました').click();
       const backups = async () => (await (await fetch(`http://localhost:${RELAY_PORT}/_backups`)).json()).length;
       const backupsBefore = await backups();
@@ -5040,7 +5040,7 @@ async function main() {
       assert((await envelopesFor(hex)).length === 0, 'a message to a deleted account was kept');
       // The other device learns it when it asks the relay, and can remove it there.
       await a2.page.reload();
-      await waitText(a2.page, 'このアカウントは削除されました。');
+      await waitText(a2.page, 'このアカウントは削除済みです。この端末からも削除してください。');
       await shot(a2.page, 'deleted-elsewhere', 'ほかの端末でアカウントが削除された時');
       await button(a2.page, 'この端末から削除').click();
       await button(a2.page, 'はじめる').waitFor({ timeout: 10000 });

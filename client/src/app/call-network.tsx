@@ -61,8 +61,8 @@ export default function CallNetworkScreen() {
       </View>
       <Text style={s.note}>
         {n.relayOnly
-          ? '相手にIPアドレスが見えません。中継のサーバーを使えない時は、通話がつながりません。'
-          : '直接つながる通話では、相手にIPアドレスが見えます。'}
+          ? '相手にIPアドレス（ネット上の住所）が見えません。中継のサーバーを使えない時は、通話がつながりません。'
+          : '直接つながる通話では、相手にIPアドレス（ネット上の住所）が見えます。'}
       </Text>
 
       <Text style={s.heading}>中継のサーバー</Text>

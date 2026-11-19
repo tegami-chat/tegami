@@ -26,7 +26,7 @@ export default function Settings() {
   const aiPerm = useAiPermissions();
   const aiOn = AI_ACTIONS.some((a) => switchValue(aiPerm, { layer: 'all' }, a));
   const aiReadOnly = AI_ACTIONS.every((a) => switchValue(aiPerm, { layer: 'all' }, a) === READ_ONLY[a]);
-  const aiState = (!aiOn ? 'すべてオフ' : aiReadOnly ? '読むと下書きだけ' : 'オン') + (myNoAi ? '、相手のAIに読ませない' : '');
+  const aiState = (!aiOn ? 'すべてオフ' : aiReadOnly ? '読むことと下書きだけ' : 'オン') + (myNoAi ? '、相手のAIに読ませない' : '');
 
   const [push, setPush] = useState<PushState>(() => pushState());
   const [pushBusy, setPushBusy] = useState(false);
@@ -64,7 +64,7 @@ export default function Settings() {
         <MaterialIcons name="chevron-right" size={22} color={c.muted} />
       </Pressable>
 
-      {recoveryBehind && <Text style={s.note}>復旧コードの控えを更新できていません。通信を確認してください。</Text>}
+      {recoveryBehind && <Text style={s.note}>友だちや設定の最近の変更を、復旧用にまだ保管できていません。通信を確認してください。</Text>}
       <Group>
         <LinkRow icon="key" label="アカウント" value={protectedByPasskey ? 'パスキー' : 'このブラウザ'} onPress={() => go('/settings/account')} />
         <LinkRow icon="shield" label="プライバシー" value={blocked.length ? `ブロック ${blocked.length}人` : undefined} onPress={() => go('/settings/privacy')} />
@@ -85,12 +85,12 @@ export default function Settings() {
         <LinkRow icon="call" label="通話の中継" value={(callNet.own ? '自分のサーバー' : 'Tegamiのサーバー') + (callNet.relayOnly ? '、常に中継' : '')} onPress={() => go('/call-network')} />
         <View style={s.groupRow}>
           <MaterialIcons name="dark-mode" size={22} color={c.muted} />
-          <Text style={s.label}>ライトとダーク</Text>
+          <Text style={s.label}>画面の色</Text>
           <ThemeSwitch />
         </View>
       </Group>
       {push === 'needs-home-screen' && <Text style={s.note}>iPhoneでは、Safariの共有ボタンから「ホーム画面に追加」を選び、ホーム画面のTegamiから開くと通知を使えます。</Text>}
-      {push === 'unsupported' && <Text style={s.note}>このブラウザは通知を使えません。</Text>}
+      {push === 'unsupported' && <Text style={s.note}>このブラウザでは通知を使えません。</Text>}
       {push === 'denied' && <Text style={s.note}>通知が許可されていません。ブラウザか端末の設定で、Tegamiの通知を許可してください。</Text>}
       {pushFailed && <Text style={s.note}>通知を設定できませんでした。通信を確認して、もう一度お試しください。</Text>}
 

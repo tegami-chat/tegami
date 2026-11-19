@@ -1369,7 +1369,7 @@ export default function Chat() {
 
         {notMember ? (
           <View style={s.blockedBar}>
-            <Text style={s.blockedText}>このグループのメンバーではありません</Text>
+            <Text style={s.blockedText}>このグループのメンバーではないため、メッセージを送れません。</Text>
           </View>
         ) : isBlocked ? (
           <View style={s.blockedBar}>
@@ -1437,7 +1437,7 @@ export default function Chat() {
                     AIに読ませない
                   </Text>
                 </View>
-                <Pressable role="button" aria-label="AIに読ませないをやめる" style={s.replyClose} onPress={toggleNoAiHere}>
+                <Pressable role="button" aria-label="「AIに読ませない」を解除" style={s.replyClose} onPress={toggleNoAiHere}>
                   <MaterialIcons name="close" size={24} color={c.muted} />
                 </Pressable>
               </View>
@@ -1819,7 +1819,7 @@ export default function Chat() {
       {aiInviting && (
         <Dialog
           title={group ? `${personName(aiInviting, contacts)}をこのグループに招待しますか？` : `${personName(aiInviting, contacts)}をこのトークに呼びますか？`}
-          text={group ? '全員が同意すると、このグループのメッセージが届くようになります。' : '相手が同意すると、このトークのメッセージが届くようになります。'}
+          text={group ? `全員が同意すると、このグループのメッセージが${personName(aiInviting, contacts)}にも届くようになります。` : `相手が同意すると、このトークのメッセージが${personName(aiInviting, contacts)}にも届くようになります。`}
           onClose={() => setAiInviting(null)}
           buttons={[
             { label: 'キャンセル', variant: 'outlined', onPress: () => setAiInviting(null) },
@@ -1828,7 +1828,7 @@ export default function Chat() {
               onPress: () => {
                 const ai = aiInviting;
                 setAiInviting(null);
-                if (peer) void inviteAiToGroup(peer, ai).catch(() => showToast('招待できませんでした'));
+                if (peer) void inviteAiToGroup(peer, ai).catch(() => showToast(group ? '招待できませんでした' : '呼べませんでした'));
               },
             },
           ]}

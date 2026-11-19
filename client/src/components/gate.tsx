@@ -101,7 +101,7 @@ export function Gate({ locked }: { locked: boolean }) {
       <Frame>
         <Icon />
         {moving.state === 'fetching' ? (
-          <Text style={s.notice}>別の端末から受け取っています</Text>
+          <Text style={s.notice}>ほかの端末から受け取っています</Text>
         ) : (
           <>
             <Text style={s.notice}>このリンクは使えません。リンクは作ってから10分で使えなくなります。元の端末の設定で、もう一度作ってください。</Text>
@@ -170,7 +170,7 @@ export function Gate({ locked }: { locked: boolean }) {
               style={s.pasteInput}
               value={pasted}
               onChangeText={setPasted}
-              placeholder="別の端末で作ったリンクを貼る"
+              placeholder="ほかの端末で作ったリンクを貼る"
               placeholderTextColor={c.muted}
               autoCapitalize="none"
               autoCorrect={false}
@@ -204,7 +204,7 @@ export function Gate({ locked }: { locked: boolean }) {
         ) : (
           <>
             <Pressable style={s.secondary} onPress={() => setPasting(true)} role="button">
-              <Text style={s.secondaryText}>別の端末から受け取る</Text>
+              <Text style={s.secondaryText}>ほかの端末から受け取る</Text>
             </Pressable>
             <Pressable style={s.quiet} onPress={() => setRestoring('input')} role="button">
               <Text style={s.quietText}>復旧コードを使う</Text>

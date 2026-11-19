@@ -34,7 +34,7 @@ const KIND_LABEL: Record<AiContent['kind'], string> = {
  * still asks this time). Only these two reasons override a switch that is on.
  */
 const WHY_STILL_ASKED: Partial<Record<Layer, string>> = {
-  always: '「確認なしで送る」はオンですが、写真、動画、ファイル、音声、リンク、お金の話に見える文は、毎回確かめてから送ります。',
+  always: '「確認なしで送る」はオンですが、写真や動画、ファイル、音声、リンクを含む文や、お金の話に見える文は、送る前に確認の画面が出ます。',
   others: '「確認なしで送る」はオンですが、ほかの人が書いた文を読んだ後は、毎回確かめてから送ります。',
 };
 

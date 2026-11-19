@@ -234,7 +234,7 @@ test('history: messages of a Tegami group, group lines and AI-written messages m
     v: 1,
     messages: [
       { id: 'e'.repeat(64), from: X, peer: room, text: 'グループで', at: 1 },
-      { id: 'd'.repeat(64), from: X, peer: room, text: 'えーがグループを作成しました。', at: 2, notice: true },
+      { id: 'd'.repeat(64), from: X, peer: room, text: 'えーがグループを作りました。', at: 2, notice: true },
       { id: 'c'.repeat(64), from: X, peer: Y, text: 'AIが書いた', at: 3, ai: { pubkey: Z, model: 'Anthropic Claude', name: 'クロード' } },
       { id: 'b'.repeat(64), from: X, peer: 'g-xyz', text: 'bad room', at: 4 },
     ],
