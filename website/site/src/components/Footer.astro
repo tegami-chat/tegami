@@ -14,7 +14,7 @@ const columns: { title: string; items: Item[] }[] = [
   { title: x('ft.users'), items: [
     { text: x('nav.how'), href: link('/how', lang) },
     { text: x('nav.status'), href: link('/status', lang) },
-    { text: x('ft.compare'), href: link('/compare', lang) },
+    // The comparison page was taken off on 2026-11-19. To bring it back, restore this line and the 'compare' entries in site.ts and PageView.astro.
     { text: x('nav.faq'), href: link('/faq', lang) },
   ] },
   { title: x('ft.project'), items: [

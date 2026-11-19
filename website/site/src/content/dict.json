@@ -347,10 +347,6 @@
   "en": "No tracking",
   "ja": "あなたの行動を追跡しません"
  },
- "sec.notyet.h": {
-  "en": "What isn't done yet",
-  "ja": "まだ足りないところ"
- },
  "sec.check.h": {
   "en": "Check it yourself",
   "ja": "自分で確かめられます"
@@ -439,25 +435,13 @@
   "en": "There is no analytics or tracking, in the app or on this website. We only count totals, and publish the weekly numbers on the <a href=\"Tegamiの稼働状況と利用統計案_2026-11-15.html\" class=\"underline\">status page</a>.",
   "ja": "アプリにもこのサイトにも、アクセス解析や追跡の仕組みは入れていません。数えるのは全体の合計だけで、毎週の数を<a href=\"Tegamiの稼働状況と利用統計案_2026-11-15.html\" class=\"underline\">稼働状況のページ</a>で公開しています。"
  },
- "sec.notyet.1.1": {
-  "en": "If someone steals your key, they could also read past messages still on the server or on your device. That's why your key is locked with a passkey.",
-  "ja": "鍵を盗まれると、サーバーや端末に残っている過去のメッセージまで読まれるおそれがあります。鍵が盗まれにくいように、パスキーで守っています。"
- },
- "sec.notyet.1.2": {
-  "en": "No outside security audit yet.",
-  "ja": "外部の専門家による安全性の監査は、まだ受けていません。"
- },
- "sec.notyet.1.3": {
-  "en": "The browser version loads its code each time you open it, so whoever serves it could swap in different code without you noticing.",
-  "ja": "ブラウザ版は、開くたびにサーバーからプログラムを読み込みます。配る側がプログラムを差し替えても、使う人には分かりません。"
- },
- "sec.notyet.1.4": {
-  "en": "You can't talk with people on other Nostr apps yet.",
-  "ja": "TegamiはNostrという共通の仕組みで動いています。ただし、Nostrを使うほかのアプリの人とは、まだやり取りできません。"
- },
  "sec.check.1": {
   "en": "All of Tegami's code is public under AGPL-3.0, so anyone can check what this page says. The details are on the <a href=\"Tegamiの開発者向け_2026-11-16.html\" class=\"underline\">developer pages</a>, and what we keep and for how long is in the <a href=\"Tegamiのプライバシーポリシー案_2026-11-14.html\" class=\"underline\">privacy policy</a>.",
   "ja": "Tegamiのコードは、AGPL-3.0というライセンスで、すべて公開しています。このページに書いたことは、誰でもコードを読んで確かめられます。詳しい作りは<a href=\"Tegamiの開発者向け_2026-11-16.html\" class=\"underline\">開発者向けの説明</a>に、預かる情報と期間は<a href=\"Tegamiのプライバシーポリシー案_2026-11-14.html\" class=\"underline\">プライバシーポリシー</a>に書いています。"
+ },
+ "sec.check.status": {
+  "en": "Service status",
+  "ja": "稼働状況"
  },
  "faq.h": {
   "en": "FAQ",

@@ -139,7 +139,7 @@
       document.querySelectorAll('[data-stat-week]').forEach((el) => { el.textContent = weekRange(last.week); });
     }
     if (has && !$('charts').children.length) {
-      $('charts').innerHTML = Object.entries(S.tabs).map(([m, label], i) => `<section class="chart-card ${i === 0 ? 'lg:col-span-2' : ''}"><h3 class="text-subsection">${label}</h3><svg data-chart="${m}" class="mt-3 w-full" viewBox="0 0 600 200" role="img" aria-label="${S.cols[m]}"></svg></section>`).join('');
+      $('charts').innerHTML = Object.entries(S.tabs).map(([m, label]) => `<section class="chart-card"><h3 class="text-subsection">${label}</h3><svg data-chart="${m}" class="mt-3 w-full" viewBox="0 0 600 200" role="img" aria-label="${S.cols[m]}"></svg></section>`).join('');
     }
     if (has) draw();
   }

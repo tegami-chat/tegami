@@ -227,14 +227,6 @@ html.dark { background-color: #101311; color-scheme: dark; }
   .iconlist { display: grid; gap: 0.75rem; }
   .iconlist li { display: flex; gap: 0.75rem; align-items: flex-start; }
   .iconlist li > svg { margin-top: 0.2rem; }
-
-  /* Steps joined by a dashed line (/how "when you lose your device"). */
-  .steps > li { position: relative; display: flex; gap: 1rem; padding-bottom: 1.5rem; }
-  .steps > li:last-child { padding-bottom: 0; }
-  .steps > li:not(:last-child)::before { content: ''; position: absolute; left: 1.25rem; top: 2.75rem; bottom: 0.25rem; border-left: 2px dashed var(--c-line-strong); }
-
-  /* /how: the lock between two phones. */
-  .seal-line { flex: 1; border-top: 2px dashed var(--c-accent); opacity: 0.5; min-width: 1rem; }
 }
 
 /* ---- Table: the comparison matrix (/compare). The Tegami column is marked with data-hl. ---- */

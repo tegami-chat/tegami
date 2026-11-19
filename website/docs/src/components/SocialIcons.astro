@@ -5,8 +5,6 @@ const ja = Astro.currentLocale === 'ja';
 const base = ja ? '/ja' : '';
 const links = [
   { href: `${base}/`, label: ja ? 'ホーム' : 'Home' },
-  { href: `${base}/how`, label: ja ? '安全の仕組み' : 'How it works' },
-  { href: `${base}/faq`, label: ja ? 'よくある質問' : 'FAQ' },
 ];
 ---
 <nav class="site-links" aria-label="Tegami">

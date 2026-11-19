@@ -44,7 +44,8 @@ export const t = (key: string, lang: Lang): string => {
   return fixLinks(e[lang] ?? e.en, lang);
 };
 
-export const PAGES = ['index', 'how', 'faq', 'about', 'compare', 'roadmap', 'status', 'privacy', 'donate'] as const;
+// The /compare page was taken off on 2026-11-19. To bring it back: add 'compare' to PAGES, restore PATH and META entries (compare: '/compare'), the Footer link and the Compare entry in PageView.astro. Compare.astro and its dict keys are kept.
+export const PAGES = ['index', 'how', 'faq', 'about', 'roadmap', 'status', 'privacy', 'donate'] as const;
 export type PageName = (typeof PAGES)[number];
 
 const PATH: Record<PageName, string> = {
@@ -52,7 +53,6 @@ const PATH: Record<PageName, string> = {
   how: '/how',
   faq: '/faq',
   about: '/about',
-  compare: '/compare',
   roadmap: '/roadmap',
   status: '/status',
   privacy: '/privacy',
@@ -65,10 +65,6 @@ export const META: Record<PageName, Record<Lang, { title: string; desc: string }
   faq: {
     en: { title: 'FAQ | Tegami', desc: 'Questions people ask first about Tegami.' },
     ja: { title: 'よくある質問 | Tegami', desc: 'Tegamiについて、よく聞かれること。' },
-  },
-  compare: {
-    en: { title: 'Compare apps | Tegami', desc: 'Tegami next to LINE, WhatsApp, Signal and Telegram.' },
-    ja: { title: 'ほかのアプリとの比較 | Tegami', desc: 'LINE、WhatsApp、Signal、Telegramと並べた、Tegamiの比較。' },
   },
   index: {
     en: { title: 'Tegami: your chats belong to you', desc: 'An open-source messaging app built on Nostr. No ads, no tracking, and bring your own AI.' },
