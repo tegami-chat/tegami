@@ -18,6 +18,6 @@ const items = groups.flatMap(([status, keys]) => keys.map((k) => ({ tag: x(statu
 <HeroText
   title={x('rm.h')}
   subtitle={x('rm.t')}
-  callToAction={{ variant: 'link', text: x('rm.issue'), href: 'https://github.com/tegami-chat/tegami/issues', target: '_blank', rel: 'noopener' }}
+  callToAction={{ variant: 'secondary', text: x('rm.issue'), href: 'https://github.com/tegami-chat/tegami/issues', target: '_blank', rel: 'noopener' }}
 />
-<Features subtitle={x('rm.note')} items={items} columns={2} />
+<Features subtitle={x('rm.note')} items={items} columns={2} classes={{ container: 'pt-4 md:pt-4 lg:pt-4' }} />

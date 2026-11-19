@@ -1,1 +1,0 @@
-var e=class extends HTMLElement{connectedCallback(){this.querySelector(`[data-aw-toggle-color-scheme]`)?.addEventListener(`click`,()=>{let e=document.documentElement.classList.toggle(`dark`);localStorage.theme=e?`dark`:`light`,document.dispatchEvent(new CustomEvent(`aw:theme-change`))})}};customElements.get(`aw-theme-toggle`)||customElements.define(`aw-theme-toggle`,e);

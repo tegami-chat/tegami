@@ -8,12 +8,12 @@ import DiffScenes from '~/components/widgets/DiffScenes.astro';
 import PlatformPills from '~/components/common/PlatformPills.astro';
 import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
 import Headline from '~/components/ui/Headline.astro';
-import { t, link, type Lang } from '~/site';
+import { t, link, browserAction, type Lang } from '~/site';
 
 const { lang = 'en' } = Astro.props as { lang?: Lang };
 const x = (k: string) => t(k, lang);
 const mail = 'hello@tegami.chat';
-const browser = { variant: 'primary' as const, text: x('cta.browser'), href: 'https://app.tegami.chat/', target: '_blank', rel: 'noopener' };
+const browser = browserAction(lang);
 
 const pillars = [
   { title: x('p1.h'), description: x('p1.t'), icon: 'tabler:ad-off' },
@@ -40,9 +40,9 @@ const make = [
     description: x('mk.bots.t') + '<br><code class="mt-2 inline-block rounded bg-gray-100 px-2 py-1 text-sm dark:bg-slate-800">node agent.mjs init --name Claude</code>',
     icon: 'tabler:plug-connected',
   },
-  { tag: x('mk.api.tag'), title: x('mk.api.h'), description: x('mk.api.t'), icon: 'tabler:api' },
+  { tag: [`${x('mk.api.mcp')} ${x('now')}`, `${x('mk.api.api')} ${x('st.plan')}`], title: x('mk.api.h'), description: x('mk.api.t'), icon: 'tabler:api' },
   { tag: x('st.plan'), title: x('mk.relay.h'), description: x('mk.relay.t'), icon: 'tabler:server' },
-  { tag: x('open'), title: x('mk.agpl.h'), description: x('mk.agpl.t'), icon: 'tabler:code' },
+  { title: x('mk.agpl.h'), description: x('mk.agpl.t'), icon: 'tabler:code' },
 ];
 const costs = ['server', 'notify', 'photo', 'dev'].map((k) => ({ title: x(`don.${k}.h`), description: x(`don.${k}.t`) }));
 const select = `<span class="select-all break-all">${mail}</span>`;
@@ -54,7 +54,7 @@ const ways = [
 ---
 
 <Hero badge={x('beta')} tagline={x('hero.kicker')} title={`${x('hero.h1a')}<br>${x('hero.h1b')}`} actions={[browser, { text: x('how.cta'), href: link('/how', lang) }]}>
-  <div slot="content" class="mt-5"><PlatformPills lang={lang} comingOnly labelled centered /></div>
+  <div slot="content" class="mt-5"><PlatformPills lang={lang} centered /></div>
 </Hero>
 
 <Features items={pillars} columns={3} />
@@ -65,8 +65,7 @@ const ways = [
 
 <Features title={x('ai.h')} items={ai} id="ai" />
 
-<Features title={x('mk.h')} subtitle={x('mk.t')} items={make} id="desk" />
-<CallToAction actions={[{ variant: 'secondary', text: x('mk.dev'), href: link('/developers', lang) }]} />
+<Features title={x('mk.h')} subtitle={x('mk.t')} items={make} id="desk" callToAction={{ variant: 'secondary', text: x('mk.dev'), href: link('/developers', lang) }} />
 
 <Features2 title={x('don.h')} subtitle={x('don.t')} items={costs} columns={4} />
 <Features2 items={ways} columns={3} />
@@ -75,4 +74,3 @@ const ways = [
 </WidgetWrapper>
 
 <CallToAction layout="banner" title={x('end.h')} actions={[browser]} />
-<div class="flex justify-center pb-16"><PlatformPills lang={lang} comingOnly labelled centered /></div>

@@ -13,7 +13,7 @@ const { lang = 'en' } = Astro.props;
 
 <WidgetWrapper containerClass="max-w-3xl py-0 md:py-0 lg:py-0">
   <div id="sample-bar" hidden class="mb-6 rounded-lg bg-amber-300 px-4 py-2 text-center text-sm font-semibold text-amber-950" set:html={t('st.sample', lang)} />
-  <div id="banner" class="mt-10 flex items-center gap-3 rounded-2xl border border-gray-200 px-5 py-4 dark:border-slate-700">
+  <div id="banner" class="mt-4 flex items-center gap-3 rounded-2xl border border-gray-200 px-5 py-4 dark:border-slate-700">
     <span id="dot" class="h-3 w-3 shrink-0 rounded-full bg-gray-300"></span>
     <span id="state" class="text-lg font-bold"></span>
   </div>
@@ -23,7 +23,7 @@ const { lang = 'en' } = Astro.props;
   </dl>
 
   <section class="mt-12 border-t border-gray-200 py-8 dark:border-slate-700">
-    <h2 class="text-2xl font-bold" set:html={t('st.use.h', lang)} />
+    <h2 class="text-3xl font-bold" set:html={t('st.use.h', lang)} />
     <p class="mt-1 text-sm text-muted tabular-nums" id="period"></p>
     <p class="mt-3 text-sm text-muted" set:html={t('st.use.env', lang)} />
     <p class="mt-2 text-sm text-muted" set:html={t('st.use.note', lang)} />
@@ -54,14 +54,14 @@ const { lang = 'en' } = Astro.props;
   </section>
 
   <section class="border-t border-gray-200 py-8 dark:border-slate-700">
-    <h2 class="text-2xl font-bold" set:html={t('st.how.h', lang)} />
+    <h2 class="text-3xl font-bold" set:html={t('st.how.h', lang)} />
     <p class="mt-3 text-muted" set:html={t('st.how.t0', lang)} />
     <p class="mt-3 text-muted" set:html={t('st.how.t1', lang)} />
     <p class="mt-3 text-muted" set:html={t('st.how.t2', lang)} />
   </section>
 
   <section class="border-t border-gray-200 py-8 dark:border-slate-700">
-    <h2 class="text-2xl font-bold" set:html={t('st.links.h', lang)} />
+    <h2 class="text-3xl font-bold" set:html={t('st.links.h', lang)} />
     <ul class="mt-3 space-y-2">
       <li><a href="https://relay.tegami.chat/stats" target="_blank" rel="noopener" class="font-semibold text-primary underline" set:html={t('st.links.json', lang)} /></li>
       <li><a href="https://github.com/tegami-chat/tegami/blob/main/relay/src/stats.ts" target="_blank" rel="noopener" class="font-semibold text-primary underline" set:html={t('st.links.code', lang)} /></li>
@@ -69,7 +69,8 @@ const { lang = 'en' } = Astro.props;
     </ul>
     <p class="mt-6 text-xs text-muted">
       <span set:html={t('st.tech.ver', lang)} />: <span id="commit">—</span><br />
-      <span set:html={t('st.tech.nips', lang)} />: <span id="nips" class="tabular-nums">—</span>
+      <span set:html={t('st.tech.nips', lang)} />: <span id="nips" class="tabular-nums">—</span><br />
+      <span set:html={t('st.tech.nipnote', lang)} />
     </p>
   </section>
 </WidgetWrapper>

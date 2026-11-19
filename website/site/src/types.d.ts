@@ -116,8 +116,8 @@ export interface Stat {
 }
 
 export interface Item {
-  /** Small status label above the title (for example: Coming soon). */
-  tag?: string;
+  /** Small status label above the title (for example: Coming soon). A list shows one label each. */
+  tag?: string | string[];
   title?: string;
   description?: string;
   icon?: string;
@@ -247,6 +247,8 @@ export interface Features extends Omit<Headline, 'classes'>, Widget {
   items?: Array<Item>;
   columns?: number;
   defaultIcon?: string;
+  /** A button centred under the items. */
+  callToAction?: CallToAction;
   isBeforeContent?: boolean;
   isAfterContent?: boolean;
 }

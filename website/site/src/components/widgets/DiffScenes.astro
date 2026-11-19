@@ -45,7 +45,7 @@ const { lang = 'en' } = Astro.props;
     </defs>
   </svg>
   <Headline title={t('diff.h', lang)} subtitle={t('diff.t', lang)} />
-  <div id="chips" class="mx-auto flex max-w-3xl flex-wrap justify-center gap-2" role="tablist"></div>
+  <div id="chips" class="mx-auto flex max-w-5xl flex-nowrap gap-2 overflow-x-auto pb-2 [&>:first-child]:ml-auto [&>:last-child]:mr-auto" role="tablist"></div>
   <div id="scenes" class="mt-8"></div>
 </WidgetWrapper>
 <script is:inline src="/diff.js" defer></script>

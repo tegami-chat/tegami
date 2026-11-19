@@ -95,8 +95,9 @@
   const sample = location.hostname !== 'tegami.chat' && new URLSearchParams(location.search).get('sample');
 
   async function load() {
+    // The "sample data" note belongs to the sample numbers only; with live data it stays hidden.
+    $('sample-bar').hidden = !sample;
     if (sample) {
-      $('sample-bar').hidden = false;
       weeks = [['2026-11-16', 120, 0, 90, 10], ['2026-11-23', 340, 20, 210, 20], ['2026-11-30', 0, 0, 40, 0], ['2026-12-07', 980, 60, 540, 50], ['2026-12-14', 1520, 90, 860, 80], ['2026-12-21', 1740, 110, 990, 90], ['2026-12-28', 1610, 100, 930, 90], ['2027-01-04', 2050, 130, 1180, 110], ['2027-01-11', 2210, 140, 1250, 120]]
         .map(([week, envelopes, files, logins, keys]) => ({ week, envelopes, files, logins, keys }));
     } else {
@@ -151,7 +152,8 @@
     const max = Math.max(20, ...vals);
     const plot = H - top - bottom;
     const y = (v) => top + plot - (v / max) * plot;
-    const bw = W / weeks.length;
+    // A slot per week, at most 100 px wide, so one week does not become one giant block; the slots are centred.
+    const bw = Math.min(100, W / weeks.length), off = (W - bw * weeks.length) / 2;
     const dark = document.documentElement.classList.contains('dark');
     const fill = dark ? '#7fd7a8' : '#106c4a', faint = dark ? '#2c3430' : '#d4d4d4', label = dark ? '#9aa39e' : '#525252';
     let out = `<line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" stroke="${faint}"/>`;
@@ -161,10 +163,11 @@
       const v = w[metric];
       const small = v === 0;
       const h = small ? Math.max(6, (y(0) - y(10)) * 0.5) : Math.max(6, y(0) - y(v));
-      const x = i * bw + bw * 0.18;
-      out += `<rect x="${x}" y="${y(0) - h}" width="${bw * 0.64}" height="${h}" rx="3" fill="${fill}" opacity="${small ? 0.35 : 1}"><title>${weekRange(w.week)}: ${show(v)}</title></rect>`;
+      const barW = Math.min(64, bw * 0.64);
+      const x = off + i * bw + (bw - barW) / 2;
+      out += `<rect x="${x}" y="${y(0) - h}" width="${barW}" height="${h}" rx="3" fill="${fill}" opacity="${small ? 0.35 : 1}"><title>${weekRange(w.week)}: ${show(v)}</title></rect>`;
       // Keep the first and last dates inside the chart.
-      if (i % step === 0) out += `<text x="${Math.min(W - 24, Math.max(24, x + bw * 0.32))}" y="${H - 6}" text-anchor="middle" font-size="13" fill="${label}">${short(w.week)}</text>`;
+      if (i % step === 0) out += `<text x="${Math.min(W - 24, Math.max(24, x + barW / 2))}" y="${H - 6}" text-anchor="middle" font-size="13" fill="${label}">${short(w.week)}</text>`;
     });
     svg.innerHTML = out;
   }

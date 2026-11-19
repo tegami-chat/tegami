@@ -86,7 +86,7 @@ const isActive = (href?: string) => typeof href === 'string' && `/${trimSlash(hr
           <Logo />
         </a>
         <div class="flex items-center lg:hidden">
-          {alternates && <LanguageSwitch lang={lang} alternates={alternates} />}
+          {alternates && <LanguageSwitch lang={lang} alternates={alternates} class="block" />}
           <ToggleMenu label={lang === 'ja' ? 'メニュー' : 'Menu'} />
         </div>
       </div>

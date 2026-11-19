@@ -219,10 +219,6 @@
   "en": "Give an AI or bot on your computer its own Tegami account, and chat with it like anyone else.",
   "ja": "パソコンで動くAIやボットに、Tegamiのアカウントを持たせられます。ほかの友だちと同じようにトークできます。"
  },
- "mk.api.tag": {
-  "en": "MCP available, API planned",
-  "ja": "MCPは提供中、APIは予定"
- },
  "mk.api.h": {
   "en": "API and MCP",
   "ja": "APIとMCP"
@@ -468,7 +464,7 @@
   "ja": "Tegamiのコードは、AGPL-3.0というライセンスで、すべて公開しています。このページに書いたことは、誰でもコードを読んで確かめられます。詳しい作りは<a href=\"Tegamiの開発者向け_2026-11-16.html\" class=\"underline\">開発者向けの説明</a>に、預かる情報と期間は<a href=\"Tegamiのプライバシーポリシー案_2026-11-14.html\" class=\"underline\">プライバシーポリシー</a>に書いています。"
  },
  "faq.h": {
-  "en": "Frequently asked questions",
+  "en": "FAQ",
   "ja": "よくある質問"
  },
  "faq.free.q": {
@@ -484,8 +480,8 @@
   "ja": "メッセージを読めるのは誰ですか？"
  },
  "faq.read.a": {
-  "en": "Only you and the people you send them to. Messages are encrypted on your device, so not even Tegami can read them. There are two exceptions. If you allow an AI to read a chat, that AI can read it, and what it reads also goes to the company behind it. You can choose not to let other people’s AIs read your messages. If you attach messages to a report, the operator can read the ones you attached.",
-  "ja": "あなたと、トークの相手だけです。メッセージは端末の中で暗号化されるので、Tegamiにも読めません。例外は2つあります。AIに読ませる許可を出したトークは、そのAIが読めます。AIに読ませたものは、そのAIの会社にも渡ります。自分の文を相手のAIに読ませない設定もあります。通報にメッセージを添えたときは、添えたメッセージを運営者が読めます。"
+  "en": "Only you and the people you send them to. Messages are encrypted on your device, so not even Tegami's operator can read them. There are two exceptions. If you allow an AI to read a chat, that AI can read it, and what it reads also goes to the company behind it. You can choose not to let other people’s AIs read your messages. If you attach messages to a report, the operator can read the ones you attached.",
+  "ja": "あなたと、トークの相手だけです。メッセージは端末の中で暗号化されるので、運営者にも読めません。例外は2つあります。AIに読ませる許可を出したトークは、そのAIが読めます。AIに読ませたものは、そのAIの会社にも渡ります。自分の文を相手のAIに読ませない設定もあります。通報にメッセージを添えたときは、添えたメッセージを運営者が読めます。"
  },
  "faq.phone.q": {
   "en": "Do I need a phone number or email?",
@@ -612,7 +608,7 @@
   "ja": "<a href=\"https://github.com/tegami-chat/tegami\">github.com/tegami-chat/tegami</a>（AGPL-3.0）"
  },
  "cmp.h": {
-  "en": "How Tegami compares",
+  "en": "Compare apps",
   "ja": "ほかのアプリとの比較"
  },
  "cmp.t": {
@@ -1004,7 +1000,7 @@
   "ja": "サンプルの数値です（実際の統計ではありません）"
  },
  "st.h": {
-  "en": "Status and usage",
+  "en": "Status and stats",
   "ja": "稼働状況と利用統計"
  },
  "st.t": {
@@ -1032,12 +1028,12 @@
   "ja": "集計が終わった週だけを表示しています。週は協定世界時（UTC）の月曜0時、日本時間の月曜9時に始まります。利用が少ない週の数値から個人を推測されないよう、数値はすべて10の倍数に切り上げ、0から9は、この画面では「10未満」と表示します（公開している統計のデータでは0です）。"
  },
  "st.lg.n": {
-  "en": "10 or more",
-  "ja": "10以上"
+  "en": "Weekly count of 10 or more (bar height is the count)",
+  "ja": "その週の数が10以上（棒の高さが数です）"
  },
  "st.lg.u": {
-  "en": "Under 10",
-  "ja": "10未満"
+  "en": "Weekly count under 10 (0 to 9)",
+  "ja": "その週の数が10未満（0から9）"
  },
  "st.c.week": {
   "en": "Week (UTC)",
@@ -1869,7 +1865,7 @@
  },
  "ft.compare": {
   "en": "Compare apps",
-  "ja": "他アプリとの比較"
+  "ja": "ほかのアプリとの比較"
  },
  "ft.devs": {
   "en": "For developers",
@@ -1938,5 +1934,17 @@
  "ft.about": {
   "en": "About us",
   "ja": "運営者情報"
+ },
+ "st.tech.nipnote": {
+  "en": "A NIP is a numbered specification for Nostr. See the <a href=\"/developers/spec/#glossary\" class=\"underline\">glossary</a> for the words used here.",
+  "ja": "NIPは、Nostrの仕様に付いている番号です。詳しくは<a href=\"/ja/developers/spec/#用語\" class=\"underline\">開発者向けの用語</a>をご覧ください。"
+ },
+ "mk.api.mcp": {
+  "en": "MCP",
+  "ja": "MCP"
+ },
+ "mk.api.api": {
+  "en": "API",
+  "ja": "API"
  }
 }

@@ -53,7 +53,12 @@ const {
     connectedCallback() {
       this.querySelector('[data-aw-toggle-color-scheme]')?.addEventListener('click', () => {
         const isDark = document.documentElement.classList.toggle('dark');
-        localStorage.theme = isDark ? 'dark' : 'light';
+        // The docs (Starlight) read their own key, so write both and the choice carries over.
+        try {
+          const value = isDark ? 'dark' : 'light';
+          localStorage.setItem('theme', value);
+          localStorage.setItem('starlight-theme', value);
+        } catch {}
         // Let the reveal-on-scroll controller drop its stagger delay so the
         // theme change doesn't flicker mid-animation (see REF #643).
         document.dispatchEvent(new CustomEvent('aw:theme-change'));

@@ -20,9 +20,8 @@ interface Links {
 
 interface Platforms {
   label: string;
-  soon: string;
-  browser: { text: string; title: string; href: string };
-  others: Array<{ id: string; text: string }>;
+  browser: { text: string; status: string; title: string; href: string };
+  others: Array<{ id: string; text: string; status: string }>;
 }
 
 export interface Props {

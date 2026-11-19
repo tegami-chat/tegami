@@ -6,7 +6,19 @@ export type Lang = 'en' | 'ja';
 type Entry = { en: string; ja: string };
 const D = dict as Record<string, Entry>;
 
-export const link = (path: string, lang: Lang): string => (lang === 'ja' ? (path === '/' ? '/ja/' : '/ja' + path) : path);
+// The developer docs are folders, and the server redirects /developers to /developers/, so write the slash.
+export const link = (path: string, lang: Lang): string => {
+  const p = /^\/developers(\/|$)/.test(path) && !path.endsWith('/') ? path + '/' : path;
+  return lang === 'ja' ? (p === '/' ? '/ja/' : '/ja' + p) : p;
+};
+
+export const browserAction = (lang: Lang) => ({
+  variant: 'primary' as const,
+  text: t('cta.browser', lang),
+  href: 'https://app.tegami.chat/',
+  target: '_blank',
+  rel: 'noopener',
+});
 
 // The sentences link to the draft file names; they become the real addresses, in the page's language.
 const DRAFT_LINKS: Record<string, string> = {
@@ -91,8 +103,6 @@ export const META: Record<PageName, Record<Lang, { title: string; desc: string }
   },
 };
 
-const SOON: Record<Lang, string> = { en: 'Coming soon', ja: '準備中' };
-
 export function headerData(lang: Lang) {
   return {
     links: [
@@ -117,9 +127,15 @@ export function footerData(lang: Lang) {
     tagline: x('ft.tag'),
     platforms: {
       label: lang === 'ja' ? '使える場所' : 'Where Tegami runs',
-      soon: SOON[lang],
-      browser: { text: x('ft.os.browser'), title: lang === 'ja' ? 'ブラウザで始める' : 'Open in your browser', href: 'https://app.tegami.chat/' },
-      others: ['iphone', 'android', 'windows', 'mac', 'linux'].map((id) => ({ id, text: x('ft.os.' + id) })),
+      browser: { text: x('ft.os.browser'), status: x('now'), title: lang === 'ja' ? 'ブラウザで始める' : 'Open in your browser', href: 'https://app.tegami.chat/' },
+      // Statuses as on the roadmap (rm.now / rm.plan) and in the FAQ.
+      others: [
+        ['iphone', 'rm.now'],
+        ['android', 'rm.now'],
+        ['windows', 'rm.plan'],
+        ['mac', 'rm.plan'],
+        ['linux', 'rm.plan'],
+      ].map(([id, st]) => ({ id, text: x('ft.os.' + id), status: x(st) })),
     },
     links: [
       {

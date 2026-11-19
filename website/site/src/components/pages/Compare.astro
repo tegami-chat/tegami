@@ -5,27 +5,27 @@ import { t, type Lang } from '~/site';
 
 const { lang = 'en' } = Astro.props as { lang?: Lang };
 const x = (k: string) => t(k, lang);
-const apps = [['line', 'LINE'], ['wa', 'WhatsApp'], ['sig', 'Signal'], ['tg', 'Telegram'], ['teg', 'Tegami']];
+const apps = [['teg', 'Tegami'], ['line', 'LINE'], ['wa', 'WhatsApp'], ['sig', 'Signal'], ['tg', 'Telegram']];
 const rows = ['price', 'signup', 'read', 'ads', 'ai', 'who'];
 ---
 
 <HeroText title={x('cmp.h')} subtitle={x('cmp.t')} />
-<WidgetWrapper containerClass="max-w-4xl pt-4 md:pt-4 lg:pt-4">
-  <div class="prose max-w-none dark:prose-invert prose-a:text-primary">
-    <div class="overflow-x-auto">
-      <table>
+<WidgetWrapper prose containerClass="max-w-5xl pt-4 md:pt-4 lg:pt-4">
+  <div class="prose prose-lg max-w-none dark:prose-invert prose-headings:font-heading prose-a:text-primary">
+    <div class="overflow-x-auto rounded-lg border border-gray-300 dark:border-slate-600" role="region" tabindex="0" aria-label={x('cmp.h')}>
+      <table class="my-0 text-base">
         <thead>
           <tr>
-            <th></th>
-            {apps.map(([, name]) => <th>{name}</th>)}
+            <th class="sticky left-0 bg-page"></th>
+            {apps.map(([, name]) => <th class="px-3 py-3 text-left whitespace-nowrap">{name}</th>)}
           </tr>
         </thead>
         <tbody>
           {
             rows.map((r) => (
               <tr>
-                <th scope="row" set:html={x(`cmp.${r}`)} />
-                {apps.map(([id]) => <td set:html={x(`cmp.${r}.${id}`)} />)}
+                <th scope="row" class="sticky left-0 min-w-28 max-w-36 border-b border-gray-200 bg-page px-3 py-3 text-left align-top dark:border-slate-700" set:html={x(`cmp.${r}`)} />
+                {apps.map(([id]) => <td class="min-w-36 px-3 py-3 align-top" set:html={x(`cmp.${r}.${id}`)} />)}
               </tr>
             ))
           }

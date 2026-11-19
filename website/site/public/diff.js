@@ -504,7 +504,7 @@ frame.className = 'mt-8 overflow-hidden rounded-3xl border border-neutral-200 bg
 frame.innerHTML = '<div class="h-1.5 w-full bg-neutral-200 dark:bg-night-line" aria-hidden="true"><div id="pbar" class="h-full w-full origin-left scale-x-0 bg-forest-600 dark:bg-forest-300"></div></div>';
 scenesEl.parentNode.insertBefore(frame, scenesEl);
 frame.insertBefore(scenesEl, frame.firstChild);
-document.getElementById('chips').innerHTML = S.map((sc) => `<button type="button" role="tab" data-sc="${sc.id}" class="chip rounded-full border px-4 py-2 text-sm font-medium">${t(sc.id + '.chip')}</button>`).join('');
+document.getElementById('chips').innerHTML = S.map((sc) => `<button type="button" role="tab" data-sc="${sc.id}" class="chip shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium">${t(sc.id + '.chip')}</button>`).join('');
 
 // ─── 再生 ───────────────────────────────────────────
 // 最初は止まった絵を見せる。場面は勝手に切り替わらない。動かすのは、絵をクリックした時（Enter と Space でも）だけ。
@@ -517,7 +517,7 @@ const ICON = {
 // 場面ごとの、絵の上にかぶせるボタン。止まっている間だけ、再生の印を出す。
 document.querySelectorAll('#diff .scene > .grid').forEach((g) => {
   g.classList.add('relative');
-  g.insertAdjacentHTML('beforeend', '<button type="button" class="playhit absolute inset-0 z-10 flex cursor-pointer items-center justify-center rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-600 dark:focus-visible:outline-forest-300"><span class="playmark flex h-16 w-16 items-center justify-center rounded-full bg-forest-600 pl-1 text-white shadow-xl ring-4 ring-white/70 dark:bg-forest-300 dark:text-forest-950 dark:ring-black/40">' + ICON.play + '</span></button>');
+  g.insertAdjacentHTML('beforeend', '<button type="button" class="playhit absolute inset-0 z-10 flex cursor-pointer items-center justify-center rounded-2xl max-sm:items-start max-sm:justify-end max-sm:p-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-600 dark:focus-visible:outline-forest-300"><span class="playmark flex h-16 w-16 items-center max-sm:h-11 max-sm:w-11 justify-center rounded-full bg-forest-600 pl-1 text-white shadow-xl ring-4 ring-white/70 dark:bg-forest-300 dark:text-forest-950 dark:ring-black/40">' + ICON.play + '</span></button>');
 });
 function showButton() {
   document.querySelectorAll('#diff .playhit').forEach((b) => {
@@ -540,7 +540,7 @@ function play(id) {
   document.querySelectorAll('#diff .chip').forEach((b) => {
     const on = b.dataset.sc === id;
     b.setAttribute('aria-selected', on);
-    b.className = 'chip rounded-full border px-4 py-2 text-sm font-medium ' + (on ? 'border-forest-600 bg-forest-600 text-white dark:border-forest-300 dark:bg-forest-300 dark:text-forest-950' : 'border-neutral-300 text-neutral-600 hover:bg-neutral-50 dark:border-night-line dark:text-neutral-300 dark:hover:bg-white/5');
+    b.className = 'chip shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium ' + (on ? 'border-forest-600 bg-forest-600 text-white dark:border-forest-300 dark:bg-forest-300 dark:text-forest-950' : 'border-neutral-300 text-neutral-600 hover:bg-neutral-50 dark:border-night-line dark:text-neutral-300 dark:hover:bg-white/5');
   });
   cur = S.find((s) => s.id === id);
   const sc = document.getElementById('sc-' + id);
