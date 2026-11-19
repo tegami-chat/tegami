@@ -141,7 +141,7 @@
  },
  "st.built": {
   "en": "Coming soon",
-  "ja": "公開待ち"
+  "ja": "準備中"
  },
  "ai.join.h": {
   "en": "Bring AI into a chat",
@@ -228,8 +228,8 @@
   "ja": "自前のサーバーを動かす"
  },
  "mk.relay.t": {
-  "en": "Companies, schools and communities will be able to run their own server.",
-  "ja": "会社や学校、地域の集まりで、自分たち専用のサーバーを持てるようになります。"
+  "en": "Letting companies, schools and communities run their own server is under consideration.",
+  "ja": "会社や学校、地域の集まりで、自分たち専用のサーバーを持てるようにすることを検討中です。"
  },
  "open": {
   "en": "Open source",
@@ -532,16 +532,16 @@
   "ja": "もしTegamiが終了したらどうなりますか？"
  },
  "faq.shutdown.a": {
-  "en": "The code is public, so someone with the skills can run their own server and keep Tegami going. But the app cannot yet connect to a different server, and you cannot yet move your account to another Nostr app (an app that uses the same protocol). You can export your chats anytime.",
-  "ja": "コードを公開しているので、技術のある人は自分でサーバーを立てて、Tegamiを動かし続けられます。ただし、いまのアプリを別のサーバーにつなぐ機能や、ほかのNostrアプリ（同じ通信の仕組みを使う別のアプリ）へアカウントを移す機能は、まだありません。トーク履歴は、いつでも書き出せます。"
+  "en": "The code is public, so someone with the skills can read it. Running your own server and connecting the app to a different server are under consideration, and moving your account to another Nostr app (an app that uses the same protocol) is not available yet. You can export your chats anytime.",
+  "ja": "コードを公開しているので、技術のある人は読めます。自分でサーバーを立てることと、アプリを別のサーバーにつなぐことは検討中です。ほかのNostrアプリ（同じ通信の仕組みを使う別のアプリ）へアカウントを移す機能は、まだありません。トーク履歴は、いつでも書き出せます。"
  },
  "faq.dev.q": {
   "en": "Where are the technical details?",
   "ja": "技術的な説明はどこにありますか？"
  },
  "faq.dev.a": {
-  "en": "On the <a href=\"Tegamiの開発者向け_2026-11-16.html\" class=\"underline\">developer page</a>: which parts of Nostr Tegami uses, what the relay can see, how keys are kept, and the full spec. The code is on <a href=\"https://github.com/tegami-chat/tegami\" class=\"underline\" target=\"_blank\" rel=\"noopener\">GitHub</a>.",
-  "ja": "<a href=\"Tegamiの開発者向け_2026-11-16.html\" class=\"underline\">開発者向けのページ</a>に、TegamiがNostrのどこを使っているか、リレーに何が見えるか、鍵をどう守るか、技術仕様までをまとめています。コードは<a href=\"https://github.com/tegami-chat/tegami\" class=\"underline\" target=\"_blank\" rel=\"noopener\">GitHub</a>で公開しています。"
+  "en": "The <a href=\"Tegamiの開発者向け_2026-11-16.html\" class=\"underline\">developer page</a> has a short overview and how to connect your own AI. The code is on <a href=\"https://github.com/tegami-chat/tegami\" class=\"underline\" target=\"_blank\" rel=\"noopener\">GitHub</a>.",
+  "ja": "<a href=\"Tegamiの開発者向け_2026-11-16.html\" class=\"underline\">開発者向けのページ</a>に、概要と、自分のAIをつなぐ方法をまとめています。コードは<a href=\"https://github.com/tegami-chat/tegami\" class=\"underline\" target=\"_blank\" rel=\"noopener\">GitHub</a>で公開しています。"
  },
  "op.h": {
   "en": "About us",
@@ -885,7 +885,7 @@
  },
  "rm.built": {
   "en": "Coming soon",
-  "ja": "公開待ち"
+  "ja": "準備中"
  },
  "rm.aigroup.h": {
   "en": "AI in group chats",
@@ -956,8 +956,8 @@
   "ja": "自前のサーバーを動かす"
  },
  "rm.relay.t": {
-  "en": "Companies, schools and communities can run their own server, and you can choose which ones to use.",
-  "ja": "会社や学校、コミュニティが自分たちのサーバーを持てます。使うサーバーも選べます。"
+  "en": "Letting companies, schools and communities run their own server, and letting you choose which ones to use, is under consideration.",
+  "ja": "会社や学校、コミュニティが自分たちのサーバーを持てることと、使うサーバーを選べることを検討中です。"
  },
  "rm.nostr.h": {
   "en": "Talk with other Nostr apps",
@@ -1940,8 +1940,8 @@
   "ja": "運営者情報"
  },
  "st.tech.nipnote": {
-  "en": "A NIP is a numbered specification for Nostr, the protocol Tegami is built on. See the <a href=\"/developers/spec/#glossary\" class=\"underline\">glossary</a> for the words used here.",
-  "ja": "NIPは、Nostr（Tegamiが土台にしている通信の規格）の仕様に付いている番号です。詳しくは<a href=\"/ja/developers/spec/#用語\" class=\"underline\">開発者向けの用語</a>をご覧ください。"
+  "en": "A NIP is a numbered specification for Nostr, the protocol Tegami is built on.",
+  "ja": "NIPは、Nostr（Tegamiが土台にしている通信の規格）の仕様に付いている番号です。"
  },
  "mk.api.mcp": {
   "en": "MCP",

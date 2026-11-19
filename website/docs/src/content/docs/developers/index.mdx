@@ -1,50 +1,16 @@
 ---
 title: "Overview"
-description: "The entry point to the developer documentation for Tegami."
+description: "A short introduction to Tegami for developers."
 ---
 
-import { Badge, CardGrid, LinkCard } from '@astrojs/starlight/components';
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-Tegami is an open-source messaging app built on Nostr. The sending device seals each message before leaving it with the relay, so the server cannot read it. The AI runs on your own computer and talks in the same format as human friends.
+Tegami is an open-source messaging app built on Nostr. Messages are sent with NIP-17. The AI runs on your own computer and talks in the same format as human friends.
 
-These docs are for people who want to check how Tegami is built. They say what runs in production today, what is still missing, and what comes next. Production is described as of November 18, 2026, in [tegami-chat/tegami](https://github.com/tegami-chat/tegami).
-
-## Find what you need
+The code is licensed under AGPL-3.0 and is on [GitHub](https://github.com/tegami-chat/tegami).
 
 <CardGrid>
-<LinkCard title="Learn how it works" description="See the parts, and how messages, AI and calls flow." href="/developers/architecture/" />
-<LinkCard title="Run your own relay" description="Run the relay code on your own Cloudflare." href="/developers/self-host-relay/" />
-<LinkCard title="Connect your own AI" description="Make your own AI a friend by QR code or MCP." href="/developers/connect-ai/" />
-<LinkCard title="Contribute" description="Report bugs, and run the code on your machine." href="/developers/contributing/" />
+<LinkCard title="Connect your own AI" description="Make your own AI a friend." href="/developers/connect-ai/" />
+<LinkCard title="Developer FAQ" description="Short answers to basic questions." href="/developers/faq/" />
+<LinkCard title="Contributing" description="Send a bug report or a request." href="/developers/contributing/" />
 </CardGrid>
-
-## Status labels
-
-Items on each page carry one of these statuses.
-
-| Label | Meaning |
-| --- | --- |
-| <Badge text="Available" variant="success" /> | In production since November 18, 2026 |
-| <Badge text="Coming soon" variant="tip" /> | The code is written but not in production yet |
-| <Badge text="In development" variant="caution" /> | Being built now, not finished yet |
-| <Badge text="Planned" variant="default" /> | We intend to build it, work has not started |
-| <Badge text="Decided" variant="note" /> | The direction is set, the code isn't written yet |
-| <Badge text="Under discussion" variant="caution" /> | Not decided yet |
-
-## All pages
-
-- Getting started: [Architecture](/developers/architecture/)
-- Concepts: [Nostr](/developers/nostr/), [Encryption](/developers/encryption/), [Keys](/developers/keys/), [Relay](/developers/relay/), [Notifications, calls and media](/developers/notifications-calls/), [AI](/developers/ai/)
-- Guides: [Run your own relay](/developers/self-host-relay/), [Connect your own AI](/developers/connect-ai/), [Contributing](/developers/contributing/)
-- Reference: [Technical spec](/developers/spec/), [Developer FAQ](/developers/faq/)
-- Comparison: [Comparison for developers](/developers/compare/), [How Tegami differs](/developers/differences/)
-
-## Where the code lives
-
-The code is split into `client/` (the app), `relay/` (the relay), `agent/` (the tool that connects an AI) and `website/` (the site). The full list of folders is in [Contributing](/developers/contributing/#what-is-in-the-repository).
-
-## Open source
-
-Tegami is licensed under AGPL-3.0. Anyone who offers an app built from Tegami's code over a network must also publish their code.
-
-For now, we accept bug reports and feature requests as GitHub Issues. We do not accept code contributions (pull requests). To take part in development, see [Contributing](/developers/contributing/).

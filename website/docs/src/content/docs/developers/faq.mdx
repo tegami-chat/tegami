@@ -1,54 +1,20 @@
 ---
 title: "Developer FAQ"
-description: "Short answers to what developers often ask."
+description: "Short answers to basic questions from developers."
 ---
 
-These are short answers to questions developers often ask about how Tegami is built. They describe production as of November 18, 2026.
+## Is Tegami open source?
 
-## Can I run my own relay?
-
-Yes, you can run your own relay, because the relay code is published in `relay/`. However, the current app connects only to the official relay, so to use your own relay you have to build the app yourself. The steps are in [Run your own relay](/developers/self-host-relay/).
-
-## Can I talk to people on other Nostr apps?
-
-No, Tegami cannot talk to people on other Nostr apps today. Tegami's relay accepts writes only from connections logged in with a key registered with Tegami. For details, see [Nostr](/developers/nostr/).
+Yes. Tegami is licensed under AGPL-3.0, and the code is on [GitHub](https://github.com/tegami-chat/tegami).
 
 ## Which NIPs does it use?
 
-Tegami sends messages with NIP-17 and NIP-59 and encrypts them with NIP-44. The list of NIPs in use is in the [technical spec](/developers/spec/).
+Tegami sends messages with NIP-17 and NIP-59 and encrypts them with NIP-44.
 
-## What encryption does it use? Is there forward secrecy?
+## Can I read the code?
 
-Tegami encrypts messages with NIP-44 v2 and wraps them twice in the NIP-59 way. It has no forward secrecy. For details, see [Encryption](/developers/encryption/) and the [technical spec](/developers/spec/).
+Yes. All of the code is public on [GitHub](https://github.com/tegami-chat/tegami).
 
-## How is the secret key protected? Can I use my own nsec?
+## How do I report a bug?
 
-Tegami encrypts the Nostr secret key with a value taken from the passkey PRF extension, and stores only the ciphertext on the device. Logging in with your own nsec and exporting your key are not possible today. For details, see [Keys](/developers/keys/).
-
-## What can the relay see?
-
-The relay can see the recipient's public key on each envelope, the arrival time, the size, the keys that are logged in, and the IP address they connect from. It cannot read message contents. For details, see [Encryption](/developers/encryption/).
-
-## Can I check that the relay and app in production match the published code?
-
-No, you cannot check that today. The commit the relay reports is the operator's own claim, and the browser version of the app does not support reproducible builds. For details, see [Encryption](/developers/encryption/).
-
-## What is the license?
-
-Tegami is licensed under AGPL-3.0. Anyone who offers an app or relay built from Tegami's code over a network must also publish their own code. For details, see the [overview](/developers/#open-source).
-
-## How do I connect my own AI?
-
-You run Node.js `tegami-agent` on your own computer and read the QR code that `node agent.mjs pair` shows with the app. The steps are in [Connect your own AI](/developers/connect-ai/).
-
-## Can I use Tegami over MCP?
-
-Yes, because `tegami-agent` also runs as a stdio MCP server. How to add it is in [Connect your own AI](/developers/connect-ai/#use-it-over-mcp).
-
-## Can someone hide instructions in a message to make the AI leak information?
-
-Tegami makes that hard, but cannot rule it out completely. The AI replies on its own only to people the owner trusts, and a message to anyone other than the owner goes through checks before it is sent. Even so, the checks cannot catch every secret or dangerous message. For details, see [AI](/developers/ai/).
-
-## How can I take part in development?
-
-We accept bug reports and feature requests as GitHub Issues. We do not accept pull requests for now. For details, see [Contributing](/developers/contributing/).
+Send it as a [GitHub Issue](https://github.com/tegami-chat/tegami/issues).

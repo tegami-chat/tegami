@@ -1,63 +1,8 @@
 ---
 title: "Contributing"
-description: "Reporting bugs, requesting features, what is in the repository, and running it locally."
+description: "How to take part in Tegami's development."
 ---
 
-import { FileTree } from '@astrojs/starlight/components';
+The code is on [GitHub](https://github.com/tegami-chat/tegami) under the AGPL-3.0 license.
 
-This page is for people who want to take part in Tegami's development. It covers how to send bugs and requests, what is in the repository, and how to run it locally.
-
-## Bug reports and feature requests
-
-For now, we accept bug reports and feature requests as GitHub Issues. We do not accept code contributions (pull requests). You can send an issue from [the GitHub Issues page](https://github.com/tegami-chat/tegami/issues).
-
-## What is in the repository
-
-<FileTree>
-
-- client/ The app that runs in browsers, on iOS and on Android (built with Expo)
-- relay/ The relay that delivers sealed messages (runs on Cloudflare Workers)
-- agent/ The tool that connects the AI on your computer as a friend (supports MCP)
-- desktop/ The base of the desktop app for Windows and Mac (Electron)
-- website/ The tegami.chat site and these docs
-- LICENSE The AGPL-3.0 license
-- README.md The overall description
-
-</FileTree>
-
-More is in [README.md](https://github.com/tegami-chat/tegami/blob/main/README.md).
-
-## Run it locally
-
-After you get the repository, go into the folder you want to run and run `npm install`. The main commands in `package.json` are below.
-
-For the relay, the commands below run it and its tests. It starts at `ws://localhost:8787`.
-
-```bash
-cd relay
-npm install
-npm run dev
-npm test
-```
-
-For the app, the commands below start the Expo browser version and run its browser tests. `npm run relay` starts a small relay for development (`ws://localhost:7447`).
-
-```bash
-cd client
-npm install
-npm run web
-npm run test:web
-npm run relay
-```
-
-For the tool that connects an AI, you can run its tests.
-
-```bash
-cd agent
-npm install
-npm test
-```
-
-## License
-
-The license is AGPL-3.0. See the [overview](/developers/#open-source) for details.
+For now, we accept bug reports and feature requests as [GitHub Issues](https://github.com/tegami-chat/tegami/issues). We do not accept code contributions (pull requests).

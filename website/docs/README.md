@@ -20,7 +20,7 @@ tegami.chat の /developers と /ja/developers の開発者向けドキュメン
 - `src\components\SocialIcons.astro` がヘッダーの「ホーム、安全の仕組み、よくある質問」へのリンク。
 - `src\components\ArchMap.astro` と `src\diagrams\arch.*.svg` が概要の構成図。
 - ページを足す時は、両言語に mdx を足し、`astro.config.mjs` のサイドバーの組に1行足す。
-- 古い `/developers/protocol` は `public\_redirects` で `/developers/nostr` に転送している（日本語も同じ）。
+- 古い `/developers/protocol` は `public\_redirects` で `/developers` に転送している（2026-11-20 から転送先は `/developers`。移す前の旧ページは git の履歴にある）（日本語も同じ）。
 - サイトのフッターの開発者向けリンクは `website\site\src\site.ts` の `footerData` にある。
 
 ## CSP

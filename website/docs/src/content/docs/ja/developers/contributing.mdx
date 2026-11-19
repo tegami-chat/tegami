@@ -1,63 +1,8 @@
 ---
 title: "開発に参加する"
-description: "不具合の報告、要望、リポジトリの中身、手元での動かし方。"
+description: "Tegamiの開発への参加のしかた。"
 ---
 
-import { FileTree } from '@astrojs/starlight/components';
+コードは[GitHub](https://github.com/tegami-chat/tegami)で、AGPL-3.0のライセンスで公開しています。
 
-Tegamiの開発に参加したい人のために、不具合や要望の送り方、リポジトリの中身、手元での動かし方を説明します。
-
-## 不具合の報告と要望
-
-現在は、不具合の報告と要望をGitHubのIssueで受け付けています。コードの取り込み（プルリクエスト）は受け付けていません。Issueは[GitHubのIssueのページ](https://github.com/tegami-chat/tegami/issues)から送れます。
-
-## リポジトリの中身
-
-<FileTree>
-
-- client/ アプリ（Expoで作っています。本番で動いているのはブラウザ版です）
-- relay/ 封をしたメッセージを届けるリレー（Cloudflare Workersで動きます）
-- agent/ 自分のパソコンのAIを友だちとしてつなぐ道具（MCPに対応しています）
-- desktop/ WindowsとMac向けのデスクトップアプリの土台（Electron）
-- website/ tegami.chatのサイトと、このドキュメント
-- LICENSE AGPL-3.0のライセンス
-- README.ja.md 全体の説明
-
-</FileTree>
-
-詳しくは[README.ja.md](https://github.com/tegami-chat/tegami/blob/main/README.ja.md)にあります。
-
-## 手元で動かす
-
-リポジトリを取得したら、動かしたいフォルダに入って`npm install`を実行します。`package.json`にある主なコマンドは次のとおりです。
-
-リレーは、次のコマンドで起動とテストを実行できます。`ws://localhost:8787`で起動します。
-
-```bash
-cd relay
-npm install
-npm run dev
-npm test
-```
-
-アプリは、次のコマンドで、Expoのブラウザ版を起動し、ブラウザ版のテストを実行できます。開発用の小さなリレー（`ws://localhost:7447`）は、`npm run relay`で起動します。
-
-```bash
-cd client
-npm install
-npm run web
-npm run test:web
-npm run relay
-```
-
-`agent/`（`tegami-agent`）は、次のコマンドでテストを実行できます。
-
-```bash
-cd agent
-npm install
-npm test
-```
-
-## ライセンス
-
-ライセンスはAGPL-3.0です。詳しくは、[概要](/ja/developers/#オープンソース)にあります。
+現在は、不具合の報告と要望を[GitHubのIssue](https://github.com/tegami-chat/tegami/issues)で受け付けています。コードの取り込み（プルリクエスト）は受け付けていません。
