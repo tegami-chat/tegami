@@ -1,45 +1,86 @@
 ---
 title: "Run your own relay"
-description: "How to run your own Tegami relay."
+description: "How to run Tegami's relay on your own Cloudflare."
 ---
 
 import { Aside, Badge, Steps } from '@astrojs/starlight/components';
 
-How to run your own Tegami relay.
+This page walks through setting up Tegami's relay on your own Cloudflare account and getting it running.
 
-Status labels such as "Available" are explained in the [overview](/developers/#what-the-status-labels-mean).
+The relay code is published in [`relay/`](https://github.com/tegami-chat/tegami/tree/main/relay) and runs on Cloudflare Workers and a Durable Object. However, the current app connects only to the official relay (`wss://relay.tegami.chat`). To use your own relay, you have to build the app yourself and change where it connects.
 
-The relay code is in `relay/` and runs on Cloudflare Workers with a Durable Object. The current app only connects to the official relay (`wss://relay.tegami.chat`), so to use your own you need to build the app yourself with `EXPO_PUBLIC_TEGAMI_RELAYS` pointing at it. We have decided to let companies and schools run their own relays.
+- <Badge text="Decided" variant="note" /> We will let companies and schools run their own relay. The operator will choose the registration rule from "anyone", "invite tickets only", and "allowed keys only".
+
+## What you need
+
+- Node.js and npm
+- A Cloudflare account. The relay uses a Durable Object and R2
+- wrangler logged in to your Cloudflare account
 
 ## Steps
 
 <Steps>
 
-1. Get the relay code. It is public in [`relay/`](https://github.com/tegami-chat/tegami/tree/main/relay).
-2. Run `npm run dev` in the `relay/` folder to start the relay on your machine at `ws://localhost:8787` (see `relay/package.json` and `relay/wrangler.jsonc`).
-3. To run it in production, use Cloudflare Workers with a Durable Object. The Durable Object and the R2 buckets for photos and stamps are set in [`relay/wrangler.jsonc`](https://github.com/tegami-chat/tegami/blob/main/relay/wrangler.jsonc), and the tool that deploys the official relay is [`relay/scripts/deploy.mjs`](https://github.com/tegami-chat/tegami/blob/main/relay/scripts/deploy.mjs).
-4. Build the app yourself, with `EXPO_PUBLIC_TEGAMI_RELAYS` pointing at your relay.
+1. Get the relay code and install what it needs.
+
+   ```bash
+   git clone https://github.com/tegami-chat/tegami.git
+   cd tegami/relay
+   npm install
+   ```
+
+2. Run it locally to check. The relay starts at `ws://localhost:8787` (as written in `relay/wrangler.jsonc`).
+
+   ```bash
+   npm run dev
+   ```
+
+3. Create two R2 buckets. Their names are `tegami-files` and `tegami-stamps`, the same as in `relay/wrangler.jsonc`. `tegami-files` holds encrypted photos and files, and the official relay deletes its contents after 30 days. `tegami-stamps` holds stickers and has no deletion rule. The repository has no steps for the 30-day rule, so you add it yourself in the Cloudflare dashboard.
+
+   ```bash
+   npx wrangler@4 r2 bucket create tegami-files
+   npx wrangler@4 r2 bucket create tegami-stamps
+   ```
+
+4. Add the secrets the relay reads. Some features work without them, and some do not.
+
+   ```bash
+   node scripts/vapid-secret.mjs
+   npx wrangler@4 secret put TURNSTILE_SECRET
+   npx wrangler@4 secret put TURN_KEY_ID
+   npx wrangler@4 secret put TURN_KEY_API_TOKEN
+   ```
+
+   - `VAPID_JWK`: the key for notifications (Web Push). `relay/scripts/vapid-secret.mjs` creates the key and registers it. Without it, notifications do not work. Running it twice changes the key, and every device has to turn notifications on again
+   - `TURNSTILE_SECRET`: the key used to check the result of the human check (Turnstile) for registration without an invite ticket
+   - `TURN_KEY_ID` and `TURN_KEY_API_TOKEN`: Cloudflare's TURN keys, used for call relaying (TURN)
+
+5. Rewrite two places in `relay/wrangler.jsonc` for yourself.
+
+   - `ADMIN_PUBKEYS` in `vars`: the public keys of the operators. `node scripts/admin.mjs init` creates an operator key, and `node scripts/admin.mjs whoami` shows its public key
+   - `routes`: replace the official relay's domain (`relay.tegami.chat`) with your own domain
+
+6. Deploy to production.
+
+   ```bash
+   npx wrangler@4 deploy
+   ```
 
 </Steps>
 
+<Aside type="caution" title="deploy.mjs is for the official relay">
+
+`relay/scripts/deploy.mjs` (`npm run deploy`) is the tool for deploying the official relay. It refuses to deploy when there are uncommitted changes, and when the commit is not on `origin/main`. To deploy your own relay, use `npx wrangler@4 deploy` above.
+
+</Aside>
+
+## Connect the app to your relay
+
+The app takes its connection targets from environment variables at build time.
+
+- `EXPO_PUBLIC_TEGAMI_RELAYS`: the relay URLs. You can list several, separated by commas. With nothing set it is `wss://relay.tegami.chat` (`client/src/lib/tegami.tsx`)
+- `EXPO_PUBLIC_TEGAMI_FILES`: the URL of the server that stores photos and files. With nothing set it is `https://relay.tegami.chat`. Change it to your own relay's URL (one that starts with `https://`) (`client/src/lib/files.ts`)
+
+These docs do not cover building the app. `client/` is an Expo project, and [client/README.md](https://github.com/tegami-chat/tegami/blob/main/client/README.md) has the standard Expo way to start it.
+
 For how the relay works as a whole, see [Relay](/developers/relay/).
-
-## Where things stand for your own relay
-
-<Aside type="tip" title="Now">
-
-The relay code is public, so you can set it up and run it yourself.
-
-</Aside>
-
-<Aside type="caution" title="Not yet">
-
-However, the Tegami app currently connects only to the official relay, so you would need to modify the app to use your own.
-
-</Aside>
-
-<Aside type="note" title="Next">
-
--   <Badge text="Decided" variant="note" />  Companies and schools will be able to run their own relays. Whoever runs a relay sets its registration rules, choosing from "anyone," "invite code only," or "approved keys only."
-
-</Aside>

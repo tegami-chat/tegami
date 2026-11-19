@@ -3,26 +3,33 @@ title: "全体の構成"
 description: "Tegamiを構成する部品と、メッセージ、AI、通話の流れ。"
 ---
 
+import { Badge } from '@astrojs/starlight/components';
 import ArchMap from '../../../../components/ArchMap.astro';
 
-Tegamiを構成する部品と、メッセージ、AI、通話がどう流れるかをまとめたページです。
+Tegamiがどんな部品でできていて、メッセージ、AI、通話がどこを通るのかを知りたい人のために、構成図と部品の一覧を示します。
+
+## 封筒
+
+Tegamiは、メッセージを封筒に入れてリレーに預けます。封筒とは、暗号化したメッセージを入れて、使い捨ての鍵で署名した外側のイベント（[kind](/ja/developers/spec/#用語) 1059）のことで、NIP-59ではgift wrapと呼びます。リレーに見えるのは封筒の外側だけです。中身を開けられるのは、宛先の鍵を持つ端末だけです。
 
 ## 構成図
 
 <ArchMap lang="ja" />
 
-メッセージは送る側の端末が相手の鍵で封をしてからリレーに預けるため、リレー、ファイルの置き場、通知配信サービスが封を開けることはありません。封を開けられるのは、相手の端末と自分の別の端末だけです。
+図は左から右に読みます。左が自分の端末と自分のパソコン、中央がCloudflare上の部品、右が相手の端末と通知の会社です。線の種類は、図の右下にある凡例で見分けられます（暗号化した中身が通る線、アプリのコードを配る線、端末どうしが直接つながる線）。以下に、封筒、AI、通話の道すじを順に書きます。
 
-AIの友だちは、自分のパソコン上で動く`tegami-agent`が固有のNostrの鍵を持ち、人間の友だちと同じ封筒形式でリレーとやり取りします。AIの会社に届くのは、`tegami-agent`がAIに渡した文だけです。
+メッセージは、送る側の端末が相手の鍵で封をしてからリレーに預けます。リレー、ファイルの置き場、通知を配る会社は、封を開けられません。封を開けられるのは、相手の端末と自分の別の端末だけです。
 
-通話は合図（シグナリング）のみをリレーの封筒で送り、音声と映像は端末どうしが直接つながってやり取りします。接続経路を探す際には`stun.cloudflare.com`を使います。
+AIの友だちは、自分のパソコン上で動く`tegami-agent`が固有のNostrの鍵を持ち、人間の友だちと同じ封筒でリレーとやり取りします。AIの会社に届くのは、`tegami-agent`がAIに渡した文だけです。
 
-## コンポーネント
+通話は、合図（シグナリング）だけをリレーの封筒で送ります。音声と映像は、端末どうしが直接つながってやり取りします。接続の経路を探す時には`stun.cloudflare.com`を使います。
 
-| コンポーネント | 概要 | コード |
+## 部品の一覧
+
+| 部品 | 概要 | コード |
 | --- | --- | --- |
-| アプリ | Expo（React Native、SDK 57）。いまはブラウザ版を`app.tegami.chat`（Cloudflare Workers）で配信中。iPhone版とAndroid版も同じコードから作る予定 | `client/` |
-| リレー | Cloudflare Workersと1つのDurable Object（SQLite）。`wss://relay.tegami.chat` | `relay/` |
-| ファイルの置き場 | Cloudflare R2。写真とファイルは30日で削除。スタンプは別の置き場で、本人が消すまで保持 | `relay/` |
-| AIの友だち | `tegami-agent`（Node.js）。自分のパソコン上で動き、Claude Codeを呼び出す。MCPサーバーとしても動作 | `agent/` |
-| サイト | `tegami.chat`（Cloudflare Workers） | `website/` |
+| アプリ | Expo（React Native、SDK 57）で作っています。ブラウザ版は`app.tegami.chat`（Cloudflare Workers）で配信中です（<Badge text="提供中" variant="success" />）。Android版は試作版です（<Badge text="公開待ち" variant="tip" />）。iPhone版と、Windows、Mac、Linux向けの版は<Badge text="予定" variant="default" />です | `client/` |
+| リレー | Cloudflare Workersと、1つのDurable Object（SQLite）です。接続先は`wss://relay.tegami.chat` | `relay/` |
+| ファイルの置き場 | Cloudflare R2です。写真とファイルは30日で削除します。スタンプは別の置き場に、本人が消すまで置きます | `relay/` |
+| AIの友だち | `tegami-agent`（Node.js）です。自分のパソコン上で動き、Claude Codeを呼び出します。MCPサーバーとしても動きます | `agent/` |
+| サイト | `tegami.chat`（Cloudflare Workers）です | `website/` |

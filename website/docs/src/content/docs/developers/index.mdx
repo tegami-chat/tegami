@@ -7,71 +7,44 @@ import { Badge, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
 Tegami is an open-source messaging app built on Nostr. The sending device seals each message before leaving it with the relay, so the server cannot read it. The AI runs on your own computer and talks in the same format as human friends.
 
-The code is split into `client/` (the app), `relay/` (the relay), `agent/` (the tool that connects an AI) and `website/` (the site).
+These docs are for people who want to check how Tegami is built. They say what runs in production today, what is still missing, and what comes next. Production is described as of November 18, 2026, in [tegami-chat/tegami](https://github.com/tegami-chat/tegami).
 
-How Tegami is built, for people who want to check it. Every answer is split into what runs in production today, what is still missing, and what comes next.
-
-Describes production as of November 18, 2026, in [tegami-chat/tegami](https://github.com/tegami-chat/tegami).
-
-## What the status labels mean
-
-**Features:**
-
-- <Badge text="Available" variant="success" />  in production since November 18, 2026
-- <Badge text="Coming soon" variant="tip" />  the code is written but not in production yet
-- <Badge text="In development" variant="caution" />  being built now, not finished yet
-- <Badge text="Planned" variant="default" />  we intend to build it, work has not started
-
-**Decisions:**
-
-- <Badge text="Decided" variant="note" />  the direction is set, the code isn't written yet
-- <Badge text="Under discussion" variant="caution" />  not decided yet
-
-## Where to go next
-
-### Getting started
+## Find what you need
 
 <CardGrid>
-<LinkCard title="Architecture" description="The parts, and how messages, AI and calls flow." href="/developers/architecture/" />
-<LinkCard title="How Tegami differs" description="A common setup and Tegami, side by side in seven scenes." href="/developers/differences/" />
+<LinkCard title="Learn how it works" description="See the parts, and how messages, AI and calls flow." href="/developers/architecture/" />
+<LinkCard title="Run your own relay" description="Run the relay code on your own Cloudflare." href="/developers/self-host-relay/" />
+<LinkCard title="Connect your own AI" description="Make your own AI a friend by QR code or MCP." href="/developers/connect-ai/" />
+<LinkCard title="Contribute" description="Report bugs, and run the code on your machine." href="/developers/contributing/" />
 </CardGrid>
 
-### Concepts
+## Status labels
 
-<CardGrid>
-<LinkCard title="Nostr" description="Which parts of Nostr Tegami uses." href="/developers/nostr/" />
-<LinkCard title="Encryption" description="How messages are sealed, what the server sees, forward secrecy." href="/developers/encryption/" />
-<LinkCard title="Keys" description="Key protection, recovery and moving devices." href="/developers/keys/" />
-<LinkCard title="Relay" description="What it runs on, registration and usage counting." href="/developers/relay/" />
-<LinkCard title="Notifications, calls and media" description="Notifications, calls, photos and files." href="/developers/notifications-calls/" />
-<LinkCard title="AI" description="How AI connects and what goes to the AI company." href="/developers/ai/" />
-</CardGrid>
+Items on each page carry one of these statuses.
 
-### Guides
+| Label | Meaning |
+| --- | --- |
+| <Badge text="Available" variant="success" /> | In production since November 18, 2026 |
+| <Badge text="Coming soon" variant="tip" /> | The code is written but not in production yet |
+| <Badge text="In development" variant="caution" /> | Being built now, not finished yet |
+| <Badge text="Planned" variant="default" /> | We intend to build it, work has not started |
+| <Badge text="Decided" variant="note" /> | The direction is set, the code isn't written yet |
+| <Badge text="Under discussion" variant="caution" /> | Not decided yet |
 
-<CardGrid>
-<LinkCard title="Run your own relay" description="Get the relay code and run it yourself." href="/developers/self-host-relay/" />
-<LinkCard title="Connect your own AI" description="Connect your own AI by QR code or MCP." href="/developers/connect-ai/" />
-<LinkCard title="Contributing" description="Bug reports, feature requests and the repository." href="/developers/contributing/" />
-</CardGrid>
+## All pages
 
-### Reference
+- Getting started: [Architecture](/developers/architecture/)
+- Concepts: [Nostr](/developers/nostr/), [Encryption](/developers/encryption/), [Keys](/developers/keys/), [Relay](/developers/relay/), [Notifications, calls and media](/developers/notifications-calls/), [AI](/developers/ai/)
+- Guides: [Run your own relay](/developers/self-host-relay/), [Connect your own AI](/developers/connect-ai/), [Contributing](/developers/contributing/)
+- Reference: [Technical spec](/developers/spec/), [Developer FAQ](/developers/faq/)
+- Comparison: [Comparison for developers](/developers/compare/), [How Tegami differs](/developers/differences/)
 
-<CardGrid>
-<LinkCard title="Technical spec" description="Crypto, NIPs, relay limits, HTTP endpoints and event kinds." href="/developers/spec/" />
-</CardGrid>
+## Where the code lives
 
-### Comparison and FAQ
-
-<CardGrid>
-<LinkCard title="Comparison for developers" description="Tegami next to LINE, WhatsApp, Signal and Telegram." href="/developers/compare/" />
-<LinkCard title="Developer FAQ" description="Short answers to questions developers ask." href="/developers/faq/" />
-</CardGrid>
+The code is split into `client/` (the app), `relay/` (the relay), `agent/` (the tool that connects an AI) and `website/` (the site). The full list of folders is in [Contributing](/developers/contributing/#what-is-in-the-repository).
 
 ## Open source
 
-The license is AGPL-3.0. Anyone who offers an app built from Tegami's code over a network must also publish their code.
+Tegami is licensed under AGPL-3.0. Anyone who offers an app built from Tegami's code over a network must also publish their code.
 
-For now, we accept bug reports and feature requests as GitHub Issues. We do not accept code contributions (pull requests).
-
-To take part in development, see [Contributing](/developers/contributing/).
+For now, we accept bug reports and feature requests as GitHub Issues. We do not accept code contributions (pull requests). To take part in development, see [Contributing](/developers/contributing/).

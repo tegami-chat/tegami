@@ -3,32 +3,105 @@ title: "Connect your own AI"
 description: "How to connect your own AI to Tegami as a friend."
 ---
 
-import { Steps } from '@astrojs/starlight/components';
+import { Steps, TabItem, Tabs } from '@astrojs/starlight/components';
 
-How to connect your own AI to Tegami as a friend. The AI gets its own Nostr key and uses the same relay and encryption as people.
+This page walks through connecting an AI that runs on your own computer to Tegami as a friend. The AI gets its own Nostr key and talks over the same relay and encryption as people. For a detailed explanation of the commands, see [agent/README.md](https://github.com/tegami-chat/tegami/blob/main/agent/README.md).
 
-Status labels such as "Available" are explained in the [overview](/developers/#what-the-status-labels-mean).
+## What you need
+
+- Node.js and npm
+- `npm install` already run in the `agent/` folder
+- An AI to write replies. If you use the default, Claude Code, install it and log in with your own account
+- The Tegami app
 
 ## Steps
 
 <Steps>
 
-1. In the `agent/` folder on your computer, run `node agent.mjs pair --name Claude`. A QR code appears in the terminal (add `--browser` to open it in a browser as well).
-2. In Tegami, open "友だち追加", then "QRコードスキャン", and read the QR code. To connect it as your own AI, turn on "自分のAIとして追加" and then press "追加".
-3. The terminal shows who the AI has connected with, and `pair` exits.
+1. In the `agent/` folder on your computer, run the command below. A QR code appears in the terminal (add `--browser` to open it in a browser too).
+
+   ```bash
+   node agent.mjs pair --name Claude
+   ```
+
+2. In Tegami, open "Add friend" and then "Scan QR code", and read the QR code. To connect it as your own AI, turn on "Add as my AI" before you press "Add".
+
+3. The terminal shows who the AI connected to, and `pair` exits.
+
+4. Keep the gateway running so the AI can keep replying. `pair` only connects, so this step is needed.
+
+   ```bash
+   node agent.mjs autostart on
+   ```
 
 </Steps>
 
-The QR code can be used once, within 10 minutes. `pair` only connects, so for the AI to keep replying, keep the gateway running with `node agent.mjs autostart on`. The commands are described in detail in [agent/README.md](https://github.com/tegami-chat/tegami/blob/main/agent/README.md).
+The QR code can be used once, for 10 minutes.
 
 ## Choose the AI that writes replies
 
-Replies are written by Claude Code by default. With the `backend` command you can switch to an API key for Anthropic, OpenAI, Gemini or OpenRouter, or to a local model such as Ollama. With `watch --command` you can plug in your own program that reads standard input and prints a reply. The full steps are in [agent/README.md](https://github.com/tegami-chat/tegami/blob/main/agent/README.md).
+The AI that writes replies is Claude Code by default. You can switch to any of the following.
+
+<Tabs>
+<TabItem label="Claude Code">
+
+This is the default AI provider. If you are logged in to Claude Code with your own account, no setup is needed. To go back from another AI provider, run this command.
+
+```bash
+node agent.mjs backend claude-code
+```
+
+</TabItem>
+<TabItem label="API key">
+
+You can use an API key from Anthropic, OpenAI, Gemini or OpenRouter. `backend` chooses the AI provider and the model, and `key` enters the API key. `key` asks for the API key without showing it on screen.
+
+```bash
+node agent.mjs backend anthropic --model <model>
+node agent.mjs key anthropic
+```
+
+You can replace `anthropic` with `openai`, `gemini` or `openrouter`.
+
+</TabItem>
+<TabItem label="Local model">
+
+A model that runs on your own computer. Ollama, llama.cpp, LM Studio and vLLM are supported.
+
+```bash
+node agent.mjs backend ollama --model llama3.2
+node agent.mjs backend local --model qwen --url http://localhost:8080/v1
+```
+
+The first line is for Ollama, and the second is for llama.cpp, LM Studio and vLLM.
+
+</TabItem>
+<TabItem label="Your own program">
+
+A program of your own that reads standard input and prints a reply can also be connected with `watch --command`.
+
+```bash
+node agent.mjs watch --command "<command>"
+```
+
+</TabItem>
+</Tabs>
 
 ## Connect with an invite link
 
-You can also connect by hand, without reading a QR code in the app. Print the AI's invite link with `node agent.mjs init --name Claude`, open it in Tegami to add the AI as a friend, and then run `node agent.mjs add "<your invite link>" --trust`. See [agent/README.md](https://github.com/tegami-chat/tegami/blob/main/agent/README.md) for details.
+You can also connect by hand, without reading a QR code in the app. Show the AI's invite link and open it in Tegami to add the AI as a friend, then give the AI your invite link.
+
+```bash
+node agent.mjs init --name Claude
+node agent.mjs add "<your invite link>" --trust
+```
 
 ## Use it over MCP
 
-tegami-agent also runs as a stdio MCP server. Add it to Claude Code with `claude mcp add tegami -- node /path/to/agent/agent.mjs mcp`, then read messages with `tegami_inbox` and send with `tegami_send`. By default, only text written by the owner is shown to the AI.
+`tegami-agent` also runs as a stdio MCP server. Add it to Claude Code with the command below, and you can read messages with `tegami_inbox` and send with `tegami_send`. Replace `/path/to/agent/agent.mjs` with where `agent.mjs` is on your computer.
+
+```bash
+claude mcp add tegami -- node /path/to/agent/agent.mjs mcp
+```
+
+By default, only text the owner wrote is shown to the AI.

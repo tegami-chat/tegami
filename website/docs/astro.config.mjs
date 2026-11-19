@@ -47,7 +47,6 @@ export default defineConfig({
           items: [
             { slug: 'developers', label: 'Overview', translations: { ja: '概要' } },
             { slug: 'developers/architecture', label: 'Architecture', translations: { ja: '全体の構成' } },
-            { slug: 'developers/differences', label: 'How Tegami differs', translations: { ja: 'よくある構成との違い' } },
           ],
         },
         {
@@ -76,14 +75,15 @@ export default defineConfig({
           translations: { ja: 'リファレンス' },
           items: [
             { slug: 'developers/spec', label: 'Technical spec', translations: { ja: '技術仕様' } },
+            { slug: 'developers/faq', label: 'Developer FAQ', translations: { ja: '開発者向けのよくある質問' } },
           ],
         },
         {
-          label: 'Comparison and FAQ',
-          translations: { ja: '比較とよくある質問' },
+          label: 'Comparison',
+          translations: { ja: '比較' },
           items: [
             { slug: 'developers/compare', label: 'Comparison for developers', translations: { ja: '開発者向けの比較' } },
-            { slug: 'developers/faq', label: 'Developer FAQ', translations: { ja: '開発者向けのよくある質問' } },
+            { slug: 'developers/differences', label: 'How Tegami differs', translations: { ja: 'よくある構成との違い' } },
           ],
         },
       ],

@@ -1,91 +1,99 @@
 ---
 title: "Technical spec"
-description: "Crypto building blocks, NIPs in use, relay limits, HTTP endpoints and Tegami event kinds."
+description: "The crypto parts, the NIPs in use, relay limits, HTTP endpoints, and Tegami's own kinds."
 ---
 
-import { Aside, Badge } from '@astrojs/starlight/components';
+import { Badge } from '@astrojs/starlight/components';
 
-Crypto building blocks, relay limits, HTTP endpoints and Tegami's own event kinds.
+This page collects the spec so that people checking Tegami's implementation, or building their own, can look up the encryption, the NIPs, the relay limits, the HTTP endpoints, and the custom kinds.
 
-Status labels such as "Available" are explained in the [overview](/developers/#what-the-status-labels-mean).
+## Glossary
+
+| Term | Meaning |
+| --- | --- |
+| kind | An integer that says what type a Nostr event is. 1059 is an envelope, 14 is a text message, and 15 is a photo or file |
+| rumor | The event that holds the message itself, with no signature (kind 14 or 15) |
+| seal | The inner event that encrypts the rumor with NIP-44 and is signed by the sender (kind 13) |
+| Envelope (gift wrap) | The outer event that encrypts the seal with NIP-44 using a throwaway key and is signed with that key (kind 1059). It is defined in NIP-59 |
+| Durable Object | A unit of execution on Cloudflare Workers that can keep data. Tegami's relay stores envelopes in SQLite inside a single Durable Object |
+| HyperLogLog | A method that gives only the approximate count of distinct items, using little memory and without remembering the items |
+| Salt | A value mixed into the input of a cryptographic function. Tegami changes it every day and discards it when the day changes, so the same key cannot be followed across days |
+| Blossom | A file-storage spec for Nostr that stores and fetches photos and files by their sha256. It uses kind 24242 for signatures |
+| NIP-98 | A spec that signs an HTTP request's URL and method with the secret key and uses it for authentication |
+| Token bucket | A limit that counts how much you can send by the number of tokens saved up. Sending uses tokens, and they refill at a steady rate. The "burst" below is the most tokens that can be saved up |
+| PRF | A WebAuthn extension (Pseudo-Random Function). Each time you authenticate with a passkey, it returns a value fixed for that passkey |
+| NIP-42 | A spec where the connecting side signs a challenge the relay issues, to show its public key |
 
 ## Cryptography
 
-| Where | Scheme |
+| Where it is used | Method |
 | --- | --- |
-| Messages | NIP-44 v2 (secp256k1 ECDH, HKDF, ChaCha20, HMAC-SHA256). Double-wrapped with a seal and gift wrap per NIP-59 |
-| Secret key storage | Takes 32 bytes from the passkey PRF extension (`userVerification: required`) and turns it into an AES-GCM 256-bit key with HKDF-SHA256 for encryption. Without PRF, a non-extractable AES-GCM key is kept in IndexedDB |
-| Photos and files | A new AES-GCM 256-bit key per file. The key and the sha256 of the encrypted data are sent inside the encrypted message (kind 15). Sticker keys are derived from the image and the account's secret key |
-| Recovery code | 28 characters (140 bits) fed through HKDF-SHA256 to create three things: a backup ID, an AES-GCM key, and a Nostr signing key |
-| Device transfer | Envelope encrypted with NIP-44 to a throwaway key, with a 10-minute NIP-40 expiry. The throwaway secret key is included only after the `#` in the link |
-| Notifications | Web Push (VAPID). Payload encrypted per device with RFC 8291 (aes128gcm) |
-| Calls | WebRTC (DTLS-SRTP). Signaling in NIP-17 envelopes (custom kind 25050, 1-minute expiry) |
+| Messages | NIP-44 v2 (secp256k1 ECDH, HKDF, ChaCha20, HMAC-SHA256). Wrapped twice in the NIP-59 way, with the outer layer as the envelope |
+| Storing the secret key | Takes 32 bytes from the passkey [PRF](#glossary) extension (`userVerification: required`), turns it into an AES-GCM 256-bit key with HKDF-SHA256, and encrypts with it. Where PRF is unavailable, a non-extractable AES-GCM key is kept in IndexedDB |
+| Photos and files | A new AES-GCM 256-bit key per file. The key and the sha256 of the encrypted data travel inside the encrypted message (kind 15). Stickers derive the key from the image and the account's secret key |
+| Recovery code | From 28 characters (140 bits), HKDF-SHA256 makes three things: a backup ID, an AES-GCM key, and a Nostr key for signing |
+| Device transfer | An envelope encrypted with NIP-44 to a throwaway key, with a 10-minute expiry set by NIP-40. The throwaway secret key is included only after the `#` in the link |
+| Notifications | Web Push (VAPID). The content is encrypted for each device with RFC 8291 (aes128gcm) |
+| Calls | WebRTC (DTLS-SRTP). Signaling goes in NIP-17 envelopes (custom kind 25050, 1-minute expiry) |
 
 ## NIPs in use
 
-<Aside type="tip" title="Now">
-
-| NIP | Usage |
+| NIP | How it is used |
 | --- | --- |
-| NIP-17, NIP-59 | One-to-one and group messages. Text uses kind 14, photos and files use kind 15, wrapped in a seal (kind 13) and gift wrap (kind 1059) |
-| NIP-44 | Encryption of seals and gift wraps, and of device transfer data |
-| NIP-42 | Authentication (login) to the relay. Both reads and writes require an authenticated key |
-| NIP-40 | Expiring envelopes (1 minute for call signals, 10 minutes for device transfer and AI draft requests) |
-| NIP-98 | Signatures for HTTP endpoints (registration, notifications, recovery backups, reports, admin operations) |
-| NIP-05, NIP-11 | Identifier for the official account (hello@tegami.chat), plus relay info and the running version |
-| Blossom (kind 24242 signatures) | Storage for photos and files (`/upload` and `/<sha256>`). Data is stored and fetched by the sha256 of the encrypted bytes. `/stamp` for stickers is a Tegami-specific extension |
+| NIP-17, NIP-59 | One-to-one and group messages. Text uses kind 14 and photos and files use kind 15, wrapped twice: a signed inner layer (kind 13) and an envelope (kind 1059) |
+| NIP-44 | Encrypting the inner layer and the envelope, and encrypting the device transfer data |
+| NIP-42 | Authentication (login) to the relay. Both reading and writing are allowed only for authenticated keys |
+| NIP-40 | Envelopes with an expiry (call signaling 1 minute; transfers and requests for the AI to draft 10 minutes) |
+| NIP-98 | Signing for the HTTP endpoints (registration, notifications, recovery backup, reports, admin actions) |
+| NIP-05, NIP-11 | The official account identifier (hello@tegami.chat), and relay information and running version |
+| Blossom (kind 24242 signatures) | Storage for photos and files (`/upload` and `/<sha256>`). Stored and fetched by the sha256 of the encrypted data. `/stamp` for stickers is a Tegami extension |
 
-Where no NIP covers what we need, we use our own kinds, only inside encrypted envelopes: icon (10100), sticker list (10101), call signaling (25050), and AI draft requests and replies (25060, 25061).
+Where no NIP applies, we use custom kinds that appear only inside encrypted envelopes. They are listed below in "Tegami's own kinds".
 
-</Aside>
-
-<Aside type="note" title="Next">
-
--   <Badge text="Available" variant="success" />  We added more custom kinds: sync between your own devices (10102), group member changes (10103), consent to invite an AI into a chat (10104), and exchanges with AI (25062 to 25070). In this version the app does not use 10104 or the AI-to-AI messages (25066, 25067) yet.
--   <Badge text="Under discussion" variant="caution" />  If the proposals for key rotation and protecting keys with passkeys (NIP pull requests #2137 and #2519) are merged, we will consider adopting them.
-
-</Aside>
+- <Badge text="Under discussion" variant="caution" /> If the proposals for key rotation and for protecting keys with a passkey (NIP pull requests #2137 and #2519) are adopted, we will consider following them.
 
 ## What the relay accepts
 
--   Over WebSocket, the only events accepted are kind 1059 (gift wrap) with exactly one recipient (`p` tag). Size limit 128KB
--   Reads and writes are allowed only for keys logged in with NIP-42. Login signatures are valid for 10 minutes, and each connection can hold up to 20 subscriptions
--   Only registered, non-suspended keys can write. You can read only envelopes addressed to you, up to 500 per fetch, deleted after 30 days. Each inbox holds up to 10,000 envelopes, and up to 200 from people registered without an invite code
--   Sending limits (token bucket): per IP address, a burst of 300 (then 5 per second); per key, a burst of 120 (then 3 per second). Up to 50 connections per IP address
+- The events accepted over WebSocket are kind 1059 envelopes with a single recipient (`p` tag). The size limit is 128KB
+- Both reading and writing are allowed only for keys logged in with NIP-42. A login signature is valid if it is within 10 minutes, and one connection can have up to 20 subscriptions
+- Only registered keys that have not been suspended can write. You can read only envelopes addressed to you, up to 500 per fetch, and they are deleted after 30 days. One person's inbox holds up to 10,000 envelopes, and up to 200 from people who registered without an invite ticket
+- The sending limits (token bucket) are a burst of 300 envelopes per IP address (then 5 per second) and a burst of 120 per key (then 3 per second). One IP address can have up to 50 connections
 
-HTTP endpoints (photo, file, and sticker operations require a kind 24242 signature; other writes require a NIP-98 signature; only `/crash` needs no signature):
+## HTTP endpoints
 
-| Endpoint | Purpose | Status |
+Operations on photos, files and stickers need a kind 24242 signature. Every other write needs a NIP-98 signature. Only `/crash` needs no signature.
+
+| Endpoint | Role | Status |
 | --- | --- | --- |
-| `POST /register` | Register a key (invite code or Turnstile) | <Badge text="Available" variant="success" /> |
+| `POST /register` | Register a key (invite ticket or Turnstile) | <Badge text="Available" variant="success" /> |
 | `PUT /upload`, `GET` and `HEAD /<sha256>` | Store and fetch photos and files. Up to 10MB | <Badge text="Available" variant="success" /> |
-| `PUT /stamp`, `GET`, `HEAD` and `DELETE /stamp/<sha256>` | Stickers. 512KB each, up to 200 per person | <Badge text="Available" variant="success" /> |
+| `PUT /stamp`, `GET` and `HEAD` and `DELETE /stamp/<sha256>` | Stickers. 512KB each, up to 200 per person | <Badge text="Available" variant="success" /> |
 | `PUT`, `GET`, `DELETE /backup/<id>` | Recovery code backup. Up to 64KB | <Badge text="Available" variant="success" /> |
-| `POST`, `DELETE /push`, `GET /push/key` | Register notification endpoints, and the notification public key | <Badge text="Available" variant="success" /> |
+| `POST`, `DELETE /push`, `GET /push/key` | Register a notification address, and the notification public key | <Badge text="Available" variant="success" /> |
 | `POST /report` | Reports | <Badge text="Available" variant="success" /> |
 | `GET /stats` | Weekly usage statistics (public) | <Badge text="Available" variant="success" /> |
-| `POST /crash` | Error reports, only when the user allows (not stored) | <Badge text="Available" variant="success" /> |
-| `POST /admin` | Admin operations such as suspending keys, usable only with the operator's key | <Badge text="Available" variant="success" /> |
-| `POST /register` (AI) | Register an AI key. The body carries the owner card (kind 25070); the relay remembers the key as an AI and counts its daily limits | <Badge text="Available" variant="success" /> |
-| `POST /turn` | Short-lived TURN credentials for calls, for registered keys only. Nothing about the request is kept | <Badge text="Available" variant="success" /> |
-| `DELETE /account` | Delete the account. The relay removes the envelopes, stamps, notification endpoints and registration it holds for the key | <Badge text="Available" variant="success" /> |
+| `POST /crash` | Error reports, only when the user allows it (not stored) | <Badge text="Available" variant="success" /> |
+| `POST /admin` | Admin actions such as suspending a key, usable only with the operator's key | <Badge text="Available" variant="success" /> |
+| `POST /register` (AI registration) | Register an AI's key. When the body carries the owner's signature (kind 25070), the relay remembers the key as an AI and counts its daily limit | <Badge text="Available" variant="success" /> |
+| `POST /turn` | Issue short-lived credentials for the call relay (TURN). Only registered keys can use it. The request content is not stored | <Badge text="Available" variant="success" /> |
+| `DELETE /account` | Delete an account. The relay deletes that key's envelopes, stickers, notification addresses, and registration | <Badge text="Available" variant="success" /> |
 
-## Tegami event kinds
+## Tegami's own kinds
 
-All are used only in the encrypted part inside a gift wrap. The relay only sees kind 1059.
+All of them are used only inside the encrypted area of an envelope. All the relay can see is kind 1059.
 
-| kind | Contents | Status |
+| kind | Content | Status |
 | --- | --- | --- |
 | 10100 | Icon. Delivered to friends only | <Badge text="Available" variant="success" /> |
 | 10101 | Sticker list. Synced between your own devices | <Badge text="Available" variant="success" /> |
-| 25050 | Call signaling (ring, answer, hang up, WebRTC connection info) | <Badge text="Available" variant="success" /> |
-| 25060, 25061 | Draft requests to AI, and drafts from AI | <Badge text="Available" variant="success" /> |
-| 10102 | Friends, groups, blocks and AI settings. Synced between your own devices | <Badge text="Available" variant="success" /> |
-| 10103 | A group's whole state (members, name, picture, admins), sent with every change | <Badge text="Available" variant="success" /> |
-| 10104 | An invitation of an AI into a chat, and each member's answer | <Badge text="Coming soon" variant="tip" /> |
-| 25062, 25063 | An AI's request to send a message in its owner's name, and the owner app's answer | <Badge text="Available" variant="success" /> |
-| 25064, 25065 | An AI's request for the friend list, and the list | <Badge text="Available" variant="success" /> |
-| 25066, 25067 | An AI's request to talk to another person's AI, and the answer | <Badge text="Coming soon" variant="tip" /> |
-| 25068 | The answer to an AI's one-time pairing code (adding an AI by QR code) | <Badge text="Available" variant="success" /> |
-| 25069 | "Turn all off": tells an AI to stop | <Badge text="Available" variant="success" /> |
-| 25070 | The owner's signature on an AI's key (owner card), handed to the AI by the app | <Badge text="Available" variant="success" /> |
+| 25050 | Call signaling (ring, answer, end, WebRTC connection info) | <Badge text="Available" variant="success" /> |
+| 25060, 25061 | A request for the AI to draft, and the draft from the AI | <Badge text="Available" variant="success" /> |
+| 10102 | A copy of friends, groups, blocks and AI settings. Synced between your own devices | <Badge text="Available" variant="success" /> |
+| 10103 | Group state (members, name, icon, admins). The whole state is sent on every change | <Badge text="Available" variant="success" /> |
+| 10104 | A request to invite an AI into a chat, and each member's response | <Badge text="Coming soon" variant="tip" /> |
+| 25062, 25063 | A request for the AI to send a message under the owner's name, and the owner app's answer | <Badge text="Available" variant="success" /> |
+| 25064, 25065 | A request for the AI to get the friend list, and the list the app returns | <Badge text="Available" variant="success" /> |
+| 25066, 25067 | A request for the AI to talk with another person's AI, and the answer | <Badge text="Coming soon" variant="tip" /> |
+| 25068 | The AI's response to a one-time code, when adding an AI as a friend by QR code | <Badge text="Available" variant="success" /> |
+| 25069 | "Turn everything off". Tells the AI to stop | <Badge text="Available" variant="success" /> |
+| 25070 | The owner's signature on the AI's key (proof of ownership). The app hands it to the AI | <Badge text="Available" variant="success" /> |

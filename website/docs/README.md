@@ -1,6 +1,6 @@
 # 開発者向けドキュメント（Astro Starlight）
 
-tegami.chat の /developers と /ja/developers の開発者向けドキュメント（15ページ）を作る Starlight のプロジェクトです。左のサイドバーは「はじめに」「仕組み」「ガイド」「リファレンス」「比較とよくある質問」の5つの組に分けています。
+tegami.chat の /developers と /ja/developers の開発者向けドキュメント（15ページ）を作る Starlight のプロジェクトです。左のサイドバーは「はじめに」「仕組み」「ガイド」「リファレンス」「比較」の5つの組に分けています。
 
 ## 作り直す1つのコマンド
 

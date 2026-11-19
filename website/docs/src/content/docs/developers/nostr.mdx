@@ -3,43 +3,29 @@ title: "Nostr"
 description: "Which parts of Nostr Tegami uses, and which it does not."
 ---
 
-import { Aside, Badge } from '@astrojs/starlight/components';
+import { Badge } from '@astrojs/starlight/components';
 
-Which parts of Nostr Tegami uses, and which it does not.
-
-Status labels such as "Available" are explained in the [overview](/developers/#what-the-status-labels-mean).
+This page is for people who know Nostr and want to check which parts of it Tegami uses and which it does not.
 
 ## How it differs from a Nostr client
 
-<Aside type="tip" title="Now">
-
-Tegami is a messaging app built on the Nostr protocol, but it is not a Nostr client in the social-network sense. Accounts use Nostr keys (secp256k1) and messages are sent and received in the NIP-17 format, but Tegami never publishes public posts (kind 1) or a public profile (kind 0).
-
-</Aside>
+Tegami is a messaging app built on the Nostr protocol, but it is not a Nostr client in the social-network sense. Accounts use Nostr keys (secp256k1) and messages are sent and received in the NIP-17 format. Tegami never publishes public posts (kind 1) or a public profile (kind 0).
 
 ## Messaging with other Nostr apps
 
-<Aside type="tip" title="Now">
+Tegami cannot message people on other Nostr apps today. The Tegami app connects only to its own relay (`wss://relay.tegami.chat`), and that relay only accepts [envelopes](/developers/architecture/#envelopes) from connections logged in with a key registered with Tegami.
 
-No. The Tegami app connects only to its own relay (`wss://relay.tegami.chat`), and that relay only accepts envelopes from connections logged in with a key registered with Tegami. We keep it closed so spam and impersonation are stopped at the door. On the relay side we have registration control, sending limits, reports, and the ability for us to suspend keys.
+We keep it closed so spam and impersonation are stopped at the door. On the relay side we have registration control, sending limits, reports, and the ability for us to suspend keys. The cost is that Tegami does not offer one of Nostr's core strengths: using the same key in any app.
 
-</Aside>
+We are comparing three options:
 
-<Aside type="caution" title="Not yet">
+- <Badge text="Under discussion" variant="caution" /> Letting you add a company or school relay as an inbox
+- <Badge text="Under discussion" variant="caution" /> Showing messages from other Nostr apps
+- <Badge text="Under discussion" variant="caution" /> Listing in an official directory only relays that agree to Tegami's rules
 
-Tegami does not offer one of Nostr's core strengths: using the same key in any app.
-
-</Aside>
-
-<Aside type="note" title="Next">
-
--   <Badge text="Under discussion" variant="caution" />  We are comparing a few options: letting you add a company relay as an inbox, showing messages from other Nostr apps, and listing in an official directory only relays that agree to Tegami's rules. We have not picked one yet.
-
-</Aside>
+We have not picked one yet.
 
 ## What Tegami uses and does not use
-
-<Aside type="tip" title="Now">
 
 | Nostr feature | In Tegami |
 | --- | --- |
@@ -55,14 +41,8 @@ Tegami does not offer one of Nostr's core strengths: using the same key in any a
 
 In short, Tegami uses Nostr as a way to "prove identity with a key and leave signed envelopes with a relay," and leaves out the social-network parts.
 
-</Aside>
-
-<Aside type="note" title="Next">
-
--   <Badge text="Under discussion" variant="caution" />  We want people to be able to send money freely with Bitcoin. We have not decided whether to build Zaps into the app.
-
-</Aside>
+- <Badge text="Under discussion" variant="caution" /> We want people to be able to send money freely with Bitcoin. We have not decided whether to build Zaps into the app.
 
 ## NIPs in use
 
-Messages use NIP-17 and NIP-59, encrypted with NIP-44. Relay login uses NIP-42, expiring events NIP-40, and HTTP signatures NIP-98. NIP-05 is used for the official account and NIP-11 for relay info. Photos and files are stored the Blossom way. Tegami does not use public posts (kind 1) or public profiles (kind 0). The full list is in the [technical spec](/developers/spec/).
+Messages use NIP-17 and NIP-59, encrypted with NIP-44. Relay login uses [NIP-42](/developers/spec/#glossary), expiring events use NIP-40, and HTTP signatures use [NIP-98](/developers/spec/#glossary). NIP-05 is used for the official account and NIP-11 for relay info. Photos and files are stored the [Blossom](/developers/spec/#glossary) way. Tegami does not use public posts (kind 1) or public profiles (kind 0). The full list is in the [technical spec](/developers/spec/).

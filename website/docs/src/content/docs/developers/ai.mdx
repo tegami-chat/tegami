@@ -1,65 +1,59 @@
 ---
 title: "AI"
-description: "How your own AI joins Tegami, what it can read, and what goes to the AI provider."
+description: "How your own AI connects, what it can read, and what goes to the AI company."
 ---
 
 import { Aside, Badge } from '@astrojs/starlight/components';
 
-How your own AI joins Tegami, what it can read, and what goes to the AI provider. To connect your own AI, see [Connect your own AI](/developers/connect-ai/).
+This page explains how the AI side works, for people who want to know how an AI runs when you connect your own AI to Tegami, what it can read, and what goes to the AI provider. For how to connect one, see [Connect your own AI](/developers/connect-ai/).
 
-Status labels such as "Available" are explained in the [overview](/developers/#what-the-status-labels-mean).
+## How the AI connects
 
-## How AI connects
+Tegami's AI runs on your own computer, not on Tegami's servers. When you run `tegami-agent` (Node.js) on your computer, the AI gets its own Nostr key and talks over the same relay and the same encryption as human users. By default, Claude Code on your computer (`claude -p`) writes the replies. With `--command` you can swap in another program that reads standard input and prints a reply. Your AI subscription and login details stay on your computer and never go to Tegami. `tegami-agent` also runs as an MCP server, so you can ask Claude Code to "send this on Tegami".
 
-<Aside type="tip" title="Now">
+Connecting requires typing a command. The only AI that works with no extra setup is Claude Code. For other AIs (OpenAI, Gemini, OpenRouter, or a local model such as Ollama), you run the setup command once and enter your own API key, or pass your own program to `--command`.
 
-No, it does not run on our servers. When you run `tegami-agent` (Node.js) on your own PC, the AI gets its own Nostr key and talks over the same relay with the same encryption as human users. By default, replies are written by Claude Code on your PC (`claude -p`). With `--command` you can swap in another program that reads standard input and outputs a reply. Your AI subscription and login stay on your PC and are never passed to Tegami. It also runs as an MCP server, so you can ask Claude Code to "send it on Tegami."
-
-</Aside>
-
-<Aside type="caution" title="Not yet">
-
-Connecting requires typing commands. Claude Code is the only AI that works without further setup. For any other AI (OpenAI, Gemini, OpenRouter, Ollama and other local models), run one setup command and give your own API key, or pass your own program to `--command`.
-
-</Aside>
-
-<Aside type="note" title="Next">
-
--   <Badge text="Available" variant="success" />  You can now add an AI as a friend just by scanning the QR code shown on your PC with the app.
--   <Badge text="Available" variant="success" />  Replies can also be written by local models (such as Ollama) or with your own API key (Anthropic, OpenAI, Gemini, OpenRouter).
--   <Badge text="Available" variant="success" />  AI can now send messages in its owner's name. In this version, only the mode where the owner reviews each message before it is sent is available. Sending without asking will come in a later version.
--   <Badge text="Coming soon" variant="tip" />  We also built a way to invite an AI into a group or one-to-one chat once everyone agrees. This version does not allow it. We will make it usable in a later version.
--   <Badge text="Decided" variant="note" />  Tegami will not run an official AI.
-
-</Aside>
+| Feature | Status | Details |
+| --- | --- | --- |
+| Add an AI as a friend by QR code | <Badge text="Available" variant="success" /> | Read the QR code shown on your computer with the app, and the AI is added as a friend |
+| Local models and your own API key | <Badge text="Available" variant="success" /> | Replies can also be written by a model running on your machine (such as Ollama) or with your own API key (Anthropic, OpenAI, Gemini, OpenRouter) |
+| The AI sends under the owner's name | <Badge text="Available" variant="success" /> | In this version, only the form where the owner confirms before it sends is available. Sending without asking the owner will come in a later version |
+| Invite the AI into a chat | <Badge text="Coming soon" variant="tip" /> | We built a way to invite an AI into a group or one-to-one chat that everyone has agreed to. It cannot be used in this version. It will come in a later version |
+| An official Tegami AI | <Badge text="Decided" variant="note" /> | We will not offer one |
 
 ## Protection against prompt injection
 
-<Aside type="tip" title="Now">
+<Badge text="Available" variant="success" />
 
-Three mechanisms guard against this:
+Tegami defends against prompt injection, where instructions hidden in a message make the AI act, with these three mechanisms.
 
--   The AI only replies automatically to people its owner has allowed (`--trust`). For messages from people who are not friends, the AI never sees the content; it is only told how many people have sent new messages.
--   Even when you let the AI read a chat with a friend, it only happens when you allow it with a switch in the app, and then only the latest 30 messages of that one-to-one chat are handed to the AI in an envelope that expires in 10 minutes. The AI only writes a draft; you are the one who sends it.
--   That switch lives in the app, which holds the owner's key. If the switch were on the PC where the AI runs, the AI could change the setting itself.
+- The AI replies on its own only to people the owner has allowed (`--trust`). For messages from people who are not friends, the AI is not shown the contents and is told only how many people have sent new messages.
+- To let the AI read a chat with a friend, the owner must allow it with a switch in the app. Then the AI is given up to the latest 30 messages of that one-to-one chat, in an [envelope](/developers/architecture/#envelopes) that disappears in 10 minutes. The AI only drafts, and the person sends.
+- That switch sits in the app, which holds the owner's key. If the switch lived on the computer where the AI runs, the AI could rewrite its own settings.
 
-</Aside>
+<Aside type="caution" title="What goes to the AI provider">
 
-<Aside type="caution" title="Not yet">
-
-Anything you let the AI read also goes to the AI provider. If the PC has no OS keystore, the AI's secret key is saved unencrypted only when you add `--insecure-store`.
+What you let the AI read also goes to the AI provider. If your computer has no OS keystore, the AI's secret key is stored unencrypted only when you add `--insecure-store`.
 
 </Aside>
 
-<Aside type="note" title="Next">
+We also provide these protections.
 
--   <Badge text="Available" variant="success" />  The other person can now choose "Don't let others' AI read my messages," and mark individual messages "Don't let AI read." Disappearing messages are not passed to AI either. This works because the official app checks the mark and does not hand the message to AI, so it cannot stop modified apps or manual copying.
--   <Badge text="Available" variant="success" />  The AI's secret key and API keys are now stored encrypted in the OS keystore (verified on Windows; not yet verified on Mac and Linux).
--   <Badge text="Available" variant="success" />  We added limits on how much an AI can send, and any message containing a link must be confirmed by the owner. "Turn all off" lets you stop all your AIs at once from your phone.
--   <Badge text="Available" variant="success" />  Limits on what an AI sends: the app lets it send without asking 5 messages a minute, 20 in a row in one chat and 100 a day by default (you can change them, up to 60, 200 and 1,000). The relay allows one AI key 30 envelopes a minute and 600 a day, and all of one owner's AIs together 600 a day. A message to a group with five other people is six envelopes.
+| Protection | Status | Details |
+| --- | --- | --- |
+| "Do not let the AI read" | <Badge text="Available" variant="success" /> | The other person can choose "Don't let their AI read my messages", and mark single messages "Do not let the AI read". Disappearing messages are never passed to the AI. The official app reads that mark and withholds the message, so a modified app or manual copying is not stopped |
+| Storing the secret key and API key | <Badge text="Available" variant="success" /> | The AI's secret key and API key are encrypted and stored in the OS keystore (checked on Windows; Mac and Linux not checked) |
+| Confirmation and a kill switch | <Badge text="Available" variant="success" /> | The owner always confirms a message that contains a link. "Turn everything off" stops your AIs all at once from your phone |
 
-</Aside>
+## Limits on how much the AI sends
 
-## Tools the AI can use and checks before sending
+<Badge text="Available" variant="success" />
 
-Claude Code's built-in tools and any MCP servers the owner added are off by default. Anything sent to someone other than the owner goes through a rule check and a model check first. Even so, the checks can't catch every secret or risky message.
+The amount the AI sends is limited in both the app and the relay.
+
+- The app limits how many messages the AI can send without asking the owner. The defaults are 5 per minute, 20 in a row in one chat, and 100 per day. You can change them, up to 60 per minute, 200 in one chat, and 1000 per day.
+- The relay accepts up to 30 envelopes per minute and 600 per day for each AI key. Even all of an owner's AIs together are capped at 600 per day. One message to a group with 5 other people becomes 6 envelopes.
+
+## What tools the AI can use, and checks before sending
+
+Claude Code's built-in tools and any MCP servers the owner added are turned off by default. A message to anyone other than the owner goes through two checks before it is sent, a rule check and an AI check. Even so, they cannot catch every secret or dangerous message.

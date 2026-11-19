@@ -7,71 +7,44 @@ import { Badge, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
 TegamiはNostrの上で動く、オープンソースのメッセージアプリです。メッセージは端末で封をしてからリレーに預けるため、サーバーは中身を読めません。AIは自分のパソコンで動き、人間の友だちと同じ形式でやり取りします。
 
-コードは`client/`（アプリ）、`relay/`（リレー）、`agent/`（AIをつなぐ道具）、`website/`（サイト）に分かれています。
+このドキュメントは、Tegamiの作りを確かめたい人のために、いま本番で動いていること、まだ足りないこと、これからのことを書いています。本番で動いている内容は、2026年11月18日の時点の[tegami-chat/tegami](https://github.com/tegami-chat/tegami)のものです。
 
-Tegamiの作りを、確かめたい人のためにまとめました。どの答えも、本番でいま動いていること、まだ足りないこと、これからのことの3つに分けて書いています。
-
-本番で動いている内容は、2026年11月18日の時点の[tegami-chat/tegami](https://github.com/tegami-chat/tegami)のものです。
-
-## 状態の表示の意味
-
-**機能の状態：**
-
-- <Badge text="提供中" variant="success" /> 2026年11月18日から本番で動いているもの
-- <Badge text="公開待ち" variant="tip" /> コードを書き終えて、本番に出す前のもの
-- <Badge text="開発中" variant="caution" /> いま作っている途中のもの
-- <Badge text="予定" variant="default" /> 作る予定で、まだ着手していないもの
-
-**決めごとの状態：**
-
-- <Badge text="決定済み" variant="note" /> 方針を決めて、コードはまだのもの
-- <Badge text="検討中" variant="caution" /> まだ決めていないもの
-
-## ドキュメントの案内
-
-### はじめに
+## 目的から探す
 
 <CardGrid>
-<LinkCard title="全体の構成" description="部品と、メッセージ、AI、通話の流れ。" href="/ja/developers/architecture/" />
-<LinkCard title="よくある構成との違い" description="よくある構成とTegamiを7つの場面で比べる。" href="/ja/developers/differences/" />
+<LinkCard title="仕組みを知る" description="部品と、メッセージ、AI、通話の流れを見る。" href="/ja/developers/architecture/" />
+<LinkCard title="自分のリレーを立てる" description="リレーのコードを自分のCloudflareで動かす。" href="/ja/developers/self-host-relay/" />
+<LinkCard title="自分のAIをつなぐ" description="QRコードやMCPで自分のAIを友だちにする。" href="/ja/developers/connect-ai/" />
+<LinkCard title="開発に参加する" description="不具合の報告と、手元での動かし方。" href="/ja/developers/contributing/" />
 </CardGrid>
 
-### 仕組み
+## 状態の表示
 
-<CardGrid>
-<LinkCard title="Nostrとの関係" description="Nostrのどこを使い、どこを使わないか。" href="/ja/developers/nostr/" />
-<LinkCard title="暗号化" description="封の仕組み、サーバーに見える情報、前方秘匿性。" href="/ja/developers/encryption/" />
-<LinkCard title="鍵" description="秘密鍵の保護、復旧、引き継ぎ。" href="/ja/developers/keys/" />
-<LinkCard title="リレー" description="リレーが動く土台、登録、利用状況の集計。" href="/ja/developers/relay/" />
-<LinkCard title="通知、通話、写真" description="通知、通話、写真とファイル。" href="/ja/developers/notifications-calls/" />
-<LinkCard title="AI" description="AIがどうつながり、何がAIの会社に渡るか。" href="/ja/developers/ai/" />
-</CardGrid>
+各ページの項目には、次の状態を付けています。
 
-### ガイド
+| 表示 | 意味 |
+| --- | --- |
+| <Badge text="提供中" variant="success" /> | 2026年11月18日から本番で動いているもの |
+| <Badge text="公開待ち" variant="tip" /> | コードを書き終えて、本番に出す前のもの |
+| <Badge text="開発中" variant="caution" /> | いま作っている途中のもの |
+| <Badge text="予定" variant="default" /> | 作る予定で、まだ着手していないもの |
+| <Badge text="決定済み" variant="note" /> | 方針を決めて、コードはまだのもの |
+| <Badge text="検討中" variant="caution" /> | まだ決めていないもの |
 
-<CardGrid>
-<LinkCard title="自分のリレーを立てる" description="リレーのコードを取得して、自分で動かす。" href="/ja/developers/self-host-relay/" />
-<LinkCard title="自分のAIをつなぐ" description="QRコードやMCPで自分のAIをつなぐ。" href="/ja/developers/connect-ai/" />
-<LinkCard title="開発に参加する" description="不具合の報告と要望、リポジトリの中身。" href="/ja/developers/contributing/" />
-</CardGrid>
+## ページの一覧
 
-### リファレンス
+- はじめに：[全体の構成](/ja/developers/architecture/)
+- 仕組み：[Nostrとの関係](/ja/developers/nostr/)、[暗号化](/ja/developers/encryption/)、[鍵](/ja/developers/keys/)、[リレー](/ja/developers/relay/)、[通知、通話、写真](/ja/developers/notifications-calls/)、[AI](/ja/developers/ai/)
+- ガイド：[自分のリレーを立てる](/ja/developers/self-host-relay/)、[自分のAIをつなぐ](/ja/developers/connect-ai/)、[開発に参加する](/ja/developers/contributing/)
+- リファレンス：[技術仕様](/ja/developers/spec/)、[開発者向けのよくある質問](/ja/developers/faq/)
+- 比較：[開発者向けの比較](/ja/developers/compare/)、[よくある構成との違い](/ja/developers/differences/)
 
-<CardGrid>
-<LinkCard title="技術仕様" description="暗号、NIP、リレーの上限、HTTPエンドポイント、独自のkind。" href="/ja/developers/spec/" />
-</CardGrid>
+## コードの置き場
 
-### 比較とよくある質問
-
-<CardGrid>
-<LinkCard title="開発者向けの比較" description="LINE、WhatsApp、Signal、Telegramとの比較。" href="/ja/developers/compare/" />
-<LinkCard title="開発者向けのよくある質問" description="開発者からよく聞かれることへの短い答え。" href="/ja/developers/faq/" />
-</CardGrid>
+コードは`client/`（アプリ）、`relay/`（リレー）、`agent/`（AIをつなぐ道具）、`website/`（サイト）に分かれています。フォルダの一覧は[開発に参加する](/ja/developers/contributing/#リポジトリの中身)にあります。
 
 ## オープンソース
 
-ライセンスはAGPL-3.0です。Tegamiのコードを使ったアプリをネットワーク越しに提供する人にも、コードの公開が求められます。
+TegamiのライセンスはAGPL-3.0です。Tegamiのコードを使ったアプリをネットワーク越しに提供する人にも、コードの公開が求められます。
 
-現在は、不具合の報告と要望をGitHubのIssueで受け付けています。コードの取り込み（プルリクエスト）は受け付けていません。
-
-開発への参加の方法は[開発に参加する](/ja/developers/contributing/)にあります。
+現在は、不具合の報告と要望をGitHubのIssueで受け付けています。コードの取り込み（プルリクエスト）は受け付けていません。開発への参加の方法は[開発に参加する](/ja/developers/contributing/)にあります。

@@ -1,64 +1,42 @@
 ---
 title: "Relay"
-description: "What the Tegami relay runs on, who can register, and what it counts."
+description: "What Tegami's relay runs on, who can register, and what it counts."
 ---
 
-import { Aside, Badge } from '@astrojs/starlight/components';
+import { Badge } from '@astrojs/starlight/components';
 
-What the Tegami relay runs on, who can register, and what it counts. To run a relay yourself, see [Run your own relay](/developers/self-host-relay/).
-
-Status labels such as "Available" are explained in the [overview](/developers/#what-the-status-labels-mean).
+This page explains how Tegami's relay works, for people who want to know what it runs on, who can register, and what it counts. To run your own relay, see [Run your own relay](/developers/self-host-relay/).
 
 ## What the relay runs on
 
-<Aside type="tip" title="Now">
+<Badge text="Available" variant="success" />
 
-It runs on Cloudflare Workers and a Durable Object (SQLite), and the code is in `relay/`. It only accepts gift wraps (kind 1059) with a single recipient, and you can only read envelopes addressed to you. Stored envelopes are deleted after 30 days, and sending limits apply per IP address and per key.
+Tegami's relay runs on Cloudflare Workers and a [Durable Object](/developers/spec/#glossary) (SQLite). The code is in `relay/`. It accepts only [envelopes](/developers/architecture/#envelopes) (kind 1059) addressed to a single person, and you can read only envelopes addressed to you. Envelopes are deleted after 30 days, and sending is limited per IP address and per key.
 
-</Aside>
+The only official relay is the one Tegami runs.
 
-<Aside type="caution" title="Not yet">
-
-There is only one relay, run by Tegami.
-
-</Aside>
-
-<Aside type="note" title="Next">
-
--   <Badge text="Decided" variant="note" />  We start with a 30-day retention for envelopes, watch how it is used, and shorten it if almost nobody goes a long time without opening the app.
-
-</Aside>
+- <Badge text="Decided" variant="note" /> We start by keeping envelopes for 30 days. If few people turn out to stay away for long, we will shorten it based on how the app is used.
 
 ## Registration and who can use it
 
-<Aside type="tip" title="Now">
+<Badge text="Available" variant="success" />
 
-Yes, anyone can register. Registration is a `POST /register` signed with NIP-98, and requires either an invite code or a human check (Cloudflare Turnstile). Unregistered keys cannot write. Messages from people who registered without an invite code are not shown anywhere, including the strangers box, until you add them as a friend, and they do not trigger notifications. Messages sent after the other person adds them as a friend, via QR code or invite link, are shown. A modified app can still use the relay if its key passed registration, so what we protect is the registration gate, not the app.
+Anyone can register with Tegami's relay. You register with a `POST /register` signed with [NIP-98](/developers/spec/#glossary), and pass either an invite ticket or a check that you are human (Cloudflare Turnstile). A key that is not registered cannot write.
 
-</Aside>
+Messages from someone who registered without an invite ticket are not shown anywhere, including the "From people you don't know" section, and no notification sounds, until you add them as a friend. They appear from the messages that arrive after the other person is added through a QR code or an invite link. Even a modified app can use the relay if its key passed registration, so what protects the relay is the registration gate, not the app.
 
-<Aside type="caution" title="Not yet">
+There is no verification badge (a mark of authenticity) yet.
 
-There is no identity verification badge (a mark of authenticity).
+- <Badge text="Decided" variant="note" /> Impersonation will be stopped with several methods combined. Family and friends read each other's QR codes in person, companies and shops are checked by domain, and people who want a mark of authenticity can get one for a fee through an outside identity-verification service. Even then Tegami receives only the result ("verified") and holds no personal information such as an address.
 
-</Aside>
+## Usage counts
 
-<Aside type="note" title="Next">
+<Badge text="Available" variant="success" />
 
--   <Badge text="Decided" variant="note" />  We will prevent impersonation by combining several methods. Family and friends scan each other's QR codes in person, companies and shops are verified by domain, and people who want a mark of authenticity can get one for a fee through a third-party identity verification company. Even then, Tegami only receives the result that verification happened, and holds no personal information such as addresses.
+The relay keeps daily totals for 183 days. What it counts is envelopes received, the number and size of files stored, the number of logins, and the approximate number of keys that logged in that day. Only the operator can see the daily numbers.
 
-</Aside>
+What we publish is only the totals for finished weeks, with the latest 24 weeks on [Uptime and usage statistics](/status). Published numbers are shown as 0 for 0 to 9, and rounded up to a multiple of 10 for 10 or more. The published number of keys is the daily average.
 
-## Usage counting
+The number of keys that logged in is estimated with [HyperLogLog](/developers/spec/#glossary). Before counting, a value that changes every day (a [salt](/developers/spec/#glossary)) is mixed in, and that value is discarded when the day changes. Neither the app nor the website has any analytics.
 
-<Aside type="tip" title="Now">
-
-The relay keeps daily totals (envelopes received, number and size of files stored, number of logins, and an approximate count of keys that logged in that day) for 183 days. On [Status and usage statistics](/status) we publish only totals for completed weeks, for the last 24 weeks. Only we can see the daily numbers. The count of keys that logged in is estimated with HyperLogLog, mixing in a value that changes every day (a salt) before counting, and that value is deleted when the day ends. The published key count is a daily average. Published numbers are 0 for 0 to 9, and rounded up to a multiple of 10 for 10 and above. Neither the app nor the website has any analytics.
-
-</Aside>
-
-<Aside type="note" title="Next">
-
--   <Badge text="Decided" variant="note" />  We will never add analytics that track what people do.
-
-</Aside>
+- <Badge text="Decided" variant="note" /> We will not add analytics that follow what people do.
