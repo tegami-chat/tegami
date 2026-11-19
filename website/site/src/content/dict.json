@@ -2009,6 +2009,26 @@
  },
  "feat.more": {
   "en": "And more",
-  "ja": "ほかにもいろいろ"
+  "ja": "ほか多数"
+ },
+ "copy.l": {
+  "en": "Copy address",
+  "ja": "アドレスをコピー"
+ },
+ "copy.done": {
+  "en": "Copied",
+  "ja": "コピーしました"
+ },
+ "donate.h": {
+  "en": "Donate with Lightning",
+  "ja": "Lightningで寄付する"
+ },
+ "donate.open": {
+  "en": "Open in your wallet",
+  "ja": "ウォレットで開く"
+ },
+ "donate.qr": {
+  "en": "QR code for the Lightning address hello@tegami.chat",
+  "ja": "Lightningアドレス hello@tegami.chat のQRコード"
  }
 }

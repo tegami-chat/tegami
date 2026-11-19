@@ -4,13 +4,13 @@
 import { PLATFORM_ICONS } from '~/platforms';
 import { t, type Lang } from '~/site';
 
-export interface Props { lang?: Lang; centered?: boolean; iconOnly?: boolean }
-const { lang = 'en', centered = false, iconOnly = false } = Astro.props;
+export interface Props { lang?: Lang; iconOnly?: boolean }
+const { lang = 'en', iconOnly = false } = Astro.props;
 const x = (k: string) => t(k, lang);
 const others: [string, string][] = [['iphone', 'rm.now'], ['android', 'rm.now'], ['windows', 'rm.plan'], ['mac', 'rm.plan'], ['linux', 'rm.plan']];
 const label = lang === 'ja' ? '使える場所' : 'Where Tegami runs';
 const title = lang === 'ja' ? 'ブラウザで始める' : 'Open in your browser';
-const pill = 'inline-flex items-center gap-2 rounded-pill border px-2.5 py-1 text-caption';
+const pill = 'flex w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-pill border px-2.5 py-1 text-caption';
 const box = 'inline-flex h-8 w-8 items-center justify-center rounded-control border';
 ---
 {iconOnly ? (
@@ -21,7 +21,7 @@ const box = 'inline-flex h-8 w-8 items-center justify-center rounded-control bor
   ))}
 </ul>
 ) : (
-<ul class:list={['flex flex-wrap gap-2', centered && 'justify-center']} aria-label={label}>
+<ul class="pills" aria-label={label}>
   <li><a href="https://app.tegami.chat/" class={`${pill} border-accent/50 text-fg hover:border-accent hover:text-accent`} title={title} target="_blank" rel="noopener"><svg viewBox="0 0 24 24" class="h-4 w-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none" aria-hidden="true" set:html={PLATFORM_ICONS.browser.svg} /><span>{x('ft.os.browser')}</span><span class="font-semibold text-accent">{x('now')}</span><span class="sr-only">{lang === 'ja' ? '（新しいタブで開きます）' : ' (opens in a new tab)'}</span></a></li>
   {others.map(([id, st]) => (
     <li><span class={`${pill} cursor-default border-dashed border-line text-fg-muted`}><svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true" set:html={PLATFORM_ICONS[id].svg} /><span>{x('ft.os.' + id)}</span><span>{x(st)}</span></span></li>

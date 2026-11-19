@@ -1,7 +1,7 @@
 // Builds tegami.chat into public/.
 //
 // Two Astro projects, one command:
-//   site/  The pages for users (/, /how, /faq, /about, /compare, /roadmap, /status, /privacy and the /ja/ copies).
+//   site/  The pages for users (/, /how, /faq, /about, /compare, /roadmap, /status, /privacy, /donate and the /ja/ copies).
 //          Astro project with our own design (no template). See site/README.md.
 //   docs/  The developer pages (/developers/..., /ja/developers/...). Built from Astro Starlight. See docs/README.md.
 //

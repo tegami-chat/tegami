@@ -23,3 +23,29 @@ document.addEventListener('click', (e) => {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') document.querySelectorAll('[data-lang-menu][open], [data-menu][open]').forEach((d) => d.removeAttribute('open'));
 });
+// The copy buttons: copy the text in data-copy, then show data-done in the label for a moment.
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-copy]');
+  if (!b) return;
+  const label = b.querySelector('[data-copy-label]');
+  const done = () => {
+    if (!label) return;
+    if (!label.dataset.orig) label.dataset.orig = label.textContent;
+    label.textContent = b.dataset.done;
+    clearTimeout(b._t);
+    b._t = setTimeout(() => { label.textContent = label.dataset.orig; }, 1800);
+  };
+  const fallback = () => {
+    const a = document.createElement('textarea');
+    a.value = b.dataset.copy;
+    a.setAttribute('readonly', '');
+    a.style.position = 'fixed';
+    a.style.opacity = '0';
+    document.body.appendChild(a);
+    a.select();
+    try { if (document.execCommand('copy')) done(); } catch {}
+    a.remove();
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(b.dataset.copy).then(done, fallback);
+  else fallback();
+});

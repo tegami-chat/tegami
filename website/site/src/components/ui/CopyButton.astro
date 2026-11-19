@@ -1,0 +1,10 @@
+---
+// A button that copies a text to the clipboard (site.js does the copying; the page needs no inline script).
+// The label says what is copied; after the click it reads "Copied" for a moment.
+import Icon from '~/components/ui/Icon.astro';
+import { t, type Lang } from '~/site';
+export interface Props { value: string; lang: Lang; size?: 'sm' | 'md'; class?: string }
+const { value, lang, size = 'md', class: cls } = Astro.props;
+const SIZE = { sm: 'px-4 py-1.5 text-small', md: 'px-8 py-3.5 text-body' };
+---
+<button type="button" data-copy={value} data-done={t('copy.done', lang)} class:list={['inline-flex items-center gap-2 whitespace-nowrap rounded-pill border border-line-strong font-semibold text-fg hover:bg-hover', SIZE[size], cls]}><Icon name="copy" class="h-4 w-4" /><span data-copy-label aria-live="polite">{t('copy.l', lang)}</span></button>

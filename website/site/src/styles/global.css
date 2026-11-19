@@ -102,6 +102,8 @@
 
 /* ---- Type scale: the only font sizes a page may use. No uppercase anywhere. ---- */
 @utility text-display { font-size: 2.5rem; line-height: 1.15; font-weight: 700; letter-spacing: -0.025em; @media (width >= 40rem) { font-size: 3.75rem; } }
+/* The top page's headline: two short lines. From 64rem the two lines sit side by side with the screenshots, one line each; the English lines are longer, so they are a size smaller. */
+@utility text-hero { font-size: 2.5rem; line-height: 1.15; font-weight: 700; letter-spacing: -0.025em; @media (width >= 40rem) { font-size: 3rem; } @media (width >= 64rem) { font-size: 2.75rem; white-space: nowrap; &:lang(en) { font-size: 2.25rem; } } }
 @utility text-title { font-size: 2.25rem; line-height: 2.5rem; font-weight: 700; letter-spacing: -0.025em; @media (width >= 40rem) { font-size: 3rem; line-height: 1; } }
 @utility text-section { font-size: 1.5rem; line-height: 2rem; font-weight: 700; letter-spacing: 0; @media (width >= 40rem) { font-size: 1.875rem; line-height: 2.25rem; } }
 @utility text-subsection { font-size: 1.125rem; line-height: 1.75rem; font-weight: 700; letter-spacing: 0; }
@@ -340,4 +342,19 @@ html.dark { background-color: #101311; color-scheme: dark; }
   .shot-row > * { flex: 0 0 11rem; scroll-snap-align: center; }
   @media (width >= 40rem) { .shot-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2rem; overflow: visible; padding-bottom: 0; } }
   .shot-row .shot-phone { max-width: 13.5rem; margin-inline: auto; }
+}
+
+/* ---- The platform labels: the same block on the top of the page and at the bottom (two columns on a phone, three from 40rem, so two rows on a desktop). ---- */
+@layer components {
+  .pills { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; width: max-content; max-width: 100%; margin-inline: auto; }
+  @media (width >= 40rem) { .pills { grid-template-columns: repeat(3, 1fr); } }
+  /* The top page's first block: the words, the button and the labels share one centre line, beside the screenshots. */
+  .hero-cols { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: 3rem; }
+  @media (width >= 64rem) { .hero-cols { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); } }
+  /* A card whose whole face is one link; buttons inside it sit above the link. */
+  .stretch::after { content: ''; position: absolute; inset: 0; }
+  .above { position: relative; z-index: 1; }
+  /* The QR code: black on white in both modes, so a camera can read it. */
+  .qr { width: 14rem; max-width: 100%; padding: 1rem; border-radius: var(--radius-box); background: #fff; box-shadow: var(--shadow-card); }
+  .qr svg { display: block; width: 100%; height: auto; }
 }

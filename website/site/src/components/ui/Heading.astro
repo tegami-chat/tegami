@@ -1,8 +1,8 @@
 ---
 // A heading tag with a look from the type scale. The level is the document outline; the style is the size.
-export interface Props { level?: 1 | 2 | 3 | 4; style?: 'display' | 'title' | 'section' | 'subsection'; class?: string; [key: string]: unknown }
+export interface Props { level?: 1 | 2 | 3 | 4; style?: 'display' | 'hero' | 'title' | 'section' | 'subsection'; class?: string; [key: string]: unknown }
 const { level = 2, style, class: cls, ...rest } = Astro.props;
-const LOOK = { display: 'text-display', title: 'text-title', section: 'text-section', subsection: 'text-subsection' };
+const LOOK = { display: 'text-display', hero: 'text-hero', title: 'text-title', section: 'text-section', subsection: 'text-subsection' };
 const DEFAULT = { 1: 'title', 2: 'section', 3: 'subsection', 4: 'subsection' } as const;
 const Tag = `h${level}` as 'h1';
 ---

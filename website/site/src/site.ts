@@ -44,7 +44,7 @@ export const t = (key: string, lang: Lang): string => {
   return fixLinks(e[lang] ?? e.en, lang);
 };
 
-export const PAGES = ['index', 'how', 'faq', 'about', 'compare', 'roadmap', 'status', 'privacy'] as const;
+export const PAGES = ['index', 'how', 'faq', 'about', 'compare', 'roadmap', 'status', 'privacy', 'donate'] as const;
 export type PageName = (typeof PAGES)[number];
 
 const PATH: Record<PageName, string> = {
@@ -56,6 +56,7 @@ const PATH: Record<PageName, string> = {
   roadmap: '/roadmap',
   status: '/status',
   privacy: '/privacy',
+  donate: '/donate',
 };
 export const pathOf = (name: PageName, lang: Lang): string =>
   lang === 'ja' ? (PATH[name] === '/' ? '/ja/' : '/ja' + PATH[name]) : PATH[name];
@@ -88,6 +89,10 @@ export const META: Record<PageName, Record<Lang, { title: string; desc: string }
   about: {
     en: { title: 'About us | Tegami', desc: 'Who runs Tegami, and how to contact us.' },
     ja: { title: '運営者情報 | Tegami', desc: 'Tegamiの運営者と連絡先。' },
+  },
+  donate: {
+    en: { title: 'Donate | Tegami', desc: 'Support Tegami with a Lightning donation.' },
+    ja: { title: '寄付 | Tegami', desc: 'Lightningで、Tegamiの運営を支えられます。' },
   },
   status: {
     en: { title: 'Status and stats | Tegami', desc: 'Whether the Tegami relay is responding, and weekly usage statistics.' },

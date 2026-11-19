@@ -1,0 +1,25 @@
+---
+// The donation page for Lightning: the QR code (made when the site is built, no outside service), the address, and two buttons.
+import QRCode from 'qrcode';
+import Section from '~/components/ui/Section.astro';
+import SectionHeading from '~/components/ui/SectionHeading.astro';
+import Button from '~/components/ui/Button.astro';
+import CopyButton from '~/components/ui/CopyButton.astro';
+import { t, type Lang } from '~/site';
+const { lang = 'en' } = Astro.props as { lang?: Lang };
+const x = (k: string) => t(k, lang);
+const ADDRESS = 'hello@tegami.chat';
+const qr = await QRCode.toString('lightning:' + ADDRESS, { type: 'svg', margin: 0, errorCorrectionLevel: 'M', color: { dark: '#000000', light: '#ffffff' } });
+---
+<main>
+  <Section rhythm="page" width="prose" class="text-center">
+    <SectionHeading level={1} title={x('donate.h')} align="center" />
+    <div class="qr mx-auto" role="img" aria-label={x('donate.qr')} set:html={qr} />
+    <p class="emphasis mt-6 select-all break-all">{ADDRESS}</p>
+    <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+      <Button href={'lightning:' + ADDRESS}>{x('donate.open')}</Button>
+      <CopyButton value={ADDRESS} lang={lang} />
+    </div>
+    <p class="mt-8 text-caption text-fg-muted"><Fragment set:html={x('don.note')} /></p>
+  </Section>
+</main>

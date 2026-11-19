@@ -477,7 +477,7 @@ const ORDER = ['ads', 'num', 'seal', 'leak', 'pw', 'trk', 'ai'];
 S.sort((x, y) => ORDER.indexOf(x.id) - ORDER.indexOf(y.id));
 
 // ─── 並べる ─────────────────────────────────────────
-const PLAYMARK = '<span class="playmark pointer-events-none absolute left-1/2 top-1/2 z-20 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-forest-600 pl-1 text-white shadow-xl ring-4 ring-white/70 max-sm:h-11 max-sm:w-11 dark:bg-forest-300 dark:text-forest-950 dark:ring-black/40"><svg viewBox="0 0 24 24" class="h-7 w-7" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg></span>';
+const PLAYMARK = '<span class="playmark pointer-events-none absolute left-1/2 top-1/2 z-20 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-forest-600 text-white ring-4 ring-white/70 max-sm:h-11 max-sm:w-11 dark:bg-forest-300 dark:text-forest-950 dark:ring-black/40"><svg viewBox="1.1 0 24 24" class="h-7 w-7" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg></span>';
 const lane = (sc, side) => {
   const tg = side === 'tg';
   const steps = [1, 2, 3].map((n) => `<li class="cap flex gap-2" data-step="${n}"><span class="font-semibold ${tg ? 'text-forest-600 dark:text-forest-300' : 'text-neutral-400'}">${n}</span><span>${t(`${sc.id}.${side}${n}`)}</span></li>`).join('');
