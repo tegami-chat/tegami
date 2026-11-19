@@ -1974,5 +1974,9 @@
  "faq.cat.project": {
   "en": "The project and the code",
   "ja": "運営と技術"
+ },
+ "ft.docs": {
+  "en": "Developer docs",
+  "ja": "開発者向けドキュメント"
  }
 }
