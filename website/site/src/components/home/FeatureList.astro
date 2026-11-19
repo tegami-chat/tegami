@@ -1,0 +1,29 @@
+---
+import { t, link, type Lang } from '~/site';
+
+const { lang = 'en' } = Astro.props as { lang?: Lang };
+const x = (k: string) => t(k, lang);
+---
+  <!-- Everyday features -->
+  <section id="features" class="bg-paper py-20 dark:bg-paper-dark md:py-24">
+    <div class="mx-auto max-w-5xl px-4">
+      <h2 class="text-center text-3xl font-bold sm:text-4xl"><Fragment set:html={x('feat.h')} /></h2>
+      <ul class="mt-10 grid grid-cols-2 gap-3 text-sm sm:text-base md:grid-cols-3 lg:grid-cols-4">
+        <li class="flex items-center gap-2 rounded-xl bg-white px-4 py-3 font-medium dark:bg-night-card"><span class="text-forest-600 dark:text-forest-300" aria-hidden="true">✓</span><span><Fragment set:html={x('feat.one')} /></span></li>
+        <li class="flex items-center gap-2 rounded-xl bg-white px-4 py-3 font-medium dark:bg-night-card"><span class="text-forest-600 dark:text-forest-300" aria-hidden="true">✓</span><span><Fragment set:html={x('feat.group')} /></span></li>
+        <li class="flex items-center gap-2 rounded-xl bg-white px-4 py-3 font-medium dark:bg-night-card"><span class="text-forest-600 dark:text-forest-300" aria-hidden="true">✓</span><span><Fragment set:html={x('feat.photo')} /></span></li>
+        <li class="flex items-center gap-2 rounded-xl bg-white px-4 py-3 font-medium dark:bg-night-card"><span class="text-forest-600 dark:text-forest-300" aria-hidden="true">✓</span><span><Fragment set:html={x('feat.voice')} /></span></li>
+        <li class="flex items-center gap-2 rounded-xl bg-white px-4 py-3 font-medium dark:bg-night-card"><span class="text-forest-600 dark:text-forest-300" aria-hidden="true">✓</span><span><Fragment set:html={x('feat.video')} /></span></li>
+        <li class="flex items-center gap-2 rounded-xl bg-white px-4 py-3 font-medium dark:bg-night-card"><span class="text-forest-600 dark:text-forest-300" aria-hidden="true">✓</span><span><Fragment set:html={x('feat.sticker')} /></span></li>
+        <li class="flex items-center gap-2 rounded-xl bg-white px-4 py-3 font-medium dark:bg-night-card"><span class="text-forest-600 dark:text-forest-300" aria-hidden="true">✓</span><span><Fragment set:html={x('feat.vmsg')} /></span></li>
+        <li class="flex items-center gap-2 rounded-xl bg-white px-4 py-3 font-medium dark:bg-night-card"><span class="text-forest-600 dark:text-forest-300" aria-hidden="true">✓</span><span><Fragment set:html={x('feat.file')} /></span></li>
+        <li class="flex items-center gap-2 rounded-xl bg-white px-4 py-3 font-medium dark:bg-night-card"><span class="text-forest-600 dark:text-forest-300" aria-hidden="true">✓</span><span><Fragment set:html={x('feat.search')} /></span></li>
+        <li class="flex items-center gap-2 rounded-xl bg-white px-4 py-3 font-medium dark:bg-night-card"><span class="text-forest-600 dark:text-forest-300" aria-hidden="true">✓</span><span><Fragment set:html={x('feat.devices')} /></span></li>
+        <li class="flex items-center gap-2 rounded-xl bg-white px-4 py-3 font-medium dark:bg-night-card"><span class="text-forest-600 dark:text-forest-300" aria-hidden="true">✓</span><span><Fragment set:html={x('feat.move')} /></span></li>
+        <li class="flex items-center gap-2 rounded-xl bg-white px-4 py-3 font-medium dark:bg-night-card"><span class="text-forest-600 dark:text-forest-300" aria-hidden="true">✓</span><span><Fragment set:html={x('feat.block')} /></span></li>
+        <li class="flex items-center gap-2 rounded-xl bg-forest-600 px-4 py-3 font-medium text-white dark:bg-forest-950 dark:text-forest-300"><span aria-hidden="true">✓</span><span><Fragment set:html={x('feat.ai')} /></span></li>
+        <li class="flex items-center gap-2 rounded-xl bg-forest-600 px-4 py-3 font-medium text-white dark:bg-forest-950 dark:text-forest-300"><span aria-hidden="true">✓</span><span><Fragment set:html={x('feat.accounts')} /></span></li>
+        <li class="flex items-center gap-2 rounded-xl bg-forest-600 px-4 py-3 font-medium text-white dark:bg-forest-950 dark:text-forest-300"><span aria-hidden="true">✓</span><span><Fragment set:html={x('feat.export')} /></span></li>
+      </ul>
+    </div>
+  </section>

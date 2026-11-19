@@ -1,0 +1,47 @@
+---
+import { t, link, type Lang } from '~/site';
+import ExtMark from '~/components/ExtMark.astro';
+const { lang = 'en' } = Astro.props as { lang?: Lang };
+const x = (k: string) => t(k, lang);
+---
+  <!-- Make it yours -->
+  <section id="desk" class="scroll-mt-16 bg-night py-20 text-neutral-100 md:py-24 dark:border-y dark:border-night-line dark:bg-[#0a0d0b]">
+    <div class="mx-auto max-w-5xl px-4">
+      <h2 class="text-3xl font-bold sm:text-4xl"><Fragment set:html={x('mk.h')} /></h2>
+      <p class="mt-3 max-w-xl text-neutral-400"><Fragment set:html={x('mk.t')} /></p>
+      <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="flex min-w-0 flex-col gap-2 rounded-2xl border border-night-line bg-night-card p-6">
+          <span class="self-start rounded-full bg-[#2b2140] px-2.5 text-xs text-nostr-300"><Fragment set:html={x('st.plan')} /></span>
+          <h3 class="font-bold"><Fragment set:html={x('mk.ui.h')} /></h3>
+          <p class="text-sm text-neutral-400"><Fragment set:html={x('mk.ui.t')} /></p>
+        </div>
+        <div class="flex min-w-0 flex-col gap-2 rounded-2xl border border-night-line bg-night-card p-6">
+          <span class="self-start rounded-full bg-[#2b2140] px-2.5 text-xs text-nostr-300"><Fragment set:html={x('st.plan')} /></span>
+          <h3 class="font-bold"><Fragment set:html={x('mk.share.h')} /></h3>
+          <p class="text-sm text-neutral-400"><Fragment set:html={x('mk.share.t')} /></p>
+        </div>
+        <div class="flex min-w-0 flex-col gap-2 rounded-2xl border border-night-line bg-night-card p-6">
+          <span class="self-start rounded-full bg-forest-950 px-2.5 text-xs text-forest-300"><Fragment set:html={x('now')} /></span>
+          <h3 class="font-bold"><Fragment set:html={x('mk.bots.h')} /></h3>
+          <p class="text-sm text-neutral-400"><Fragment set:html={x('mk.bots.t')} /></p>
+          <code class="overflow-x-auto whitespace-nowrap rounded-md bg-black/40 px-3 py-2 text-[13px] text-neutral-300">node agent.mjs init --name Claude</code>
+        </div>
+        <div class="flex min-w-0 flex-col gap-2 rounded-2xl border border-night-line bg-night-card p-6">
+          <div class="flex flex-wrap gap-1.5 self-start"><span class="rounded-full bg-forest-950 px-2.5 text-xs text-forest-300">{x('mk.api.mcp')} {x('now')}</span><span class="rounded-full bg-[#2b2140] px-2.5 text-xs text-nostr-300">{x('mk.api.api')} {x('st.plan')}</span></div>
+          <h3 class="font-bold"><Fragment set:html={x('mk.api.h')} /></h3>
+          <p class="text-sm text-neutral-400"><Fragment set:html={x('mk.api.t')} /></p>
+        </div>
+        <div class="flex min-w-0 flex-col gap-2 rounded-2xl border border-night-line bg-night-card p-6">
+          <span class="self-start rounded-full bg-[#2b2140] px-2.5 text-xs text-nostr-300"><Fragment set:html={x('st.plan')} /></span>
+          <h3 class="font-bold"><Fragment set:html={x('mk.relay.h')} /></h3>
+          <p class="text-sm text-neutral-400"><Fragment set:html={x('mk.relay.t')} /></p>
+        </div>
+        <div class="flex min-w-0 flex-col gap-2 rounded-2xl border border-night-line bg-night-card p-6">
+          <span class="self-start rounded-full bg-forest-950 px-2.5 text-xs text-forest-300"><Fragment set:html={x('open')} /></span>
+          <h3 class="font-bold"><Fragment set:html={x('mk.agpl.h')} /></h3>
+          <p class="text-sm text-neutral-400"><Fragment set:html={x('mk.agpl.t')} /></p>
+        </div>
+      </div>
+      <a href={link('/developers', lang)} class="mt-8 inline-block rounded-full border border-night-line px-6 py-2.5 text-sm font-semibold text-neutral-100 hover:bg-white/5"><Fragment set:html={x('mk.dev')} /></a>
+    </div>
+  </section>

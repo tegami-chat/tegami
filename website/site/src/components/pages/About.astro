@@ -1,0 +1,17 @@
+---
+import ExtMark from '~/components/ExtMark.astro';
+import { t, link, type Lang } from '~/site';
+const { lang = 'en' } = Astro.props as { lang?: Lang };
+const x = (k: string) => t(k, lang);
+---
+<main class="mx-auto max-w-3xl px-4 py-14 md:py-20 leading-relaxed [&_h2]:mt-14 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:tracking-tight [&_p]:mt-4 [&_p]:text-neutral-700 dark:[&_p]:text-neutral-300 [&_ul]:mt-4 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-6 [&_li]:text-neutral-700 dark:[&_li]:text-neutral-300 [&_dd_a]:text-forest-600 [&_dd_a]:text-forest-600 [&_dd_a]:text-forest-600 [&_dd_a]:text-forest-600 [&_a]:text-forest-600 [&_a]:underline dark:[&_a]:text-forest-300">
+  <h1 class="text-4xl font-bold tracking-tight sm:text-5xl"><Fragment set:html={x('op.h')} /></h1>
+
+  <dl class="mt-10 grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 text-neutral-700 dark:text-neutral-300">
+    <dt class="font-semibold text-neutral-900 dark:text-neutral-100"><Fragment set:html={x('op.1.k')} /></dt><dd><Fragment set:html={x('op.1.v')} /></dd>
+    <dt class="font-semibold text-neutral-900 dark:text-neutral-100"><Fragment set:html={x('op.2.k')} /></dt><dd><Fragment set:html={x('op.2.v')} /></dd>
+    <dt class="font-semibold text-neutral-900 dark:text-neutral-100"><Fragment set:html={x('op.4.k')} /></dt><dd><Fragment set:html={x('op.4.v')} /></dd>
+    <dt class="font-semibold text-neutral-900 dark:text-neutral-100"><Fragment set:html={x('op.5.k')} /></dt><dd><Fragment set:html={x('op.5.v')} /></dd>
+    <dt class="font-semibold text-neutral-900 dark:text-neutral-100"><Fragment set:html={x('op.6.k')} /></dt><dd><Fragment set:html={x('op.6.v')} /></dd>
+  </dl>
+</main>

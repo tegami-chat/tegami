@@ -517,7 +517,7 @@ const ICON = {
 // 場面ごとの、絵の上にかぶせるボタン。止まっている間だけ、再生の印を出す。
 document.querySelectorAll('#diff .scene > .grid').forEach((g) => {
   g.classList.add('relative');
-  g.insertAdjacentHTML('beforeend', '<button type="button" class="playhit absolute inset-0 z-10 flex cursor-pointer items-center justify-center rounded-2xl max-sm:items-start max-sm:justify-end max-sm:p-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-600 dark:focus-visible:outline-forest-300"><span class="playmark flex h-16 w-16 items-center max-sm:h-11 max-sm:w-11 justify-center rounded-full bg-forest-600 pl-1 text-white shadow-xl ring-4 ring-white/70 dark:bg-forest-300 dark:text-forest-950 dark:ring-black/40">' + ICON.play + '</span></button>');
+  g.insertAdjacentHTML('beforeend', '<button type="button" class="playhit absolute inset-0 z-10 flex cursor-pointer items-center justify-center rounded-2xl max-sm:items-start max-sm:justify-end max-sm:p-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-600 dark:focus-visible:outline-forest-300"><span class="playmark flex h-16 w-16 items-center max-sm:h-11 max-sm:w-11 justify-center rounded-full bg-forest-600 pl-1 text-white shadow-xl ring-4 ring-white/70 dark:bg-forest-300 dark:text-forest-950 dark:ring-black/40">' + ICON.play + '</span></button>');
 });
 function showButton() {
   document.querySelectorAll('#diff .playhit').forEach((b) => {

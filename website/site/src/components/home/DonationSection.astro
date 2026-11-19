@@ -1,0 +1,25 @@
+---
+import { t, link, type Lang } from '~/site';
+import ExtMark from '~/components/ExtMark.astro';
+const { lang = 'en' } = Astro.props as { lang?: Lang };
+const x = (k: string) => t(k, lang);
+---
+  <!-- Keeping Tegami independent -->
+  <section class="bg-paper py-20 dark:bg-paper-dark md:py-24">
+    <div class="mx-auto max-w-3xl px-4 text-center">
+      <h2 class="text-3xl font-bold sm:text-4xl"><Fragment set:html={x('don.h')} /></h2>
+      <p class="mx-auto mt-4 max-w-xl text-neutral-600 dark:text-neutral-400"><Fragment set:html={x('don.t')} /></p>
+      <ul class="mt-8 grid grid-cols-2 gap-3 text-left md:grid-cols-4">
+        <li class="rounded-xl bg-white p-4 dark:bg-night-card"><span class="block font-bold"><Fragment set:html={x('don.server.h')} /></span><span class="text-sm text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('don.server.t')} /></span></li>
+        <li class="rounded-xl bg-white p-4 dark:bg-night-card"><span class="block font-bold"><Fragment set:html={x('don.notify.h')} /></span><span class="text-sm text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('don.notify.t')} /></span></li>
+        <li class="rounded-xl bg-white p-4 dark:bg-night-card"><span class="block font-bold"><Fragment set:html={x('don.photo.h')} /></span><span class="text-sm text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('don.photo.t')} /></span></li>
+        <li class="rounded-xl bg-white p-4 dark:bg-night-card"><span class="block font-bold"><Fragment set:html={x('don.dev.h')} /></span><span class="text-sm text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('don.dev.t')} /></span></li>
+      </ul>
+      <div class="mt-8 grid gap-3 text-left sm:grid-cols-3">
+        <div class="rounded-xl border border-neutral-300 p-4 dark:border-night-line"><span class="block font-bold">Lightning (Zap)</span><span class="mt-1 block select-all break-all text-sm text-neutral-600 dark:text-neutral-300">hello@tegami.chat</span></div>
+        <a href="https://github.com/sponsors/azumayoshihiro" target="_blank" rel="noopener" class="block rounded-xl border border-neutral-300 p-4 font-bold hover:bg-white dark:border-night-line dark:hover:bg-night-card">GitHub Sponsors<ExtMark lang={lang} /></a>
+        <div class="rounded-xl border border-neutral-300 p-4 dark:border-night-line"><span class="block font-bold"><Fragment set:html={x('don.amz.h')} /></span><span class="mt-1 block text-sm text-neutral-600 dark:text-neutral-300"><span><Fragment set:html={x('don.amz.t')} /></span> <span class="select-all break-all">hello@tegami.chat</span></span></div>
+      </div>
+      <p class="mt-4 text-xs text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('don.note')} /></p>
+    </div>
+  </section>

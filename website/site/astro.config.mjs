@@ -1,12 +1,10 @@
-// User pages for tegami.chat (AstroWind template). Build output goes to ./dist;
+// User pages for tegami.chat. Build output goes to ./dist;
 // build.mjs in the parent folder copies the pages into ../public.
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFileSync, existsSync } from 'node:fs';
 import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
-import icon from 'astro-icon';
-import astrowind from './vendor/integration';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -40,15 +38,10 @@ export default defineConfig({
       scriptDirective: { resources: ["'self'"], hashes: inline.script },
     },
   },
-  integrations: [icon({ include: { tabler: ['*'] } }), astrowind({ config: './src/config.yaml' })],
   vite: {
     plugins: [tailwindcss()],
     // Small scripts would be written into the page; keep them as files so script-src 'self' is enough.
     build: { assetsInlineLimit: 0 },
-    resolve: {
-      alias: {
-        '~': path.resolve(__dirname, './src'),
-      },
-    },
+    resolve: { alias: { '~': path.resolve(__dirname, './src') } },
   },
 });

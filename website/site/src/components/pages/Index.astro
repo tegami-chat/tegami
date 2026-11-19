@@ -1,76 +1,24 @@
 ---
-// The top page, put together from the template's widgets. The words are in content/dict.json.
-import Hero from '~/components/widgets/Hero.astro';
-import Features from '~/components/widgets/Features.astro';
-import Features2 from '~/components/widgets/Features2.astro';
-import CallToAction from '~/components/widgets/CallToAction.astro';
-import DiffScenes from '~/components/widgets/DiffScenes.astro';
-import PlatformPills from '~/components/common/PlatformPills.astro';
-import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
-import Headline from '~/components/ui/Headline.astro';
-import { t, link, browserAction, type Lang } from '~/site';
+// The top page, section by section. The words are in content/dict.json.
+import Hero from '~/components/home/Hero.astro';
+import Pillars from '~/components/home/Pillars.astro';
+import DiffScenes from '~/components/home/DiffScenes.astro';
+import FeatureList from '~/components/home/FeatureList.astro';
+import AiSection from '~/components/home/AiSection.astro';
+import MakeSection from '~/components/home/MakeSection.astro';
+import DonationSection from '~/components/home/DonationSection.astro';
+import FinalCta from '~/components/home/FinalCta.astro';
+import type { Lang } from '~/site';
 
 const { lang = 'en' } = Astro.props as { lang?: Lang };
-const x = (k: string) => t(k, lang);
-const mail = 'hello@tegami.chat';
-const browser = browserAction(lang);
-
-const pillars = [
-  { title: x('p1.h'), description: x('p1.t'), icon: 'tabler:ad-off' },
-  { title: x('p2.h'), description: x('p2.t'), icon: 'tabler:robot' },
-  { title: x('p3.h'), description: x('p3.t'), icon: 'tabler:lock' },
-];
-const checklist = ['one', 'group', 'photo', 'voice', 'video', 'sticker', 'vmsg', 'file', 'search', 'devices', 'move', 'block', 'ai', 'accounts', 'export'].map((k) => ({
-  title: x('feat.' + k),
-}));
-const ai = [
-  { title: x('ai.pick.h'), description: x('ai.pick.t'), icon: 'tabler:brain' },
-  { title: x('ai.talk.h'), description: x('ai.talk.t'), icon: 'tabler:message-chatbot' },
-  { tag: x('st.built'), title: x('ai.join.h'), description: x('ai.join.t'), icon: 'tabler:users-group' },
-  { tag: x('st.built'), title: x('ai.each.h'), description: x('ai.each.t'), icon: 'tabler:arrows-exchange' },
-  { title: x('ai.many.h'), description: x('ai.many.t'), icon: 'tabler:apps' },
-  { title: x('ai.own.h'), description: x('ai.own.t'), icon: 'tabler:tools' },
-];
-const make = [
-  { tag: x('st.plan'), title: x('mk.ui.h'), description: x('mk.ui.t'), icon: 'tabler:layout-dashboard' },
-  { tag: x('st.plan'), title: x('mk.share.h'), description: x('mk.share.t'), icon: 'tabler:share' },
-  {
-    tag: x('now'),
-    title: x('mk.bots.h'),
-    description: x('mk.bots.t') + '<br><code class="mt-2 inline-block rounded bg-gray-100 px-2 py-1 text-sm dark:bg-slate-800">node agent.mjs init --name Claude</code>',
-    icon: 'tabler:plug-connected',
-  },
-  { tag: [`${x('mk.api.mcp')} ${x('now')}`, `${x('mk.api.api')} ${x('st.plan')}`], title: x('mk.api.h'), description: x('mk.api.t'), icon: 'tabler:api' },
-  { tag: x('st.plan'), title: x('mk.relay.h'), description: x('mk.relay.t'), icon: 'tabler:server' },
-  { title: x('mk.agpl.h'), description: x('mk.agpl.t'), icon: 'tabler:code' },
-];
-const costs = ['server', 'notify', 'photo', 'dev'].map((k) => ({ title: x(`don.${k}.h`), description: x(`don.${k}.t`) }));
-const select = `<span class="select-all break-all">${mail}</span>`;
-const ways = [
-  { title: 'Lightning (Zap)', description: select, icon: 'tabler:bolt' },
-  { title: 'GitHub Sponsors', href: 'https://github.com/sponsors/azumayoshihiro', icon: 'tabler:brand-github' },
-  { title: x('don.amz.h'), description: `${x('don.amz.t')} ${select}`, icon: 'tabler:gift' },
-];
 ---
-
-<Hero badge={x('beta')} tagline={x('hero.kicker')} title={`${x('hero.h1a')}<br>${x('hero.h1b')}`} actions={[browser, { text: x('how.cta'), href: link('/how', lang) }]}>
-  <div slot="content" class="mt-5"><PlatformPills lang={lang} centered /></div>
-</Hero>
-
-<Features items={pillars} columns={3} />
-
-<DiffScenes lang={lang} />
-
-<Features title={x('feat.h')} items={checklist} columns={3} defaultIcon="tabler:check" id="features" />
-
-<Features title={x('ai.h')} items={ai} id="ai" />
-
-<Features title={x('mk.h')} subtitle={x('mk.t')} items={make} id="desk" callToAction={{ variant: 'secondary', text: x('mk.dev'), href: link('/developers', lang) }} />
-
-<Features2 title={x('don.h')} subtitle={x('don.t')} items={costs} columns={4} />
-<Features2 items={ways} columns={3} />
-<WidgetWrapper containerClass="max-w-3xl py-0 md:py-0 lg:py-0">
-  <Headline subtitle={x('don.note')} classes={{ subtitle: 'text-xs text-muted' }} />
-</WidgetWrapper>
-
-<CallToAction layout="banner" title={x('end.h')} actions={[browser]} />
+<main>
+  <Hero lang={lang} />
+  <Pillars lang={lang} />
+  <DiffScenes lang={lang} />
+  <FeatureList lang={lang} />
+  <AiSection lang={lang} />
+  <MakeSection lang={lang} />
+  <DonationSection lang={lang} />
+  <FinalCta lang={lang} />
+</main>

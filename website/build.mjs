@@ -2,7 +2,7 @@
 //
 // Two Astro projects, one command:
 //   site/  The pages for users (/, /how, /faq, /about, /compare, /roadmap, /status, /privacy and the /ja/ copies).
-//          Built from the AstroWind template. See site/README.md.
+//          Astro project with our own design (no template). See site/README.md.
 //   docs/  The developer pages (/developers/..., /ja/developers/...). Built from Astro Starlight. See docs/README.md.
 //
 // Each project builds into its own dist/ folder, and this script copies the result into public/.
@@ -34,7 +34,7 @@ for (const f of readdirSync('site/dist/ja').filter((f) => f.endsWith('.html'))) 
 // Their scripts, styles and the page scripts (the animation, the status check and the theme setup).
 rmSync('public/_site', { recursive: true, force: true });
 cpSync('site/dist/_site', 'public/_site', { recursive: true });
-for (const f of ['icon.svg', 'diff.js', 'status.js', 'theme-init.js']) copyFileSync(`site/dist/${f}`, `public/${f}`);
+for (const f of ['icon.svg', 'diff.js', 'status.js', 'theme-init.js', 'site.js']) copyFileSync(`site/dist/${f}`, `public/${f}`);
 
 // The developer docs: replace the docs' files in public/.
 for (const d of ['developers', 'ja/developers', '_astro', 'pagefind']) {

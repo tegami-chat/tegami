@@ -1,0 +1,63 @@
+---
+import Logo from '~/components/Logo.astro';
+import PlatformPills from '~/components/PlatformPills.astro';
+import ExtMark from '~/components/ExtMark.astro';
+import { t, link, type Lang } from '~/site';
+
+export interface Props { lang: Lang }
+const { lang } = Astro.props;
+const x = (k: string) => t(k, lang);
+const GH = 'https://github.com/tegami-chat/tegami';
+type Item = { text: string; href: string; ext?: boolean };
+const columns: { title: string; items: Item[] }[] = [
+  { title: x('ft.users'), items: [
+    { text: x('nav.how'), href: link('/how', lang) },
+    { text: x('nav.status'), href: link('/status', lang) },
+    { text: x('ft.compare'), href: link('/compare', lang) },
+    { text: x('nav.faq'), href: link('/faq', lang) },
+  ] },
+  { title: x('ft.devs'), items: [
+    { text: x('ft.ov'), href: link('/developers', lang) },
+    { text: x('dp.arch'), href: link('/developers/architecture', lang) },
+    { text: x('dp.enc'), href: link('/developers/encryption', lang) },
+    { text: x('dp.keys'), href: link('/developers/keys', lang) },
+    { text: x('dp.relay'), href: link('/developers/relay', lang) },
+    { text: x('dp.ai'), href: link('/developers/ai', lang) },
+    { text: x('dp.spec'), href: link('/developers/spec', lang) },
+    { text: x('ft.devcompare'), href: link('/developers/compare', lang) },
+    { text: x('ft.devfaq'), href: link('/developers/faq', lang) },
+  ] },
+  { title: x('ft.project'), items: [
+    { text: x('roadmap'), href: link('/roadmap', lang) },
+    { text: x('ft.src'), href: GH, ext: true },
+    { text: x('ft.issues'), href: GH + '/issues', ext: true },
+  ] },
+  { title: x('ft.community'), items: [
+    { text: 'X', href: 'https://x.com/tegamichat', ext: true },
+    { text: 'Bluesky', href: 'https://bsky.app/profile/tegami.chat', ext: true },
+    { text: 'Mastodon', href: 'https://mastodon.social/@tegamichat', ext: true },
+    { text: 'Nostr', href: 'https://njump.me/npub1zptpqkxhr98glpt4rqv9945f3hd3q82wghaqth4gwqtmzmtjutsse5a98k', ext: true },
+  ] },
+];
+const hov = 'hover:text-neutral-900 dark:hover:text-white';
+---
+<footer class="border-t border-neutral-200 text-sm text-neutral-500 dark:border-night-line dark:text-neutral-400">
+  <div class="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-2 md:grid-cols-5">
+    <div class="sm:col-span-2 md:col-span-1">
+      <a href={link('/', lang)} class="flex items-center gap-2.5 text-base font-bold text-neutral-900 dark:text-neutral-100"><Logo id="tg-f" />Tegami</a>
+      <p class="mt-3" set:html={x('ft.tag')} />
+      <div class="mt-4"><PlatformPills lang={lang} /></div>
+    </div>
+    {columns.map((c) => (
+      <div>
+        <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{c.title}</h3>
+        <ul class="mt-3 space-y-2">
+          {c.items.map((i) => <li><a href={i.href} class={hov} target={i.ext ? '_blank' : undefined} rel={i.ext ? 'noopener' : undefined}>{i.text}{i.ext && <ExtMark lang={lang} />}</a></li>)}
+        </ul>
+      </div>
+    ))}
+  </div>
+  <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 border-t border-neutral-200 px-4 py-6 text-xs dark:border-night-line">
+    <div class="flex flex-wrap items-center gap-x-5 gap-y-2"><a href={link('/privacy', lang)} class={hov}>{x('ft.privacy')}</a><a href={link('/about', lang)} class={hov}>{x('ft.about')}</a><a href="mailto:hello@tegami.chat" class={hov}>hello@tegami.chat</a><span>© 2026 Tegami contributors. Licensed under <a href={GH + '/blob/main/LICENSE'} class={'underline ' + hov} target="_blank" rel="noopener">AGPL-3.0<ExtMark lang={lang} /></a>.</span></div>
+  </div>
+</footer>

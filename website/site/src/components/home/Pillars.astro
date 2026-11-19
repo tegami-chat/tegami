@@ -1,0 +1,20 @@
+---
+import { t, link, type Lang } from '~/site';
+
+const { lang = 'en' } = Astro.props as { lang?: Lang };
+const x = (k: string) => t(k, lang);
+---
+  <section class="mx-auto grid max-w-5xl gap-8 px-4 pb-20 pt-6 md:grid-cols-3 md:pb-24 md:pt-8">
+    <div>
+      <h3 class="text-lg font-bold"><Fragment set:html={x('p1.h')} /></h3>
+      <p class="mt-1.5 text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('p1.t')} /></p>
+    </div>
+    <div>
+      <h3 class="text-lg font-bold"><Fragment set:html={x('p2.h')} /></h3>
+      <p class="mt-1.5 text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('p2.t')} /></p>
+    </div>
+    <div>
+      <h3 class="text-lg font-bold"><Fragment set:html={x('p3.h')} /></h3>
+      <p class="mt-1.5 text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('p3.t')} /></p>
+    </div>
+  </section>

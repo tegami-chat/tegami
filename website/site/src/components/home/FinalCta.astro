@@ -1,0 +1,13 @@
+---
+import { t, link, type Lang } from '~/site';
+import PlatformPills from '~/components/PlatformPills.astro';
+import ExtMark from '~/components/ExtMark.astro';
+const { lang = 'en' } = Astro.props as { lang?: Lang };
+const x = (k: string) => t(k, lang);
+---
+  <!-- Last call -->
+  <section class="mx-auto max-w-5xl px-4 py-24 text-center">
+    <h2 class="text-4xl font-bold leading-tight tracking-tight sm:text-5xl"><Fragment set:html={x('end.h')} /></h2>
+    <a href="https://app.tegami.chat/" class="mt-8 inline-block rounded-full bg-forest-600 px-8 py-3.5 font-semibold text-white hover:bg-forest-700 dark:bg-forest-300 dark:text-forest-950" target="_blank" rel="noopener"><Fragment set:html={x('cta.browser')} /><ExtMark lang={lang} /></a>
+    <div class="mt-5"><PlatformPills lang={lang} centered /></div>
+  </section>

@@ -1,0 +1,214 @@
+---
+import ExtMark from '~/components/ExtMark.astro';
+import { t, link, type Lang } from '~/site';
+const { lang = 'en' } = Astro.props as { lang?: Lang };
+const x = (k: string) => t(k, lang);
+---
+<main class="mx-auto max-w-3xl px-4 py-14 md:py-20 leading-relaxed [&_h2]:mt-14 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:tracking-tight [&_p]:mt-4 [&_p]:text-neutral-700 dark:[&_p]:text-neutral-300 [&_ul]:mt-4 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-6 [&_li]:text-neutral-700 dark:[&_li]:text-neutral-300 [&_dd_a]:text-forest-600 [&_dd_a]:text-forest-600 [&_dd_a]:text-forest-600 [&_dd_a]:text-forest-600 [&_a]:text-forest-600 [&_a]:underline dark:[&_a]:text-forest-300">
+  <h1 class="text-4xl font-bold tracking-tight sm:text-5xl"><Fragment set:html={x('pv.h')} /></h1>
+
+  <p><Fragment set:html={x('pv.pre')} /></p>
+
+  <h2><Fragment set:html={x('pv.scope.h')} /></h2>
+
+  <ul>
+    <li><Fragment set:html={x('pv.scope.1')} /></li>
+    <li><Fragment set:html={x('pv.scope.2')} /></li>
+    <li><Fragment set:html={x('pv.scope.3')} /></li>
+    <li><Fragment set:html={x('pv.scope.4')} /></li>
+  </ul>
+
+  <p><Fragment set:html={x('pv.scope.p')} /></p>
+
+  <h2><Fragment set:html={x('pv.cant.h')} /></h2>
+
+  <p><Fragment set:html={x('pv.cant.p')} /></p>
+
+  <ul>
+    <li><Fragment set:html={x('pv.cant.1')} /></li>
+    <li><Fragment set:html={x('pv.cant.2')} /></li>
+    <li><Fragment set:html={x('pv.cant.3')} /></li>
+    <li><Fragment set:html={x('pv.cant.4')} /></li>
+    <li><Fragment set:html={x('pv.cant.5')} /></li>
+    <li><Fragment set:html={x('pv.cant.6')} /></li>
+    <li><Fragment set:html={x('pv.cant.7')} /></li>
+  </ul>
+
+  <p><Fragment set:html={x('pv.cant.ex')} /></p>
+
+  <h2><Fragment set:html={x('pv.keep.h')} /></h2>
+
+  <p><Fragment set:html={x('pv.keep.p')} /></p>
+
+  <div class="mt-6 divide-y divide-neutral-200 rounded-xl border border-neutral-200 dark:divide-night-line dark:border-night-line">
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100"><Fragment set:html={x('pv.k.1.t')} /></p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l1')} /></span><p><Fragment set:html={x('pv.k.1.1')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l2')} /></span><p><Fragment set:html={x('pv.k.1.2')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l3')} /></span><p><Fragment set:html={x('pv.k.1.3')} /></p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100"><Fragment set:html={x('pv.k.2.t')} /></p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l1')} /></span><p><Fragment set:html={x('pv.k.2.1')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l2')} /></span><p><Fragment set:html={x('pv.k.2.2')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l3')} /></span><p><Fragment set:html={x('pv.k.2.3')} /></p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100"><Fragment set:html={x('pv.k.3.t')} /></p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l1')} /></span><p><Fragment set:html={x('pv.k.3.1')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l2')} /></span><p><Fragment set:html={x('pv.k.3.2')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l3')} /></span><p><Fragment set:html={x('pv.k.3.3')} /></p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100"><Fragment set:html={x('pv.k.st.t')} /></p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l1')} /></span><p><Fragment set:html={x('pv.k.st.1')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l2')} /></span><p><Fragment set:html={x('pv.k.st.2')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l3')} /></span><p><Fragment set:html={x('pv.k.st.3')} /></p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100"><Fragment set:html={x('pv.k.4.t')} /></p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l1')} /></span><p><Fragment set:html={x('pv.k.4.1')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l2')} /></span><p><Fragment set:html={x('pv.k.4.2')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l3')} /></span><p><Fragment set:html={x('pv.k.4.3')} /></p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100"><Fragment set:html={x('pv.k.ai.t')} /></p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l1')} /></span><p><Fragment set:html={x('pv.k.ai.1')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l2')} /></span><p><Fragment set:html={x('pv.k.ai.2')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l3')} /></span><p><Fragment set:html={x('pv.k.ai.3')} /></p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100"><Fragment set:html={x('pv.k.dl.t')} /></p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l1')} /></span><p><Fragment set:html={x('pv.k.dl.1')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l2')} /></span><p><Fragment set:html={x('pv.k.dl.2')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l3')} /></span><p><Fragment set:html={x('pv.k.dl.3')} /></p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100"><Fragment set:html={x('pv.k.5.t')} /></p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l1')} /></span><p><Fragment set:html={x('pv.k.5.1')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l2')} /></span><p><Fragment set:html={x('pv.k.5.2')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l3')} /></span><p><Fragment set:html={x('pv.k.5.3')} /></p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100"><Fragment set:html={x('pv.k.6.t')} /></p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l1')} /></span><p><Fragment set:html={x('pv.k.6.1')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l2')} /></span><p><Fragment set:html={x('pv.k.6.2')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l3')} /></span><p><Fragment set:html={x('pv.k.6.3')} /></p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100"><Fragment set:html={x('pv.k.7.t')} /></p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l1')} /></span><p><Fragment set:html={x('pv.k.7.1')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l2')} /></span><p><Fragment set:html={x('pv.k.7.2')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l3')} /></span><p><Fragment set:html={x('pv.k.7.3')} /></p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100"><Fragment set:html={x('pv.k.8.t')} /></p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l1')} /></span><p><Fragment set:html={x('pv.k.8.1')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l2')} /></span><p><Fragment set:html={x('pv.k.8.2')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l3')} /></span><p><Fragment set:html={x('pv.k.8.3')} /></p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100"><Fragment set:html={x('pv.k.9.t')} /></p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l1')} /></span><p><Fragment set:html={x('pv.k.9.1')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l2')} /></span><p><Fragment set:html={x('pv.k.9.2')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l3')} /></span><p><Fragment set:html={x('pv.k.9.3')} /></p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100"><Fragment set:html={x('pv.k.10.t')} /></p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l1')} /></span><p><Fragment set:html={x('pv.k.10.1')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l2')} /></span><p><Fragment set:html={x('pv.k.10.2')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.k.l3')} /></span><p><Fragment set:html={x('pv.k.10.3')} /></p></div></div>
+  </div>
+
+  <h2><Fragment set:html={x('pv.dev.h')} /></h2>
+
+  <p><Fragment set:html={x('pv.dev.p')} /></p>
+
+  <ul>
+    <li><Fragment set:html={x('pv.dev.1')} /></li>
+    <li><Fragment set:html={x('pv.dev.2')} /></li>
+    <li><Fragment set:html={x('pv.dev.3')} /></li>
+  </ul>
+
+  <p><Fragment set:html={x('pv.dev.p2')} /></p>
+
+  <h2><Fragment set:html={x('pv.co.h')} /></h2>
+
+  <p><Fragment set:html={x('pv.co.p')} /></p>
+
+  <div class="mt-6 divide-y divide-neutral-200 rounded-xl border border-neutral-200 dark:divide-night-line dark:border-night-line">
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100"><Fragment set:html={x('pv.c.1.t')} /></p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.c.l1')} /></span><p><Fragment set:html={x('pv.c.1.1')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.c.l2')} /></span><p><Fragment set:html={x('pv.c.1.2')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.c.l3')} /></span><p><Fragment set:html={x('pv.c.1.3')} /></p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100"><Fragment set:html={x('pv.c.2.t')} /></p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.c.l1')} /></span><p><Fragment set:html={x('pv.c.2.1')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.c.l2')} /></span><p><Fragment set:html={x('pv.c.2.2')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.c.l3')} /></span><p><Fragment set:html={x('pv.c.2.3')} /></p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100"><Fragment set:html={x('pv.c.3.t')} /></p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.c.l1')} /></span><p><Fragment set:html={x('pv.c.3.1')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.c.l2')} /></span><p><Fragment set:html={x('pv.c.3.2')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.c.l3')} /></span><p><Fragment set:html={x('pv.c.3.3')} /></p></div></div>
+    <div class="grid gap-3 p-4 sm:grid-cols-[1fr_1.4fr_1.2fr_1fr] [&_p]:!mt-0 [&_p]:text-sm"><p class="font-semibold !text-neutral-900 dark:!text-neutral-100"><Fragment set:html={x('pv.c.4.t')} /></p><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.c.l1')} /></span><p><Fragment set:html={x('pv.c.4.1')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.c.l2')} /></span><p><Fragment set:html={x('pv.c.4.2')} /></p></div><div><span class="block text-xs font-semibold text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('pv.c.l3')} /></span><p><Fragment set:html={x('pv.c.4.3')} /></p></div></div>
+  </div>
+
+  <p><Fragment set:html={x('pv.co.us')} /></p>
+
+  <h2><Fragment set:html={x('pv.call.h')} /></h2>
+
+  <p><Fragment set:html={x('pv.call.p1')} /></p>
+  <p><Fragment set:html={x('pv.call.p2')} /></p>
+  <p><Fragment set:html={x('pv.call.p3')} /></p>
+  <p><Fragment set:html={x('pv.call.p4')} /></p>
+  <p><Fragment set:html={x('pv.call.p5')} /></p>
+
+  <h2><Fragment set:html={x('pv.ai.h')} /></h2>
+
+  <p><Fragment set:html={x('pv.ai.p1')} /></p>
+
+  <p><Fragment set:html={x('pv.ai.p2')} /></p>
+
+  <ul>
+    <li><Fragment set:html={x('pv.ai.1')} /></li>
+    <li><Fragment set:html={x('pv.ai.2')} /></li>
+    <li><Fragment set:html={x('pv.ai.3')} /></li>
+  </ul>
+
+  <p><Fragment set:html={x('pv.ai.p3')} /></p>
+
+  <p><Fragment set:html={x('pv.ai.p4')} /></p>
+
+  <ul>
+    <li><Fragment set:html={x('pv.ai.n1')} /></li>
+    <li><Fragment set:html={x('pv.ai.n2')} /></li>
+    <li><Fragment set:html={x('pv.ai.n3')} /></li>
+  </ul>
+
+  <p><Fragment set:html={x('pv.ai.p5')} /></p>
+
+  <p><Fragment set:html={x('pv.ai.p6')} /></p>
+
+  <h2><Fragment set:html={x('pv.never.h')} /></h2>
+
+  <ul>
+    <li><Fragment set:html={x('pv.never.1')} /></li>
+    <li><Fragment set:html={x('pv.never.2')} /></li>
+    <li><Fragment set:html={x('pv.never.3')} /></li>
+    <li><Fragment set:html={x('pv.never.4')} /></li>
+    <li><Fragment set:html={x('pv.never.5')} /></li>
+  </ul>
+
+  <h2><Fragment set:html={x('pv.gov.h')} /></h2>
+
+  <p><Fragment set:html={x('pv.gov.p1')} /></p>
+
+  <p><Fragment set:html={x('pv.gov.p2')} /></p>
+
+  <h2><Fragment set:html={x('pv.del.h')} /></h2>
+
+  <p><Fragment set:html={x('pv.del.self')} /></p>
+
+  <ul>
+    <li><Fragment set:html={x('pv.del.a.1')} /></li>
+    <li><Fragment set:html={x('pv.del.a.2')} /></li>
+    <li><Fragment set:html={x('pv.del.a.3')} /></li>
+    <li><Fragment set:html={x('pv.del.a.4')} /></li>
+    <li><Fragment set:html={x('pv.del.a.5')} /></li>
+    <li><Fragment set:html={x('pv.del.a.6')} /></li>
+    <li><Fragment set:html={x('pv.del.a.7')} /></li>
+  </ul>
+
+  <p><Fragment set:html={x('pv.del.ask')} /></p>
+
+  <ul>
+    <li><Fragment set:html={x('pv.del.b.1')} /></li>
+    <li><Fragment set:html={x('pv.del.b.2')} /></li>
+    <li><Fragment set:html={x('pv.del.b.3')} /></li>
+    <li><Fragment set:html={x('pv.del.b.4')} /></li>
+    <li><Fragment set:html={x('pv.del.b.5')} /></li>
+    <li><Fragment set:html={x('pv.del.b.6')} /></li>
+  </ul>
+
+
+  <h2><Fragment set:html={x('pv.kid.h')} /></h2>
+
+  <p><Fragment set:html={x('pv.kid.p1')} /></p>
+
+  <p><Fragment set:html={x('pv.kid.p2')} /></p>
+
+  <h2><Fragment set:html={x('pv.safe.h')} /></h2>
+
+  <ul>
+    <li><Fragment set:html={x('pv.safe.1')} /></li>
+    <li><Fragment set:html={x('pv.safe.2')} /></li>
+    <li><Fragment set:html={x('pv.safe.3')} /></li>
+    <li><Fragment set:html={x('pv.safe.4')} /></li>
+    <li><Fragment set:html={x('pv.safe.5')} /></li>
+    <li><Fragment set:html={x('pv.safe.6')} /></li>
+    <li><Fragment set:html={x('pv.safe.7')} /></li>
+    <li><Fragment set:html={x('pv.safe.8')} /></li>
+  </ul>
+
+  <h2><Fragment set:html={x('pv.eu.h')} /></h2>
+
+  <p><Fragment set:html={x('pv.eu.p1')} /></p>
+
+  <ul>
+    <li><Fragment set:html={x('pv.eu.1')} /></li>
+    <li><Fragment set:html={x('pv.eu.2')} /></li>
+    <li><Fragment set:html={x('pv.eu.3')} /></li>
+  </ul>
+
+  <p><Fragment set:html={x('pv.eu.p2')} /></p>
+
+  <p><Fragment set:html={x('pv.eu.p3')} /></p>
+
+  <h2><Fragment set:html={x('pv.ca.h')} /></h2>
+
+  <p><Fragment set:html={x('pv.ca.p')} /></p>
+
+  <h2><Fragment set:html={x('pv.chg.h')} /></h2>
+
+  <p><Fragment set:html={x('pv.chg.p1')} /></p>
+
+  <p><Fragment set:html={x('pv.chg.p2')} /></p>
+
+  <h2><Fragment set:html={x('pv.ask.h')} /></h2>
+
+  <p><Fragment set:html={x('pv.ask.p')} /></p>
+
+  <dl class="mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-neutral-700 dark:text-neutral-300">
+    <dt class="font-semibold text-neutral-900 dark:text-neutral-100"><Fragment set:html={x('pv.op.1.k')} /></dt><dd><Fragment set:html={x('pv.op.1.v')} /></dd>
+    <dt class="font-semibold text-neutral-900 dark:text-neutral-100"><Fragment set:html={x('pv.op.2.k')} /></dt><dd><Fragment set:html={x('pv.op.2.v')} /></dd>
+    <dt class="font-semibold text-neutral-900 dark:text-neutral-100"><Fragment set:html={x('pv.op.3.k')} /></dt><dd><Fragment set:html={x('pv.op.3.v')} /></dd>
+  </dl>
+
+  <p class="!mt-10 text-sm !text-neutral-500"><Fragment set:html={x('pv.date')} /></p>
+</main>

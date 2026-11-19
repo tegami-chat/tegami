@@ -1,0 +1,25 @@
+---
+import { t, link, type Lang } from '~/site';
+import PlatformPills from '~/components/PlatformPills.astro';
+import ExtMark from '~/components/ExtMark.astro';
+const { lang = 'en' } = Astro.props as { lang?: Lang };
+const x = (k: string) => t(k, lang);
+---
+  <!-- For everyone, on the phone -->
+  <section class="mx-auto max-w-5xl px-4 pb-6 pt-14 text-center sm:pt-20">
+    <svg viewBox="0 0 1024 1024" class="mx-auto mb-8 h-24 w-24 rounded-[1.6rem] shadow-xl ring-1 ring-black/5 sm:h-28 sm:w-28 dark:ring-white/10" aria-hidden="true"><rect width="1024" height="1024" fill="#f4f1e8"/><g transform="translate(512 512) scale(2.27) translate(-256 -249.5)"><defs><clipPath id="tg-hero"><path d="M164 112 H348 Q406 112 406 170 V304 Q406 362 348 362 H164 Q106 362 106 304 V170 Q106 112 164 112 Z"/></clipPath></defs><path d="M138 356 Q146 376 134 398 Q126 412 142 408 Q192 392 232 358 Z" fill="#1d6b4b"/><path clip-path="url(#tg-hero)" d="M86 123 L230 234 Q256 254 282 234 L426 123 L426 382 L86 382 Z" fill="#1d6b4b"/><path clip-path="url(#tg-hero)" d="M86 92 L426 92 L426 126 L282 237 Q256 257 230 237 L86 126 Z" fill="#bbd3c9"/></g></svg>
+    <span class="rounded-full bg-forest-50 px-2.5 py-0.5 text-xs text-forest-600 dark:bg-forest-950 dark:text-forest-300"><Fragment set:html={x('beta')} /></span>
+    <p class="mt-3 text-sm font-medium text-neutral-500 dark:text-neutral-400"><Fragment set:html={x('hero.kicker')} /></p>
+    <h1 class="mx-auto mt-5 max-w-5xl text-[40px] font-bold leading-[1.15] tracking-tight sm:text-6xl">
+      <span class="block"><Fragment set:html={x('hero.h1a')} /></span>
+      <span class="mt-4 block sm:mt-5"><Fragment set:html={x('hero.h1b')} /></span>
+    </h1>
+
+    <div class="mt-10 flex flex-wrap justify-center gap-3">
+      <a href="https://app.tegami.chat/" class="inline-block rounded-full bg-forest-600 px-8 py-3.5 font-semibold text-white hover:bg-forest-700 dark:bg-forest-300 dark:text-forest-950" target="_blank" rel="noopener"><Fragment set:html={x('cta.browser')} /><ExtMark lang={lang} /></a>
+      <a href={link('/how', lang)} class="inline-block rounded-full border border-neutral-300 px-8 py-3.5 font-semibold hover:bg-neutral-50 dark:border-night-line dark:hover:bg-white/5"><Fragment set:html={x('how.cta')} /></a>
+    </div>
+
+    <div class="mt-5"><PlatformPills lang={lang} centered /></div>
+
+  </section>

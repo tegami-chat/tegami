@@ -23,10 +23,6 @@
   "en": "How it keeps you safe",
   "ja": "安全の仕組みを見る"
  },
- "soon.label": {
-  "en": "Coming soon",
-  "ja": "準備中"
- },
  "p1.h": {
   "en": "Free from the platform.",
   "ja": "プラットフォームから自由に。"
@@ -308,7 +304,7 @@
   "ja": "トークはあなたのもの。<br>AIの持ち込み自由。"
  },
  "sec.h": {
-  "en": "How Tegami keeps you safe",
+  "en": "Security",
   "ja": "安全の仕組み"
  },
  "sec.t": {
@@ -564,7 +560,7 @@
   "ja": "<a href=\"Tegamiの開発者向け_2026-11-16.html\" class=\"underline\">開発者向けのページ</a>に、TegamiがNostrのどこを使っているか、リレーに何が見えるか、鍵をどう守るか、技術仕様までをまとめています。コードは<a href=\"https://github.com/tegami-chat/tegami\" class=\"underline\" target=\"_blank\" rel=\"noopener\">GitHub</a>で公開しています。"
  },
  "op.h": {
-  "en": "About the operator",
+  "en": "About us",
   "ja": "運営者情報"
  },
  "op.1.k": {

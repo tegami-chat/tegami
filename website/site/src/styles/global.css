@@ -1,0 +1,63 @@
+/* tegami.chat user pages: Tailwind CSS 4 with our own colours and fonts.
+   The classes come from the pages in this folder and from the two scripts that draw into them (diff.js, status.js). */
+@import 'tailwindcss';
+@source '../../public/diff.js';
+@source '../../public/status.js';
+
+/* Dark mode follows the "dark" class on <html> (set before paint by theme-init.js). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-forest-50: #e3f0e8;
+  --color-forest-300: #7fd7a8;
+  --color-forest-600: #106c4a;
+  --color-forest-700: #0b5a3d;
+  --color-forest-950: #0b1a12;
+  --color-nostr-300: #c9a2ff;
+  --color-nostr-600: #7c2eda;
+  --color-paper: #f4f1e8;
+  --color-paper-dark: #171b18;
+  --color-night: #121614;
+  --color-night-card: #1c221f;
+  --color-night-line: #2c3430;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;
+}
+
+/* Tailwind 4 draws borders in the text colour and buttons with an arrow; keep the look the pages were designed with. */
+@layer base {
+  *, ::after, ::before, ::backdrop, ::file-selector-button { border-color: var(--color-gray-200); }
+  button:not(:disabled), [role='button']:not(:disabled), summary { cursor: pointer; }
+}
+
+:lang(ja) h1, :lang(ja) h2, :lang(ja) h3, :lang(ja) th, :lang(ja) td, :lang(ja) summary, :lang(ja) li { word-break: auto-phrase; }
+:lang(ja) p { word-break: auto-phrase; text-wrap: pretty; }
+h1, h2, h3 { text-wrap: balance; }
+
+/* Moving between pages must not shift or flash. Keep the scrollbar's room even on a short page,
+   paint the page colour on the root before the body, and let the browser cross-fade the page change
+   (the header and footer are identical on every page, so only the content changes). */
+html { scrollbar-gutter: stable; background-color: #fff; }
+html.dark { background-color: #101311; color-scheme: dark; }
+@view-transition { navigation: auto; }
+
+/* The animated comparison (diff.js). */
+.flow text { font-family: inherit; }
+.flow [data-a] { opacity: 0; }
+.flow [data-a][data-keep] { opacity: 1; }
+.fx { transform-box: fill-box; transform-origin: center; }
+.fxb { transform-box: fill-box; transform-origin: 50% 100%; }
+.cap { opacity: .45; transition: opacity .3s; }
+.cap.on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .cap { opacity: 1; } }
+
+/* The comparison table (/compare). It scrolls sideways inside its own box; on a phone the first column stays in view. */
+.cmp { --card:#fff; --line:#e5e5e5; --code:#f2efe6; --accent:#106c4a; line-height: 1.8; }
+.dark .cmp { --card:#1c221f; --line:#2c3430; --code:#252c28; --accent:#7fd7a8; }
+.cmp a { color:var(--accent); text-decoration:underline; text-underline-offset:2px; }
+.cmp code { background:var(--code); border-radius:4px; padding:1px 5px; font-size:.88em; }
+.cmp table { border-collapse:collapse; width:100%; font-size:.9rem; }
+.cmp th, .cmp td { border:1px solid var(--line); padding:6px 8px; text-align:left; vertical-align:top; }
+.cmp th { background:var(--code); }
+.cmp .wrap { overflow-x:auto; }
+@media (max-width:640px) { .cmp .wrap td:first-child, .cmp .wrap th:first-child { position:sticky; left:0; z-index:1; background:var(--card); box-shadow:1px 0 0 var(--line); min-width:6.5em; } .cmp .wrap th:first-child { background:var(--code); } }
+

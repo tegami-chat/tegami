@@ -1,0 +1,40 @@
+---
+// The frame of every user page: head, header, the page, footer.
+// Astro's security.csp adds the Content-Security-Policy meta tag; nothing here is inline.
+import '~/styles/global.css';
+import Header from '~/components/Header.astro';
+import Footer from '~/components/Footer.astro';
+import { META, pathOf, type Lang, type PageName } from '~/site';
+
+export interface Props { name: PageName; lang: Lang; scripts?: string[] }
+const { name, lang, scripts = [] } = Astro.props;
+const meta = META[name][lang];
+const url = (l: Lang) => new URL(pathOf(name, l), 'https://tegami.chat').toString();
+const alternates = { en: pathOf(name, 'en'), ja: pathOf(name, 'ja') };
+---
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{meta.title}</title>
+    <meta name="description" content={meta.desc} />
+    <meta property="og:title" content={meta.title} />
+    <meta property="og:description" content={meta.desc} />
+    <meta property="og:url" content={url(lang)} />
+    <meta property="og:type" content="website" />
+    <link rel="canonical" href={url(lang)} />
+    <link rel="alternate" hreflang="en" href={url('en')} />
+    <link rel="alternate" hreflang="ja" href={url('ja')} />
+    <link rel="alternate" hreflang="x-default" href={url('en')} />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <script is:inline src="/theme-init.js"></script>
+  </head>
+  <body class="bg-white text-neutral-900 antialiased dark:bg-[#101311] dark:text-neutral-100">
+    <Header lang={lang} current={name} alternates={alternates} />
+    <slot />
+    <Footer lang={lang} />
+    <script is:inline src="/site.js"></script>
+    {scripts.map((s) => <script is:inline src={s} defer></script>)}
+  </body>
+</html>
