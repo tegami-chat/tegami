@@ -477,13 +477,14 @@ const ORDER = ['ads', 'num', 'seal', 'leak', 'pw', 'trk', 'ai'];
 S.sort((x, y) => ORDER.indexOf(x.id) - ORDER.indexOf(y.id));
 
 // ─── 並べる ─────────────────────────────────────────
+const PLAYMARK = '<span class="playmark pointer-events-none absolute left-1/2 top-1/2 z-20 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-forest-600 pl-1 text-white shadow-xl ring-4 ring-white/70 max-sm:h-11 max-sm:w-11 dark:bg-forest-300 dark:text-forest-950 dark:ring-black/40"><svg viewBox="0 0 24 24" class="h-7 w-7" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg></span>';
 const lane = (sc, side) => {
   const tg = side === 'tg';
   const steps = [1, 2, 3].map((n) => `<li class="cap flex gap-2" data-step="${n}"><span class="font-semibold ${tg ? 'text-forest-600 dark:text-forest-300' : 'text-neutral-400'}">${n}</span><span>${t(`${sc.id}.${side}${n}`)}</span></li>`).join('');
   const vb = sc.id === 'pw' || sc.id === 'trk' ? '0 0 520 290' : '0 0 520 270';
   return `<figure class="rounded-2xl ${tg ? 'border-2 border-forest-600 dark:border-forest-300' : 'border border-neutral-200 dark:border-night-line'} p-5">
     <figcaption class="text-sm font-semibold ${tg ? 'text-forest-600 dark:text-forest-300' : 'text-neutral-500 dark:text-neutral-400'}">${tg ? 'Tegami' : t('ty')}</figcaption>
-    <svg class="flow mt-3 w-full" viewBox="${vb}" role="img" aria-label="${[1, 2, 3].map((n) => t(`${sc.id}.${side}${n}`)).join(' ')}">${sc[side]}</svg>
+    <div class="relative mt-3"><svg class="flow w-full" viewBox="${vb}" role="img" aria-label="${[1, 2, 3].map((n) => t(`${sc.id}.${side}${n}`)).join(' ')}">${sc[side]}</svg>${tg ? PLAYMARK : ''}</div>
     <ol class="mt-4 space-y-2 text-sm sm:text-base">${steps}</ol>
   </figure>`;
 };
@@ -504,7 +505,7 @@ frame.className = 'mt-8 overflow-hidden rounded-3xl border border-neutral-200 bg
 frame.innerHTML = '<div class="h-1.5 w-full bg-neutral-200 dark:bg-night-line" aria-hidden="true"><div id="pbar" class="h-full w-full origin-left scale-x-0 bg-forest-600 dark:bg-forest-300"></div></div>';
 scenesEl.parentNode.insertBefore(frame, scenesEl);
 frame.insertBefore(scenesEl, frame.firstChild);
-document.getElementById('chips').innerHTML = S.map((sc) => `<button type="button" role="tab" data-sc="${sc.id}" class="chip shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium">${t(sc.id + '.chip')}</button>`).join('');
+document.getElementById('chips').innerHTML = S.map((sc) => `<button type="button" role="tab" data-sc="${sc.id}" class="scene-tab">${t(sc.id + '.chip')}</button>`).join('');
 
 // ─── 再生 ───────────────────────────────────────────
 // 最初は止まった絵を見せる。場面は勝手に切り替わらない。動かすのは、絵をクリックした時（Enter と Space でも）だけ。
@@ -517,13 +518,13 @@ const ICON = {
 // 場面ごとの、絵の上にかぶせるボタン。止まっている間だけ、再生の印を出す。
 document.querySelectorAll('#diff .scene > .grid').forEach((g) => {
   g.classList.add('relative');
-  g.insertAdjacentHTML('beforeend', '<button type="button" class="playhit absolute inset-0 z-10 flex cursor-pointer items-center justify-center rounded-2xl max-sm:items-start max-sm:justify-end max-sm:p-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-600 dark:focus-visible:outline-forest-300"><span class="playmark flex h-16 w-16 items-center max-sm:h-11 max-sm:w-11 justify-center rounded-full bg-forest-600 pl-1 text-white shadow-xl ring-4 ring-white/70 dark:bg-forest-300 dark:text-forest-950 dark:ring-black/40">' + ICON.play + '</span></button>');
+  g.insertAdjacentHTML('beforeend', '<button type="button" class="playhit absolute inset-0 z-10 cursor-pointer rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-600 dark:focus-visible:outline-forest-300"></button>');
 });
 function showButton() {
   document.querySelectorAll('#diff .playhit').forEach((b) => {
     b.setAttribute('aria-label', t(paused ? 'ctl.play' : 'ctl.pause'));
-    b.querySelector('.playmark').style.display = paused ? '' : 'none';
   });
+  document.querySelectorAll('#diff .playmark').forEach((m) => { m.style.display = paused ? '' : 'none'; });
 }
 function run() {
   const go = visible && !paused;
@@ -537,10 +538,10 @@ function toggle() {
 function play(id) {
   anims.forEach((x) => x.cancel()); anims = [];
   document.querySelectorAll('#diff .scene').forEach((el) => { el.hidden = el.id !== 'sc-' + id; });
-  document.querySelectorAll('#diff .chip').forEach((b) => {
+  document.querySelectorAll('#diff .scene-tab').forEach((b) => {
     const on = b.dataset.sc === id;
     b.setAttribute('aria-selected', on);
-    b.className = 'chip shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium ' + (on ? 'border-forest-600 bg-forest-600 text-white dark:border-forest-300 dark:bg-forest-300 dark:text-forest-950' : 'border-neutral-300 text-neutral-600 hover:bg-neutral-50 dark:border-night-line dark:text-neutral-300 dark:hover:bg-white/5');
+    b.className = 'scene-tab';
   });
   cur = S.find((s) => s.id === id);
   const sc = document.getElementById('sc-' + id);
@@ -559,7 +560,7 @@ function play(id) {
   run();
 }
 document.getElementById('chips').addEventListener('click', (e) => {
-  const b = e.target.closest('.chip'); if (!b) return;
+  const b = e.target.closest('.scene-tab'); if (!b) return;
   play(b.dataset.sc);
 });
 document.getElementById('scenes').addEventListener('click', (e) => { if (e.target.closest('.playhit')) toggle(); });

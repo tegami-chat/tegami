@@ -306,6 +306,12 @@ html.dark { background-color: #101311; color-scheme: dark; }
 }
 
 /* ---- The animated comparison (diff.js). ---- */
+/* The row of tabs that switch the scene. The chosen tab (aria-selected) is filled. */
+@layer components {
+  .scene-tab { flex-shrink: 0; white-space: nowrap; padding: 0.5rem 1rem; border: 1px solid var(--c-line-strong); border-radius: var(--radius-pill); color: var(--c-fg-muted); font-size: 0.875rem; line-height: 1.25rem; font-weight: 500; }
+  .scene-tab:hover { background: var(--c-hover); }
+  .scene-tab[aria-selected='true'] { border-color: var(--c-accent); background: var(--c-accent); color: var(--c-on-accent); }
+}
 .flow text { font-family: inherit; }
 .flow [data-a] { opacity: 0; }
 .flow [data-a][data-keep] { opacity: 1; }

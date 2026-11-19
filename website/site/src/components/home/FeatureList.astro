@@ -3,6 +3,7 @@ import { t, type Lang } from '~/site';
 import Section from '~/components/ui/Section.astro';
 import SectionHeading from '~/components/ui/SectionHeading.astro';
 import Card from '~/components/ui/Card.astro';
+import Icon from '~/components/ui/Icon.astro';
 
 const { lang = 'en' } = Astro.props as { lang?: Lang };
 const x = (k: string) => t(k, lang);
@@ -20,5 +21,6 @@ const own = ['ai', 'accounts', 'export'];
     {own.map((k) => (
       <Card as="li" tile variant="accent" class="flex items-center gap-2"><span aria-hidden="true">✓</span><span><Fragment set:html={x('feat.' + k)} /></span></Card>
     ))}
+    <Card as="li" tile variant="outlined" class="flex items-center gap-2 text-fg-muted"><Icon name="more" class="h-4 w-4" /><span><Fragment set:html={x('feat.more')} /></span></Card>
   </ul>
 </Section>

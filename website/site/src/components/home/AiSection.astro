@@ -28,12 +28,14 @@ const items: [string, boolean][] = [['pick', false], ['each', true], ['many', fa
       </figure>
     ))}
   </div>
-  <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+  <div class="grid gap-x-8 gap-y-0 sm:grid-cols-2 lg:grid-cols-4">
     {items.map(([k, coming]) => (
-      <div>
-        {coming && <Badge status="coming" lang={lang} class="mb-2" />}
-        <Heading level={3}><Fragment set:html={x('ai.' + k + '.h')} /></Heading>
-        <p class="mt-2 text-fg-muted"><Fragment set:html={x('ai.' + k + '.t')} /></p>
+      <div class="row-span-2 mb-8 grid grid-rows-subgrid gap-y-2">
+        <div class="flex flex-wrap content-start items-center gap-x-2 gap-y-1">
+          <Heading level={3}><Fragment set:html={x('ai.' + k + '.h')} /></Heading>
+          {coming && <Badge status="coming" lang={lang} />}
+        </div>
+        <p class="text-fg-muted"><Fragment set:html={x('ai.' + k + '.t')} /></p>
       </div>
     ))}
   </div>

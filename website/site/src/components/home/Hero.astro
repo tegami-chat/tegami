@@ -1,5 +1,5 @@
 ---
-import { t, link, type Lang } from '~/site';
+import { t, type Lang } from '~/site';
 import Section from '~/components/ui/Section.astro';
 import Heading from '~/components/ui/Heading.astro';
 import Button from '~/components/ui/Button.astro';
@@ -22,7 +22,6 @@ const x = (k: string) => t(k, lang);
 
     <div class="mt-8 flex flex-wrap justify-center gap-3 lg:justify-start">
       <Button href="https://app.tegami.chat/" external lang={lang}><Fragment set:html={x('cta.browser')} /></Button>
-      <Button href={link('/how', lang)} variant="secondary"><Fragment set:html={x('how.cta')} /></Button>
     </div>
 
     <div class="mt-4 flex justify-center lg:justify-start"><PlatformPills lang={lang} /></div>
