@@ -1128,8 +1128,8 @@
   "ja": "写真、動画、ファイル、音声メッセージ、スタンプの中身"
  },
  "pv.cant.3": {
-  "en": "Who sent a message (it cannot be told from what the relay keeps; the relay knows which key is logged in at the moment it accepts a message, but does not store it. To count messages per day and to limit notifications from people you have not replied to, the relay holds the sender and recipient pair in memory for up to a day, but never saves it to disk)",
-  "ja": "メッセージの送信者（保存した記録からは分かりません。リレーはメッセージを受け付ける瞬間にログインしている鍵を知りますが、保存しません。1日の送信数を数えるためと、返事をしたことのない相手からの通知を減らすため、送信者と宛先の組をメモリに最長1日置きますが、ディスクには保存しません）"
+  "en": "Who sent a message (the envelopes saved on disk do not show who sent them. The relay knows the sender's public key when it accepts a message, but never records it on the envelope or saves it to disk. What it holds in memory to count limits is listed under \"Records for counting limits\" in \"3. What the relay keeps\")",
+  "ja": "メッセージの送信者（ディスクに保存した封筒からは分かりません。リレーはメッセージを受け付ける時に送信者の公開鍵を知りますが、封筒には記録せず、ディスクにも保存しません。上限を数えるためにメモリに置く記録は、「3. リレーが保存する情報」の「上限を数えるための記録」に記載しています）"
  },
  "pv.cant.4": {
   "en": "Your list of friends",
@@ -1168,8 +1168,8 @@
   "ja": "取得する情報"
  },
  "pv.k.1.1": {
-  "en": "Public key, whether the account was registered with an invite, registration date and time, whether the account is suspended, its invite code and how many people it can invite per day, and whether its invites are stopped",
-  "ja": "公開鍵、招待の有無、登録日時、利用停止の有無、招待コードと1日に招待できる数、招待を止めたかどうか"
+  "en": "Public key, whether the account was registered with an invite, registration date and time, whether the account is suspended, its invite code and how many people it can invite per day, and whether its invites are stopped. The record of whether it was registered with an invite is kept even after the 90-day record of who invited it is deleted",
+  "ja": "公開鍵、招待で登録したかどうか、登録日時、利用停止の有無、招待コードと1日に招待できる数、招待を止めたかどうか。招待で登録したかどうかの記録は、誰に招待されたかの記録が90日で消えた後も残します"
  },
  "pv.k.l2": {
   "en": "Purpose",
@@ -1192,8 +1192,8 @@
   "ja": "メッセージの封筒"
  },
  "pv.k.2.1": {
-  "en": "The encrypted message (an \"envelope\": each message makes one for every recipient and one copy for the sender), the recipient's public key, the arrival time, and the data size. Envelopes sent by an account that registered without an invite also get a mark so that the app shows them only when the sender is already a friend (the sender's public key is not stored)",
-  "ja": "暗号化されたメッセージ（以下「封筒」といいます。メッセージ1通につき、受信者ごとに1つと、送信者の控えに1つ作られます）、宛先の公開鍵、受信日時、データサイズ。招待なしで登録したアカウントが送った封筒には、友だち以外のときは表示しないための印も付けて保存します（送信者の公開鍵は保存しません）"
+  "en": "The encrypted message (an \"envelope\": each message makes one for every recipient and one copy for the sender), the recipient's public key, the arrival time, and the data size. Envelopes sent by an account that registered without an invite also get a mark so that the app shows them only when the sender is already a friend (the sender's public key is not stored). When saving an envelope, if the recipient has not written to the sender that day (UTC), the relay adds a separate mark for counting the limit. The relay keeps at most 1,000 envelopes with this mark per recipient and does not accept any beyond that",
+  "ja": "暗号化されたメッセージ（以下「封筒」といいます。メッセージ1通につき、受信者ごとに1つと、送信者の控えに1つ作られます）、宛先の公開鍵、受信日時、データサイズ。招待なしで登録したアカウントが送った封筒には、友だち以外のときは表示しないための印を付けて保存します（送信者の公開鍵は保存しません）。また、封筒を保存する時、受信者がその日（UTC）に送信者へメッセージを送っていなければ、上限を数えるための別の印を付けて保存します。この印の付いた封筒は、受信者1人あたり1,000通までしか保存せず、超えた分は受け付けません"
  },
  "pv.k.2.2": {
   "en": "To deliver messages later when a device is off or offline",
@@ -1320,8 +1320,8 @@
   "ja": "復旧用バックアップ"
  },
  "pv.k.7.1": {
-  "en": "A backup of your account encrypted with your recovery code, the backup's ID, a signing public key made from the recovery code (not your account's public key), and when it was created and last updated. The relay cannot tell which account it belongs to",
-  "ja": "復旧コードで暗号化したアカウントのバックアップ、バックアップの識別子、復旧コードから作った署名用の公開鍵（アカウントの公開鍵とは別のもの）、作成日時と更新日時。どのアカウントのものかは、リレーでは識別できません"
+  "en": "A backup of your account encrypted with your recovery code, the backup's ID, a signing public key made from the recovery code (not your account's public key), and when it was created and last updated. The stored records do not show which account a backup belongs to. When a new backup is created, the relay receives a signature made with your account key to check that the account is registered, and stores neither the signature nor the account's public key",
+  "ja": "復旧コードで暗号化したアカウントのバックアップ、バックアップの識別子、復旧コードから作った署名用の公開鍵（アカウントの公開鍵とは別のもの）、作成日時と更新日時。保存した記録からは、どのアカウントのものかは分かりません。バックアップを新しく作る時だけ、登録済みのアカウントかを確かめるために、アカウントの鍵で作った署名を受け取りますが、署名もアカウントの公開鍵も保存しません"
  },
  "pv.k.7.2": {
   "en": "To restore your account if you lose your device",
@@ -1372,12 +1372,28 @@
   "ja": "接続元のIPアドレス"
  },
  "pv.k.10.2": {
-  "en": "To limit the number of connections, requests, the amount of data sent, and new recovery backups from a single network, and to verify that you are not a bot when you register without an invite",
-  "ja": "1つのネットワークからの接続数、要求の回数、送信量、新しい復旧用バックアップの数を制限するため。招待なしの登録時に、自動プログラムでないことを確認するため"
+  "en": "To limit the number of connections, requests, envelopes read, and new recovery backups, as well as the amount of data sent, from a single network, and to verify that you are not a bot when you register without an invite",
+  "ja": "ネットワークごとの接続数、要求の回数、送信量、封筒の読み出し数、新しい復旧用バックアップの作成数を制限するため。招待なしの登録時に、自動プログラムでないことを確認するため"
  },
  "pv.k.10.3": {
-  "en": "Held in memory only and never saved to disk. If too many entries pile up, the oldest are cleared first",
-  "ja": "メモリにだけ置き、ディスクには保存しません。記録がたまりすぎた時は、古いものから消します"
+  "en": "Held in memory only and never saved to disk. For IPv6 addresses, the relay counts by /64, and also by /48 and /32 blocks. If too many entries pile up, those where a limit is not currently active are cleared first",
+  "ja": "メモリにだけ置き、ディスクには保存しません。IPv6のアドレスは、/64に加え、/48と/32の範囲でも数えます。記録がたまりすぎた時は、制限にかかっていないものから先に消します"
+ },
+ "pv.k.lim.t": {
+  "en": "Records for counting limits",
+  "ja": "上限を数えるための記録"
+ },
+ "pv.k.lim.1": {
+  "en": "Which sender wrote to which recipient, bytes sent per key and per invite tree (the root key of an invite chain), envelopes read per key and per network, and new recovery backups created and new keys registered per invite tree",
+  "ja": "どの送信者がどの宛先に送ったか、鍵ごとと招待のつながり（招待をさかのぼった最初の鍵）ごとの送信量、鍵ごとと接続元のネットワークごとに読み出した封筒の数、招待のつながりごとに新しく作った復旧用バックアップの数と新しく登録した鍵の数"
+ },
+ "pv.k.lim.2": {
+  "en": "To keep the daily (UTC) limits on messages to the same recipient, bytes sent, envelopes read, new recovery backups and new accounts, to keep envelopes from senders the recipient has not written to that day (UTC) to 1,000 per recipient, and to limit notifications from people you have not replied to",
+  "ja": "1日（UTC）に同じ相手へ送れる数、送信量、封筒の読み出し数、復旧用バックアップの作成数、アカウントの登録数の上限を守るため。受信者がその日（UTC）にメッセージを送っていない相手からの封筒を、1人あたり1,000通までにするため。返事をしたことのない相手からの通知を減らすため"
+ },
+ "pv.k.lim.3": {
+  "en": "Held in memory only, for up to a day, and never saved to disk",
+  "ja": "メモリにだけ最長1日置き、ディスクには保存しません"
  },
  "pv.dev.h": {
   "en": "4. What stays on your device",
