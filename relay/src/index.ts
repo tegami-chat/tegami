@@ -231,9 +231,9 @@ const INFO = {
     files: 'Encrypted photos and files, deleted after 30 days. Nothing about the uploader.',
     members:
       'Registered keys: the key, whether it registered with an invite or without one, when, and whether it is stopped. Who invited whom is forgotten after 90 days. Each inviting key has one invite code.',
-    push: 'For notifications: a device push address and the key it belongs to, until turned off.',
+    push: 'For notifications: a device push address and the key it belongs to, until turned off. In memory only: when a key that the person has not written to today last rang them, so a stranger cannot keep a phone ringing.',
     backups:
-      'Recovery backups: an id derived from the recovery code, the ciphertext, a signing key also derived from the code (not the account key) and when it was last uploaded. Kept until the person deletes it.',
+      'Recovery backups: an id derived from the recovery code, the ciphertext, a signing key also derived from the code (not the account key), when it was first and last uploaded. Kept until the person deletes it.',
     turn: 'Nothing. Short-lived call relay (TURN) credentials are made per request and not kept.',
     ai: "AI keys that registered as an AI: the AI's key, its owner's key (from the owner's signed card) and when, and how many envelopes each AI key and each owner sent per day (kept two days).",
     deleted:
