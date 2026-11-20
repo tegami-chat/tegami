@@ -1,6 +1,6 @@
 import { getPublicKey } from 'nostr-tools/pure';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { AccountList, accountName, goToAccount } from '@/components/account-list';
 import { GateInfo } from '@/components/gate-info';
@@ -277,9 +277,11 @@ function Hero() {
   const c = usePalette();
   const s = styles(c);
   const wide = useWide();
-  const h1 = [s.h1, wide && s.h1Wide];
-  // On a phone each promise breaks after its first word, as on tegami.chat.
-  const br = wide ? '' : '\n';
+  // Each promise stays on one line. On a phone the size follows the width so
+  // 「トークはあなたのもの。」 (11 characters) fits, as on tegami.chat.
+  const { width } = useWindowDimensions();
+  const phone = Math.min(30, Math.floor((width - 40) / 11.5));
+  const h1 = [s.h1, wide ? s.h1Wide : { fontSize: phone, lineHeight: Math.round(phone * 1.2) }];
   return (
     <View style={s.hero}>
       <Text style={s.beta}>ベータ版</Text>
@@ -287,11 +289,11 @@ function Hero() {
         <Text style={s.nostr}>Nostrで動く</Text>、オープンソースのメッセージアプリ
       </Text>
       <Text style={h1} role="heading" aria-level={1}>
-        {`トークは${br}`}
+        トークは
         <Text style={s.green}>あなたのもの。</Text>
       </Text>
       <Text style={[h1, s.h1Second]} role="heading" aria-level={1}>
-        {`AIの${br}`}
+        AIの
         <Text style={s.green}>持ち込み自由。</Text>
       </Text>
     </View>

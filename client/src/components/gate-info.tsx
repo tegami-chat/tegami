@@ -39,7 +39,7 @@ const FEATURES = [
 
 const STEPS = [
   { title: '「はじめる」を押す', body: '電話番号もメールアドレスもいりません。' },
-  { title: 'パスキーで鍵を守る', body: 'アカウントの鍵は、この端末の中で作ります。' },
+  { title: 'パスキーで鍵を守る', body: '鍵は、この端末の中で作ります。' },
   { title: '友だちを追加する', body: '招待リンクを送るか、QRコードを見せます。' },
 ];
 
@@ -79,12 +79,14 @@ export function GateInfo() {
         </View>
 
         <Text style={s.heading} role="heading" aria-level={2}>はじめ方</Text>
-        <View style={row}>
+        <View style={[s.card, s.steps]}>
           {STEPS.map((st, i) => (
-            <View key={st.title} style={s.card}>
+            <View key={st.title} style={[s.step, i > 0 && s.stepLine]}>
               <Text style={s.number}>{i + 1}</Text>
-              <Text style={s.cardTitle} role="heading" aria-level={3}>{st.title}</Text>
-              <Text style={s.body}>{st.body}</Text>
+              <View style={s.stepText}>
+                <Text style={s.cardTitle} role="heading" aria-level={3}>{st.title}</Text>
+                <Text style={[s.body, s.stepBody]}>{st.body}</Text>
+              </View>
             </View>
           ))}
         </View>
@@ -107,7 +109,7 @@ export function GateInfo() {
 const styles = (c: Palette) =>
   StyleSheet.create({
     section: { width: '100%', alignItems: 'center', marginTop: 56 },
-    inner: { width: '100%', maxWidth: 960, paddingHorizontal: 16, gap: 48 },
+    inner: { width: '100%', maxWidth: 960, gap: 48 },
     row: { flexDirection: 'row', gap: 16, alignItems: 'stretch' },
     column: { flexDirection: 'column', gap: 16 },
     card: { flex: 1, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: 16, padding: 20, gap: 8 },
@@ -116,7 +118,12 @@ const styles = (c: Palette) =>
     heading: { fontSize: 24, fontWeight: '700', color: c.text, textAlign: 'center' },
     chips: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: -24 },
     chip: { fontSize: 14, color: c.text, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6, overflow: 'hidden' },
-    number: { alignSelf: 'flex-start', width: 32, height: 32, borderRadius: 16, backgroundColor: c.selected, color: c.accent, fontSize: 16, fontWeight: '700', textAlign: 'center', lineHeight: 32, overflow: 'hidden' },
+    steps: { flexGrow: 0, flexShrink: 0, flexBasis: 'auto', width: '100%', maxWidth: 560, alignSelf: 'center', paddingVertical: 4, paddingHorizontal: 16, gap: 0 },
+    step: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 14 },
+    stepLine: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line },
+    stepText: { flex: 1, gap: 2 },
+    stepBody: { fontSize: 13, lineHeight: 20 },
+    number: { width: 28, height: 28, borderRadius: 14, backgroundColor: c.selected, color: c.accent, fontSize: 14, fontWeight: '700', textAlign: 'center', lineHeight: 28, overflow: 'hidden' },
     footer: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line, paddingTop: 20, paddingBottom: 8, gap: 12, alignItems: 'center' },
     links: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: 16, rowGap: 6 },
     link: { fontSize: 12, color: c.muted, textDecorationLine: 'underline' },
