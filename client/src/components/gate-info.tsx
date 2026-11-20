@@ -74,10 +74,12 @@ export function GateInfo({ returning }: { returning?: boolean }) {
       <View style={[s.grid, wide && s.gridWide]}>
         {PILLARS.map((p) => (
           <View key={p.title} style={[s.card, wide && s.cardWide]}>
-            <View style={s.badge}>
-              <MaterialIcons name={p.icon} size={22} color={c.accent} />
+            <View style={wide ? s.cardHeadWide : s.cardHead}>
+              <View style={s.badge}>
+                <MaterialIcons name={p.icon} size={22} color={c.accent} />
+              </View>
+              <Text style={s.cardTitle} role="heading" aria-level={3}>{p.title}</Text>
             </View>
-            <Text style={s.cardTitle} role="heading" aria-level={3}>{p.title}</Text>
             <Text style={s.body}>{p.body}</Text>
           </View>
         ))}
@@ -133,8 +135,12 @@ const styles = (c: Palette) =>
     gridWide: { flexDirection: 'row', alignItems: 'stretch' },
     card: { backgroundColor: c.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: c.line, borderRadius: 20, padding: 24 },
     cardWide: { flex: 1 },
-    badge: { width: 40, height: 40, borderRadius: 12, backgroundColor: c.selected, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-    cardTitle: { fontSize: 17, lineHeight: 24, fontWeight: '700', color: c.text, marginBottom: 8 },
+    // On a phone the icon sits left of the title; three cards side by side are too narrow for that,
+    // so on a wide screen the icon stays above the title.
+    cardHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+    cardHeadWide: { gap: 16, marginBottom: 8 },
+    badge: { width: 40, height: 40, borderRadius: 12, backgroundColor: c.selected, alignItems: 'center', justifyContent: 'center' },
+    cardTitle: { flexShrink: 1, fontSize: 17, lineHeight: 24, fontWeight: '700', color: c.text },
     body: { fontSize: 14, lineHeight: 24, color: c.muted },
     section: { gap: 24 },
     heading: { fontSize: 22, lineHeight: 30, fontWeight: '700', color: c.text, textAlign: 'center' },
