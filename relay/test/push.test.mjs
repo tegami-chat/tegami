@@ -166,6 +166,7 @@ check('no push after turning off', received.filter((r) => r.path === '/bob').len
 // encrypted for that device. The rest of a call's signals do not notify.
 const carol = generateSecretKey();
 const carolPub = getPublicKey(carol);
+await trust(carol);
 check('push keys that are not keys are refused', (await register(carol, endpoint('/carol'), 'POST', { keys: { p256dh: 'x', auth: 'y' } })) === 400);
 check('carol registers a device with its keys', (await register(carol, endpoint('/carol'), 'POST', { keys: deviceKeys })) === 204);
 const carolGot = () => received.filter((r) => r.path === '/carol');
@@ -191,6 +192,8 @@ check('other short-lived envelopes (the rest of a call) do not notify', carolGot
 await wait(3500);
 const dave = generateSecretKey();
 const erin = generateSecretKey();
+await trust(dave);
+await trust(erin);
 check('dave registers the shared device', (await register(dave, endpoint('/shared'))) === 204);
 check('erin registers the same device', (await register(erin, endpoint('/shared'))) === 204);
 const sharedGot = () => received.filter((r) => r.path === '/shared').length;

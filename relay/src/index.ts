@@ -31,7 +31,7 @@
 // (NIP-98) registers a key with an invite code or a Cloudflare Turnstile token, or just
 // reports its state, and returns its own invite code when it may invite. Envelopes from keys
 // registered without an invite are marked (tegami_open) and ring no notifications.
-// POST /admin lets the operator (ADMIN_PUBKEYS) stop a key and those it invited.
+// POST /admin lets the operator (ADMIN_PUBKEYS) stop a key and everyone below it in the invite tree.
 // An AI key may also send {ai_card} (its owner card): from then on it is an AI key, and the
 // envelopes it publishes are counted against AI limits per key and per owner (ai.ts).
 //
@@ -59,7 +59,7 @@ import { STATS_DESCRIPTION, Stats } from './stats';
 import { TURN_RATE, TURN_TTL_SECONDS as TURN_TTL, makeTurnCredentials, turnConfigured, type TurnEnv } from './turn';
 
 type Filter = { kinds?: number[]; '#p'?: string[]; since?: number; until?: number; limit?: number; ids?: string[] };
-type Attachment = { challenge: string; ip: string; pubkey?: string; subs: Record<string, Filter[]> };
+type Attachment = { challenge: string; ip: string; pubkey?: string; subs: Record<string, Filter[]>; authTries?: number; testLimit?: number };
 
 // VAPID_JWK: the relay's Web Push key (Worker secret). DEV_PUSH=1 lets tests push to localhost
 // (and sign requests for localhost). DEV_LOCAL=1 only lets tests sign requests for localhost.
@@ -90,6 +90,27 @@ const AUTH_WINDOW_SECONDS = 10 * 60;
 const RATE = { ip: { burst: 300, perSecond: 5 }, key: { burst: 120, perSecond: 3 } };
 const MAX_CONNECTIONS_PER_IP = 50;
 const MAX_MAILBOX = 10_000;
+// One REQ may carry at most this many filters: each filter runs its own query of up to 500 rows.
+const MAX_FILTERS_PER_REQ = 10;
+// REQs per address and per key (burst, then per second): a client asks a few times when it opens, not constantly.
+const REQ_RATE = { ip: { burst: 120, perSecond: 2 }, key: { burst: 40, perSecond: 1 } };
+// AUTH events one connection may send before it is closed: each one costs a signature check.
+const MAX_AUTH_ATTEMPTS = 10;
+// Envelopes one key may send to one recipient in a day (memory only, so the sender's key is never written down):
+// without it one invited key could fill a person's mailbox in about an hour. Copies to oneself are exempt.
+const PAIR_PER_DAY = 500;
+// A recipient that is not registered can only get short-lived envelopes (moving an account sends one to a
+// one-time key), at most this long, this many waiting, and this many a day from one key.
+const STRANGER_MAX_TTL_SECONDS = 15 * 60;
+const MAX_STRANGER_MAILBOX = 3;
+const STRANGER_PER_DAY = 50;
+// New recovery backups per address per day: the signing key comes from the recovery code, so it cannot be
+// tied to a registered account, and keys cost nothing; only the address can slow someone who makes ids in bulk.
+const NEW_BACKUPS_PER_IP_PER_DAY = 10;
+// Most keys tracked in memory by a limiter before the oldest are dropped (a bounded Map, never a full reset).
+const LIMITER_MAX_KEYS = 50_000;
+// Bytes one key may upload in a day (memory only), on top of the burst limit above: stops slow, steady filling of storage.
+const FILE_BYTES_PER_KEY_PER_DAY = 200e6;
 // Envelopes from keys registered without an invite, waiting for one person. Their app
 // shows them only from friends, so a stranger cannot fill someone's mailbox with them.
 const MAX_OPEN_MAILBOX = 200;
@@ -112,6 +133,16 @@ const CORS = {
   'Access-Control-Max-Age': '86400',
 };
 
+/** Drops the oldest entries of a Map (insertion order) once it grows past LIMITER_MAX_KEYS. */
+function trimOldest<V>(m: Map<string, V>) {
+  if (m.size <= LIMITER_MAX_KEYS) return;
+  let drop = Math.ceil(LIMITER_MAX_KEYS / 10);
+  for (const k of m.keys()) {
+    if (drop-- <= 0) break;
+    m.delete(k);
+  }
+}
+
 /** Token bucket: `burst` sends at once, refilling at `perSecond`. */
 class Buckets {
   private b = new Map<string, { tokens: number; at: number }>();
@@ -121,12 +152,47 @@ class Buckets {
     const cur = this.b.get(key) ?? { tokens: this.burst, at: t };
     cur.tokens = Math.min(this.burst, cur.tokens + (t - cur.at) * this.perSecond);
     cur.at = t;
-    if (this.b.size > 50_000) this.b.clear(); // memory guard; buckets only ever err towards allowing
+    this.b.delete(key); // re-insert so the least recently used keys are the ones dropped
     this.b.set(key, cur);
+    trimOldest(this.b); // memory guard; a dropped bucket only errs towards allowing, and only for idle keys
     if (cur.tokens < cost) return false;
     cur.tokens -= cost;
     return true;
   }
+}
+
+/** Counts per key for the current UTC day, in memory only. `take` adds `n` unless that would pass `limit`. */
+class DayCounter {
+  private m = new Map<string, { day: number; n: number }>();
+  take(key: string, limit: number, n = 1): boolean {
+    const day = Math.floor(Date.now() / 86_400_000);
+    let cur = this.m.get(key);
+    if (!cur || cur.day !== day) cur = { day, n: 0 };
+    this.m.delete(key);
+    this.m.set(key, cur);
+    trimOldest(this.m);
+    if (cur.n + n > limit) return false;
+    cur.n += n;
+    return true;
+  }
+}
+
+/** The address a request came from. Tests (DEV_LOCAL) may pose as another address with X-Test-Ip. */
+function clientIp(req: Request, env: Env): string {
+  const test = env.DEV_LOCAL === '1' || env.DEV_PUSH === '1' ? req.headers.get('X-Test-Ip') : null;
+  return test ?? req.headers.get('CF-Connecting-IP') ?? 'unknown';
+}
+
+/** Limits count an IPv6 address by its /64, the block one subscriber gets, so a rented block is one address. */
+export function ipGroup(ip: string): string {
+  if (!ip.includes(':')) return ip;
+  const mapped = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  if (mapped) return mapped[1];
+  const [head, tail] = ip.toLowerCase().split('::');
+  const h = head ? head.split(':') : [];
+  const t = tail === undefined ? [] : tail ? tail.split(':') : [];
+  const groups = tail === undefined ? h : [...h, ...Array(Math.max(0, 8 - h.length - t.length)).fill('0'), ...t];
+  return groups.slice(0, 4).join(':');
 }
 
 const INFO = {
@@ -166,7 +232,7 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
     if (url.pathname === '/crash' && req.method === 'POST') {
       const headers = new Headers(req.headers);
-      headers.set('X-Tegami-IP', req.headers.get('CF-Connecting-IP') ?? 'unknown');
+      headers.set('X-Tegami-IP', clientIp(req, env));
       return env.RELAY.get(env.RELAY.idFromName('main')).fetch(new Request(req, { headers }));
     }
     if (url.pathname === '/stats' && req.method === 'GET') {
@@ -178,17 +244,17 @@ export default {
     }
     if (((url.pathname === '/register' || url.pathname === '/admin' || url.pathname === '/report' || url.pathname === '/turn') && req.method === 'POST') || (url.pathname === '/account' && req.method === 'DELETE')) {
       const headers = new Headers(req.headers);
-      headers.set('X-Tegami-IP', req.headers.get('CF-Connecting-IP') ?? 'unknown');
+      headers.set('X-Tegami-IP', clientIp(req, env));
       return env.RELAY.get(env.RELAY.idFromName('main')).fetch(new Request(req, { headers }));
     }
     if (url.pathname === '/push' && (req.method === 'POST' || req.method === 'DELETE')) {
       const headers = new Headers(req.headers);
-      headers.set('X-Tegami-IP', req.headers.get('CF-Connecting-IP') ?? 'unknown');
+      headers.set('X-Tegami-IP', clientIp(req, env));
       return env.RELAY.get(env.RELAY.idFromName('main')).fetch(new Request(req, { headers }));
     }
     if (BACKUP_PATH.test(url.pathname) && ['GET', 'PUT', 'DELETE'].includes(req.method)) {
       const headers = new Headers(req.headers);
-      headers.set('X-Tegami-IP', req.headers.get('CF-Connecting-IP') ?? 'unknown');
+      headers.set('X-Tegami-IP', clientIp(req, env));
       return env.RELAY.get(env.RELAY.idFromName('main')).fetch(new Request(req, { headers }));
     }
     const stampPath = url.pathname.match(STAMP_PATH);
@@ -207,12 +273,12 @@ export default {
     }
     if ((url.pathname === '/stamp' && req.method === 'PUT') || (stampPath && req.method === 'DELETE')) {
       const headers = new Headers(req.headers);
-      headers.set('X-Tegami-IP', req.headers.get('CF-Connecting-IP') ?? 'unknown');
+      headers.set('X-Tegami-IP', clientIp(req, env));
       return env.RELAY.get(env.RELAY.idFromName('main')).fetch(new Request(req, { headers }));
     }
     if (url.pathname === '/upload' && req.method === 'PUT') {
       const headers = new Headers(req.headers);
-      headers.set('X-Tegami-IP', req.headers.get('CF-Connecting-IP') ?? 'unknown');
+      headers.set('X-Tegami-IP', clientIp(req, env));
       return env.RELAY.get(env.RELAY.idFromName('main')).fetch(new Request(req, { headers }));
     }
     const blob = url.pathname.match(/^\/([0-9a-f]{64})(\.[a-z0-9]+)?$/);
@@ -231,7 +297,7 @@ export default {
     if (req.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
       // Cloudflare sets CF-Connecting-IP; a client cannot forge it through the edge.
       const headers = new Headers(req.headers);
-      headers.set('X-Tegami-IP', req.headers.get('CF-Connecting-IP') ?? 'unknown');
+      headers.set('X-Tegami-IP', clientIp(req, env));
       return env.RELAY.get(env.RELAY.idFromName('main')).fetch(new Request(req, { headers }));
     }
     if (req.headers.get('Accept')?.includes('application/nostr+json')) {
@@ -270,6 +336,13 @@ export class Relay extends DurableObject<Env> {
   sql: SqlStorage;
   ipRate = new Buckets(RATE.ip.burst, RATE.ip.perSecond);
   keyRate = new Buckets(RATE.key.burst, RATE.key.perSecond);
+  reqIp = new Buckets(REQ_RATE.ip.burst, REQ_RATE.ip.perSecond);
+  reqKey = new Buckets(REQ_RATE.key.burst, REQ_RATE.key.perSecond);
+  // Memory only on purpose: the site promises the relay does not keep who sent to whom.
+  pairDay = new DayCounter();
+  strangerDay = new DayCounter();
+  backupNewDay = new DayCounter();
+  uploadDay = new DayCounter();
   stats: Stats;
 
   constructor(ctx: DurableObjectState, env: Env) {
@@ -323,7 +396,7 @@ export class Relay extends DurableObject<Env> {
   }
 
   async fetch(req: Request): Promise<Response> {
-    const ip = req.headers.get('X-Tegami-IP') ?? 'unknown';
+    const ip = ipGroup(req.headers.get('X-Tegami-IP') ?? 'unknown');
     const path = new URL(req.url).pathname;
     if (path === '/upload') return this.upload(req, ip);
     if (path === '/stamp') return this.stampPut(req, ip);
@@ -350,6 +423,9 @@ export class Relay extends DurableObject<Env> {
     const [client, server] = Object.values(pair);
     this.ctx.acceptWebSocket(server);
     const att: Attachment = { challenge: randomHex(16), ip, subs: {} };
+    // Tests only (DEV_LOCAL): a small daily limit for this connection, so a test need not send hundreds.
+    const testLimit = Number(req.headers.get('X-Test-Limit'));
+    if (this.devLocal && testLimit > 0) att.testLimit = testLimit;
     server.serializeAttachment(att);
     server.send(JSON.stringify(['AUTH', att.challenge]));
     if ((await this.ctx.storage.getAlarm()) == null) await this.ctx.storage.setAlarm(Date.now() + 60 * 60 * 1000);
@@ -467,9 +543,9 @@ export class Relay extends DurableObject<Env> {
       if (this.ai.setOwnerLimit(a.pubkey, a.per_day) === null) return new Response('invalid', { status: 400, headers: CORS });
       return Response.json({ changed: 1, per_day: this.ai.ownerLimit(a.pubkey) }, { headers: CORS });
     }
-    // The keys this action stops or lets back by name (the key and, with invitees, those it invited).
+    // The keys this action stops or lets back by name (the key and, with invitees, everyone below it in the invite tree).
     const named = [a.pubkey];
-    if (a.invitees === true) for (const r of this.sql.exec('SELECT pubkey FROM members WHERE invited_by = ?', a.pubkey).toArray()) named.push(r.pubkey as string);
+    if (a.invitees === true) named.push(...this.members.inviteTree(a.pubkey));
     if (a.action === 'ban' || a.action === 'unban') for (const k of named) this.ai.clearHold(k);
     const changed = this.members.admin(a.action, a.pubkey, { invitees: a.invitees === true, per_day: a.per_day as number });
     if (changed === null) return new Response('invalid', { status: 400, headers: CORS });
@@ -643,6 +719,7 @@ export class Relay extends DurableObject<Env> {
     if (!this.ipBytes.take(ip, size) || !this.keyBytes.take(auth.pubkey, size)) {
       return fail(429, 'rate-limited: slow down');
     }
+    if (!this.uploadDay.take(auth.pubkey, (this.devLocal && Number(req.headers.get('X-Test-Limit'))) || FILE_BYTES_PER_KEY_PER_DAY, size)) return fail(429, 'rate-limited: too many files today');
     const body = await req.arrayBuffer();
     if (body.byteLength !== size || body.byteLength > MAX_FILE_BYTES) return fail(400, 'invalid: size mismatch');
     const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', body))]
@@ -756,6 +833,7 @@ export class Relay extends DurableObject<Env> {
     if (!owner) {
       const held = this.sql.exec('SELECT COUNT(*) AS n FROM backups WHERE pubkey = ?', pubkey).one().n as number;
       if (held >= MAX_BACKUPS_PER_KEY) return fail(429, 'rate-limited: too many backups for this key');
+      if (!this.backupNewDay.take(ip, NEW_BACKUPS_PER_IP_PER_DAY)) return fail(429, 'rate-limited: too many new backups from this address today');
     }
     this.sql.exec('INSERT OR REPLACE INTO backups (id, pubkey, data, updated_at) VALUES (?, ?, ?, ?)', id, pubkey, body, now());
     return new Response(null, { status: 204, headers: CORS });
@@ -904,6 +982,17 @@ export class Relay extends DurableObject<Env> {
 
   onAuth(ws: WebSocket, att: Attachment, ev: NostrEvent) {
     const id = ev?.id ?? '';
+    att.authTries = (att.authTries ?? 0) + 1;
+    if (att.authTries > MAX_AUTH_ATTEMPTS) {
+      ws.send(JSON.stringify(['OK', id, false, 'rate-limited: too many login attempts']));
+      try {
+        ws.close(4008, 'too many login attempts');
+      } catch {
+        // Already closed.
+      }
+      return;
+    }
+    ws.serializeAttachment(att);
     const tag = (name: string) => ev?.tags?.find((t) => t[0] === name)?.[1];
     const fresh = Math.abs(now() - (ev?.created_at ?? 0)) <= AUTH_WINDOW_SECONDS;
     if (!ev || ev.kind !== 22242 || tag('challenge') !== att.challenge || !fresh || !verifyEvent(ev)) {
@@ -952,6 +1041,16 @@ export class Relay extends DurableObject<Env> {
     if (this.members.deleted(p)) return reply(true, '');
     const held = this.sql.exec('SELECT COUNT(*) AS n FROM events WHERE p = ?', p).one().n as number;
     if (held >= MAX_MAILBOX) return reply(false, 'rate-limited: the recipient has too many waiting messages');
+    if (p !== att.pubkey) {
+      if (!this.members.get(p)) {
+        // Not registered: only short-lived envelopes (an account move goes to a one-time key), a few at a time.
+        const until = Number(ev.tags.find((t) => t[0] === 'expiration')?.[1]);
+        if (!Number.isFinite(until) || until - now() > STRANGER_MAX_TTL_SECONDS) return reply(false, 'restricted: the recipient is not registered');
+        if (held >= MAX_STRANGER_MAILBOX) return reply(false, 'rate-limited: the recipient has too many waiting messages');
+        if (!this.strangerDay.take(att.pubkey, STRANGER_PER_DAY)) return reply(false, 'rate-limited: too many messages to unregistered keys today');
+      }
+      if (!this.pairDay.take(att.pubkey + p, att.testLimit ?? PAIR_PER_DAY)) return reply(false, 'rate-limited: too many messages to this recipient today');
+    }
     if (open && p !== att.pubkey) {
       const fromOpen = this.sql.exec('SELECT COUNT(*) AS n FROM events WHERE p = ? AND open = 1', p).one().n as number;
       if (fromOpen >= MAX_OPEN_MAILBOX) return reply(false, 'rate-limited: the recipient has too many waiting messages');
@@ -998,6 +1097,8 @@ export class Relay extends DurableObject<Env> {
     const closed = (why: string) => ws.send(JSON.stringify(['CLOSED', subId, why]));
     if (!att.pubkey) return closed('auth-required: log in first');
     if (Object.keys(att.subs).length >= MAX_SUBS && !att.subs[subId]) return closed('error: too many subscriptions');
+    if (!Array.isArray(filters) || filters.length > MAX_FILTERS_PER_REQ) return closed('error: too many filters');
+    if (!this.reqIp.take(att.ip) || !this.reqKey.take(att.pubkey)) return closed('rate-limited: slow down');
     for (const f of filters) {
       const onlyMine = f['#p']?.length === 1 && f['#p'][0] === att.pubkey;
       const onlyWraps = !f.kinds || f.kinds.every((k) => ALLOWED_KINDS.has(k));

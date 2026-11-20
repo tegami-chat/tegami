@@ -4,7 +4,7 @@
 //   node scripts/admin.mjs init                     make the operator key (once per computer)
 //   node scripts/admin.mjs whoami                   show the operator's public key
 //   node scripts/admin.mjs reports [key]            latest reports, or the reports about one key
-//   node scripts/admin.mjs ban <key> [--invitees]   stop a key (and everyone it invited)
+//   node scripts/admin.mjs ban <key> [--invitees]   stop a key (and, with --invitees, everyone below it in the invite tree: whom it invited, whom they invited, down to 10 levels)
 //   node scripts/admin.mjs unban <key> [--invitees]
 //   node scripts/admin.mjs stop-invites <key>       the key can no longer invite
 //   node scripts/admin.mjs allow-invites <key>

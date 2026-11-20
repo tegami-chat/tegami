@@ -11,7 +11,8 @@
 //
 // Invites: each invite or legacy key has one code. At most `per_day` keys (20 unless the
 // operator changes it) can register with one code in 24 hours. Who invited whom is kept for
-// 90 days, so the operator can stop a key and everyone it invited; then it is forgotten.
+// 90 days, so the operator can stop a key and everyone below it in the invite tree (invitees,
+// their invitees, and so on, MAX_INVITE_DEPTH levels); then it is forgotten.
 //
 // Deleted accounts (DELETE /account): the key's row and invite code go, and only the key and
 // when it was deleted stay in deleted_keys, so the key cannot register again (a stopped key
@@ -22,6 +23,11 @@ export type Member = { pubkey: string; via: Via; invited_by: string | null; crea
 
 export const INVITES_PER_DAY = 20;
 export const INVITE_MEMORY_SECONDS = 90 * 24 * 60 * 60;
+// How many levels down the invite tree an operator action follows (invitees, their invitees, ...). A chain
+// of invited keys can be made by hand, so stopping only the first level lets a stopped key's helpers go on.
+export const MAX_INVITE_DEPTH = 10;
+// Most keys one action reaches through the tree: a bound on the work, and on a mistake.
+const MAX_INVITE_TREE_KEYS = 5000;
 const CODE_ALPHABET = 'abcdefghijkmnpqrstuvwxyz23456789';
 
 function now() {
@@ -131,12 +137,33 @@ export class Members {
     this.sql.exec('UPDATE members SET invited_by = NULL WHERE invited_by IS NOT NULL AND created_at < ?', now() - INVITE_MEMORY_SECONDS);
   }
 
+  /**
+   * Everyone below `pubkey` in the invite tree, down to MAX_INVITE_DEPTH levels (not `pubkey` itself).
+   * A key is visited once, so a loop in the rows cannot run forever.
+   */
+  inviteTree(pubkey: string): string[] {
+    const seen = new Set<string>([pubkey]);
+    let level = [pubkey];
+    for (let depth = 0; depth < MAX_INVITE_DEPTH && level.length; depth++) {
+      const next: string[] = [];
+      for (const parent of level) {
+        for (const r of this.sql.exec('SELECT pubkey FROM members WHERE invited_by = ?', parent).toArray()) {
+          const k = r.pubkey as string;
+          if (seen.has(k)) continue;
+          if (seen.size > MAX_INVITE_TREE_KEYS) return [...seen].slice(1);
+          seen.add(k);
+          next.push(k);
+        }
+      }
+      level = next;
+    }
+    return [...seen].slice(1);
+  }
+
   /** The operator's actions. Returns how many keys changed. */
   admin(action: string, pubkey: string, opts: { invitees?: boolean; per_day?: number }): number | null {
     const keys = [pubkey];
-    if (opts.invitees) {
-      for (const r of this.sql.exec('SELECT pubkey FROM members WHERE invited_by = ?', pubkey).toArray()) keys.push(r.pubkey as string);
-    }
+    if (opts.invitees) keys.push(...this.inviteTree(pubkey));
     let changed = 0;
     for (const k of keys) {
       switch (action) {

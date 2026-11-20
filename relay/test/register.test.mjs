@@ -126,7 +126,9 @@ check('a stopped key cannot register again', (await register(friend, { turnstile
 check('the operator can undo it', (await admin('unban', getPublicKey(friend))).json?.member?.banned === false);
 
 // ---------- a stranger cannot fill someone's mailbox ----------
-const victim = getPublicKey(generateSecretKey());
+const victimKey = generateSecretKey();
+const victim = getPublicKey(victimKey);
+await admin('trust', victim); // a recipient has to be registered to get envelopes
 let accepted = 0;
 let refused = 0;
 for (let k = 0; k < 2; k++) {

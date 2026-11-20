@@ -121,7 +121,9 @@ const flooder = generateSecretKey();
 await trust(flooder);
 const f = await connect();
 await login(f, flooder);
-const target = getPublicKey(generateSecretKey());
+const targetKey = generateSecretKey();
+await trust(targetKey); // a recipient has to be registered to get envelopes
+const target = getPublicKey(targetKey);
 const wraps = Array.from({ length: 200 }, (_, i) =>
   nip59.createWrap(nip59.createSeal(nip59.createRumor({ kind: 14, content: `spam ${i}`, tags: [['p', target]] }, flooder), flooder, target), target),
 );
