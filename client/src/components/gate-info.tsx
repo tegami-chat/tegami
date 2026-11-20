@@ -1,26 +1,24 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Link } from 'expo-router';
-import type { ComponentProps } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { PillarIcon, type PillarIconName } from '@/components/pillar-icon';
 import { Palette, usePalette } from '@/constants/theme';
 import { useWide } from '@/lib/layout';
 
-type IconName = ComponentProps<typeof MaterialIcons>['name'];
-
-const PILLARS: { icon: IconName; title: string; body: string }[] = [
+const PILLARS: { icon: PillarIconName; title: string; body: string }[] = [
   {
-    icon: 'block',
+    icon: 'no-ads',
     title: 'プラットフォームから自由に。',
     body: '追いかけてくる広告も、見たくないニュースも、やりたくないゲームも、いらない機能も、全部ありません。あなたの個人情報を広告や営業のために売ることもありません。',
   },
   {
-    icon: 'smart-toy',
+    icon: 'ai-friend',
     title: 'AIを自由に使う。',
     body: '自分のAIを、友だちとしてつなげられます。MCP（AIとツールをつなぐ仕組み）を使えば、AIがメッセージを読んだり送ったりできます。AIを使わないことも、相手のAIに自分の文を読ませないことも、あなたの自由です。',
   },
   {
-    icon: 'lock-outline',
+    icon: 'no-peeking',
     title: '誰にも覗かれない。',
     body: 'メッセージは端末の中で暗号化してから送り、端末に保存します。Tegamiのサーバーを通る間も暗号化したままなので、運営者にも読めません。',
   },
@@ -74,9 +72,9 @@ export function GateInfo({ returning }: { returning?: boolean }) {
       <View style={[s.grid, wide && s.gridWide]}>
         {PILLARS.map((p) => (
           <View key={p.title} style={[s.card, wide && s.cardWide]}>
-            <View style={wide ? s.cardHeadWide : s.cardHead}>
+            <View style={s.cardHead}>
               <View style={s.badge}>
-                <MaterialIcons name={p.icon} size={22} color={c.accent} />
+                <PillarIcon name={p.icon} size={22} color={c.accent} />
               </View>
               <Text style={s.cardTitle} role="heading" aria-level={3}>{p.title}</Text>
             </View>
@@ -130,15 +128,12 @@ export function GateInfo({ returning }: { returning?: boolean }) {
 
 const styles = (c: Palette) =>
   StyleSheet.create({
-    page: { width: '100%', maxWidth: 960, marginTop: 64, gap: 64 },
+    page: { width: '100%', maxWidth: 1080, marginTop: 64, gap: 64 },
     grid: { gap: 16 },
     gridWide: { flexDirection: 'row', alignItems: 'stretch' },
     card: { backgroundColor: c.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: c.line, borderRadius: 20, padding: 24 },
     cardWide: { flex: 1 },
-    // On a phone the icon sits left of the title; three cards side by side are too narrow for that,
-    // so on a wide screen the icon stays above the title.
     cardHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-    cardHeadWide: { gap: 16, marginBottom: 8 },
     badge: { width: 40, height: 40, borderRadius: 12, backgroundColor: c.selected, alignItems: 'center', justifyContent: 'center' },
     cardTitle: { flexShrink: 1, fontSize: 17, lineHeight: 24, fontWeight: '700', color: c.text },
     body: { fontSize: 14, lineHeight: 24, color: c.muted },

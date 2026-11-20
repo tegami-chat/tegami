@@ -2,18 +2,28 @@
 import { t, type Lang } from '~/site';
 import Section from '~/components/ui/Section.astro';
 import Heading from '~/components/ui/Heading.astro';
+import Card from '~/components/ui/Card.astro';
+import IconChip from '~/components/ui/IconChip.astro';
+import type { IconName } from '~/components/ui/Icon.astro';
 
 const { lang = 'en' } = Astro.props as { lang?: Lang };
 const x = (k: string) => t(k, lang);
-const pillars = ['p1', 'p2', 'p3'];
+const pillars: { key: string; icon: IconName }[] = [
+  { key: 'p1', icon: 'megaphone-off' },
+  { key: 'p2', icon: 'bot-message-square' },
+  { key: 'p3', icon: 'eye-off' },
+];
 ---
 <Section rhythm="default" trim="start">
-  <div class="mt-12 grid gap-8 md:grid-cols-3">
+  <div class="mt-12 grid gap-4 md:grid-cols-3">
     {pillars.map((p) => (
-      <div>
-        <Heading level={3}><Fragment set:html={x(p + '.h')} /></Heading>
-        <p class="mt-2 text-fg-muted"><Fragment set:html={x(p + '.t')} /></p>
-      </div>
+      <Card variant="outlined">
+        <div class="flex items-center gap-3">
+          <IconChip name={p.icon} tone="accent" />
+          <Heading level={3}><Fragment set:html={x(p.key + '.h')} /></Heading>
+        </div>
+        <p class="mt-3 text-fg-muted"><Fragment set:html={x(p.key + '.t')} /></p>
+      </Card>
     ))}
   </div>
 </Section>
