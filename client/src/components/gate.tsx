@@ -313,11 +313,11 @@ function PasskeyStores() {
     <View style={s.stores}>
       <Text style={s.storesHeading}>いま使えるパスキーの保存先</Text>
       {STORES_OK.map((name) => (
-        <Text key={name} style={s.storesItem}>・{name}</Text>
+        <Text key={name} style={s.storesItem}>{name}</Text>
       ))}
       <Text style={[s.storesHeading, s.storesGap]}>対応予定</Text>
       {STORES_PLANNED.map((name) => (
-        <Text key={name} style={s.storesItem}>・{name}</Text>
+        <Text key={name} style={s.storesItem}>{name}</Text>
       ))}
     </View>
   );
@@ -330,25 +330,25 @@ const styles = (c: Palette) =>
     logo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     logoIcon: { width: 28, height: 28, borderRadius: 7 },
     logoText: { fontSize: 17, fontWeight: '700', color: c.text },
-    start: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 40 },
+    start: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 32 },
     // A long page starts at the top; centering would cut off its top when it overflows.
     startLong: { justifyContent: 'flex-start' },
-    icon: { width: 96, height: 96, borderRadius: 22, marginBottom: 20, borderWidth: StyleSheet.hairlineWidth, borderColor: c.line },
-    hero: { alignItems: 'center', marginBottom: 28 },
+    icon: { width: 72, height: 72, borderRadius: 18, marginBottom: 24, borderWidth: StyleSheet.hairlineWidth, borderColor: c.line },
+    hero: { alignItems: 'center', marginBottom: 32 },
     beta: { fontSize: 12, color: c.accent, backgroundColor: c.selected, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2, overflow: 'hidden' },
     kicker: { marginTop: 12, fontSize: 14, fontWeight: '500', color: c.muted, textAlign: 'center' },
     nostr: { color: c.nostr },
-    h1: { marginTop: 20, fontSize: 40, lineHeight: 46, fontWeight: '700', color: c.text, textAlign: 'center', letterSpacing: -0.5 },
-    h1Wide: { fontSize: 56, lineHeight: 64 },
-    h1Second: { marginTop: 12 },
+    h1: { marginTop: 16, fontSize: 40, lineHeight: 46, fontWeight: '700', color: c.text, textAlign: 'center', letterSpacing: -0.5 },
+    h1Wide: { fontSize: 52, lineHeight: 60 },
+    h1Second: { marginTop: 4 },
     green: { color: c.accent },
     lockedGap: { height: 16 },
     promise: { fontSize: 18, color: c.muted, marginBottom: 32, textAlign: 'center' },
-    primary: { backgroundColor: c.accent, borderRadius: 999, paddingVertical: 14, paddingHorizontal: 48, minWidth: 220, alignItems: 'center' },
+    primary: { backgroundColor: c.accent, borderRadius: 999, height: 52, width: '100%', maxWidth: 320, alignItems: 'center', justifyContent: 'center' },
     primaryText: { color: c.onAccent, fontSize: 17, fontWeight: '600' },
     busy: { opacity: 0.5 },
     secondary: { paddingVertical: 12, paddingHorizontal: 24 },
-    secondaryText: { color: c.accent, fontSize: 16, fontWeight: '600' },
+    secondaryText: { color: c.accent, fontSize: 15, fontWeight: '600' },
     quiet: { paddingVertical: 6, paddingHorizontal: 24 },
     quietText: { color: c.muted, fontSize: 14 },
     small: { fontSize: 12, color: c.muted, textAlign: 'center', maxWidth: 320 },
@@ -365,8 +365,8 @@ const styles = (c: Palette) =>
       fontSize: 14,
       color: c.text,
     },
-    stores: { marginTop: 24, width: '100%', maxWidth: 280 },
-    storesHeading: { fontSize: 12, color: c.muted, marginBottom: 2 },
+    stores: { marginTop: 16, width: '100%', maxWidth: 320, alignItems: 'center', paddingVertical: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line },
+    storesHeading: { fontSize: 12, color: c.muted, marginBottom: 2, textAlign: 'center' },
     storesGap: { marginTop: 10 },
-    storesItem: { fontSize: 13, color: c.muted, lineHeight: 20 },
+    storesItem: { fontSize: 13, color: c.muted, lineHeight: 20, textAlign: 'center' },
   });
