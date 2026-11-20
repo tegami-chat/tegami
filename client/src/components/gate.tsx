@@ -164,7 +164,7 @@ export function Gate({ locked }: { locked: boolean }) {
         </>
       ) : (
         <Pressable style={[s.primary, busy && s.busy]} onPress={go} disabled={busy} role="button">
-          <Text style={s.primaryText}>{locked ? 'ひらく' : moved ? 'この端末で使う' : 'はじめる'}</Text>
+          <Text style={s.primaryText}>{locked ? 'ロックを解除' : moved ? 'この端末で使う' : 'はじめる'}</Text>
         </Pressable>
       )}
       {failed && <Text style={s.notice}>{'パスキーを使えませんでした。\nもう一度押してください。'}</Text>}
@@ -281,7 +281,7 @@ function Welcome() {
     <View style={s.hero}>
       <Text style={s.welcome} role="heading" aria-level={1}>{name ? `おかえりなさい、${name}さん` : "おかえりなさい"}</Text>
       <Text style={s.kicker}>トークは暗号化して、この端末にあります。</Text>
-      <Text style={s.welcomeBody}>パスキーで鍵を開けると、続きから使えます。</Text>
+      <Text style={s.welcomeBody}>パスキーでロックを解除すると、続きから使えます。</Text>
     </View>
   );
 }

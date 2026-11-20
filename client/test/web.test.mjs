@@ -241,7 +241,7 @@ const closeInfo = (page) => button(page, NARROW ? '戻る' : '閉じる').click(
 async function waitOpen(page) {
   await page.waitForFunction(() => {
     const t = document.body.innerText;
-    return !!document.querySelector('[aria-label="友だち追加"]') && !t.includes('はじめる') && !t.includes('ひらく');
+    return !!document.querySelector('[aria-label="友だち追加"]') && !t.includes('はじめる') && !t.includes('ロックを解除');
   }, null, { timeout: 15000 }).catch(async () => {
     throw new Error(`account did not open (page: ${(await text(page)).replace(/\s+/g, ' ').slice(0, 160)})`);
   });
@@ -515,7 +515,7 @@ async function main() {
       const c = await calls(u.page);
       assert(c.create === 1 && c.get === 0, `prompts: ${JSON.stringify(c)}`);
       await u.page.reload();
-      await button(u.page, 'ひらく').click();
+      await button(u.page, 'ロックを解除').click();
       await waitOpen(u.page);
       await u.context.close();
     });
@@ -596,7 +596,7 @@ async function main() {
       await u.page.evaluate(() => {
         navigator.credentials.get = () => Promise.reject(new DOMException('denied', 'NotAllowedError'));
       });
-      await button(u.page, 'ひらく').click();
+      await button(u.page, 'ロックを解除').click();
       await waitText(u.page, 'パスワード管理アプリの画面が出た時は');
       await u.context.close();
     });
@@ -611,7 +611,7 @@ async function main() {
         localStorage.setItem('tegami.vault', JSON.stringify(v));
       });
       await u.page.reload();
-      await button(u.page, 'ひらく').click();
+      await button(u.page, 'ロックを解除').click();
       await waitText(u.page, 'パスキーを使えませんでした');
       await u.context.close();
     });
@@ -621,9 +621,9 @@ async function main() {
       await button(u.page, 'はじめる').click();
       await waitOpen(u.page);
       await u.page.goto(ORIGIN + '/add');
-      await waitText(u.page, 'ひらく');
+      await waitText(u.page, 'ロックを解除');
       const t = await text(u.page);
-      assert(t.includes('ひらく') && !t.includes('マイQRコード'), `screen: ${t.slice(0, 80)}`);
+      assert(t.includes('ロックを解除') && !t.includes('マイQRコード'), `screen: ${t.slice(0, 80)}`);
       await u.context.close();
     });
 
@@ -647,7 +647,7 @@ async function main() {
       await button(a.page, 'はじめる').click();
       await waitOpen(a.page);
       await a.page.goto(ORIGIN + '/add');
-      await button(a.page, 'ひらく').click();
+      await button(a.page, 'ロックを解除').click();
       await waitText(a.page, 'マイQRコード');
       await a.page.getByPlaceholder('自分の名前').fill('あ');
       const link = (await text(a.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
@@ -661,7 +661,7 @@ async function main() {
       await b.page.getByPlaceholder('メッセージ').fill('こんにちは');
       await button(b.page, '送る').click();
       await a.page.goto(ORIGIN + '/');
-      await button(a.page, 'ひらく').click();
+      await button(a.page, 'ロックを解除').click();
       await waitOpen(a.page);
       await waitText(a.page, '知らない人から');
       await a.page.getByText('知らない人から').click();
@@ -739,10 +739,10 @@ async function main() {
       await openSettings(u.page);
       await waitText(u.page, 'パスキー');
       await u.page.goto(ORIGIN + '/settings/account');
-      await button(u.page, 'ひらく').click();
+      await button(u.page, 'ロックを解除').click();
       await waitText(u.page, 'パスキーで守っています');
       await u.page.goto(ORIGIN + '/settings/privacy');
-      await button(u.page, 'ひらく').click();
+      await button(u.page, 'ロックを解除').click();
       const crashes = async () => (await fetch(`http://localhost:${RELAY_PORT}/_crashes`)).json();
       const throwSoon = (tag) =>
         u.page.evaluate((tag) => setTimeout(() => { throw new Error(`boom-${tag} "my secret text" ${'ab'.repeat(32)}`); }), tag);
@@ -768,12 +768,12 @@ async function main() {
       // The choice is remembered.
       // Reloading /settings shows the lock first, then the same screen again.
       await u.page.reload();
-      await button(u.page, 'ひらく').click();
+      await button(u.page, 'ロックを解除').click();
       await waitText(u.page, '利用状況の統計');
       await waitText(u.page, '送受信の数などを週ごとに見る');
       assert(await u.page.getByRole('switch', { name: 'Tegamiに報告を送る' }).isChecked(), 'the choice was not remembered');
       await u.page.goto(ORIGIN + '/settings/talk');
-      await button(u.page, 'ひらく').click();
+      await button(u.page, 'ロックを解除').click();
 
       // Export: a JSON file with the chats, never the key.
       const dl = u.page.waitForEvent('download');
@@ -798,8 +798,8 @@ async function main() {
     await test('Another device: a 10-minute link moves the key, name and contacts; both devices then send and receive', async () => {
       // After a page load the lock screen (passkey) or the screen itself comes up; open if locked.
       const openIfLocked = async (page, expect) => {
-        await page.waitForFunction((e) => document.body.innerText.includes('ひらく') || document.body.innerText.includes(e), expect, { timeout: 15000 });
-        if ((await text(page)).includes('ひらく')) await button(page, 'ひらく').click();
+        await page.waitForFunction((e) => document.body.innerText.includes('ロックを解除') || document.body.innerText.includes(e), expect, { timeout: 15000 });
+        if ((await text(page)).includes('ロックを解除')) await button(page, 'ロックを解除').click();
       };
       const inviteOf = async (page) => {
         await page.goto(ORIGIN + '/add');
@@ -820,7 +820,7 @@ async function main() {
       await b.page.getByPlaceholder('自分の名前').fill('びー');
       const bLink = (await text(b.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
       await a.page.goto(bLink.replace('https://app.tegami.chat', ORIGIN));
-      await button(a.page, 'ひらく').click();
+      await button(a.page, 'ロックを解除').click();
       await waitText(a.page, 'マイQRコード');
       await a.page.getByPlaceholder('自分の名前').fill('えー');
       await button(a.page, '追加').click();
@@ -1574,8 +1574,8 @@ async function main() {
 
     await test('Recovery code: backup on the relay is encrypted, follows changes, restores on a new device; wrong, old and turned-off codes fail', async () => {
       const openIfLocked = async (page, expect) => {
-        await page.waitForFunction((e) => document.body.innerText.includes('ひらく') || document.body.innerText.includes(e), expect, { timeout: 15000 });
-        if ((await text(page)).includes('ひらく')) await button(page, 'ひらく').click();
+        await page.waitForFunction((e) => document.body.innerText.includes('ロックを解除') || document.body.innerText.includes(e), expect, { timeout: 15000 });
+        if ((await text(page)).includes('ロックを解除')) await button(page, 'ロックを解除').click();
       };
       const backups = async () => (await fetch(`http://localhost:${RELAY_PORT}/_backups`)).json();
       const until = async (cond, what) => {
@@ -1623,7 +1623,7 @@ async function main() {
       await b.page.getByPlaceholder('自分の名前').fill('びー');
       const bLink = (await text(b.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0].replace('https://app.tegami.chat', ORIGIN);
       await a.page.goto(bLink);
-      await button(a.page, 'ひらく').click();
+      await button(a.page, 'ロックを解除').click();
       await waitText(a.page, 'マイQRコード');
       await a.page.getByPlaceholder('自分の名前').fill('えー');
       await button(a.page, '追加').click();
@@ -1968,7 +1968,7 @@ async function main() {
         await button(u.page, '送る').click();
         await waitText(u.page, 'echo: わたし: はじめまして');
         await u.page.goto(ORIGIN + '/');
-        await button(u.page, 'ひらく').click();
+        await button(u.page, 'ロックを解除').click();
         await waitText(u.page, 'Anthropic Claude');
         await u.context.close();
       } finally {
@@ -3791,8 +3791,8 @@ async function main() {
       await waitOpen(a2.page);
       await a2.page.waitForFunction(() => JSON.parse(__tegamiStore.getItem('tegami.blocked') || '[]').length > 0, null, { timeout: 15000 });
       await a2.page.goto(ORIGIN + '/settings/privacy');
-      await a2.page.waitForFunction(() => /ひらく|ブロックリスト/.test(document.body.innerText), null, { timeout: 15000 });
-      if ((await text(a2.page)).includes('ひらく')) await button(a2.page, 'ひらく').click();
+      await a2.page.waitForFunction(() => /ロックを解除|ブロックリスト/.test(document.body.innerText), null, { timeout: 15000 });
+      if ((await text(a2.page)).includes('ロックを解除')) await button(a2.page, 'ロックを解除').click();
       // Unlocking may land on the settings list: then open the privacy page from it.
       await a2.page.waitForFunction(() => /ブロックリスト|プライバシー/.test(document.body.innerText), null, { timeout: 15000 });
       if (!(await text(a2.page)).includes('ブロックリスト')) await a2.page.getByRole('button', { name: 'プライバシー', exact: true }).last().click();
@@ -5208,7 +5208,7 @@ async function main() {
       await savedHas(u.page, 'tegami.messages', '鍵の前の手紙');
       await u.page.evaluate(() => __tegamiStore.flush());
       await u.page.reload();
-      await button(u.page, 'ひらく').waitFor();
+      await button(u.page, 'ロックを解除').waitFor();
       // Locked: nothing can be read here, and a save is dropped (the screen has not loaded).
       assert((await u.page.evaluate(() => __tegamiStore.open())) === false, 'open before the passkey');
       assert((await u.page.evaluate(() => __tegamiStore.getItem('tegami.messages'))) === null, 'messages read before the passkey');
@@ -5219,7 +5219,7 @@ async function main() {
       });
       assert((await sealedNames(u.page)).includes('tegami.messages'), 'a save before the passkey erased the record');
       assert(!(await leaks(u.page, '鍵の前の手紙')).length, 'the message is plain text');
-      await button(u.page, 'ひらく').click();
+      await button(u.page, 'ロックを解除').click();
       await waitOpen(u.page);
       await savedHas(u.page, 'tegami.messages', '鍵の前の手紙');
       await waitText(u.page, '知らない人から');
