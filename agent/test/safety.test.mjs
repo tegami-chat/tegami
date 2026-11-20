@@ -83,7 +83,7 @@ try {
   await responder({})('こんにちは', { peer: 'a' });
   check('everyday replies call Claude Code with no tools, no MCP and a turn limit', closed(calls()[0].argv));
   check('the model Claude Code ran is written down for friends to see', JSON.parse(readFileSync(join(D1, 'model.json'), 'utf8')).model === 'claude-fake-1');
-  check('the first reply starts a conversation that is kept', !calls()[0].argv.includes('--no-session-persistence') && state.claudeSession === 'session-1');
+  check('the first reply starts a conversation that is kept', !calls()[0].argv.includes('--no-session-persistence') && state.claudeSessions.a?.id === 'session-1');
   await responder({})('2回目', { peer: 'a' });
   check('the next reply continues it', calls()[1].argv.join(' ').includes('--resume session-1'));
   await responder({ tools: true })('下書き', { draft: true });
@@ -91,11 +91,30 @@ try {
   await responder({ tools: true })('道具あり', { peer: 'a' });
   check('tools open only when the owner opens them', !calls()[3].argv.includes('--tools') && !calls()[3].argv.includes('--strict-mcp-config'));
   await responder({ remember: false })('覚えない', { peer: 'a' });
-  check('remember off: --no-session-persistence, and the old conversation is not resumed', calls()[4].argv.includes('--no-session-persistence') && !calls()[4].argv.includes('--resume') && !state.claudeSession);
-  state.claudeSession = 'old';
-  state.claudeSessionAt = Math.floor(Date.now() / 1000) - 31 * 86400;
+  check('remember off: --no-session-persistence, and the old conversation is not resumed', calls()[4].argv.includes('--no-session-persistence') && !calls()[4].argv.includes('--resume') && !Object.keys(state.claudeSessions).length);
+  state.claudeSessions.a = { id: 'old', at: Math.floor(Date.now() / 1000) - 31 * 86400 };
   await responder({ keepDays: 30 })('古い会話', { peer: 'a' });
-  check('a conversation older than keepDays is not resumed', !calls()[5].argv.includes('--resume') && state.claudeSessionAt > Math.floor(Date.now() / 1000) - 60);
+  check('a conversation older than keepDays is not resumed', !calls()[5].argv.includes('--resume') && state.claudeSessions.a.at > Math.floor(Date.now() / 1000) - 60);
+  // One session per person: nothing one friend wrote sits in the context of another's reply.
+  const DS = newHome();
+  const state3 = { lastRead: 0, replied: [], claudeSession: 'mixed', claudeSessionAt: Math.floor(Date.now() / 1000) };
+  const r3 = makeResponder({ dir: DS, config: { type: 'claude-code' }, system: 'SYS', draftSystem: 'DRAFT', state: state3, saveState: () => {}, settings: {} });
+  resetCalls();
+  await r3('テストAです', { peer: 'peerA' });
+  check('the old single session is dropped, not carried over', !calls()[0].argv.includes('--resume') && !state3.claudeSession && !state3.claudeSessionAt);
+  const idA = state3.claudeSessions.peerA.id;
+  await r3('テストBです', { peer: 'peerB' });
+  check("another person's reply does not resume the first person's session", !calls()[1].argv.includes('--resume') && !!state3.claudeSessions.peerB);
+  await r3('Aの続き', { peer: 'peerA' });
+  check("the first person's next reply resumes their own session", calls()[2].argv.join(' ').includes(`--resume ${idA}`));
+  state3.claudeSessions.peerB.id = 'session-B';
+  await r3('Bの続き', { peer: 'peerB' });
+  check("and the other's resumes theirs, with a different id", calls()[3].argv.join(' ').includes('--resume session-B') && state3.claudeSessions.peerA.id !== 'session-B');
+  await r3('相手なし');
+  check('a call with no peer keeps no session', calls()[4].argv.includes('--no-session-persistence') && !calls()[4].argv.includes('--resume') && Object.keys(state3.claudeSessions).length === 2);
+  state3.claudeSessions.peerA.at = Math.floor(Date.now() / 1000) - 31 * 86400;
+  await r3('古い会話', { peer: 'peerA' });
+  check('a session older than keepDays is not resumed, and only that one', !calls()[5].argv.includes('--resume') && !!state3.claudeSessions.peerB);
   check('the command line keeps the closed form', claudeLine({ system: 'S' }).includes('--tools "" --strict-mcp-config --disallowedTools "mcp__*" --max-turns'));
 
   // ---------- 9. what API backends keep ----------

@@ -17,6 +17,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { heldNotice } from './check.mjs';
 import { OTHERS_WARNING, parseInvite, shortId } from './lib.mjs';
+import { findHold } from './screen.mjs';
 
 const text = (value) => ({ content: [{ type: 'text', text: typeof value === 'string' ? value : JSON.stringify(value, null, 2) }] });
 
@@ -125,6 +126,12 @@ export async function startMcp(agent, { check = async () => ({ verdict: 'ASK_OWN
       const c = target(to);
       if (!c) return text(`Unknown contact: ${to}`);
       if (c.pubkey !== agent.owner?.pubkey) {
+        const hold = findHold(body);
+        if (hold) {
+          const reason = hold === 'MONEY' ? 'it looks like money talk' : 'it has a link';
+          if (agent.owner) await agent.send(agent.owner.pubkey, heldNotice(c.name, reason, body), { notice: true }).catch(() => {});
+          return text(`Not sent: ${reason}, so your owner has to see it first (code ${hold}). Your owner was told.`);
+        }
         const kind = c.pubkey.includes(',') ? 'group' : agent.isTrusted(c.pubkey) ? 'trusted' : agent.contacts.some((x) => x.pubkey === c.pubkey) ? 'contact' : 'peerAi';
         const v = await check({ text: body, context: contextFor(c.pubkey), to: kind });
         if (v.verdict !== 'SAFE') {

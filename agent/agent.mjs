@@ -57,6 +57,7 @@ import { fileURLToPath } from 'node:url';
 import { autostartCommands, autostartFile, carriedEnv, keepArgs, launchdPlist, systemdUnit } from './autostart.mjs';
 import { BACKENDS, backendLabel, loadBackend, loadKeys, makeResponder, ownEnv, saveBackend, saveKey } from './backends.mjs';
 import { Agent, DRAFT_TTL, PAIR_TTL, loadSettings, needsInit, parseAsk, parseInvite, saveSettings, shortId } from './lib.mjs';
+import { findHold } from './screen.mjs';
 import { qrHtml, qrTerminal } from './qr.mjs';
 import { CHECK_SYSTEM, heldNotice, modelCheck } from './check.mjs';
 import { cleanForAi } from './screen.mjs';
@@ -288,6 +289,13 @@ const commands = {
           const text = await reply(prompt, { peer });
           // AIの検査, stage 2: a reply to anyone but the owner is checked first; it waits otherwise.
           if (text.trim() && peer !== agent.owner?.pubkey) {
+            // Fixed rules first (no model): money talk and links are never sent in this AI's name.
+            const hold = findHold(text);
+            if (hold) {
+              await holdForOwner(name, hold === 'MONEY' ? 'the reply looks like money talk' : 'the reply has a link', text.trim());
+              markReplied(batch);
+              continue;
+            }
             const c = await check({ text: text.trim(), context: prompt, to: 'trusted' });
             if (c.verdict !== 'SAFE') {
               await holdForOwner(name, c.reason, text.trim());

@@ -192,7 +192,7 @@ export function makeResponder({ dir, config, system, draftSystem, checkSystem = 
     return (prompt, opts = {}) =>
       opts.check
         ? runClaude({ dir, prompt, system, draftSystem: checkSystem, state, saveState, draft: true, check: true, timeout: opts.timeout ?? CHECK_PROCESS_TIMEOUT, tools, remember, keepDays })
-        : runClaude({ dir, prompt, system, draftSystem, state, saveState, draft: !!opts.draft, tools, remember, keepDays });
+        : runClaude({ dir, prompt, system, draftSystem, state, saveState, draft: !!opts.draft, peer: opts.peer ?? '', tools, remember, keepDays });
   if (b.kind === 'command') throw new Error('The command backend needs --command "<program>" on watch.');
   return async (prompt, { draft = false, check = false, peer = '' } = {}) => {
     if (check) draft = true;
@@ -383,16 +383,30 @@ export function claudeLine({ system, tools = false, remember = true, draft = fal
  * draft: a reply draft for a friend's chat instead. It runs once on its own: no tools (the
  * friend's words must not make it act), no saved session, and not added to the conversation.
  */
-async function runClaude({ dir, prompt, system, draftSystem, state, saveState, draft, check = false, timeout = 0, tools, remember, keepDays }) {
+async function runClaude({ dir, prompt, system, draftSystem, state, saveState, draft, check = false, timeout = 0, peer = '', tools, remember, keepDays }) {
   const work = join(dir, check ? 'check' : draft ? 'draft' : 'work');
   mkdirSync(work, { recursive: true });
   const now = Math.floor(Date.now() / 1000);
-  if (!draft && state.claudeSession && (!remember || (state.claudeSessionAt ?? 0) < now - keepDays * DAY)) {
-    delete state.claudeSession;
-    delete state.claudeSessionAt;
-    saveState();
+  // One session per person (or group): what one friend wrote never sits in the context of another's reply.
+  // The single session an older version kept mixed everyone's words, so it is dropped, not carried over.
+  let dirty = false;
+  // (Set to null, not deleted: saveState writes what changed, and a deleted key would come back from disk.)
+  if (!draft && (state.claudeSession != null || state.claudeSessionAt != null)) {
+    state.claudeSession = null;
+    state.claudeSessionAt = null;
+    dirty = true;
   }
-  const line = claudeLine({ system: draft ? draftSystem : system, tools, remember, draft, session: state.claudeSession });
+  const sessions = (state.claudeSessions ??= {});
+  for (const [k, v] of draft ? [] : Object.entries(sessions)) {
+    if (!remember || (v?.at ?? 0) < now - keepDays * DAY) {
+      delete sessions[k];
+      dirty = true;
+    }
+  }
+  if (dirty) saveState();
+  // Without a person to key the session on, nothing is kept (--no-session-persistence).
+  const keep = !draft && remember && !!peer;
+  const line = claudeLine({ system: draft ? draftSystem : system, tools, remember: keep, draft, session: keep ? (sessions[peer]?.id ?? '') : '' });
   const r = await run(line, prompt, work, ownEnv(), { timeout });
   let out;
   try {
@@ -400,9 +414,8 @@ async function runClaude({ dir, prompt, system, draftSystem, state, saveState, d
   } catch {
     throw new Error(r.err.trim() || r.out.trim() || `claude exited ${r.code}`);
   }
-  if (out.session_id && !draft && remember) {
-    if (out.session_id !== state.claudeSession) state.claudeSessionAt = now;
-    state.claudeSession = out.session_id;
+  if (out.session_id && keep) {
+    sessions[peer] = { id: out.session_id, at: out.session_id !== sessions[peer]?.id ? now : (sessions[peer].at ?? now) };
     saveState();
   }
   if (out.is_error) throw new Error(String(out.result ?? 'Claude returned an error'));

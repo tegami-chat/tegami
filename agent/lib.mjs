@@ -9,7 +9,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync, existsSync, chmodSync } from 'node:fs';
 import { accountFor, forget, protect, refusePlain, storeKind, unprotect, warnPlain } from './secrets.mjs';
 import { Vault, recordsKey } from './vault.mjs';
-import { cleanForAi, findSecret } from './screen.mjs';
+import { cleanForAi, findHold, findSecret } from './screen.mjs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import * as nip17 from 'nostr-tools/nip17';
@@ -301,6 +301,12 @@ export class Agent {
     // can lack `replied` (it stayed at its default) and must still read as an empty list.
     this.state = { lastRead: 0, replied: [], ...this.vault.read('state.json', {}) };
     this.stateBase = snapshot(this.state);
+    // The one Claude Code session an older version kept for everyone mixed all the chats: dropped, not carried over.
+    if (this.state.claudeSession != null || this.state.claudeSessionAt != null) {
+      this.state.claudeSession = null;
+      this.state.claudeSessionAt = null;
+      this.saveState();
+    }
     // Messages from strangers: counted (who and when), never kept with their words, never on disk.
     this.strangers = [];
     this.listeners = new Set();
@@ -833,6 +839,12 @@ export class Agent {
     // AIの検査: a key, a recovery code, an API key or a card number never leaves as this AI's message.
     const secret = findSecret(String(text));
     if (secret) throw Object.assign(new Error(`Not sent: the text looks like it carries a secret (${secret}).`), { code: 'SECRET' });
+    // Money talk and links go to the owner's look first: to anyone but the owner, this AI's key never sends them.
+    if (!notice && peer !== this.owner?.pubkey) {
+      const hold = findHold(String(text));
+      if (hold)
+        throw Object.assign(new Error(`Not sent: the text looks like ${hold === 'MONEY' ? 'money talk' : 'a link'}; your owner has to see it first.`), { code: hold });
+    }
     const toAi = this.isAiChat(peer);
     const why = toAi ? this.aiTalkCheck(peer, { count: false }) : '';
     if (why) throw new Error(why);

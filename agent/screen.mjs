@@ -138,3 +138,23 @@ export function findMoney(text) {
   if (MONEY_SOFT.test(t) && ASK.test(t)) return 'amountAsk';
   return null;
 }
+
+// ---------- リンク ----------
+
+/** A web address in a text: http(s)://, www., or a bare domain with a common ending. Same as LINK in client/src/lib/ai-permissions.ts. */
+const LINK = /https?:\/\/|www\.|\b[a-z0-9-]+\.(com|net|org|jp|io|co|app|chat|me|ly|gl|xyz|info|biz|link|site|top|dev|page|shop)\b/;
+
+/** Whether a text carries a web address (read in plain, lower-case form like the app does). */
+export function findLink(text) {
+  return LINK.test(String(text ?? '').normalize('NFKC').toLowerCase());
+}
+
+/**
+ * What a fixed rule says about a text going out in the AI's own name to anyone but its owner:
+ * 'MONEY' (findMoney), 'LINK' (findLink) or null. Same as the app's needsConfirm for text.
+ */
+export function findHold(text) {
+  if (findMoney(text) !== null) return 'MONEY';
+  if (findLink(text)) return 'LINK';
+  return null;
+}

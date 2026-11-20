@@ -94,5 +94,15 @@ for (const t of ['I need you to wire money to my bank account today', 'Your tax 
   check(`money (English and brand words): ${t.slice(0, 30)}`, !!agent.findMoney(t) && agent.findMoney(t) === app.findMoney(t));
 check('money: full-width amounts and hidden characters do not hide it', agent.findMoney(`５万円今すぐ用意${ZW}できる？`) === 'amountAsk');
 
+// Links (findLink): the same answer as the app's needsConfirm for text (which is LINK or money).
+const perm = await import(pathToFileURL(join(resolve(import.meta.dirname, '../..'), 'client/src/lib/ai-permissions.ts')).href);
+const linkTexts = ['https://example.com/x', 'www.example.com', 'tegami.chat を見て', 'ＨＴＴＰＳ：／／ｅｘａｍｐｌｅ．ｃｏｍ', 'app.tegami.chat/link', 'FOO.COM'];
+const plainTexts = ['明日の10時でどう？', 'LINEってくそじゃない？', '会議は3.5時間です', 'ありがとう。また今度ね'];
+for (const t of linkTexts) check(`link: ${t}`, agent.findLink(t) && agent.findHold(t) !== null && perm.needsConfirm({ kind: 'text', text: t }));
+for (const t of plainTexts) check(`not a link: ${t}`, !agent.findLink(t) && agent.findHold(t) === null && !perm.needsConfirm({ kind: 'text', text: t }));
+const mixed = [...linkTexts, ...plainTexts, ...fixture.money, ...fixture.everyday, ...fixture.heldOut.money, ...fixture.heldOut.everyday];
+check('hold: the watcher holds exactly what the app asks the owner about, for every line', mixed.every((t) => (agent.findHold(t) !== null) === perm.needsConfirm({ kind: 'text', text: t })));
+check('hold: money is MONEY and a link alone is LINK', agent.findHold('三万円貸してくれない？') === 'MONEY' && agent.findHold('www.example.com') === 'LINK');
+
 console.log(failures ? `\n${failures} failed` : '\nall passed');
 process.exit(failures ? 1 : 0);
