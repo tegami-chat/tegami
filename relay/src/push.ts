@@ -44,16 +44,21 @@ export function allowedEndpoint(endpoint: unknown, allowLocal = false): endpoint
  * with the body's sha256 in a payload tag. Returns the person's pubkey, or null.
  */
 export async function nip98(req: Request, body: string, urlOk: (u: string) => boolean): Promise<string | null> {
+  return nip98Header(req.headers.get('Authorization') ?? '', req.method, body, urlOk);
+}
+
+/** The same check for a header value that is not the request's own Authorization (a second signature, by another key). */
+export async function nip98Header(header: string, method: string, body: string, urlOk: (u: string) => boolean): Promise<string | null> {
   let ev: NostrEvent;
   try {
-    ev = JSON.parse(atob((req.headers.get('Authorization') ?? '').replace(/^Nostr /, '')));
+    ev = JSON.parse(atob(header.replace(/^Nostr /, '')));
   } catch {
     return null;
   }
   const tag = (n: string) => ev?.tags?.find((t) => t[0] === n)?.[1];
   const hash = b64hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body)));
   const fresh = Math.abs(Math.floor(Date.now() / 1000) - (ev?.created_at ?? 0)) <= 60;
-  if (ev?.kind !== 27235 || !urlOk(tag('u') ?? '') || tag('method') !== req.method || tag('payload') !== hash || !fresh) return null;
+  if (ev?.kind !== 27235 || !urlOk(tag('u') ?? '') || tag('method') !== method || tag('payload') !== hash || !fresh) return null;
   return verifyEvent(ev) ? ev.pubkey : null;
 }
 

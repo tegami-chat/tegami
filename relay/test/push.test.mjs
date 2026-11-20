@@ -312,6 +312,44 @@ for (let i = 0; i < 3; i++) {
 }
 check('a third stranger within the hour is held', hankGot() === 2);
 
+// Friends are limited too (the recipient can be made to write one line to anyone): per sender and recipient, and
+// per recipient across friends. Test options lower the bursts to 1 (the real ones are 10 a minute and 300 an hour).
+await wait(3500);
+{
+  const jack = generateSecretKey();
+  const jackPub = getPublicKey(jack);
+  await trust(jack);
+  check('jack registers a device', (await register(jack, endpoint('/jack'))) === 204);
+  const jackGot = () => received.filter((r) => r.path === '/jack').length;
+  const j = await connect(jack);
+  const ivy = generateSecretKey();
+  const kate = generateSecretKey();
+  await trust(ivy);
+  await trust(kate);
+  await j.send(wrapTo(jack, getPublicKey(ivy), 'hi ivy'));
+  await j.send(wrapTo(jack, getPublicKey(kate), 'hi kate'));
+  const i1 = await connect(ivy, { 'X-Test-Opts': JSON.stringify({ friendPair: 1 }) });
+  const k1 = await connect(kate, { 'X-Test-Opts': JSON.stringify({ friendHour: 1 }) });
+  await i1.send(wrapTo(ivy, jackPub, 'friend one'));
+  await wait(1500);
+  check('a friend (jack wrote to ivy) rings', jackGot() === 1);
+  await wait(3500);
+  await i1.send(wrapTo(ivy, jackPub, 'friend two'));
+  await wait(1500);
+  check('…the next message from the same friend is held once the one-minute limit for that pair is used (stored, not rung)', jackGot() === 1);
+  await wait(3500);
+  await k1.send(wrapTo(kate, jackPub, 'another friend'));
+  await wait(1500);
+  check('another friend rings (its own pair)', jackGot() === 2);
+  await wait(3500);
+  await k1.send(wrapTo(kate, jackPub, 'another friend again'));
+  await wait(1500);
+  check('…and is held once the one-hour limit for jack across all friends is used', jackGot() === 2);
+  i1.ws.close();
+  k1.ws.close();
+  j.ws.close();
+}
+
 a.ws.close();
 b.ws.close();
 c.ws.close();

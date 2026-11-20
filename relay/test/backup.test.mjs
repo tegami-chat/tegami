@@ -3,7 +3,8 @@
 // Usage: npm run dev (in another window), then  node test/backup.test.mjs
 //        HTTP=http://localhost:8807 node test/backup.test.mjs   for another port
 import { randomBytes } from 'node:crypto';
-import { finalizeEvent, generateSecretKey } from 'nostr-tools/pure';
+import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
+import { admin, register, trust } from './join.mjs';
 
 const HTTP = process.env.HTTP ?? 'http://localhost:8787';
 let failures = 0;
@@ -17,10 +18,25 @@ async function sha256hex(text) {
 }
 const newId = () => randomBytes(32).toString('hex');
 
-/** method on /backup/<id>, signed by sk (NIP-98) unless sign is false. Returns the response. */
-async function call(method, id, { sk, body = '', sign = true, headers = {}, signedUrl } = {}) {
+// A new backup needs a registered account: a second signature of the same request by the account's key
+// (X-Tegami-Member). This key is registered (as if invited) and makes the invite tree used below.
+const member = generateSecretKey();
+await trust(member);
+
+/** A NIP-98 header value for `method` on `url`, signed by `sk`. */
+async function nip98(sk, method, url, body) {
+  const ev = finalizeEvent({ kind: 27235, created_at: Math.floor(Date.now() / 1000), content: '', tags: [['u', url], ['method', method], ['payload', await sha256hex(body)]] }, sk);
+  return 'Nostr ' + Buffer.from(JSON.stringify(ev)).toString('base64');
+}
+
+/**
+ * method on /backup/<id>, signed by sk (NIP-98) unless sign is false. A PUT that is not a refresh also carries the
+ * member proof, signed by `account` (the registered key above unless given; null sends none). Returns the response.
+ */
+async function call(method, id, { sk, body = '', sign = true, headers = {}, signedUrl, account = member } = {}) {
   const url = `${HTTP}/backup/${id}`;
   const h = { 'Content-Type': 'application/json', ...headers };
+  if (method === 'PUT' && account && !headers['If-Match'] && !headers['X-Tegami-Member']) h['X-Tegami-Member'] = await nip98(account, 'PUT', url, body);
   if (sign && sk) {
     const ev = finalizeEvent(
       { kind: 27235, created_at: Math.floor(Date.now() / 1000), content: '', tags: [['u', signedUrl ?? url], ['method', method], ['payload', await sha256hex(body)]] },
@@ -59,12 +75,43 @@ check('a backup over 64 KB is refused', (await call('PUT', newId(), { sk: alice,
 
 // The app derives one signing key per recovery code, so one key holds one backup.
 const more = [];
+check('a new backup without the account proof is refused (403)', (await call('PUT', newId(), { sk: generateSecretKey(), body: blob, account: null })).status === 403);
+check('…also when the account is not registered', (await call('PUT', newId(), { sk: generateSecretKey(), body: blob, account: generateSecretKey() })).status === 403);
+const stopped = generateSecretKey();
+await trust(stopped);
+await admin('ban', getPublicKey(stopped));
+check('…also when the account is stopped', (await call('PUT', newId(), { sk: generateSecretKey(), body: blob, account: stopped })).status === 403);
+{
+  // A proof for another body or another id does not count.
+  const sk = generateSecretKey();
+  const i = newId();
+  const wrongBody = await call('PUT', i, { sk, body: blob, headers: { 'X-Tegami-Member': await nip98(member, 'PUT', `${HTTP}/backup/${i}`, 'other') } });
+  const wrongId = await call('PUT', i, { sk, body: blob, headers: { 'X-Tegami-Member': await nip98(member, 'PUT', `${HTTP}/backup/${newId()}`, blob) } });
+  check('…a proof signed for another body or another id is refused too', wrongBody.status === 403 && wrongId.status === 403);
+}
 check('a second backup for the same key is refused', (await call('PUT', newId(), { sk: alice, body: blob })).status === 429);
 const bobId = newId();
 check('another key stores its own backup', (await call('PUT', bobId, { sk: mallory, body: blob })).status === 204);
 check('…and deletes it', (await call('DELETE', bobId, { sk: mallory })).status === 204);
 
-// Relay-wide caps on new backups (test headers lower them, DEV_LOCAL only; the real caps are 500 a day and 100,000 in all).
+// Per invite tree: the registered key above and the keys it invites share a daily number of new backups (50; a test header lowers it).
+{
+  const root = generateSecretKey();
+  await trust(root);
+  const code = (await register(root)).json?.code;
+  const kid = generateSecretKey();
+  await register(kid, { invite: code });
+  const cap = { 'X-Test-Backups-Per-Tree': '2', 'X-Test-Ip': '10.7.6.1' };
+  const a = await call('PUT', newId(), { sk: generateSecretKey(), body: blob, headers: cap, account: root });
+  const b = await call('PUT', newId(), { sk: generateSecretKey(), body: blob, headers: cap, account: kid });
+  const c = await call('PUT', newId(), { sk: generateSecretKey(), body: blob, headers: cap, account: root });
+  check(`two keys of one invite tree share the daily number of new backups (${a.status}, ${b.status}, then ${c.status})`, a.status === 204 && b.status === 204 && c.status === 429);
+  const other = generateSecretKey();
+  await trust(other);
+  check('another tree is not affected', (await call('PUT', newId(), { sk: generateSecretKey(), body: blob, headers: cap, account: other })).status === 204);
+}
+
+// Relay-wide caps on new backups (test headers lower them, DEV_LOCAL only; the real caps are 5,000 a day and 100,000 in all).
 const capId = newId();
 const capKey = generateSecretKey();
 const capIp = { 'X-Test-Ip': '10.7.7.7' };

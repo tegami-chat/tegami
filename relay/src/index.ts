@@ -12,7 +12,16 @@
 //
 // - Limits: each network address and each key can send only so fast, each address can
 //   hold only so many connections, and each mailbox holds at most MAX_MAILBOX envelopes.
-//   Keys cost nothing to make, so the address limit is the one that stops floods.
+//   Keys cost nothing to make, so the address limit is the one that stops floods. An IPv6 address counts
+//   by its /64, and also toward larger blocks (/48, /32) with looser limits, so a rented block does not
+//   get a fresh allowance for every /64.
+// - One answer to a REQ holds at most MAX_REQ_ROWS envelopes and MAX_REQ_BYTES bytes, newest first; the
+//   app asks again with `until` to read the rest. Each key and each address has a budget of rows it can
+//   read (REQ_ROWS), so asking for the same large mailbox over and over is refused.
+// - Each envelope is marked when the recipient had not written to its sender that day (one bit, not who
+//   the sender is); at most MAX_STRANGER_BOX such envelopes wait for one person, so people the person
+//   does not know cannot take the whole mailbox. Bytes saved per sending key and per invite tree are
+//   counted per day (memory only).
 //
 // Files (Blossom, BUD-01/02): PUT /upload stores an already-encrypted file, GET /<sha256>
 // returns it. Uploads need a signed kind 24242 event; files are deleted after 30 days.
@@ -27,7 +36,7 @@
 // until the person deletes it (no 30-day limit). It cannot read the backup or find one
 // without the code.
 //
-// Registration (members.ts): only registered keys may write or upload. POST /register
+// Registration (members.ts): only registered keys may write or upload (and make a new recovery backup). POST /register
 // (NIP-98) registers a key with an invite code or a Cloudflare Turnstile token, or just
 // reports its state, and returns its own invite code when it may invite. Envelopes from keys
 // registered without an invite are marked (tegami_open) and ring no notifications.
@@ -53,13 +62,25 @@ import { verifyEvent, type NostrEvent } from 'nostr-tools/pure';
 
 import { AI_PER_MINUTE, AiKeys, HELD_OWNER_BANNED, HELD_OWNER_DELETED, checkAiCard } from './ai';
 import { Members, turnstileOk, type Member } from './members';
-import { MAX_DEVICES, Vapid, allowedEndpoint, nip98, validKeys, type PushKeys } from './push';
+import { MAX_DEVICES, Vapid, allowedEndpoint, nip98, nip98Header, validKeys, type PushKeys } from './push';
 import { Reports, parseReport } from './reports';
 import { STATS_DESCRIPTION, Stats } from './stats';
 import { TURN_RATE, TURN_TTL_SECONDS as TURN_TTL, makeTurnCredentials, turnConfigured, type TurnEnv } from './turn';
 
 type Filter = { kinds?: number[]; '#p'?: string[]; since?: number; until?: number; limit?: number; ids?: string[] };
-type Attachment = { challenge: string; ip: string; pubkey?: string; subs: Record<string, Filter[]>; authTries?: number; testLimit?: number; testPushCap?: number };
+type TestOpts = {
+  rows?: number; // rows in one answer to a REQ
+  bytes?: number; // bytes in one answer to a REQ
+  budget?: number; // a key's row budget (burst)
+  strangerBox?: number; // MAX_STRANGER_BOX
+  senderBytes?: number; // ENVELOPE_BYTES_PER_KEY_PER_DAY
+  treeBytes?: number; // ENVELOPE_BYTES_PER_TREE_PER_DAY
+  dbSize?: number; // DB_NEARLY_FULL_BYTES
+  newKeySeconds?: number; // NEW_KEY_SECONDS
+  friendPair?: number; // FRIEND_PUSH_PER_PAIR burst
+  friendHour?: number; // FRIEND_PUSH_PER_HOUR burst
+};
+type Attachment = { challenge: string; ip: string; pubkey?: string; subs: Record<string, Filter[]>; authTries?: number; testLimit?: number; testPushCap?: number; t?: TestOpts };
 
 // VAPID_JWK: the relay's Web Push key (Worker secret). DEV_PUSH=1 lets tests push to localhost
 // (and sign requests for localhost). DEV_LOCAL=1 only lets tests sign requests for localhost.
@@ -92,6 +113,13 @@ const MAX_CONNECTIONS_PER_IP = 50;
 const MAX_MAILBOX = 10_000;
 // One REQ may carry at most this many filters: each filter runs its own query of up to 500 rows.
 const MAX_FILTERS_PER_REQ = 10;
+// One answer to a REQ: at most this many envelopes in all (every filter together) and this many bytes. When
+// it is cut short the relay still ends with EOSE; the app asks again with `until` (client lib/catch-up.ts).
+const MAX_REQ_ROWS = 1000;
+const MAX_REQ_BYTES = 4 * 1024 * 1024;
+// Envelopes a key (and an address) may read: a budget of rows, refilled over time. The key's burst is one
+// whole full mailbox, so reading everything once always works; after that about 100 rows a second.
+const REQ_ROWS = { key: { burst: 10_000, perSecond: 100 }, ip: { burst: 20_000, perSecond: 200 } };
 // REQs per address and per key (burst, then per second): a client asks a few times when it opens, not constantly.
 const REQ_RATE = { ip: { burst: 120, perSecond: 2 }, key: { burst: 40, perSecond: 1 } };
 // AUTH events one connection may send before it is closed: each one costs a signature check.
@@ -103,6 +131,18 @@ const PAIR_PER_DAY = 500;
 // one-time key), at most this long, this many waiting, and this many a day from one key.
 const STRANGER_MAX_TTL_SECONDS = 15 * 60;
 const MAX_STRANGER_MAILBOX = 3;
+// Envelopes waiting for one person from keys the person had not written to that day (the relay marks them with
+// one bit): the rest of the mailbox stays for people they have. Keys cost nothing, so without this a handful
+// of invited keys can fill a mailbox and lock out a person's friends.
+const MAX_STRANGER_BOX = 1000;
+// Bytes of envelopes one key may save in a day, and all the keys of one invite tree together (memory only).
+// A tree is the same people: invites made by hand can give a person hundreds of keys.
+const ENVELOPE_BYTES_PER_KEY_PER_DAY = 50e6;
+const ENVELOPE_BYTES_PER_TREE_PER_DAY = 500e6;
+// When the Durable Object holds more than this (its limit is 10 GB), envelopes from keys made in the last
+// NEW_KEY_SECONDS are refused until the 30-day clean-up makes room.
+const DB_NEARLY_FULL_BYTES = 8e9;
+const NEW_KEY_SECONDS = 7 * 24 * 60 * 60;
 const STRANGER_PER_DAY = 50;
 // New recovery backups per address per day: the signing key comes from the recovery code, so it cannot be
 // tied to a registered account, and keys cost nothing; only the address can slow someone who makes ids in bulk.
@@ -111,7 +151,11 @@ const NEW_BACKUPS_PER_IP_PER_DAY = 10;
 // rotate (rented blocks, proxies), so the per-address limit alone cannot stop bulk creation; these bound the
 // worst case: a day of abuse costs at most this many rows of up to 64 KB, and storage stays well under the
 // Durable Object's 10 GB. Refreshing or deleting an existing backup is never blocked by either.
-const NEW_BACKUPS_PER_DAY = 500;
+const NEW_BACKUPS_PER_DAY = 5000;
+// New backups per invite tree per day. A backup is signed with a key from the recovery code, so the relay
+// asks for a second signature by the account's own key (X-Tegami-Member), checks that it is registered, counts
+// it for the tree, and keeps nothing: the backup row has no account key, only the one from the code.
+const NEW_BACKUPS_PER_TREE_PER_DAY = 50;
 const MAX_BACKUPS_TOTAL = 100_000;
 // Notifications from a key the recipient has not written to (the relay cannot read envelopes, so it cannot
 // know who is a friend; "the recipient wrote to this key today" is the only sign it has). Such a sender rings
@@ -119,6 +163,11 @@ const MAX_BACKUPS_TOTAL = 100_000;
 // The envelope is still stored and delivered; only the push is skipped. Memory only, like PAIR_PER_DAY.
 const STRANGER_PUSH_PAIR_SECONDS = 10 * 60;
 const STRANGER_PUSH_PER_HOUR = 20;
+// Notifications from a key the recipient did write to today: no longer unlimited (the recipient can be made to
+// write one line to anyone). Per sender and recipient 10 in a minute, and per recipient 300 an hour from all
+// friends together. The message is still delivered; only the ring is skipped. Memory only.
+const FRIEND_PUSH_PER_PAIR: Rate = { burst: 10, perSecond: 10 / 60 };
+const FRIEND_PUSH_PER_HOUR: Rate = { burst: 300, perSecond: 300 / 3600 };
 // Most keys tracked in memory by a limiter before the oldest are dropped (a bounded Map, never a full reset).
 const LIMITER_MAX_KEYS = 50_000;
 // Bytes one key may upload in a day (memory only), on top of the burst limit above: stops slow, steady filling of storage.
@@ -145,31 +194,114 @@ const CORS = {
   'Access-Control-Max-Age': '86400',
 };
 
-/** Drops the oldest entries of a Map (insertion order) once it grows past LIMITER_MAX_KEYS. */
-function trimOldest<V>(m: Map<string, V>) {
-  if (m.size <= LIMITER_MAX_KEYS) return;
-  let drop = Math.ceil(LIMITER_MAX_KEYS / 10);
-  for (const k of m.keys()) {
-    if (drop-- <= 0) break;
-    m.delete(k);
-  }
+// Most keys tracked in memory by a limiter. Tests (DEV_LOCAL) may lower it with X-Test-Table-Max.
+let limiterMax = LIMITER_MAX_KEYS;
+
+/**
+ * Makes room once a Map holds more than limiterMax entries (down to 90%). Entries that limit nothing right now
+ * (`idle`: a bucket that is full again, a count from an earlier day) go first; only when there are not enough of
+ * them, the oldest records that are not refusing anything (`limiting`: a used-up bucket) go next, and the records that
+ * are refusing something right now go last. Someone who makes a record for every address they can reach cannot
+ * push out the records of addresses that are used up.
+ */
+function trimOldest<V>(m: Map<string, V>, idle?: (v: V) => boolean, limiting?: (v: V) => boolean) {
+  if (m.size <= limiterMax) return;
+  let drop = m.size - (limiterMax - Math.ceil(limiterMax / 10));
+  const pass = (pick: (v: V) => boolean) => {
+    for (const [k, v] of m) {
+      if (drop <= 0) return;
+      if (pick(v)) {
+        m.delete(k);
+        drop--;
+      }
+    }
+  };
+  if (idle) pass(idle);
+  if (limiting) pass((v) => !limiting(v));
+  pass(() => true);
 }
 
-/** Token bucket: `burst` sends at once, refilling at `perSecond`. */
+type Rate = { burst: number; perSecond: number };
+
+/** Token bucket: `burst` sends at once, refilling at `perSecond`. `over` replaces both (tests, per-call limits). */
 class Buckets {
   private b = new Map<string, { tokens: number; at: number }>();
   constructor(private burst: number, private perSecond: number) {}
-  take(key: string, cost = 1): boolean {
+  private level(key: string, over?: Rate) {
+    const burst = over?.burst ?? this.burst;
+    const per = over?.perSecond ?? this.perSecond;
     const t = Date.now() / 1000;
-    const cur = this.b.get(key) ?? { tokens: this.burst, at: t };
-    cur.tokens = Math.min(this.burst, cur.tokens + (t - cur.at) * this.perSecond);
+    const cur = this.b.get(key) ?? { tokens: burst, at: t };
+    cur.tokens = Math.min(burst, cur.tokens + (t - cur.at) * per);
     cur.at = t;
+    return { cur, burst, per };
+  }
+  private store(key: string, cur: { tokens: number; at: number }, burst: number, per: number) {
     this.b.delete(key); // re-insert so the least recently used keys are the ones dropped
     this.b.set(key, cur);
-    trimOldest(this.b); // memory guard; a dropped bucket only errs towards allowing, and only for idle keys
+    // A full bucket limits nothing, so it is the first to go when the table is full.
+    const now = () => Date.now() / 1000;
+    trimOldest(
+      this.b,
+      (v) => v.tokens + (now() - v.at) * per >= burst,
+      (v) => v.tokens + (now() - v.at) * per < 1,
+    );
+  }
+  /** Whether `cost` could be taken now. Takes nothing. */
+  can(key: string, cost = 1, over?: Rate): boolean {
+    const { cur, burst, per } = this.level(key, over);
+    this.store(key, cur, burst, per);
+    return cur.tokens >= cost;
+  }
+  take(key: string, cost = 1, over?: Rate): boolean {
+    const { cur, burst, per } = this.level(key, over);
+    this.store(key, cur, burst, per); // memory guard; a dropped bucket only errs towards allowing, and only for idle keys
     if (cur.tokens < cost) return false;
     cur.tokens -= cost;
     return true;
+  }
+  /** For a budget that may run into debt: takes `n` even if that leaves less than nothing (down to -burst). */
+  charge(key: string, n: number, over?: Rate) {
+    const { cur, burst, per } = this.level(key, over);
+    cur.tokens = Math.max(-burst, cur.tokens - n);
+    this.store(key, cur, burst, per);
+  }
+  /** Whether anything is left (above zero). Takes nothing. */
+  hasSome(key: string, over?: Rate): boolean {
+    const { cur, burst, per } = this.level(key, over);
+    this.store(key, cur, burst, per);
+    return cur.tokens > 0;
+  }
+}
+
+/** The address blocks a limit counts: the address (its /64 for IPv6), and for IPv6 also its /48 and /32. */
+function ipLevels(ip: string): string[] {
+  if (!ip.includes(':')) return [ip];
+  const g = ip.split(':');
+  return [ip, g.slice(0, 3).join(':'), g.slice(0, 2).join(':')];
+}
+/** How much looser each level is than the /64 (or the IPv4 address). */
+const IP_LEVEL_SCALE = [1, 4, 16];
+const scaled = (r: Rate, i: number): Rate => ({ burst: r.burst * IP_LEVEL_SCALE[i], perSecond: r.perSecond * IP_LEVEL_SCALE[i] });
+
+/** A limit per network address: the /64 level plus, for IPv6, a 4 times looser /48 and 16 times looser /32. Any one used up refuses. */
+class IpBuckets {
+  private b: Buckets[];
+  constructor(burst: number, perSecond: number) {
+    this.b = IP_LEVEL_SCALE.map((k) => new Buckets(burst * k, perSecond * k));
+  }
+  take(ip: string, cost = 1): boolean {
+    const keys = ipLevels(ip);
+    if (!keys.every((k, i) => this.b[i].can(k, cost))) return false;
+    keys.forEach((k, i) => this.b[i].take(k, cost));
+    return true;
+  }
+  /** A budget run into debt (see Buckets.charge): is anything left, and take `n`. `over` is the /64 level's limit. */
+  hasSome(ip: string, over: Rate): boolean {
+    return ipLevels(ip).every((k, i) => this.b[i].hasSome(k, scaled(over, i)));
+  }
+  charge(ip: string, n: number, over: Rate) {
+    ipLevels(ip).forEach((k, i) => this.b[i].charge(k, n, scaled(over, i)));
   }
 }
 
@@ -182,7 +314,8 @@ class DayCounter {
     if (!cur || cur.day !== day) cur = { day, n: 0 };
     this.m.delete(key);
     this.m.set(key, cur);
-    trimOldest(this.m);
+    // A count from an earlier day limits nothing: it goes first when the table is full.
+    trimOldest(this.m, (v) => v.day !== Math.floor(Date.now() / 86_400_000));
     if (cur.n + n > limit) return false;
     cur.n += n;
     return true;
@@ -194,13 +327,27 @@ class DayCounter {
   }
 }
 
+/** A daily count per network address, with the same looser /48 and /32 levels as IpBuckets. */
+class IpDayCounter {
+  private d = IP_LEVEL_SCALE.map(() => new DayCounter());
+  take(ip: string, limit: number): boolean {
+    const keys = ipLevels(ip);
+    if (!keys.every((k, i) => this.d[i].peek(k) + 1 <= limit * IP_LEVEL_SCALE[i])) return false;
+    keys.forEach((k, i) => this.d[i].take(k, limit * IP_LEVEL_SCALE[i]));
+    return true;
+  }
+}
+
 /** The address a request came from. Tests (DEV_LOCAL) may pose as another address with X-Test-Ip. */
 function clientIp(req: Request, env: Env): string {
   const test = env.DEV_LOCAL === '1' || env.DEV_PUSH === '1' ? req.headers.get('X-Test-Ip') : null;
   return test ?? req.headers.get('CF-Connecting-IP') ?? 'unknown';
 }
 
-/** Limits count an IPv6 address by its /64, the block one subscriber gets, so a rented block is one address. */
+/**
+ * Limits count an IPv6 address by its /64, the block one subscriber gets, so a rented block is one address.
+ * IpBuckets and IpDayCounter also count its /48 and /32 (looser), so a block cannot get a new allowance for each /64.
+ */
 export function ipGroup(ip: string): string {
   if (!ip.includes(':')) return ip;
   const mapped = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
@@ -227,13 +374,16 @@ const INFO = {
   // What this relay keeps. Recovery backups are encrypted on the person's device; the
   // relay cannot read them or find one without the recovery code.
   keeps: {
-    envelopes: 'Gift-wrapped messages (kind 1059), deleted 30 days after they arrive.',
+    envelopes:
+      'Gift-wrapped messages (kind 1059), deleted 30 days after they arrive. Each has one mark: whether the recipient had written to its sender that day (not who the sender is).',
     files: 'Encrypted photos and files, deleted after 30 days. Nothing about the uploader.',
     members:
-      'Registered keys: the key, whether it registered with an invite or without one, when, and whether it is stopped. Who invited whom is forgotten after 90 days. Each inviting key has one invite code.',
+      'Registered keys: the key, whether it registered with an invite or without one, when, and whether it is stopped. Who invited whom is forgotten after 90 days; a mark that the key joined with an invite stays. Each inviting key has one invite code.',
     push: 'For notifications: a device push address and the key it belongs to, until turned off. In memory only: when a key that the person has not written to today last rang them, so a stranger cannot keep a phone ringing.',
     backups:
-      'Recovery backups: an id derived from the recovery code, the ciphertext, a signing key also derived from the code (not the account key), when it was first and last uploaded. Kept until the person deletes it.',
+      'Recovery backups: an id derived from the recovery code, the ciphertext, a signing key also derived from the code (not the account key), when it was first and last uploaded. Kept until the person deletes it. A new backup also carries a second signature by the account key, checked when it is made and not kept.',
+    limits:
+      'In memory only, for at most a day: how many bytes of envelopes each key and each invite tree saved today, how many new backups each invite tree made today and how many times each network address (and its /48 and /32 block for IPv6) asked for something, how many envelopes each key and address read, and which keys the person wrote to today.',
     turn: 'Nothing. Short-lived call relay (TURN) credentials are made per request and not kept.',
     ai: "AI keys that registered as an AI: the AI's key, its owner's key (from the owner's signed card) and when, and how many envelopes each AI key and each owner sent per day (kept two days).",
     deleted:
@@ -351,14 +501,24 @@ function matches(f: Filter, ev: NostrEvent) {
 
 export class Relay extends DurableObject<Env> {
   sql: SqlStorage;
-  ipRate = new Buckets(RATE.ip.burst, RATE.ip.perSecond);
+  ipRate = new IpBuckets(RATE.ip.burst, RATE.ip.perSecond);
   keyRate = new Buckets(RATE.key.burst, RATE.key.perSecond);
-  reqIp = new Buckets(REQ_RATE.ip.burst, REQ_RATE.ip.perSecond);
+  reqIp = new IpBuckets(REQ_RATE.ip.burst, REQ_RATE.ip.perSecond);
   reqKey = new Buckets(REQ_RATE.key.burst, REQ_RATE.key.perSecond);
+  // Rows read per key and per address (a budget that can run into debt: see Buckets.charge).
+  rowsKey = new Buckets(REQ_ROWS.key.burst, REQ_ROWS.key.perSecond);
+  rowsIp = new IpBuckets(REQ_ROWS.ip.burst, REQ_ROWS.ip.perSecond);
+  // Bytes of envelopes saved today, per sending key and per invite tree (its top key). Memory only.
+  senderBytesDay = new DayCounter();
+  treeBytesDay = new DayCounter();
+  backupTreeDay = new DayCounter();
+  // Pushes to a recipient from keys they wrote to today: per pair a minute, per recipient an hour.
+  friendPair = new Buckets(FRIEND_PUSH_PER_PAIR.burst, FRIEND_PUSH_PER_PAIR.perSecond);
+  friendHour = new Buckets(FRIEND_PUSH_PER_HOUR.burst, FRIEND_PUSH_PER_HOUR.perSecond);
   // Memory only on purpose: the site promises the relay does not keep who sent to whom.
   pairDay = new DayCounter();
   strangerDay = new DayCounter();
-  backupNewDay = new DayCounter();
+  backupNewDay = new IpDayCounter();
   uploadDay = new DayCounter();
   stats: Stats;
 
@@ -409,6 +569,15 @@ export class Relay extends DurableObject<Env> {
       // Already there.
     }
     this.sql.exec('CREATE INDEX IF NOT EXISTS events_expires ON events (expires_at) WHERE expires_at IS NOT NULL');
+    // 1 when the recipient had not written to the sender that day (the relay cannot know friends; this is its only sign).
+    // One bit: the sender's key is not stored. It decides how many such envelopes may wait for one person.
+    try {
+      this.sql.exec('ALTER TABLE events ADD COLUMN stranger INTEGER DEFAULT 0');
+    } catch {
+      // Already there.
+    }
+    // Counting the waiting envelopes from strangers must not scan the whole mailbox for each new one.
+    this.sql.exec('CREATE INDEX IF NOT EXISTS events_stranger ON events (p) WHERE stranger = 1');
     this.members = new Members(this.sql);
     this.ai = new AiKeys(this.sql);
     this.reports = new Reports(this.sql);
@@ -421,6 +590,8 @@ export class Relay extends DurableObject<Env> {
   async fetch(req: Request): Promise<Response> {
     const ip = ipGroup(req.headers.get('X-Tegami-IP') ?? 'unknown');
     const path = new URL(req.url).pathname;
+    // Tests only (DEV_LOCAL): how many entries a limiter's table holds before it drops some. 0 puts it back.
+    if (this.devLocal && req.headers.has('X-Test-Table-Max')) limiterMax = Number(req.headers.get('X-Test-Table-Max')) || LIMITER_MAX_KEYS;
     if (path === '/upload') return this.upload(req, ip);
     if (path === '/stamp') return this.stampPut(req, ip);
     const stamp = path.match(STAMP_PATH);
@@ -452,10 +623,27 @@ export class Relay extends DurableObject<Env> {
     // Tests only (DEV_LOCAL): a small hourly cap on pushes from strangers, likewise.
     const testPushCap = Number(req.headers.get('X-Test-Push-Cap'));
     if (this.devLocal && testPushCap > 0) att.testPushCap = testPushCap;
+    // Tests only (DEV_LOCAL): lower limits for this connection, as JSON (see TestOpts).
+    const t = this.testOpts(req);
+    if (t) att.t = t;
     server.serializeAttachment(att);
     server.send(JSON.stringify(['AUTH', att.challenge]));
     if ((await this.ctx.storage.getAlarm()) == null) await this.ctx.storage.setAlarm(Date.now() + 60 * 60 * 1000);
     return new Response(null, { status: 101, webSocket: client });
+  }
+
+  /** Tests only (DEV_LOCAL): X-Test-Opts, a JSON object of numbers (TestOpts). Nothing otherwise. */
+  testOpts(req: Request): TestOpts | undefined {
+    if (!this.devLocal) return undefined;
+    try {
+      const o = JSON.parse(req.headers.get('X-Test-Opts') ?? 'null');
+      if (!o || typeof o !== 'object') return undefined;
+      const out: Record<string, number> = {};
+      for (const [k, v] of Object.entries(o)) if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
+      return out as TestOpts;
+    } catch {
+      return undefined;
+    }
   }
 
   members: Members;
@@ -464,8 +652,8 @@ export class Relay extends DurableObject<Env> {
   aiMinute = new Buckets(AI_PER_MINUTE, AI_PER_MINUTE / 60);
   // Registering: per address. Without an invite 10 at once, then one every 10 minutes;
   // with one (or just asking) 60 at once, then one a second.
-  openJoinRate = new Buckets(10, 1 / 600);
-  registerRate = new Buckets(60, 1);
+  openJoinRate = new IpBuckets(10, 1 / 600);
+  registerRate = new IpBuckets(60, 1);
 
   /** The signed URL for a route: the public address, or localhost in tests (wrangler dev rewrites the host). */
   signedFor(path: string) {
@@ -585,7 +773,7 @@ export class Relay extends DurableObject<Env> {
   reports: Reports;
   // Reporting: per address, 60 at once, then one every 10 seconds. The real limit is per
   // reporter (reports.ts); this only stops floods of bad requests.
-  reportRate = new Buckets(60, 0.1);
+  reportRate = new IpBuckets(60, 0.1);
 
   /**
    * POST /report, signed (NIP-98) by the reporter, a registered key that is not stopped.
@@ -618,7 +806,7 @@ export class Relay extends DurableObject<Env> {
 
   // TURN credentials: per key (turn.ts), and per address 60 at once, then one every 5 seconds.
   turnKeyRate = new Buckets(TURN_RATE.burst, TURN_RATE.perSecond);
-  turnIpRate = new Buckets(60, 0.2);
+  turnIpRate = new IpBuckets(60, 0.2);
 
   /**
    * POST /turn, signed (NIP-98) by a registered key that is not stopped. Answers
@@ -644,7 +832,7 @@ export class Relay extends DurableObject<Env> {
   }
 
   // Deleting: per address, 10 at once, then one a minute.
-  deleteRate = new Buckets(10, 1 / 60);
+  deleteRate = new IpBuckets(10, 1 / 60);
 
   /**
    * DELETE /account, signed (NIP-98) by the key itself, body {"delete":"account"}. Removes what
@@ -690,10 +878,10 @@ export class Relay extends DurableObject<Env> {
     return Response.json({ deleted: true, already, envelopes, stamps: shas.length, push, ais }, { headers: CORS });
   }
 
-  ipBytes = new Buckets(FILE_RATE.ip.burst, FILE_RATE.ip.perSecond);
+  ipBytes = new IpBuckets(FILE_RATE.ip.burst, FILE_RATE.ip.perSecond);
   keyBytes = new Buckets(FILE_RATE.key.burst, FILE_RATE.key.perSecond);
 
-  crashRate = new Buckets(20, 0.05); // per address: 20 at once, then one every 20 seconds
+  crashRate = new IpBuckets(20, 0.05); // per address: 20 at once, then one every 20 seconds
 
   /**
    * A crash report from an app whose user allowed it. Only written to Workers Logs
@@ -825,8 +1013,8 @@ export class Relay extends DurableObject<Env> {
   vapid: Vapid | null;
   devPush: boolean;
   devLocal: boolean;
-  backupWriteRate = new Buckets(60, 0.1); // per address: 60 at once, then one every 10 seconds
-  backupReadRate = new Buckets(30, 0.2); // per address: 30 at once, then one every 5 seconds
+  backupWriteRate = new IpBuckets(60, 0.1); // per address: 60 at once, then one every 10 seconds
+  backupReadRate = new IpBuckets(30, 0.2); // per address: 30 at once, then one every 5 seconds
 
   /** GET returns a backup to anyone with its id; PUT and DELETE need the owning key's signature (NIP-98). */
   async backupRoute(req: Request, ip: string, id: string): Promise<Response> {
@@ -859,11 +1047,19 @@ export class Relay extends DurableObject<Env> {
     if (!owner) {
       const held = this.sql.exec('SELECT COUNT(*) AS n FROM backups WHERE pubkey = ?', pubkey).one().n as number;
       if (held >= MAX_BACKUPS_PER_KEY) return fail(429, 'rate-limited: too many backups for this key');
+      // Tests only (DEV_LOCAL): lower caps for this request, so a test need not make thousands of backups.
+      const test = (name: string) => (this.devLocal ? Number(req.headers.get(name)) || 0 : 0);
+      // A new backup needs a registered account: a second NIP-98 signature of the same request, by the account's
+      // key (X-Tegami-Member). The relay checks it and keeps nothing of it; the tree it belongs to is counted today.
+      const account = await nip98Header(req.headers.get('X-Tegami-Member') ?? '', 'PUT', body, signedFor);
+      const member = account ? this.members.get(account) : null;
+      if (!account || !member || member.banned || this.members.deleted(account)) return fail(403, 'restricted: register first (POST /register)');
+      if (!this.backupTreeDay.take(this.members.root(account), test('X-Test-Backups-Per-Tree') || NEW_BACKUPS_PER_TREE_PER_DAY)) {
+        return fail(429, 'rate-limited: too many new backups from this invite today');
+      }
       if (!this.backupNewDay.take(ip, NEW_BACKUPS_PER_IP_PER_DAY)) return fail(429, 'rate-limited: too many new backups from this address today');
       // Relay-wide caps. The day's count comes from created_at, so it survives a restart and stores nothing new.
       const total = this.sql.exec('SELECT COUNT(*) AS n FROM backups').one().n as number;
-      // Tests only (DEV_LOCAL): lower caps for this request, so a test need not make thousands of backups.
-      const test = (name: string) => (this.devLocal ? Number(req.headers.get(name)) || 0 : 0);
       if (total >= (test('X-Test-Backups-Total') || MAX_BACKUPS_TOTAL)) return fail(507, 'full: this relay holds no more new backups');
       const midnight = Math.floor(now() / 86_400) * 86_400;
       const today = this.sql.exec('SELECT COUNT(*) AS n FROM backups WHERE created_at >= ?', midnight).one().n as number;
@@ -882,7 +1078,7 @@ export class Relay extends DurableObject<Env> {
     );
     return new Response(null, { status: 204, headers: CORS });
   }
-  pushRate = new Buckets(30, 0.1); // registering: per address, 30 at once, then one every 10 seconds
+  pushRate = new IpBuckets(30, 0.1); // registering: per address, 30 at once, then one every 10 seconds
   lastPush = new Map<string, number>();
 
   /** POST /push registers this device for a key (NIP-98 signed); DELETE removes it. */
@@ -932,33 +1128,43 @@ export class Relay extends DurableObject<Env> {
 
   /**
    * Whether this envelope may ring the recipient's devices. A sender the recipient wrote to today (the reverse
-   * pair has a count) is a friend as far as the relay can tell: no extra limit. Anyone else rings at most once
+   * pair has a count) is a friend as far as the relay can tell: 10 rings a minute per pair and 300 an hour per
+   * recipient (the recipient can be made to write one line to anyone). Anyone else rings at most once
    * per pair and kind every 10 minutes and `hourCap` times an hour across all such senders, so a stranger with a
    * free key cannot keep a phone ringing.
    */
-  mayRing(sender: string, recipient: string, kind: 'message' | 'call', hourCap: number): boolean {
-    if (this.pairDay.peek(recipient + sender) > 0) return true;
-    const t = Date.now();
+  mayRing(sender: string, recipient: string, kind: 'message' | 'call', hourCap: number, t?: TestOpts): boolean {
+    if (this.pairDay.peek(recipient + sender) > 0) {
+      // A friend as far as the relay can tell: still limited, so one line to the right key cannot be turned into a flood.
+      const pair: Rate = t?.friendPair ? { burst: t.friendPair, perSecond: FRIEND_PUSH_PER_PAIR.perSecond } : FRIEND_PUSH_PER_PAIR;
+      const hour: Rate = t?.friendHour ? { burst: t.friendHour, perSecond: FRIEND_PUSH_PER_HOUR.perSecond } : FRIEND_PUSH_PER_HOUR;
+      const pairKey = `${sender}:${recipient}`;
+      if (!this.friendPair.can(pairKey, 1, pair) || !this.friendHour.can(recipient, 1, hour)) return false;
+      this.friendPair.take(pairKey, 1, pair);
+      this.friendHour.take(recipient, 1, hour);
+      return true;
+    }
+    const t0 = Date.now();
     // Forget what no longer limits anything (older than an hour), so these times never outlive a day.
-    if (t - this.strangerSwept > 10 * 60_000) {
-      this.strangerSwept = t;
-      for (const [k, at] of this.strangerPairPush) if (t - at > 3_600_000) this.strangerPairPush.delete(k);
-      const hour = Math.floor(t / 3_600_000);
-      for (const [k, h] of this.strangerHourPush) if (h.hour !== hour) this.strangerHourPush.delete(k);
+    if (t0 - this.strangerSwept > 10 * 60_000) {
+      this.strangerSwept = t0;
+      for (const [k, at] of this.strangerPairPush) if (t0 - at > 3_600_000) this.strangerPairPush.delete(k);
+      const hr = Math.floor(t0 / 3_600_000);
+      for (const [k, h] of this.strangerHourPush) if (h.hour !== hr) this.strangerHourPush.delete(k);
     }
     const pairKey = `${sender}:${recipient}:${kind}`;
-    if (t - (this.strangerPairPush.get(pairKey) ?? 0) < STRANGER_PUSH_PAIR_SECONDS * 1000) return false;
-    const hour = Math.floor(t / 3_600_000);
+    if (t0 - (this.strangerPairPush.get(pairKey) ?? 0) < STRANGER_PUSH_PAIR_SECONDS * 1000) return false;
+    const hour = Math.floor(t0 / 3_600_000);
     const cur = this.strangerHourPush.get(recipient);
     const h = cur && cur.hour === hour ? cur : { hour, n: 0 };
     if (h.n >= hourCap) return false;
     h.n++;
     this.strangerHourPush.delete(recipient);
     this.strangerHourPush.set(recipient, h);
-    trimOldest(this.strangerHourPush);
+    trimOldest(this.strangerHourPush, (v) => v.hour !== Math.floor(Date.now() / 3_600_000));
     this.strangerPairPush.delete(pairKey);
-    this.strangerPairPush.set(pairKey, t);
-    trimOldest(this.strangerPairPush);
+    this.strangerPairPush.set(pairKey, t0);
+    trimOldest(this.strangerPairPush, (at) => Date.now() - at > STRANGER_PUSH_PAIR_SECONDS * 1000);
     return true;
   }
 
@@ -1098,6 +1304,10 @@ export class Relay extends DurableObject<Env> {
     if (!writer) return reply(false, 'restricted: register first (POST /register)');
     if (writer.banned) return reply(false, 'blocked: this key is stopped');
     const open = writer.via === 'open';
+    // Nearly out of room: only keys that have been here a while may add envelopes, until the 30-day clean-up frees some.
+    if (this.sql.databaseSize > (att.t?.dbSize ?? DB_NEARLY_FULL_BYTES) && writer.created_at > now() - (att.t?.newKeySeconds ?? NEW_KEY_SECONDS)) {
+      return reply(false, 'rate-limited: the relay is nearly full, new keys must wait');
+    }
     if (!this.ipRate.take(att.ip) || !this.keyRate.take(att.pubkey)) {
       return reply(false, 'rate-limited: slow down');
     }
@@ -1136,17 +1346,29 @@ export class Relay extends DurableObject<Env> {
       const fromOpen = this.sql.exec('SELECT COUNT(*) AS n FROM events WHERE p = ? AND open = 1', p).one().n as number;
       if (fromOpen >= MAX_OPEN_MAILBOX) return reply(false, 'rate-limited: the recipient has too many waiting messages');
     }
+    // Written to by no one the recipient wrote to today: such envelopes may take only part of the mailbox, so
+    // keys made in bulk cannot lock out the recipient's friends. Only a bit is kept, never the sender.
+    const stranger = p !== att.pubkey && this.pairDay.peek(p + att.pubkey) === 0;
+    if (stranger) {
+      const waiting = this.sql.exec('SELECT COUNT(*) AS n FROM events WHERE p = ? AND stranger = 1', p).one().n as number;
+      if (waiting >= (att.t?.strangerBox ?? MAX_STRANGER_BOX)) return reply(false, 'rate-limited: the recipient has too many waiting messages from people they have not written to');
+    }
+    const raw = JSON.stringify(ev);
+    // Bytes saved per key, and per invite tree (the top of its tree counts for all the keys below).
+    if (!this.senderBytesDay.take(att.pubkey, att.t?.senderBytes ?? ENVELOPE_BYTES_PER_KEY_PER_DAY, raw.length)) return reply(false, 'rate-limited: too much saved today from this key');
+    if (!this.treeBytesDay.take(this.members.root(att.pubkey), att.t?.treeBytes ?? ENVELOPE_BYTES_PER_TREE_PER_DAY, raw.length)) return reply(false, 'rate-limited: too much saved today from this invite');
     const exp = Number(ev.tags.find((t) => t[0] === 'expiration')?.[1]);
     const res = this.sql.exec(
-      'INSERT OR IGNORE INTO events (id, kind, created_at, received_at, p, raw, open, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT OR IGNORE INTO events (id, kind, created_at, received_at, p, raw, open, expires_at, stranger) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       ev.id,
       ev.kind,
       ev.created_at,
       now(),
       p,
-      JSON.stringify(ev),
+      raw,
       open ? 1 : 0,
       Number.isFinite(exp) ? exp : null,
+      stranger ? 1 : 0,
     );
     reply(true, res.rowsWritten === 0 ? 'duplicate: already have this event' : '');
     if (res.rowsWritten === 0) return;
@@ -1162,7 +1384,7 @@ export class Relay extends DurableObject<Env> {
       // t=quiet: something for the app that is not a message (a friend's new picture).
       const quiet = ev.tags.some((t) => t[0] === 't' && t[1] === 'quiet');
       const kind = !short && !quiet ? 'message' : call ? 'call' : null;
-      if (kind && this.mayRing(att.pubkey, p, kind, att.testPushCap ?? STRANGER_PUSH_PER_HOUR)) this.ctx.waitUntil(this.notify(p, kind));
+      if (kind && this.mayRing(att.pubkey, p, kind, att.testPushCap ?? STRANGER_PUSH_PER_HOUR, att.t)) this.ctx.waitUntil(this.notify(p, kind));
     }
 
     for (const other of this.ctx.getWebSockets()) {
@@ -1180,33 +1402,72 @@ export class Relay extends DurableObject<Env> {
     if (Object.keys(att.subs).length >= MAX_SUBS && !att.subs[subId]) return closed('error: too many subscriptions');
     if (!Array.isArray(filters) || filters.length > MAX_FILTERS_PER_REQ) return closed('error: too many filters');
     if (!this.reqIp.take(att.ip) || !this.reqKey.take(att.pubkey)) return closed('rate-limited: slow down');
+    // Rows already read: a key and an address each have a budget (it may run into debt, so one whole answer is
+    // always allowed while some is left; the next asks wait until it fills up again).
+    const keyRows: Rate = att.t?.budget ? { burst: att.t.budget, perSecond: REQ_ROWS.key.perSecond } : REQ_ROWS.key;
+    if (!this.rowsKey.hasSome(att.pubkey, keyRows) || !this.rowsIp.hasSome(att.ip, REQ_ROWS.ip)) {
+      return closed('rate-limited: too many messages read, wait a little');
+    }
     for (const f of filters) {
+      if (!f || typeof f !== 'object' || (f.kinds !== undefined && !Array.isArray(f.kinds))) return closed('error: invalid filter');
       const onlyMine = f['#p']?.length === 1 && f['#p'][0] === att.pubkey;
       const onlyWraps = !f.kinds || f.kinds.every((k) => ALLOWED_KINDS.has(k));
       if (!onlyMine || !onlyWraps) return closed('restricted: you can only read messages addressed to you');
     }
+    // The subscription stays so that new envelopes reach it. A connection keeps its subscriptions in an
+    // attachment of at most 16 KB, so one that does not fit is refused (it used to throw).
+    const before = att.subs[subId];
     att.subs[subId] = filters;
-    ws.serializeAttachment(att);
+    try {
+      ws.serializeAttachment(att);
+    } catch {
+      if (before) att.subs[subId] = before;
+      else delete att.subs[subId];
+      return closed('error: too many subscriptions');
+    }
 
+    const rowsCap = att.t?.rows ?? MAX_REQ_ROWS;
+    const bytesCap = att.t?.bytes ?? MAX_REQ_BYTES;
+    const t = now();
     const seen = new Set<string>();
+    let rows = 0;
+    let bytes = 0;
     for (const f of filters) {
-      const limit = Math.min(f.limit ?? 500, 500);
-      const rows = this.sql
+      if (rows >= rowsCap || bytes >= bytesCap) break;
+      // Every read has a LIMIT: a filter with no limit (or a negative one) gets 500, and the answer as a whole is cut at rowsCap.
+      const asked = Number.isFinite(Number(f.limit)) ? Math.floor(Number(f.limit)) : 500;
+      const limit = Math.max(0, Math.min(asked, 500, rowsCap - rows));
+      if (!limit || (f.kinds && !f.kinds.includes(1059))) continue;
+      const wanted = Array.isArray(f.ids) ? new Set(f.ids.filter((x) => typeof x === 'string')) : null;
+      // First only the size of each row (length reads no more than the row's header), then the envelopes that
+      // fit one by one: a mailbox of large envelopes is never read into memory whole.
+      const found = this.sql
         .exec(
-          'SELECT raw, open FROM events WHERE p = ? AND created_at >= ? AND created_at <= ? ORDER BY created_at DESC LIMIT ?',
+          'SELECT rowid AS r, id, length(raw) AS n, open FROM events WHERE p = ? AND created_at >= ? AND created_at <= ? AND (expires_at IS NULL OR expires_at > ?) ORDER BY created_at DESC LIMIT ?',
           att.pubkey,
-          f.since ?? 0,
-          f.until ?? 2 ** 40,
+          Number(f.since) || 0,
+          Number.isFinite(Number(f.until)) && f.until !== undefined ? Number(f.until) : 2 ** 40,
+          t,
           limit,
         )
         .toArray();
-      for (const row of rows) {
-        const ev = JSON.parse(row.raw as string) as NostrEvent;
-        if (seen.has(ev.id) || !matches(f, ev)) continue;
-        seen.add(ev.id);
-        ws.send(JSON.stringify(['EVENT', subId, row.open ? { ...ev, tegami_open: 1 } : ev]));
+      for (const row of found) {
+        const id = row.id as string;
+        if (seen.has(id) || (wanted && !wanted.has(id))) continue;
+        const n = row.n as number;
+        if (rows >= rowsCap || (rows > 0 && bytes + n > bytesCap)) break;
+        const raw = this.sql.exec('SELECT raw FROM events WHERE rowid = ?', row.r as number).toArray()[0]?.raw as string | undefined;
+        if (!raw) continue;
+        seen.add(id);
+        rows++;
+        bytes += n;
+        // raw is the envelope's JSON as it was saved; a mark is added without parsing it.
+        ws.send(`["EVENT",${JSON.stringify(subId)},${row.open ? `${raw.slice(0, -1)},"tegami_open":1}` : raw}]`);
       }
     }
+    // Pay for what was read. Cut short or not, the answer ends with EOSE; the app asks again for older ones.
+    this.rowsKey.charge(att.pubkey, Math.max(1, rows), keyRows);
+    this.rowsIp.charge(att.ip, Math.max(1, rows), REQ_ROWS.ip);
     ws.send(JSON.stringify(['EOSE', subId]));
   }
 }

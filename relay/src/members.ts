@@ -19,9 +19,12 @@
 // cannot come back by deleting itself) and envelopes for it are not kept.
 
 export type Via = 'invite' | 'open' | 'legacy';
-export type Member = { pubkey: string; via: Via; invited_by: string | null; created_at: number; banned: number; no_invites: number };
+export type Member = { pubkey: string; via: Via; invited_by: string | null; created_at: number; banned: number; no_invites: number; child: number };
 
 export const INVITES_PER_DAY = 20;
+// A key that joined with an invite (not one the operator trusted, and not one that was here before registration)
+// may invite only this many a day. Without it a tree grows 1, 20, 400, and one person's key count has no limit.
+export const INVITED_KEYS_PER_DAY = 3;
 export const INVITE_MEMORY_SECONDS = 90 * 24 * 60 * 60;
 // How many levels down the invite tree an operator action follows (invitees, their invitees, ...). A chain
 // of invited keys can be made by hand, so stopping only the first level lets a stopped key's helpers go on.
@@ -48,10 +51,26 @@ export class Members {
     sql.exec(`CREATE TABLE IF NOT EXISTS invites (
       code TEXT PRIMARY KEY, issuer TEXT UNIQUE, per_day INTEGER, created_at INTEGER)`);
     sql.exec('CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)');
+    // child: 1 for a key that joined with someone's invite. It stays after "who invited whom" is forgotten (90 days),
+    // so the key keeps the smaller invite limit; it says nothing about who the inviter was.
+    try {
+      sql.exec('ALTER TABLE members ADD COLUMN child INTEGER DEFAULT 0');
+    } catch {
+      // Already there.
+    }
     sql.exec('CREATE TABLE IF NOT EXISTS deleted_keys (pubkey TEXT PRIMARY KEY, deleted_at INTEGER)');
     // Registration started on 2026-11-13. Keys already in use then keep working: everyone
     // with an envelope waiting (senders keep a copy for their other devices, so senders too)
     // and everyone who turned on notifications.
+    if (!sql.exec("SELECT v FROM meta WHERE k = 'children_marked'").toArray()[0]) {
+      sql.exec("UPDATE members SET child = 1 WHERE via = 'invite' AND invited_by IS NOT NULL");
+      sql.exec(
+        'UPDATE invites SET per_day = ? WHERE per_day = ? AND issuer IN (SELECT pubkey FROM members WHERE child = 1)',
+        INVITED_KEYS_PER_DAY,
+        INVITES_PER_DAY,
+      );
+      sql.exec("INSERT INTO meta (k, v) VALUES ('children_marked', ?)", String(now()));
+    }
     const seeded = sql.exec("SELECT v FROM meta WHERE k = 'members_seeded'").toArray()[0];
     if (!seeded) {
       const t = now();
@@ -91,7 +110,7 @@ export class Members {
     const row = this.sql.exec('SELECT code FROM invites WHERE issuer = ?', m!.pubkey).toArray()[0];
     if (row) return row.code as string;
     const code = newCode();
-    this.sql.exec('INSERT INTO invites (code, issuer, per_day, created_at) VALUES (?, ?, ?, ?)', code, m!.pubkey, INVITES_PER_DAY, now());
+    this.sql.exec('INSERT INTO invites (code, issuer, per_day, created_at) VALUES (?, ?, ?, ?)', code, m!.pubkey, m!.child ? INVITED_KEYS_PER_DAY : INVITES_PER_DAY, now());
     return code;
   }
 
@@ -115,7 +134,7 @@ export class Members {
     const m = this.get(pubkey);
     if (m && (m.via !== 'open' || m.banned)) return;
     this.sql.exec(
-      "INSERT OR REPLACE INTO members (pubkey, via, invited_by, created_at, banned, no_invites) VALUES (?, 'invite', ?, ?, 0, 0)",
+      "INSERT OR REPLACE INTO members (pubkey, via, invited_by, created_at, banned, no_invites, child) VALUES (?, 'invite', ?, ?, 0, 0, 1)",
       pubkey,
       inviter,
       now(),
@@ -135,6 +154,21 @@ export class Members {
   /** Forgets who invited whom after 90 days. */
   forgetOldInvites() {
     this.sql.exec('UPDATE members SET invited_by = NULL WHERE invited_by IS NOT NULL AND created_at < ?', now() - INVITE_MEMORY_SECONDS);
+  }
+
+  /**
+   * The top of this key's invite tree: follow "invited by" up (at most MAX_INVITE_DEPTH + 1 steps). A key nobody
+   * invited, or whose inviter is forgotten (after 90 days), is its own top. Used to count what a whole tree
+   * does in a day; nothing is stored.
+   */
+  root(pubkey: string): string {
+    let k = pubkey;
+    for (let i = 0; i <= MAX_INVITE_DEPTH; i++) {
+      const up = this.sql.exec('SELECT invited_by FROM members WHERE pubkey = ?', k).toArray()[0]?.invited_by as string | null | undefined;
+      if (!up || up === k) return k;
+      k = up;
+    }
+    return k;
   }
 
   /**
