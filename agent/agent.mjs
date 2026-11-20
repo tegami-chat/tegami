@@ -57,10 +57,9 @@ import { fileURLToPath } from 'node:url';
 import { autostartCommands, autostartFile, carriedEnv, keepArgs, launchdPlist, systemdUnit } from './autostart.mjs';
 import { BACKENDS, backendLabel, loadBackend, loadKeys, makeResponder, ownEnv, saveBackend, saveKey } from './backends.mjs';
 import { Agent, DRAFT_TTL, PAIR_TTL, loadSettings, needsInit, parseAsk, parseInvite, saveSettings, shortId } from './lib.mjs';
-import { findHold } from './screen.mjs';
 import { qrHtml, qrTerminal } from './qr.mjs';
 import { CHECK_SYSTEM, heldNotice, modelCheck } from './check.mjs';
-import { cleanForAi } from './screen.mjs';
+import { cleanForAi, findHold } from './screen.mjs';
 
 export { ownEnv };
 
