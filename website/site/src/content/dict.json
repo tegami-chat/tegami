@@ -1128,8 +1128,8 @@
   "ja": "写真、動画、ファイル、音声メッセージ、スタンプの中身"
  },
  "pv.cant.3": {
-  "en": "Who sent a message (it cannot be told from what the relay keeps; the relay knows which key is logged in at the moment it accepts a message, but does not store it. To count messages per day, the relay holds the sender and recipient pair in memory for up to a day, but never saves it to disk)",
-  "ja": "メッセージの送信者（保存した記録からは分かりません。リレーはメッセージを受け付ける瞬間にログインしている鍵を知りますが、保存しません。1日の送信数を数えるため、送信者と宛先の組をメモリに最長1日置きますが、ディスクには保存しません）"
+  "en": "Who sent a message (it cannot be told from what the relay keeps; the relay knows which key is logged in at the moment it accepts a message, but does not store it. To count messages per day and to limit notifications from people you have not replied to, the relay holds the sender and recipient pair in memory for up to a day, but never saves it to disk)",
+  "ja": "メッセージの送信者（保存した記録からは分かりません。リレーはメッセージを受け付ける瞬間にログインしている鍵を知りますが、保存しません。1日の送信数を数えるためと、返事をしたことのない相手からの通知を減らすため、送信者と宛先の組をメモリに最長1日置きますが、ディスクには保存しません）"
  },
  "pv.cant.4": {
   "en": "Your list of friends",
@@ -1320,8 +1320,8 @@
   "ja": "復旧用バックアップ"
  },
  "pv.k.7.1": {
-  "en": "A backup of your account encrypted with your recovery code, the backup's ID, a signing public key made from the recovery code (not your account's public key), and when it was last updated. The relay cannot tell which account it belongs to",
-  "ja": "復旧コードで暗号化したアカウントのバックアップ、バックアップの識別子、復旧コードから作った署名用の公開鍵（アカウントの公開鍵とは別のもの）、更新日時。どのアカウントのものかは、リレーでは識別できません"
+  "en": "A backup of your account encrypted with your recovery code, the backup's ID, a signing public key made from the recovery code (not your account's public key), and when it was created and last updated. The relay cannot tell which account it belongs to",
+  "ja": "復旧コードで暗号化したアカウントのバックアップ、バックアップの識別子、復旧コードから作った署名用の公開鍵（アカウントの公開鍵とは別のもの）、作成日時と更新日時。どのアカウントのものかは、リレーでは識別できません"
  },
  "pv.k.7.2": {
   "en": "To restore your account if you lose your device",
