@@ -314,6 +314,26 @@ const eventsOf = (c, id) => c.inbox.filter((m) => m[0] === 'EVENT' && m[1] === i
   check('a root key (trusted by the operator) still invites more than 3 a day', more.every((v) => v === 'invite'));
 }
 
+// ---------- 2b. invites: one invite tree may grow by only so many keys a day ----------
+{
+  const root = generateSecretKey();
+  await trust(root);
+  const cap = { 'X-Test-Joins-Per-Tree': '3' };
+  const rootCode = (await register(root)).json?.code;
+  const kid = generateSecretKey();
+  const first = await register(kid, { invite: rootCode }, cap);
+  const kidCode = (await register(kid)).json?.code;
+  const second = await register(generateSecretKey(), { invite: kidCode }, cap);
+  const third = await register(generateSecretKey(), { invite: rootCode }, cap);
+  check('a tree takes new keys up to its daily cap, from the root and from below it', [first, second, third].every((r) => r.json?.via === 'invite'));
+  const fourth = await register(generateSecretKey(), { invite: kidCode }, cap);
+  check('...and then refuses the next one (invite-used-up), also through a key below the root', fourth.json?.error === 'invite-used-up');
+  const other = generateSecretKey();
+  await trust(other);
+  const otherCode = (await register(other)).json?.code;
+  check('another tree is not affected', (await register(generateSecretKey(), { invite: otherCode }, cap)).json?.via === 'invite');
+}
+
 // ---------- 2b. mailbox: envelopes from people the recipient has not written to take only part of it ----------
 {
   const r = generateSecretKey();

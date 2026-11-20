@@ -156,6 +156,8 @@ const NEW_BACKUPS_PER_DAY = 5000;
 // asks for a second signature by the account's own key (X-Tegami-Member), checks that it is registered, counts
 // it for the tree, and keeps nothing: the backup row has no account key, only the one from the code.
 const NEW_BACKUPS_PER_TREE_PER_DAY = 50;
+// New keys that may join one invite tree (counted at its root) per UTC day, in memory only.
+const NEW_KEYS_PER_TREE_PER_DAY = 200;
 const MAX_BACKUPS_TOTAL = 100_000;
 // Notifications from a key the recipient has not written to (the relay cannot read envelopes, so it cannot
 // know who is a friend; "the recipient wrote to this key today" is the only sign it has). Such a sender rings
@@ -383,7 +385,7 @@ const INFO = {
     backups:
       'Recovery backups: an id derived from the recovery code, the ciphertext, a signing key also derived from the code (not the account key), when it was first and last uploaded. Kept until the person deletes it. A new backup also carries a second signature by the account key, checked when it is made and not kept.',
     limits:
-      'In memory only, for at most a day: how many bytes of envelopes each key and each invite tree saved today, how many new backups each invite tree made today and how many times each network address (and its /48 and /32 block for IPv6) asked for something, how many envelopes each key and address read, and which keys the person wrote to today.',
+      'In memory only, for at most a day: how many bytes of envelopes each key and each invite tree saved today, how many new backups each invite tree made and how many new keys joined it today, how many times each network address (and its /48 and /32 block for IPv6) asked for something, how many envelopes each key and address read, and which keys the person wrote to today.',
     turn: 'Nothing. Short-lived call relay (TURN) credentials are made per request and not kept.',
     ai: "AI keys that registered as an AI: the AI's key, its owner's key (from the owner's signed card) and when, and how many envelopes each AI key and each owner sent per day (kept two days).",
     deleted:
@@ -512,6 +514,7 @@ export class Relay extends DurableObject<Env> {
   senderBytesDay = new DayCounter();
   treeBytesDay = new DayCounter();
   backupTreeDay = new DayCounter();
+  joinTreeDay = new DayCounter();
   // Pushes to a recipient from keys they wrote to today: per pair a minute, per recipient an hour.
   friendPair = new Buckets(FRIEND_PUSH_PER_PAIR.burst, FRIEND_PUSH_PER_PAIR.perSecond);
   friendHour = new Buckets(FRIEND_PUSH_PER_HOUR.burst, FRIEND_PUSH_PER_HOUR.perSecond);
@@ -686,10 +689,13 @@ export class Relay extends DurableObject<Env> {
     let m = this.members.get(pubkey);
     if (m?.banned) return fail(403, 'blocked');
     let inviteError = '';
+    const test = (name: string) => (this.devLocal ? Number(req.headers.get(name)) || 0 : 0);
     if (typeof ask.invite === 'string' && ask.invite && (!m || m.via === 'open')) {
       const inviter = /^[a-z2-9]{6,32}$/.test(ask.invite) ? this.members.inviter(ask.invite) : null;
       if (inviter === 'used-up') inviteError = 'invite-used-up';
       else if (!inviter || inviter === pubkey) inviteError = 'invite-invalid';
+      // Each invited key may invite 3 a day, so one tree could still double every day; this caps the tree.
+      else if (!this.joinTreeDay.take(this.members.root(inviter), test('X-Test-Joins-Per-Tree') || NEW_KEYS_PER_TREE_PER_DAY)) inviteError = 'invite-used-up';
       else {
         this.members.joinWithInvite(pubkey, inviter);
         m = this.members.get(pubkey);

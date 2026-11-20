@@ -11,7 +11,7 @@ export const ADMIN = createHash('sha256').update('tegami test admin').digest();
 const sha256hex = (text) => createHash('sha256').update(text).digest('hex');
 
 /** POST `path` with `body`, signed by `sk`. Returns { status, json }. */
-export async function signedPost(path, sk, body, { url } = {}) {
+export async function signedPost(path, sk, body, { url, headers = {} } = {}) {
   const text = JSON.stringify(body);
   const ev = finalizeEvent(
     { kind: 27235, created_at: Math.floor(Date.now() / 1000), content: '', tags: [['u', url ?? `${HTTP}${path}`], ['method', 'POST'], ['payload', sha256hex(text)]] },
@@ -19,7 +19,7 @@ export async function signedPost(path, sk, body, { url } = {}) {
   );
   const res = await fetch(`${HTTP}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: 'Nostr ' + Buffer.from(JSON.stringify(ev)).toString('base64') },
+    headers: { ...headers, 'Content-Type': 'application/json', Authorization: 'Nostr ' + Buffer.from(JSON.stringify(ev)).toString('base64') },
     body: text,
   });
   let json = null;
@@ -29,7 +29,7 @@ export async function signedPost(path, sk, body, { url } = {}) {
   return { status: res.status, json };
 }
 
-export const register = (sk, body = {}) => signedPost('/register', sk, body);
+export const register = (sk, body = {}, headers = {}) => signedPost('/register', sk, body, { headers });
 export const admin = (action, pubkey, extra = {}) => signedPost('/admin', ADMIN, { action, pubkey, ...extra });
 
 /** Makes `sk` a key that may write and reach strangers (as if invited). */
