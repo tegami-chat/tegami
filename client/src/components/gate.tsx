@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AccountList, accountName, goToAccount } from '@/components/account-list';
+import { GateInfo } from '@/components/gate-info';
 import { ThemeSwitch } from '@/components/theme-switch';
 import { Palette, usePalette } from '@/constants/theme';
 import { useWide } from '@/lib/layout';
@@ -96,6 +97,9 @@ export function Gate({ locked }: { locked: boolean }) {
     }
   }
 
+  // The first screen of someone new: the information sections go below the buttons.
+  const showInfo = !locked && !moved && !twin;
+
   if (moving && moving.state !== 'ready') {
     return (
       <Frame>
@@ -119,7 +123,7 @@ export function Gate({ locked }: { locked: boolean }) {
   }
 
   return (
-    <Frame>
+    <Frame long={showInfo}>
       <Icon />
       {moved ? (
         <Text style={s.promise}>{moved.myName ? `${moved.myName}さんのアカウントを受け取りました` : 'アカウントを受け取りました'}</Text>
@@ -230,6 +234,7 @@ export function Gate({ locked }: { locked: boolean }) {
         </Pressable>
       )}
       {!locked && !twin && passkeysAvailable() && <PasskeyStores />}
+      {showInfo && <GateInfo />}
       {failed && <Text style={s.notice}>パスキーを使えませんでした。もう一度押してください</Text>}
       {missed && (
         <Text style={s.notice}>
@@ -242,7 +247,7 @@ export function Gate({ locked }: { locked: boolean }) {
 }
 
 /** The page around every gate screen: Tegami and the light and dark switch on top, as on tegami.chat. */
-function Frame({ children }: { children: ReactNode }) {
+function Frame({ children, long }: { children: ReactNode; long?: boolean }) {
   const c = usePalette();
   const s = styles(c);
   return (
@@ -254,7 +259,7 @@ function Frame({ children }: { children: ReactNode }) {
         </View>
         <ThemeSwitch />
       </View>
-      <ScrollView contentContainerStyle={s.start}>{children}</ScrollView>
+      <ScrollView contentContainerStyle={[s.start, long && s.startLong]}>{children}</ScrollView>
     </View>
   );
 }
@@ -324,6 +329,8 @@ const styles = (c: Palette) =>
     logoIcon: { width: 28, height: 28, borderRadius: 7 },
     logoText: { fontSize: 17, fontWeight: '700', color: c.text },
     start: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 40 },
+    // A long page starts at the top; centering would cut off its top when it overflows.
+    startLong: { justifyContent: 'flex-start' },
     icon: { width: 96, height: 96, borderRadius: 22, marginBottom: 20, borderWidth: StyleSheet.hairlineWidth, borderColor: c.line },
     hero: { alignItems: 'center', marginBottom: 28 },
     beta: { fontSize: 12, color: c.accent, backgroundColor: c.selected, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2, overflow: 'hidden' },
