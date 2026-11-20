@@ -12,7 +12,10 @@ export async function resolve(spec, ctx, next) {
   if (spec.startsWith('.') && !/\\.[a-z]+$/.test(spec)) {
     try { return await next(spec + '.ts', ctx); } catch {}
   }
-  return next(spec, ctx);
+  // A second copy of the app's modules (a second browser tab): everything it imports is a copy too.
+  const r = await next(spec, ctx);
+  if (ctx.parentURL && ctx.parentURL.includes('?tabB') && r.url.startsWith('file:') && !r.url.includes('node_modules')) return { ...r, url: r.url.split('?')[0] + '?tabB' };
+  return r;
 }`),
 );
 
@@ -118,14 +121,33 @@ test('the log keeps which messages were handed over, only when allowed', () => {
   assert.equal(log.at(-1).range, undefined);
 });
 
-test('a switch turned off in another tab stops the gate at once', () => {
+test('a switch turned off in another tab stops the gate at once', async () => {
   assert.equal(gateAi({ ai: AI, model: MODEL, action: 'read', friend: TEST_B }, isFriend), true);
-  // Another tab of this browser writes the stored switches; this tab's cache is not told.
-  const stored = JSON.parse(A.sealedRaw('tegami.ai.permissions'));
-  stored.friends[TEST_B].read = false;
-  A.saveSealed('tegami.ai.permissions', JSON.stringify(stored));
-  assert.equal(gateAi({ ai: AI, model: MODEL, action: 'read', friend: TEST_B }, isFriend), false);
+  // Tab B: its own copy of the modules and its own memory, opened from what tab A has written.
+  await A.flushAtRest();
+  const AB = await import('../src/lib/at-rest.ts?tabB');
+  assert.notEqual(AB, A, 'a second copy');
+  await AB.openAtRest('main', new Uint8Array(32).fill(1));
+  const PB = await import('../src/lib/ai-permissions.ts?tabB');
+  const gateB = () => PB.gateAi({ ai: AI, model: MODEL, action: 'read', friend: TEST_B }, isFriend);
+  assert.equal(gateB(), true, 'tab B starts with the same switches');
+  let told = 0;
+  const off = AB.onSealedChange(() => told++);
+  // Tab A turns the switch off; tab B is not touched directly.
+  setAiSwitch({ layer: 'friend', id: TEST_B }, 'read', false);
+  await new Promise((r) => setTimeout(r, 50));
+  assert.equal(gateB(), false, 'tab B stops at once');
+  assert.equal(PB.getAiPermissions().friends[TEST_B].read, false);
+  assert.ok(told >= 1, 'tab B was told, so its screens draw again');
+  // Tab B must not write the received value back: only tab A's write reaches the records.
+  await AB.flushAtRest();
+  await A.flushAtRest();
   setAiSwitch({ layer: 'friend', id: TEST_B }, 'read', true);
+  await new Promise((r) => setTimeout(r, 50));
+  assert.equal(gateB(), true, 'and the switch coming back on reaches tab B too');
+  off();
+  AB.closeAtRest(true);
+  await A.flushAtRest();
 });
 
 // ---------- reply drafts (src/lib/ai-draft.ts) ----------

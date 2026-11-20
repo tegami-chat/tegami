@@ -204,6 +204,7 @@ export function saveSealed(key: string, json: string | undefined) {
   }
   cur.cache.set(key, json === undefined ? null : json);
   touch(cur, key);
+  announce(key, json === undefined ? null : json);
 }
 
 /** Removes a name. Works without the key (removing an account that is not open). */
@@ -216,9 +217,63 @@ export function removeSealed(key: string) {
   if (cur && mine(key)) {
     cur.cache.set(key, null);
     touch(cur, key);
+    announce(key, null);
     return;
   }
   void writeRecords([[key, null]]).catch(() => {});
+}
+
+// ---------- other tabs of the same browser ----------
+// Sealed names live only in each tab's memory, so a switch turned off in one tab would not
+// reach another open tab until it reloads. The names below (settings that gate what an AI or a
+// call may do) are therefore passed to the other tabs over a BroadcastChannel (same origin,
+// in memory only, never stored). A receiving tab updates its memory and does not write it back:
+// the tab that changed it writes the encrypted copy. Where there is no BroadcastChannel (the
+// phone apps) nothing happens.
+
+const SHARED_NAMES = new Set(['ai.permissions', 'callNetwork']);
+type Shared = { account: string; key: string; raw: string | null };
+const changeListeners = new Set<() => void>();
+/** Calls `l` when another tab changed a shared name (so a hook can read it again). Returns the way to stop. */
+export function onSealedChange(l: () => void) {
+  changeListeners.add(l);
+  return () => {
+    changeListeners.delete(l);
+  };
+}
+
+const channel: BroadcastChannel | null = (() => {
+  try {
+    if (typeof BroadcastChannel !== 'function') return null;
+    const c = new BroadcastChannel('tegami-at-rest');
+    (c as unknown as { unref?: () => void }).unref?.();
+    c.onmessage = (e: MessageEvent) => {
+      const m = e.data as Shared | null;
+      if (!m || typeof m.key !== 'string' || typeof m.account !== 'string' || !(typeof m.raw === 'string' || m.raw === null)) return;
+      if (!cur || cur.account !== m.account || !mine(m.key) || !isShared(m.key)) return;
+      cur.cache.set(m.key, m.raw);
+      // The other tab writes it; writing it here too would only fight over the same record.
+      cur.dirty.delete(m.key);
+      for (const l of [...changeListeners]) l();
+    };
+    return c;
+  } catch {
+    return null;
+  }
+})();
+
+function isShared(key: string) {
+  const m = KEY_NAME.exec(key);
+  return !!m && SHARED_NAMES.has(m[1]);
+}
+
+function announce(key: string, raw: string | null) {
+  if (!channel || !cur || !isShared(key)) return;
+  try {
+    channel.postMessage({ account: cur.account, key, raw } satisfies Shared);
+  } catch {
+    // The channel is closed: the other tabs read it when they next open.
+  }
 }
 
 function touch(s: Session, key: string) {

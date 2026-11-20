@@ -16,6 +16,7 @@
 
 import { useSyncExternalStore } from 'react';
 
+import { onSealedChange } from './at-rest';
 import { k, load, rawOf, save } from './storage';
 
 export type OwnTurn = { url: string; username: string; credential: string };
@@ -56,6 +57,11 @@ function put(value: CallNetwork) {
 
 function subscribe(l: () => void) {
   listeners.add(l);
+  // Another tab of the same browser changed it (sealed names do not raise the storage event).
+  const offSealed = onSealedChange(() => {
+    cache = null;
+    l();
+  });
   // Another tab of the same account changed it.
   const onStorage = (e: StorageEvent) => {
     if (e.key === KEY()) {
@@ -66,6 +72,7 @@ function subscribe(l: () => void) {
   globalThis.addEventListener?.('storage', onStorage as EventListener);
   return () => {
     listeners.delete(l);
+    offSealed();
     globalThis.removeEventListener?.('storage', onStorage as EventListener);
   };
 }

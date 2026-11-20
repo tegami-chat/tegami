@@ -28,6 +28,7 @@
 import { useSyncExternalStore } from 'react';
 
 import { findMoney, findSecret } from './ai-screen';
+import { onSealedChange } from './at-rest';
 import { k, load, rawOf, save } from './storage';
 
 /** Actions, from the least to the most power. */
@@ -306,7 +307,12 @@ function put(next: AiPermissions) {
 
 function subscribe(l: () => void) {
   listeners.add(l);
-  return () => listeners.delete(l);
+  // Another tab of the same browser changed the switches: read again and draw again.
+  const offSealed = onSealedChange(l);
+  return () => {
+    listeners.delete(l);
+    offSealed();
+  };
 }
 
 export function useAiPermissions(): AiPermissions {
