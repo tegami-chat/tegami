@@ -928,6 +928,7 @@ export class Relay extends DurableObject<Env> {
   /** Last push per sender, recipient and kind, and pushes per recipient this hour, from senders the recipient has not written to (memory only). */
   strangerPairPush = new Map<string, number>();
   strangerHourPush = new Map<string, { hour: number; n: number }>();
+  strangerSwept = 0;
 
   /**
    * Whether this envelope may ring the recipient's devices. A sender the recipient wrote to today (the reverse
@@ -938,6 +939,13 @@ export class Relay extends DurableObject<Env> {
   mayRing(sender: string, recipient: string, kind: 'message' | 'call', hourCap: number): boolean {
     if (this.pairDay.peek(recipient + sender) > 0) return true;
     const t = Date.now();
+    // Forget what no longer limits anything (older than an hour), so these times never outlive a day.
+    if (t - this.strangerSwept > 10 * 60_000) {
+      this.strangerSwept = t;
+      for (const [k, at] of this.strangerPairPush) if (t - at > 3_600_000) this.strangerPairPush.delete(k);
+      const hour = Math.floor(t / 3_600_000);
+      for (const [k, h] of this.strangerHourPush) if (h.hour !== hour) this.strangerHourPush.delete(k);
+    }
     const pairKey = `${sender}:${recipient}:${kind}`;
     if (t - (this.strangerPairPush.get(pairKey) ?? 0) < STRANGER_PUSH_PAIR_SECONDS * 1000) return false;
     const hour = Math.floor(t / 3_600_000);
