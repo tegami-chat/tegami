@@ -88,6 +88,7 @@ import {
 import { bundleSecret, cleanStamps, sendTransfer, type Bundle } from './transfer';
 import { disablePush, enablePush, refreshPush, replaceSubscription, type PushState } from './push';
 import { SIGNAL_KIND, freshSignal, wrapQuiet, wrapSignal } from './signal';
+import { type Page, catchUp } from './catch-up';
 import { BackupGoneError, type BackupRef, RecoveryError, clearLocal, deleteBackup, deriveKeys, loadLocal, makeCode, putBackup, recoveryOnHere, saveLocal, takeRestoredKeys } from './recovery';
 import { createVault, unlockVault, type Vault } from './vault';
 import { TURNSTILE_SITEKEY, askRelay, forgetInviteCode, keptInviteCode, type Registration } from './register';
@@ -1111,11 +1112,43 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       // After the first time, only what is new: envelopes carry a random time up to 2 days back.
       const filter = first ? { kinds: [1059], '#p': [me] } : { kinds: [1059], '#p': [me], since: Math.floor(Date.now() / 1000) - 3 * 86400 };
       first = false;
+      // The relay answers at most 1,000 envelopes at a time, newest first. Note the ones that came, then ask
+      // again for older ones (lib/catch-up.ts) until nothing new arrives, so a full mailbox is read whole.
+      const seen = new Set<string>();
+      let oldest = Infinity;
       const s = p.subscribe(RELAYS, filter, {
         onauth,
-        onevent,
-        // Connected (again): send what is waiting.
-        oneose: () => void flushRef.current(),
+        onevent: (ev) => {
+          seen.add(ev.id);
+          if (ev.created_at < oldest) oldest = ev.created_at;
+          onevent(ev);
+        },
+        // Connected (again): send what is waiting, and read the older envelopes.
+        oneose: () => {
+          void flushRef.current();
+          if (!seen.size) return;
+          void catchUp({
+            seen,
+            oldest,
+            stopped: () => disposed || sub !== s,
+            page: (until) =>
+              new Promise<Page>((resolve) => {
+                const events: Page['events'] = [];
+                const q = p.subscribe(RELAYS, { ...filter, until }, {
+                  onauth,
+                  onevent: (ev) => {
+                    events.push({ id: ev.id, created_at: ev.created_at });
+                    onevent(ev);
+                  },
+                  oneose: () => {
+                    resolve({ events, closed: null });
+                    q.close();
+                  },
+                  onclose: (reasons) => resolve({ events, closed: reasons.map((r) => r.reason).join(' ') || 'closed' }),
+                });
+              }),
+          });
+        },
         onclose: () => {
           if (disposed || sub !== s) return;
           retry = setTimeout(open, 2000);
@@ -2820,7 +2853,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     const bundle = currentBundle(secret);
     await enqueue(async () => {
       const old = await loadLocal(secret);
-      await putBackup(keys, bundle);
+      await putBackup(keys, bundle, false, secret);
       lastUploaded.current = JSON.stringify(bundle);
       const stale = [...(old?.stale ?? []), ...(old ? [old.keys] : [])].map(({ id, signer }) => ({ id, signer }));
       await saveLocal(secret, { keys, stale });

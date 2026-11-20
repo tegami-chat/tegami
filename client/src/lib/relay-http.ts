@@ -13,12 +13,18 @@ export async function sha256hex(text: string) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** Sends `body` to `path` on the relay with a NIP-98 Authorization header signed by `secret`. */
-export async function signedFetch(method: 'POST' | 'PUT' | 'DELETE', path: string, body: string, secret: Uint8Array, headers: Record<string, string> = {}) {
+/** A NIP-98 Authorization value for this request, signed by `secret`. */
+export async function signedAuth(method: 'POST' | 'PUT' | 'DELETE', path: string, body: string, secret: Uint8Array) {
   const url = `${relayHttp()}${path}`;
   const ev = finalizeEvent(
     { kind: 27235, created_at: Math.floor(Date.now() / 1000), content: '', tags: [['u', url], ['method', method], ['payload', await sha256hex(body)]] },
     secret,
   );
-  return fetch(url, { method, headers: { ...headers, 'Content-Type': 'application/json', Authorization: `Nostr ${btoa(JSON.stringify(ev))}` }, body });
+  return `Nostr ${btoa(JSON.stringify(ev))}`;
+}
+
+/** Sends `body` to `path` on the relay with a NIP-98 Authorization header signed by `secret`. */
+export async function signedFetch(method: 'POST' | 'PUT' | 'DELETE', path: string, body: string, secret: Uint8Array, headers: Record<string, string> = {}) {
+  const url = `${relayHttp()}${path}`;
+  return fetch(url, { method, headers: { ...headers, 'Content-Type': 'application/json', Authorization: await signedAuth(method, path, body, secret) }, body });
 }

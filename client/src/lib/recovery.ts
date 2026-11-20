@@ -29,7 +29,7 @@
 import { getPublicKey } from 'nostr-tools/pure';
 
 import { k, load, remove, save } from './storage';
-import { relayHttp, signedFetch } from './relay-http';
+import { relayHttp, signedAuth, signedFetch } from './relay-http';
 import { cleanBundle, fitBundle, type Bundle } from './transfer';
 import { fromB64u, toB64u } from './vault';
 
@@ -146,10 +146,14 @@ export class BackupGoneError extends RecoveryError {}
  * that missed a new code or turning off (made on another device) does not bring the
  * old code back to life.
  */
-export async function putBackup(keys: RecoveryKeys, bundle: Bundle, refresh = false) {
+export async function putBackup(keys: RecoveryKeys, bundle: Bundle, refresh = false, account?: Uint8Array) {
   const body = await sealBackup(keys, bundle);
   if (body.length > MAX_BACKUP_BYTES) throw new RecoveryError('too large');
-  const res = await signedFetch('PUT', `/backup/${keys.id}`, body, keys.signer, refresh ? { 'If-Match': '*' } : {});
+  // Making a new backup needs proof that the account is registered with the relay (a second signature of
+  // the same request, by the account's key; the relay checks it and does not keep it). Refreshing does not.
+  const headers: Record<string, string> = refresh ? { 'If-Match': '*' } : {};
+  if (!refresh && account) headers['X-Tegami-Member'] = await signedAuth('PUT', `/backup/${keys.id}`, body, account);
+  const res = await signedFetch('PUT', `/backup/${keys.id}`, body, keys.signer, headers);
   if (res.status === 412) throw new BackupGoneError('gone');
   if (!res.ok) throw refused(res.status, res);
 }
