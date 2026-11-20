@@ -392,8 +392,8 @@
   "ja": "サーバーにつないでいるアカウントと、接続元のIPアドレス（ネット上の住所にあたる番号）"
  },
  "sec.server.5": {
-  "en": "The server needs these to deliver messages. It deletes messages after 30 days and doesn't keep a record of who sent them.",
-  "ja": "メッセージを届けるのに、サーバーにはこれらの情報が必要です。サーバーで預かったメッセージは30日で消します。誰が送ったかは記録に残しません。"
+  "en": "The server needs these to deliver messages. It deletes messages after 30 days and doesn't keep a record of who sent them. Your account registration, stickers, notification settings and recovery backup stay until you delete them. The privacy policy lists everything the server keeps and for how long.",
+  "ja": "メッセージを届けるのに、サーバーにはこれらの情報が必要です。サーバーで預かったメッセージは30日で消します。誰が送ったかは記録に残しません。アカウントの登録、スタンプ、通知の宛先、復旧用のバックアップは、あなたが消すまで残します。サーバーが何をいつまで残すかは、プライバシーポリシーに書いています。"
  },
  "sec.account.1": {
   "en": "Your account is a key made on your own device. We don't ask for a phone number or an email address.",
