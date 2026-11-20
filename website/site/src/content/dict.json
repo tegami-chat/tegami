@@ -1376,8 +1376,8 @@
   "ja": "1つのネットワークからの接続数と送信量を制限するため。招待なしの登録時に、自動プログラムでないことを確認するため"
  },
  "pv.k.10.3": {
-  "en": "Held in memory only and never saved to disk. They stay in memory for rate limiting, and all of them are cleared if too many entries pile up",
-  "ja": "メモリにだけ置き、ディスクには保存しません。流量を制限するためにメモリに残り、記録がたまりすぎた時は、すべて消します"
+  "en": "Held in memory only and never saved to disk. They stay in memory for rate limiting, and the oldest entries are cleared first if too many pile up",
+  "ja": "メモリにだけ置き、ディスクには保存しません。流量を制限するためにメモリに残り、記録がたまりすぎた時は、古いものから消します"
  },
  "pv.dev.h": {
   "en": "4. What stays on your device",
