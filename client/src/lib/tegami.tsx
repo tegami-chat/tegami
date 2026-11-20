@@ -10,6 +10,7 @@ import { accounts, describeAccount, readyAccounts, removeAccountHere } from './a
 import { FEEDBACK_NAME, FEEDBACK_PUBKEY } from './feedback';
 import { AI_DRAFT_ASK_KIND, AI_DRAFT_KIND, draftAsk, parseDraft, wrapExpiring } from './ai-draft';
 import { pairWrap } from './ai-pair';
+import { rumorIdMatches } from './rumor-id';
 import { OWNER_CARD_KIND, OWNER_CARD_RENEW, aiSelfOf, ownerCardTemplate, ownerOfMessage, type AiSelf, type OwnerMark } from './ai-owner';
 import { aiReadable, chatNoAi, keptFromAi, myNoAi, nothingToRead, profileNoAi, saveMyNoAi, withNoAi, type NothingToRead } from './ai-optout';
 import {
@@ -928,6 +929,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       {
         try {
           const rumor = nip17.unwrapEvent(wrap, secret);
+          // The id comes from the sender; recompute it, or a copy of someone else's id hides the real one.
+          if (!rumorIdMatches(rumor)) return;
           if (rumor.pubkey !== me && blockedRef.current.includes(rumor.pubkey)) return;
           // Written by a key registered without an invite: only from friends and groups I know.
           // Keys made in bulk cannot reach strangers this way (relay/src/members.ts).

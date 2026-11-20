@@ -158,7 +158,9 @@ export default function Add() {
     }
     keepInviteCode(inviteCodeOf(link));
     setInvite(link);
-    setAsMine(!!pairCodeOf(link));
+    // Off even when the code carries a pairing code: a picture someone else handed me must not
+    // make their AI mine. Only my own switch turns it on.
+    setAsMine(false);
     const n = inviteName(link);
     if (n) setName(n);
     setScanError(null);

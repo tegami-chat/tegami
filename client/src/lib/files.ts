@@ -268,6 +268,11 @@ export function isStampRumor(tags: string[][]): boolean {
   return tags.some((t) => t[0] === 't' && t[1] === 'stamp');
 }
 
+/** True for an address on this app's own file server (the only place a file is fetched from). */
+export function isOwnFileUrl(url: string): boolean {
+  return url.startsWith(`${FILE_SERVER}/`);
+}
+
 /** Reads a kind 15 rumor back into a FileRef (null when it is not something we can open). */
 export function fileFromRumor(content: string, tags: string[][]): FileRef | null {
   const tag = (n: string) => tags.find((t) => t[0] === n)?.[1];
@@ -275,8 +280,8 @@ export function fileFromRumor(content: string, tags: string[][]): FileRef | null
   const nonce = tag('decryption-nonce');
   const sha256 = tag('x');
   if (tag('encryption-algorithm') !== 'aes-gcm' || !key || !nonce || !sha256) return null;
-  // Only https, or this app's own file server (a development address in tests).
-  if (!content.startsWith('https://') && !content.startsWith(`${FILE_SERVER}/`)) return null;
+  // Only this app's own file server: another host would learn the reader's address and time.
+  if (!isOwnFileUrl(content)) return null;
   const rawName = tag('name');
   if (rawName !== undefined && !validFileName(rawName)) return null;
   const name = validFileName(rawName);
@@ -303,7 +308,7 @@ export function validFileRef(raw: unknown): FileRef | null {
   const f = raw as Record<string, unknown>;
   if (
     typeof f.url !== 'string' ||
-    (!f.url.startsWith('https://') && !f.url.startsWith(`${FILE_SERVER}/`)) ||
+    !isOwnFileUrl(f.url) ||
     typeof f.type !== 'string' ||
     typeof f.key !== 'string' ||
     !f.key ||
@@ -432,6 +437,7 @@ async function keep(id: string, blob: Blob) {
 export async function openFile(id: string, f: FileRef): Promise<Blob> {
   const hit = await cached(id).catch(() => undefined);
   if (hit) return hit;
+  if (!isOwnFileUrl(f.url)) throw new Error('file is not on the file server');
   const res = await fetch(f.url);
   if (!res.ok) throw new Error(res.status === 404 ? 'gone' : `download failed: ${res.status}`);
   const cipher = new Uint8Array(await res.arrayBuffer());
