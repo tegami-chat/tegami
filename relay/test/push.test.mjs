@@ -74,9 +74,9 @@ async function register(sk, ep, method = 'POST', { sign = true, keys } = {}) {
   }
   return (await fetch(`${HTTP}/push`, { method, headers, body })).status;
 }
-function connect(sk) {
+function connect(sk, headers) {
   return new Promise((resolve) => {
-    const ws = new WebSocket(RELAY);
+    const ws = new WebSocket(RELAY, { headers });
     const inbox = [];
     ws.on('message', (raw) => inbox.push(JSON.parse(raw.toString())));
     const next = async (pred) => {
@@ -104,6 +104,9 @@ function connect(sk) {
 }
 const wrapTo = (from, to, text) => nip59.createWrap(nip59.createSeal(nip59.createRumor({ kind: 14, content: text, tags: [['p', to]] }, from), from, to), to);
 
+const short2 = (to, tags) =>
+  finalizeEvent({ kind: 1059, created_at: Math.floor(Date.now() / 1000), tags: [['p', to], ['expiration', String(Math.floor(Date.now() / 1000) + 60)], ...tags], content: 'sealed' }, generateSecretKey());
+
 // ---------- tests ----------
 const alice = generateSecretKey();
 const bob = generateSecretKey();
@@ -120,6 +123,9 @@ check('bob registers a device', (await register(bob, endpoint('/bob'))) === 204)
 
 const a = await connect(alice);
 const b = await connect(bob);
+const aliceKey = getPublicKey(alice);
+// A recipient that has written to the sender counts as a friend; the stranger limits (below) do not apply.
+check('bob writes to alice, so they are mutual', (await b.send(wrapTo(bob, aliceKey, 'hello alice'))) === true);
 check('alice writes to bob', (await a.send(wrapTo(alice, bobPub, 'hi'))) === true);
 await wait(1500);
 const got = received.filter((r) => r.path === '/bob');
@@ -170,6 +176,8 @@ await trust(carol);
 check('push keys that are not keys are refused', (await register(carol, endpoint('/carol'), 'POST', { keys: { p256dh: 'x', auth: 'y' } })) === 400);
 check('carol registers a device with its keys', (await register(carol, endpoint('/carol'), 'POST', { keys: deviceKeys })) === 204);
 const carolGot = () => received.filter((r) => r.path === '/carol');
+const c = await connect(carol);
+await c.send(wrapTo(carol, aliceKey, 'hello alice'));
 await a.send(wrapTo(alice, carolPub, 'hello carol'));
 await wait(1500);
 const first = carolGot()[0];
@@ -196,6 +204,11 @@ await trust(dave);
 await trust(erin);
 check('dave registers the shared device', (await register(dave, endpoint('/shared'))) === 204);
 check('erin registers the same device', (await register(erin, endpoint('/shared'))) === 204);
+for (const sk of [dave, erin]) {
+  const x = await connect(sk);
+  await x.send(wrapTo(sk, aliceKey, 'hello alice'));
+  x.ws.close();
+}
 const sharedGot = () => received.filter((r) => r.path === '/shared').length;
 await a.send(wrapTo(alice, getPublicKey(dave), 'to dave'));
 await wait(1500);
@@ -243,8 +256,65 @@ check('a quiet envelope is accepted', (await a.send(quietWrap)) === true);
 await wait(1500);
 check('…and rings nothing', carolGot().length === beforeQuiet);
 
+// Strangers: a key the recipient has never written to rings once, then is held for 10 minutes.
+await wait(3500);
+const fred = generateSecretKey();
+const gina = generateSecretKey();
+const ginaPub = getPublicKey(gina);
+await trust(fred);
+await trust(gina);
+check('gina registers a device', (await register(gina, endpoint('/gina'))) === 204);
+const ginaGot = () => received.filter((r) => r.path === '/gina').length;
+const f = await connect(fred);
+const g = await connect(gina);
+await f.send(wrapTo(fred, ginaPub, 'first'));
+await wait(1500);
+check('a stranger rings once', ginaGot() === 1);
+await wait(3500);
+await f.send(wrapTo(fred, ginaPub, 'second'));
+await wait(1500);
+check('…and is held for 10 minutes after that (the message is still stored)', ginaGot() === 1);
+check('a short-lived call from the same stranger is accepted', (await f.send(short2(ginaPub, [['t', 'call']]))) === true);
+await wait(1500);
+check('…a first call rings (its own limit per kind)', ginaGot() === 2);
+await wait(3500);
+await f.send(short2(ginaPub, [['t', 'call']]));
+await wait(1500);
+check('…a second call is held too', ginaGot() === 2);
+await g.send(wrapTo(gina, getPublicKey(fred), 'hi fred'));
+await wait(3500);
+await f.send(wrapTo(fred, ginaPub, 'third'));
+await wait(1500);
+check('after gina writes back, the same sender rings freely', ginaGot() === 3);
+await wait(3500);
+await f.send(wrapTo(fred, ginaPub, 'fourth'));
+await wait(1500);
+check('…again, with no 10 minute wait', ginaGot() === 4);
+f.ws.close();
+g.ws.close();
+
+// At most STRANGER_PUSH_PER_HOUR (here 2, set by a test header) pushes an hour per recipient across strangers.
+await wait(3500);
+const hank = generateSecretKey();
+const hankPub = getPublicKey(hank);
+await trust(hank);
+check('hank registers a device', (await register(hank, endpoint('/hank'))) === 204);
+const hankGot = () => received.filter((r) => r.path === '/hank').length;
+for (let i = 0; i < 3; i++) {
+  const sk = generateSecretKey();
+  await trust(sk);
+  const x = await connect(sk, { 'X-Test-Push-Cap': '2' });
+  await x.send(wrapTo(sk, hankPub, 'stranger ' + i));
+  await wait(1500);
+  x.ws.close();
+  if (i === 1) check('two different strangers ring hank', hankGot() === 2);
+  await wait(3500);
+}
+check('a third stranger within the hour is held', hankGot() === 2);
+
 a.ws.close();
 b.ws.close();
+c.ws.close();
 push.close();
 console.log(failures ? `${failures} failed` : 'all passed');
 process.exit(failures ? 1 : 0);

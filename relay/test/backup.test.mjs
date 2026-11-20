@@ -64,6 +64,29 @@ const bobId = newId();
 check('another key stores its own backup', (await call('PUT', bobId, { sk: mallory, body: blob })).status === 204);
 check('…and deletes it', (await call('DELETE', bobId, { sk: mallory })).status === 204);
 
+// Relay-wide caps on new backups (test headers lower them, DEV_LOCAL only; the real caps are 500 a day and 100,000 in all).
+const capId = newId();
+const capKey = generateSecretKey();
+const capIp = { 'X-Test-Ip': '10.7.7.7' };
+check('a backup is stored (it counts towards today)', (await call('PUT', capId, { sk: capKey, body: blob, headers: capIp })).status === 204);
+const dayCapped = await call('PUT', newId(), { sk: generateSecretKey(), body: blob, headers: { ...capIp, 'X-Test-Backups-Per-Day': '1' } });
+const retry = Number(dayCapped.headers.get('Retry-After'));
+check('over the day cap, a new backup gets 503 with a clear error', dayCapped.status === 503 && (await dayCapped.text()).startsWith('busy:'));
+check('…and Retry-After says how many seconds until the next UTC midnight', retry > 0 && retry <= 86_400);
+check('over the day cap, a refresh still works', (await call('PUT', capId, { sk: capKey, body: blob.replace('aaaa', 'dddd'), headers: { ...capIp, 'If-Match': '*', 'X-Test-Backups-Per-Day': '1' } })).status === 204);
+check('…and the refresh was kept', (await (await call('GET', capId)).text()).includes('dddd'));
+const totalCapped = await call('PUT', newId(), { sk: generateSecretKey(), body: blob, headers: { ...capIp, 'X-Test-Backups-Total': '1' } });
+check('over the total cap, a new backup gets 507 with a clear error', totalCapped.status === 507 && (await totalCapped.text()).startsWith('full:'));
+check('over the total cap, a refresh still works', (await call('PUT', capId, { sk: capKey, body: blob, headers: { ...capIp, 'If-Match': '*', 'X-Test-Backups-Total': '1' } })).status === 204);
+check('over the cap, deleting still works', (await call('DELETE', capId, { sk: capKey, headers: { ...capIp, 'X-Test-Backups-Per-Day': '1' } })).status === 204);
+check('a backup made without the test headers is not capped', (await (async () => {
+  const k = generateSecretKey();
+  const i = newId();
+  const r = await call('PUT', i, { sk: k, body: blob, headers: { 'X-Test-Ip': '10.7.7.8' } });
+  await call('DELETE', i, { sk: k });
+  return r.status;
+})()) === 204);
+
 check('alice deletes it', (await call('DELETE', id, { sk: alice })).status === 204);
 check('after deleting, GET is 404', (await call('GET', id)).status === 404);
 check('deleting again is 404', (await call('DELETE', id, { sk: alice })).status === 404);

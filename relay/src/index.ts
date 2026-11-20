@@ -59,7 +59,7 @@ import { STATS_DESCRIPTION, Stats } from './stats';
 import { TURN_RATE, TURN_TTL_SECONDS as TURN_TTL, makeTurnCredentials, turnConfigured, type TurnEnv } from './turn';
 
 type Filter = { kinds?: number[]; '#p'?: string[]; since?: number; until?: number; limit?: number; ids?: string[] };
-type Attachment = { challenge: string; ip: string; pubkey?: string; subs: Record<string, Filter[]>; authTries?: number; testLimit?: number };
+type Attachment = { challenge: string; ip: string; pubkey?: string; subs: Record<string, Filter[]>; authTries?: number; testLimit?: number; testPushCap?: number };
 
 // VAPID_JWK: the relay's Web Push key (Worker secret). DEV_PUSH=1 lets tests push to localhost
 // (and sign requests for localhost). DEV_LOCAL=1 only lets tests sign requests for localhost.
@@ -107,6 +107,18 @@ const STRANGER_PER_DAY = 50;
 // New recovery backups per address per day: the signing key comes from the recovery code, so it cannot be
 // tied to a registered account, and keys cost nothing; only the address can slow someone who makes ids in bulk.
 const NEW_BACKUPS_PER_IP_PER_DAY = 10;
+// New recovery backups for the whole relay per UTC day, and backups held in total. Addresses are free to
+// rotate (rented blocks, proxies), so the per-address limit alone cannot stop bulk creation; these bound the
+// worst case: a day of abuse costs at most this many rows of up to 64 KB, and storage stays well under the
+// Durable Object's 10 GB. Refreshing or deleting an existing backup is never blocked by either.
+const NEW_BACKUPS_PER_DAY = 500;
+const MAX_BACKUPS_TOTAL = 100_000;
+// Notifications from a key the recipient has not written to (the relay cannot read envelopes, so it cannot
+// know who is a friend; "the recipient wrote to this key today" is the only sign it has). Such a sender rings
+// a recipient at most once per pair, kind and 10 minutes, and all strangers together at most 20 times an hour.
+// The envelope is still stored and delivered; only the push is skipped. Memory only, like PAIR_PER_DAY.
+const STRANGER_PUSH_PAIR_SECONDS = 10 * 60;
+const STRANGER_PUSH_PER_HOUR = 20;
 // Most keys tracked in memory by a limiter before the oldest are dropped (a bounded Map, never a full reset).
 const LIMITER_MAX_KEYS = 50_000;
 // Bytes one key may upload in a day (memory only), on top of the burst limit above: stops slow, steady filling of storage.
@@ -174,6 +186,11 @@ class DayCounter {
     if (cur.n + n > limit) return false;
     cur.n += n;
     return true;
+  }
+  /** The count for this key today, without adding anything. */
+  peek(key: string): number {
+    const cur = this.m.get(key);
+    return cur && cur.day === Math.floor(Date.now() / 86_400_000) ? cur.n : 0;
   }
 }
 
@@ -368,6 +385,12 @@ export class Relay extends DurableObject<Env> {
     // Recovery backups (encrypted on the device). Not touched by the 30-day clean-up.
     this.sql.exec('CREATE TABLE IF NOT EXISTS backups (id TEXT PRIMARY KEY, pubkey TEXT, data TEXT, updated_at INTEGER)');
     this.sql.exec('CREATE INDEX IF NOT EXISTS backups_pubkey ON backups (pubkey)');
+    try {
+      // Existing rows get NULL: they count as old, never as created today.
+      this.sql.exec('ALTER TABLE backups ADD COLUMN created_at INTEGER');
+    } catch {
+      /* already there */
+    }
     // Stamps (encrypted on the device): which key keeps which stamp, so a key's stamps can be
     // counted and the file deleted when nobody keeps it. Not touched by the 30-day clean-up.
     this.sql.exec('CREATE TABLE IF NOT EXISTS stamps (sha TEXT, pubkey TEXT, size INTEGER, created_at INTEGER, PRIMARY KEY (sha, pubkey))');
@@ -426,6 +449,9 @@ export class Relay extends DurableObject<Env> {
     // Tests only (DEV_LOCAL): a small daily limit for this connection, so a test need not send hundreds.
     const testLimit = Number(req.headers.get('X-Test-Limit'));
     if (this.devLocal && testLimit > 0) att.testLimit = testLimit;
+    // Tests only (DEV_LOCAL): a small hourly cap on pushes from strangers, likewise.
+    const testPushCap = Number(req.headers.get('X-Test-Push-Cap'));
+    if (this.devLocal && testPushCap > 0) att.testPushCap = testPushCap;
     server.serializeAttachment(att);
     server.send(JSON.stringify(['AUTH', att.challenge]));
     if ((await this.ctx.storage.getAlarm()) == null) await this.ctx.storage.setAlarm(Date.now() + 60 * 60 * 1000);
@@ -834,8 +860,26 @@ export class Relay extends DurableObject<Env> {
       const held = this.sql.exec('SELECT COUNT(*) AS n FROM backups WHERE pubkey = ?', pubkey).one().n as number;
       if (held >= MAX_BACKUPS_PER_KEY) return fail(429, 'rate-limited: too many backups for this key');
       if (!this.backupNewDay.take(ip, NEW_BACKUPS_PER_IP_PER_DAY)) return fail(429, 'rate-limited: too many new backups from this address today');
+      // Relay-wide caps. The day's count comes from created_at, so it survives a restart and stores nothing new.
+      const total = this.sql.exec('SELECT COUNT(*) AS n FROM backups').one().n as number;
+      // Tests only (DEV_LOCAL): lower caps for this request, so a test need not make thousands of backups.
+      const test = (name: string) => (this.devLocal ? Number(req.headers.get(name)) || 0 : 0);
+      if (total >= (test('X-Test-Backups-Total') || MAX_BACKUPS_TOTAL)) return fail(507, 'full: this relay holds no more new backups');
+      const midnight = Math.floor(now() / 86_400) * 86_400;
+      const today = this.sql.exec('SELECT COUNT(*) AS n FROM backups WHERE created_at >= ?', midnight).one().n as number;
+      if (today >= (test('X-Test-Backups-Per-Day') || NEW_BACKUPS_PER_DAY)) {
+        return new Response('busy: new backups are paused until tomorrow', { status: 503, headers: { ...CORS, 'Retry-After': String(midnight + 86_400 - now()) } });
+      }
     }
-    this.sql.exec('INSERT OR REPLACE INTO backups (id, pubkey, data, updated_at) VALUES (?, ?, ?, ?)', id, pubkey, body, now());
+    // created_at is set once, when the backup first appears; a refresh keeps it.
+    this.sql.exec(
+      'INSERT INTO backups (id, pubkey, data, updated_at, created_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at',
+      id,
+      pubkey,
+      body,
+      now(),
+      now(),
+    );
     return new Response(null, { status: 204, headers: CORS });
   }
   pushRate = new Buckets(30, 0.1); // registering: per address, 30 at once, then one every 10 seconds
@@ -879,6 +923,35 @@ export class Relay extends DurableObject<Env> {
       MAX_DEVICES,
     );
     return new Response(null, { status: 204, headers: CORS });
+  }
+
+  /** Last push per sender, recipient and kind, and pushes per recipient this hour, from senders the recipient has not written to (memory only). */
+  strangerPairPush = new Map<string, number>();
+  strangerHourPush = new Map<string, { hour: number; n: number }>();
+
+  /**
+   * Whether this envelope may ring the recipient's devices. A sender the recipient wrote to today (the reverse
+   * pair has a count) is a friend as far as the relay can tell: no extra limit. Anyone else rings at most once
+   * per pair and kind every 10 minutes and `hourCap` times an hour across all such senders, so a stranger with a
+   * free key cannot keep a phone ringing.
+   */
+  mayRing(sender: string, recipient: string, kind: 'message' | 'call', hourCap: number): boolean {
+    if (this.pairDay.peek(recipient + sender) > 0) return true;
+    const t = Date.now();
+    const pairKey = `${sender}:${recipient}:${kind}`;
+    if (t - (this.strangerPairPush.get(pairKey) ?? 0) < STRANGER_PUSH_PAIR_SECONDS * 1000) return false;
+    const hour = Math.floor(t / 3_600_000);
+    const cur = this.strangerHourPush.get(recipient);
+    const h = cur && cur.hour === hour ? cur : { hour, n: 0 };
+    if (h.n >= hourCap) return false;
+    h.n++;
+    this.strangerHourPush.delete(recipient);
+    this.strangerHourPush.set(recipient, h);
+    trimOldest(this.strangerHourPush);
+    this.strangerPairPush.delete(pairKey);
+    this.strangerPairPush.set(pairKey, t);
+    trimOldest(this.strangerPairPush);
+    return true;
   }
 
   /** Messages for a key not yet told to its devices (counted while pushes wait out the 3 seconds). */
@@ -1080,8 +1153,8 @@ export class Relay extends DurableObject<Env> {
       const call = ev.tags.some((t) => t[0] === 't' && t[1] === 'call');
       // t=quiet: something for the app that is not a message (a friend's new picture).
       const quiet = ev.tags.some((t) => t[0] === 't' && t[1] === 'quiet');
-      if (!short && !quiet) this.ctx.waitUntil(this.notify(p, 'message'));
-      else if (call) this.ctx.waitUntil(this.notify(p, 'call'));
+      const kind = !short && !quiet ? 'message' : call ? 'call' : null;
+      if (kind && this.mayRing(att.pubkey, p, kind, att.testPushCap ?? STRANGER_PUSH_PER_HOUR)) this.ctx.waitUntil(this.notify(p, kind));
     }
 
     for (const other of this.ctx.getWebSockets()) {
