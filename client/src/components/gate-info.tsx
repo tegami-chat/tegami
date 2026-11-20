@@ -99,9 +99,9 @@ export function GateInfo() {
 
       <View style={s.section}>
         <Text style={[s.heading, wide && s.headingWide]} role="heading" aria-level={2}>はじめ方</Text>
-        <View style={[s.card, s.steps]}>
+        <View style={[s.card, s.steps, wide && s.stepsWide]}>
           {STEPS.map((st, i) => (
-            <View key={st.title} style={[s.step, i > 0 && s.stepLine]}>
+            <View key={st.title} style={[s.step, wide && s.stepWide, i > 0 && (wide ? s.stepLineWide : s.stepLine)]}>
               <Text style={s.number}>{i + 1}</Text>
               <View style={s.stepText}>
                 <Text style={s.stepTitle} role="heading" aria-level={3}>{st.title}</Text>
@@ -143,13 +143,16 @@ const styles = (c: Palette) =>
     feature: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
     featureWide: { width: '33.333%', paddingRight: 16 },
     featureText: { flex: 1, fontSize: 15, lineHeight: 22, color: c.text },
-    steps: { paddingVertical: 8 },
-    step: { flexDirection: 'row', alignItems: 'flex-start', gap: 16, paddingVertical: 16 },
+    steps: { paddingVertical: 8, paddingHorizontal: 16 },
+    stepsWide: { flexDirection: 'row', paddingVertical: 0, paddingHorizontal: 0 },
+    stepWide: { flex: 1, paddingVertical: 24, paddingHorizontal: 24 },
+    stepLineWide: { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: c.line },
+    step: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 16 },
     stepLine: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line },
     number: { width: 28, height: 28, borderRadius: 14, backgroundColor: c.accent, color: c.onAccent, fontSize: 14, fontWeight: '700', textAlign: 'center', lineHeight: 28, overflow: 'hidden' },
     stepText: { flex: 1, gap: 4 },
     stepTitle: { fontSize: 16, lineHeight: 28, fontWeight: '700', color: c.text },
-    stepBody: { fontSize: 14, lineHeight: 22, color: c.muted },
+    stepBody: { fontSize: 13, lineHeight: 20, color: c.muted },
     footer: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line, paddingTop: 24, paddingBottom: 8, gap: 16, alignItems: 'center' },
     links: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: 20, rowGap: 8 },
     link: { fontSize: 13, color: c.muted },
