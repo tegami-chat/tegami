@@ -7,7 +7,7 @@ import { GateInfo } from '@/components/gate-info';
 import { ThemeSwitch } from '@/components/theme-switch';
 import { Palette, usePalette } from '@/constants/theme';
 import { useWide } from '@/lib/layout';
-import { accountWithKey, adding, cancelAdd, readyAccounts } from '@/lib/accounts';
+import { accounts, accountWithKey, adding, cancelAdd, readyAccounts } from '@/lib/accounts';
 import { RELAYS, useTegami } from '@/lib/tegami';
 import { restoreFromCode, setRestoredKeys, takeRestoredKeys } from '@/lib/recovery';
 import { arrival, bundleSecret, receiveTransfer, takeLinkKey, transferKey, type Bundle } from '@/lib/transfer';
@@ -97,8 +97,8 @@ export function Gate({ locked }: { locked: boolean }) {
     }
   }
 
-  // The first screen of someone new: the information sections go below the buttons.
-  const showInfo = !locked && !moved && !twin;
+  // The first screen and the unlock screen: the information sections go below the buttons.
+  const showInfo = !moved && !twin;
 
   if (moving && moving.state !== 'ready') {
     return (
@@ -128,7 +128,7 @@ export function Gate({ locked }: { locked: boolean }) {
       {moved ? (
         <Text style={s.promise}>{moved.myName ? `${moved.myName}さんのアカウントを受け取りました` : 'アカウントを受け取りました'}</Text>
       ) : locked ? (
-        <View style={s.lockedGap} />
+        <Welcome />
       ) : (
         <Hero />
       )}
@@ -234,7 +234,7 @@ export function Gate({ locked }: { locked: boolean }) {
         </Pressable>
       )}
       {!locked && !twin && passkeysAvailable() && <PasskeyStores />}
-      {showInfo && <GateInfo />}
+      {showInfo && <GateInfo returning={locked} />}
       {failed && <Text style={s.notice}>パスキーを使えませんでした。もう一度押してください</Text>}
       {missed && (
         <Text style={s.notice}>
@@ -270,6 +270,20 @@ function Icon() {
   const c = usePalette();
   const s = styles(c);
   return <Image source={ICON} style={s.icon} aria-hidden />;
+}
+
+/** The unlock screen: whose account this is, and that the talks are kept here. */
+function Welcome() {
+  const s = styles(usePalette());
+  const i = accounts();
+  const name = i.list.find((a) => a.id === i.current)?.name;
+  return (
+    <View style={s.hero}>
+      <Text style={s.welcome} role="heading" aria-level={1}>{name ? `おかえりなさい、${name}さん` : "おかえりなさい"}</Text>
+      <Text style={s.kicker}>トークは暗号化して、この端末にあります。</Text>
+      <Text style={s.welcomeBody}>パスキーで鍵を開けると、続きから使えます。</Text>
+    </View>
+  );
 }
 
 /** The first lines of tegami.chat: what Tegami is, and the two promises. */
@@ -342,7 +356,8 @@ const styles = (c: Palette) =>
     h1Wide: { fontSize: 52, lineHeight: 60 },
     h1Second: { marginTop: 4 },
     green: { color: c.accent },
-    lockedGap: { height: 16 },
+    welcome: { fontSize: 24, lineHeight: 32, fontWeight: "700", color: c.text, textAlign: "center" },
+    welcomeBody: { marginTop: 4, fontSize: 14, color: c.muted, textAlign: "center" },
     promise: { fontSize: 18, color: c.muted, marginBottom: 32, textAlign: 'center' },
     primary: { backgroundColor: c.accent, borderRadius: 999, height: 52, width: '100%', maxWidth: 320, alignItems: 'center', justifyContent: 'center' },
     primaryText: { color: c.onAccent, fontSize: 17, fontWeight: '600' },

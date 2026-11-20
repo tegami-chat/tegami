@@ -65,7 +65,7 @@ const LINKS = [
  * and the links. Every section is the same width, every gap is a multiple of 8, and every block of
  * content sits in the same kind of card, so the page reads as one column.
  */
-export function GateInfo() {
+export function GateInfo({ returning }: { returning?: boolean }) {
   const c = usePalette();
   const s = styles(c);
   const wide = useWide();
@@ -97,7 +97,7 @@ export function GateInfo() {
         </View>
       </View>
 
-      <View style={s.section}>
+      {!returning && <View style={s.section}>
         <Text style={[s.heading, wide && s.headingWide]} role="heading" aria-level={2}>はじめ方</Text>
         <View style={[s.card, s.steps, wide && s.stepsWide]}>
           {STEPS.map((st, i) => (
@@ -110,7 +110,7 @@ export function GateInfo() {
             </View>
           ))}
         </View>
-      </View>
+      </View>}
 
       <View style={s.footer}>
         <View style={s.links}>
