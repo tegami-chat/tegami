@@ -9,11 +9,11 @@
  },
  "hero.h1a": {
   "en": "Your chats<br class=\"sm:hidden\"> belong <span class=\"text-forest-600 dark:text-forest-300\">to you.</span>",
-  "ja": "トークは<br class=\"sm:hidden\"><span class=\"text-forest-600 dark:text-forest-300\">あなたのもの。</span>"
+  "ja": "トークは<span class=\"text-forest-600 dark:text-forest-300\">あなたのもの。</span>"
  },
  "hero.h1b": {
   "en": "Bring your<br class=\"sm:hidden\"> <span class=\"text-forest-600 dark:text-forest-300\">own AI.</span>",
-  "ja": "AIの<br class=\"sm:hidden\"><span class=\"text-forest-600 dark:text-forest-300\">持ち込み自由。</span>"
+  "ja": "AIの<span class=\"text-forest-600 dark:text-forest-300\">持ち込み自由。</span>"
  },
  "cta.browser": {
   "en": "Open in your browser",

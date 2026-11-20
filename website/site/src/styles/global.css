@@ -103,7 +103,7 @@
 /* ---- Type scale: the only font sizes a page may use. No uppercase anywhere. ---- */
 @utility text-display { font-size: 2.5rem; line-height: 1.15; font-weight: 700; letter-spacing: -0.025em; @media (width >= 40rem) { font-size: 3.75rem; } }
 /* The top page's headline: two short lines. From 64rem the two lines sit side by side with the screenshots, one line each; the English lines are longer, so they are a size smaller. */
-@utility text-hero { font-size: 2.5rem; line-height: 1.15; font-weight: 700; letter-spacing: -0.025em; @media (width >= 40rem) { font-size: 3rem; } @media (width >= 64rem) { font-size: 2.75rem; white-space: nowrap; &:lang(en) { font-size: 2.25rem; } } }
+@utility text-hero { font-size: 2.5rem; line-height: 1.15; font-weight: 700; letter-spacing: -0.025em; @media (width < 40rem) { &:lang(ja) { font-size: min(1.875rem, 8vw); white-space: nowrap; } } @media (width >= 40rem) { font-size: 3rem; } @media (width >= 64rem) { font-size: 2.75rem; white-space: nowrap; &:lang(en) { font-size: 2.25rem; } } }
 @utility text-title { font-size: 2.25rem; line-height: 2.5rem; font-weight: 700; letter-spacing: -0.025em; @media (width >= 40rem) { font-size: 3rem; line-height: 1; } }
 @utility text-section { font-size: 1.5rem; line-height: 2rem; font-weight: 700; letter-spacing: 0; @media (width >= 40rem) { font-size: 1.875rem; line-height: 2.25rem; } }
 @utility text-subsection { font-size: 1.125rem; line-height: 1.75rem; font-weight: 700; letter-spacing: 0; }
