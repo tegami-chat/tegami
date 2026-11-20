@@ -100,7 +100,7 @@ const nip98 = (req, body, path) => {
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, HEAD, PUT, POST, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-SHA-256, If-Match',
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-SHA-256, If-Match, X-Tegami-Member',
 };
 const http = createServer((req, res) => {
   const send = (status, body = '', type = 'text/plain') => {

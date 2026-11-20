@@ -52,6 +52,11 @@ const mallory = generateSecretKey();
 const id = newId();
 const blob = JSON.stringify({ v: 1, iv: 'aaaa', ct: 'b'.repeat(2000) });
 
+{
+  // A browser asks first (CORS preflight) whether it may send the account proof header; without it, a new backup cannot be made from the web app.
+  const pre = await fetch(`${HTTP}/backup/${newId()}`, { method: 'OPTIONS', headers: { Origin: 'https://app.tegami.chat', 'Access-Control-Request-Method': 'PUT', 'Access-Control-Request-Headers': 'authorization,content-type,x-tegami-member' } });
+  check('a browser may send the account proof header (X-Tegami-Member)', (pre.headers.get('access-control-allow-headers') || '').toLowerCase().includes('x-tegami-member'));
+}
 check('GET of an unknown id is 404', (await call('GET', newId())).status === 404);
 check('a PUT without a signature is refused', (await call('PUT', id, { body: blob, sign: false })).status === 401);
 check('a PUT signed for another id is refused', (await call('PUT', id, { sk: alice, body: blob, signedUrl: `${HTTP}/backup/${newId()}` })).status === 401);

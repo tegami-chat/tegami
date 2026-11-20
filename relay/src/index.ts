@@ -192,7 +192,7 @@ const FILE_RATE = { ip: { burst: 100e6, perSecond: 100e3 }, key: { burst: 50e6, 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, HEAD, PUT, POST, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-SHA-256, If-Match',
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-SHA-256, If-Match, X-Tegami-Member',
   'Access-Control-Max-Age': '86400',
 };
 
