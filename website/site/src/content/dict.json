@@ -392,7 +392,7 @@
   "ja": "サーバーにつないでいるアカウントと、接続元のIPアドレス（ネット上の住所にあたる番号）"
  },
  "sec.server.5": {
-  "en": "The server needs these to deliver messages. It deletes messages after 30 days and doesn't keep a record of who sent them. Your account registration, stickers, notification settings and recovery backup stay until you delete them. The privacy policy lists everything the server keeps and for how long.",
+  "en": "The server needs these to deliver messages. It deletes messages after 30 days and doesn't keep a record of who sent them. Your account registration, stickers, notification addresses and recovery backup stay until you delete them. The privacy policy lists everything the server keeps and for how long.",
   "ja": "メッセージを届けるのに、サーバーにはこれらの情報が必要です。サーバーで預かったメッセージは30日で消します。誰が送ったかは記録に残しません。アカウントの登録、スタンプ、通知の宛先、復旧用のバックアップは、あなたが消すまで残します。サーバーが何をいつまで残すかは、プライバシーポリシーに書いています。"
  },
  "sec.account.1": {
@@ -1128,8 +1128,8 @@
   "ja": "写真、動画、ファイル、音声メッセージ、スタンプの中身"
  },
  "pv.cant.3": {
-  "en": "Who sent a message (it cannot be told from what the relay keeps; the relay knows which key is logged in at the moment it accepts a message, but does not store it)",
-  "ja": "メッセージの送信者（保存した記録からは分かりません。リレーはメッセージを受け付ける瞬間にログインしている鍵を知りますが、保存しません）"
+  "en": "Who sent a message (it cannot be told from what the relay keeps; the relay knows which key is logged in at the moment it accepts a message, but does not store it. To count messages per day, the relay holds the sender and recipient pair in memory for up to a day, but never saves it to disk)",
+  "ja": "メッセージの送信者（保存した記録からは分かりません。リレーはメッセージを受け付ける瞬間にログインしている鍵を知りますが、保存しません。1日の送信数を数えるため、送信者と宛先の組をメモリに最長1日置きますが、ディスクには保存しません）"
  },
  "pv.cant.4": {
   "en": "Your list of friends",
@@ -1168,16 +1168,16 @@
   "ja": "取得する情報"
  },
  "pv.k.1.1": {
-  "en": "Public key, whether the account was registered with an invite, registration date and time, and whether the account is suspended",
-  "ja": "公開鍵、招待の有無、登録日時、利用停止の有無"
+  "en": "Public key, whether the account was registered with an invite, registration date and time, whether the account is suspended, its invite code and how many people it can invite per day, and whether its invites are stopped",
+  "ja": "公開鍵、招待の有無、登録日時、利用停止の有無、招待コードと1日に招待できる数、招待を止めたかどうか"
  },
  "pv.k.l2": {
   "en": "Purpose",
   "ja": "利用目的"
  },
  "pv.k.1.2": {
-  "en": "To allow only registered accounts to send messages, and to suspend abusive accounts",
-  "ja": "登録済みのアカウントのみがメッセージを送信できるようにするため。不正なアカウントの利用を停止するため"
+  "en": "To allow only registered accounts to send and receive messages (except envelopes that expire within 15 minutes, used when moving to a new device), and to suspend abusive accounts",
+  "ja": "登録したアカウントだけがメッセージを送受信できるようにするため（新しい端末への移行に使う、15分で期限が切れる封筒を除く）。不正なアカウントの利用を停止するため"
  },
  "pv.k.l3": {
   "en": "How long",
@@ -1216,8 +1216,8 @@
   "ja": "受信者や、移した先の端末に配信するため"
  },
  "pv.k.3.3": {
-  "en": "30 days. After deletion, copies may remain in the browser cache of a device that received them, for up to 30 days",
-  "ja": "30日間。削除した後も、受け取った端末のブラウザのキャッシュに、最大30日間残る場合があります"
+  "en": "30 days. After deletion, copies may remain for up to 30 days in the browser cache of a device that received them and in caches used for delivery",
+  "ja": "30日間。削除した後も、受け取った端末のブラウザのキャッシュと、配信のためのキャッシュに、最大30日間残る場合があります"
  },
  "pv.k.st.t": {
   "en": "Stickers",
@@ -1244,8 +1244,8 @@
   "ja": "誰が誰を招待したか"
  },
  "pv.k.4.2": {
-  "en": "To suspend accounts that engage in abuse, along with the accounts they invited",
-  "ja": "不正行為を行った利用者と、その利用者が招待した利用者の利用を停止するため"
+  "en": "To suspend accounts that engage in abuse, along with the accounts reached by following their invites (up to 10 levels)",
+  "ja": "不正行為を行った利用者と、その利用者から招待をたどった利用者（10段まで）の利用を停止するため"
  },
  "pv.k.4.3": {
   "en": "90 days",
@@ -1256,7 +1256,7 @@
   "ja": "AIの登録"
  },
  "pv.k.ai.1": {
-  "en": "For an AI account that registers itself as an AI: its public key, the public key of its owner (from the card the owner signed), when it registered, how many envelopes each AI account and each owner sent per day (kept under the owner's public key), and the daily limit the operator set for a particular owner, only if the operator changed it",
+  "en": "For an AI account that registers itself as an AI: its public key, the public key of its owner (from the card the owner signed), when it registered, the number of envelopes sent per day, counted for each AI account and for each owner, and the daily limit the operator set for a particular owner, only if the operator changed it",
   "ja": "AIとして登録したAIのアカウントの公開鍵、そのAIの持ち主の公開鍵（持ち主が署名した証明から取得します）、登録した日時、1日の封筒の送信数（AIのアカウントと持ち主の公開鍵のそれぞれで数えます）、運営者が特定の持ち主について変えた場合に限り、その持ち主の1日の送信の上限"
  },
  "pv.k.ai.2": {
@@ -1288,8 +1288,8 @@
   "ja": "通報"
  },
  "pv.k.5.1": {
-  "en": "The public keys of the reporting and reported accounts, and the reason for the report. If the reporter chooses, up to 20 messages from the reported user, decrypted on the reporter's device. The reported user is not notified",
-  "ja": "通報した利用者と通報された利用者の公開鍵、通報の理由。通報者が選択した場合は、通報された利用者のメッセージ20件まで（通報者の端末で復号したもの）。通報されたことは、通報された利用者に通知しません"
+  "en": "The public keys of the reporting and reported accounts, the reason for the report, and when it was made. If the reporter chooses, up to 20 messages from the reported user, decrypted on the reporter's device. The reported user is not notified",
+  "ja": "通報した利用者と通報された利用者の公開鍵、通報の理由、通報した日時。通報者が選択した場合は、通報された利用者のメッセージ20件まで（通報者の端末で復号したもの）。通報されたことは、通報された利用者に通知しません"
  },
  "pv.k.5.2": {
   "en": "To stop abuse",
@@ -1304,24 +1304,24 @@
   "ja": "通知の宛先"
  },
  "pv.k.6.1": {
-  "en": "Your device's notification address, the keys to encrypt notifications to it, and the public key of the account using it",
-  "ja": "端末の通知の宛先、通知の暗号化に使う鍵、その端末で利用するアカウントの公開鍵"
+  "en": "Your device's notification address, the keys to encrypt notifications to it, the public key of the account using it, and when it was registered",
+  "ja": "端末の通知の宛先、通知の暗号化に使う鍵、その端末で利用するアカウントの公開鍵、登録した日時"
  },
  "pv.k.6.2": {
   "en": "To tell you about new messages and calls",
   "ja": "新着メッセージと着信を通知するため"
  },
  "pv.k.6.3": {
-  "en": "Until you turn notifications off",
-  "ja": "通知をオフにするまで"
+  "en": "Until you turn notifications off. The relay also deletes it when the notification service reports that the address no longer exists",
+  "ja": "通知をオフにするまで。通知の配信を担う事業者が、宛先がなくなったと返した時も削除します"
  },
  "pv.k.7.t": {
   "en": "Recovery backups",
   "ja": "復旧用バックアップ"
  },
  "pv.k.7.1": {
-  "en": "A backup of your account, encrypted with your recovery code. The relay cannot tell which account it belongs to",
-  "ja": "復旧コードで暗号化したアカウントのバックアップ。どのアカウントのものかは、リレーでは識別できません"
+  "en": "A backup of your account encrypted with your recovery code, the backup's ID, a signing public key made from the recovery code (not your account's public key), and when it was last updated. The relay cannot tell which account it belongs to",
+  "ja": "復旧コードで暗号化したアカウントのバックアップ、バックアップの識別子、復旧コードから作った署名用の公開鍵（アカウントの公開鍵とは別のもの）、更新日時。どのアカウントのものかは、リレーでは識別できません"
  },
  "pv.k.7.2": {
   "en": "To restore your account if you lose your device",
@@ -1344,8 +1344,8 @@
   "ja": "利用状況を把握し、サーバーの規模を決めるため"
  },
  "pv.k.8.3": {
-  "en": "6 months. Only the operator can see the daily counts. What we publish is the total for each completed week, rounded up to a multiple of 10 (0 to 9 shown as 0). The last 24 weeks are public at <a href=\"https://relay.tegami.chat/stats\">relay.tegami.chat/stats</a>",
-  "ja": "6か月間。1日ごとの数は運営者だけが見られます。公開するのは、終わった週ごとの合計を10の倍数に切り上げた数（0から9は0）で、直近24週分を<a href=\"https://relay.tegami.chat/stats\">relay.tegami.chat/stats</a>で公開しています"
+  "en": "6 months. Only the operator can see the daily counts. What we publish is the total for each completed week (for the estimated number of accounts that logged in, the daily average), rounded up to a multiple of 10 (0 to 9 shown as 0). The last 24 weeks are public at <a href=\"https://relay.tegami.chat/stats\">relay.tegami.chat/stats</a>",
+  "ja": "6か月間。1日ごとの数は運営者だけが見られます。公開するのは、終わった週の合計（ログインしたアカウントの推定数は1日あたりの平均）を10の倍数に切り上げた数（0から9は0）で、直近24週分を<a href=\"https://relay.tegami.chat/stats\">relay.tegami.chat/stats</a>で公開しています"
  },
  "pv.k.9.t": {
   "en": "Error reports",
@@ -1353,7 +1353,7 @@
  },
  "pv.k.9.1": {
   "en": "The error message, where in the code it occurred, the app version, and the device and browser type. Quoted text and long strings are removed on your device before sending. Keys and chat messages are not included. Sent only if you turn this on in settings (off by default)",
-  "ja": "エラーメッセージ、発生箇所、アプリのバージョン、端末とブラウザの種類。引用符で囲まれた文字列などは、端末で削除してから送信します。鍵とメッセージは含まれません。設定で有効にした場合のみ送信します（初期設定は無効）"
+  "ja": "エラーメッセージ、発生箇所、アプリのバージョン、端末とブラウザの種類。引用符で囲まれた文字列と長い文字列は、端末で削除してから送信します。鍵とメッセージは含まれません。設定で有効にした場合のみ送信します（初期設定は無効）"
  },
  "pv.k.9.2": {
   "en": "To fix bugs",
@@ -1372,20 +1372,20 @@
   "ja": "接続元のIPアドレス"
  },
  "pv.k.10.2": {
-  "en": "To limit the number of connections and the amount of data sent from a single network, and to verify that you are not a bot when you register without an invite",
-  "ja": "1つのネットワークからの接続数と送信量を制限するため。招待なしの登録時に、自動プログラムでないことを確認するため"
+  "en": "To limit the number of connections, requests, the amount of data sent, and new recovery backups from a single network, and to verify that you are not a bot when you register without an invite",
+  "ja": "1つのネットワークからの接続数、要求の回数、送信量、新しい復旧用バックアップの数を制限するため。招待なしの登録時に、自動プログラムでないことを確認するため"
  },
  "pv.k.10.3": {
-  "en": "Held in memory only and never saved to disk. They stay in memory for rate limiting, and the oldest entries are cleared first if too many pile up",
-  "ja": "メモリにだけ置き、ディスクには保存しません。流量を制限するためにメモリに残り、記録がたまりすぎた時は、古いものから消します"
+  "en": "Held in memory only and never saved to disk. If too many entries pile up, the oldest are cleared first",
+  "ja": "メモリにだけ置き、ディスクには保存しません。記録がたまりすぎた時は、古いものから消します"
  },
  "pv.dev.h": {
   "en": "4. What stays on your device",
   "ja": "4. 端末に保存される情報"
  },
  "pv.dev.p": {
-  "en": "The following are saved only on your device.",
-  "ja": "次の情報は、利用者の端末内にのみ保存されます。"
+  "en": "The contents of the following are saved only on your device. The relay holds only encrypted envelopes and files.",
+  "ja": "次の情報の中身は、利用者の端末にだけ保存します。リレーには、暗号化した封筒とファイルだけを預けます。"
  },
  "pv.dev.1": {
   "en": "Messages, photos, videos, files, voice messages and stickers",
@@ -1436,8 +1436,8 @@
   "ja": "送信される情報"
  },
  "pv.c.1.3": {
-  "en": "Your IP address when you connect, and the data handled by the relay. Messages (except those attached to reports), files and recovery backups remain encrypted",
-  "ja": "接続時のIPアドレスと、リレーが保存する情報。通報に添付されたメッセージを除き、メッセージ、ファイル、復旧用バックアップは暗号化されたまま保存されます"
+  "en": "Your IP address when you connect, and the data handled by the relay. Messages (except those attached to reports), files, stickers and recovery backups remain encrypted",
+  "ja": "接続時のIPアドレスと、リレーが保存する情報。通報に添付されたメッセージを除き、メッセージ、ファイル、スタンプ、復旧用バックアップは暗号化されたまま保存されます"
  },
  "pv.c.2.t": {
   "en": "Cloudflare, Inc.",
@@ -1489,7 +1489,7 @@
  },
  "pv.co.us": {
   "en": "Cloudflare's servers are located in the United States and other countries. The United States has no comprehensive federal privacy law like Japan's, and some US laws allow the government to order companies to hand over data. Japan's Personal Information Protection Commission publishes <a href=\"https://www.ppc.go.jp/personalinfo/legal/kaiseihogohou/#gaikoku\">an overview of the US legal system</a>.",
-  "ja": "Cloudflareのサーバーは、アメリカとほかの国にあります。アメリカには日本の個人情報保護法のような包括的な連邦法がなく、政府が会社に情報の提出を命じられる法律があります。アメリカの制度は、<a href=\"https://www.ppc.go.jp/personalinfo/legal/kaiseihogohou/#gaikoku\">個人情報保護委員会がまとめています</a>。"
+  "ja": "Cloudflareのサーバーは、アメリカとほかの国にあります。アメリカには日本の個人情報保護法のような包括的な連邦法がなく、政府が会社に情報の提出を命じることができる法律があります。アメリカの制度は、<a href=\"https://www.ppc.go.jp/personalinfo/legal/kaiseihogohou/#gaikoku\">個人情報保護委員会がまとめています</a>。"
  },
  "pv.call.h": {
   "en": "6. Calls",
@@ -1529,7 +1529,7 @@
  },
  "pv.ai.1": {
   "en": "Reply drafts: up to the 30 most recent text messages in one 1:1 chat with a friend, including your own (each cut to 2,000 characters), and your name and your friend's name as your device knows them (each up to 60 characters). Photos, videos, files, voice messages and calls are not passed",
-  "ja": "返信の下書き：友だちとの1対1のトークの文字のメッセージのうち、新しいものから30通まで（利用者自身のメッセージを含みます。1通あたり2,000文字まで）。あわせて、端末に登録されている利用者の名前と友だちの名前（それぞれ60文字まで）を渡します。写真、動画、ファイル、音声メッセージ、通話は渡しません"
+  "ja": "返信の下書き：友だちとの1対1のトークの文字のメッセージのうち、新しいものから30通まで（利用者自身のメッセージを含みます。1通あたり2,000文字を超える分は切ります）。あわせて、端末に登録されている利用者の名前と友だちの名前（それぞれ60文字まで）を渡します。写真、動画、ファイル、音声メッセージ、通話は渡しません"
  },
  "pv.ai.2": {
   "en": "Your friend list: your friends' names and public keys. Other people's AIs and people you have blocked are not included",
@@ -1561,10 +1561,10 @@
  },
  "pv.ai.p5": {
   "en": "What your AI friend receives is saved on the computer it runs on, and may be sent to the AI service you use (such as Anthropic, OpenAI or Google). From there, it is handled under your agreement with that service and that service's privacy policy. If you use a model that runs on your own computer, it is not sent outside your computer. The operator is not involved in how that computer or the AI service handles the information. Once sent, the messages are no longer protected by Tegami's encryption.",
-  "ja": "AIの友だちが受け取った情報は、AIの友だちが動くパソコンに保存され、利用者が利用するAIサービス（Anthropic、OpenAI、Googleなど）に送信されることがあります。送信された情報は、利用者とAIサービスとの間の契約と、AIサービスのプライバシーポリシーに従って取り扱われます。利用者のパソコンで動くモデルを使う場合は、パソコンの外へ送信されません。運営者は、AIの友だちが動くパソコンとAIサービスでの情報の取扱いに関与しません。送信後のメッセージは、本サービスの暗号化による保護の対象外となります。"
+  "ja": "AIの友だちが受け取った情報は、AIの友だちが動くパソコンに保存され、利用者が利用するAIサービス（Anthropic、OpenAI、Googleなど）に送信されることがあります。送信された情報は、利用者とAIサービスとの間の契約と、AIサービスのプライバシーポリシーに従って取り扱われます。利用者のパソコンで動くモデルを使う場合は、パソコンの外へ送信されません。運営者は、AIの友だちが動くパソコンとAIサービスでの情報の取扱いに関与しません。AIサービスへ送信した後のメッセージは、本サービスの暗号化では保護されません。"
  },
  "pv.ai.p6": {
-  "en": "Apps modified from Tegami's code may not follow the rules in this section. If the other person uses a modified app, your messages may reach their AI even if you have chosen not to let AI read them. Nothing can stop a recipient from copying a message by hand.",
+  "en": "Apps modified from Tegami's code may not follow the rules in this section. If the other person uses a modified app, your messages may reach their AI even if you have chosen not to let other people's AIs read what you write. Nothing can stop a recipient from copying a message by hand.",
   "ja": "本サービスのコードを改造したアプリは、本節の定めに従わないことがあります。相手が改造したアプリを使っている場合、「自分の文を相手のAIに読ませない」を選んでいても、利用者のメッセージが相手のAIへ渡ることがあります。また、受信者が手作業でメッセージを書き写すことは防げません。"
  },
  "pv.never.h": {
@@ -1620,8 +1620,8 @@
   "ja": "設定の「復旧コードを削除」を押すと、リレーは復旧用バックアップを削除します"
  },
  "pv.del.a.3": {
-  "en": "Envelopes and files other than stickers are deleted automatically after 30 days",
-  "ja": "封筒と、スタンプ以外のファイルは、30日後に自動で削除されます"
+  "en": "The relay deletes envelopes and files other than stickers automatically after 30 days",
+  "ja": "リレーは、封筒と、スタンプ以外のファイルを、30日後に自動で削除します"
  },
  "pv.del.a.4": {
   "en": "Delete a sticker: the relay deletes the sticker image and the record of who kept it",
@@ -1629,7 +1629,7 @@
  },
  "pv.del.a.5": {
   "en": "Tap \"Delete account\" in settings: the relay deletes the envelopes waiting for the account, its stickers, its notification addresses, its registration and its invites, and the data on that device is deleted too. If that device has the recovery code, the recovery backup is deleted first",
-  "ja": "設定の「アカウントを削除」を押すと、リレーはそのアカウント宛ての封筒、スタンプ、通知の宛先、アカウントの登録、招待券を削除します。あわせて、操作した端末のデータも削除します。その端末に復旧コードがある場合は、復旧用バックアップも先に削除します"
+  "ja": "設定の「アカウントを削除」を押すと、リレーはそのアカウント宛ての封筒、スタンプ、通知の宛先、アカウントの登録、招待コードを削除します。あわせて、操作した端末のデータも削除します。その端末に復旧コードがある場合は、復旧用バックアップも先に削除します"
  },
  "pv.del.a.6": {
   "en": "Even after the account is deleted, the following remain:",
@@ -1716,8 +1716,8 @@
   "ja": "サイト、アプリ、リレーとの通信は、すべて暗号化しています"
  },
  "pv.safe.3": {
-  "en": "The relay only accepts messages in encrypted envelopes",
-  "ja": "リレーは、暗号化された封筒のみを受け付けます"
+  "en": "The relay accepts messages only as encrypted envelopes",
+  "ja": "リレーは、メッセージを暗号化された封筒としてのみ受け付けます"
  },
  "pv.safe.4": {
   "en": "The relay gives each logged-in account only the envelopes addressed to it",
