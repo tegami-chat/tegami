@@ -43,7 +43,17 @@ const PAD = 1024;
 export const MAX_BACKUP_BYTES = 64 * 1024;
 const LOCAL = () => k('recovery');
 
-export class RecoveryError extends Error {}
+export class RecoveryError extends Error {
+  /** Milliseconds the relay asked to wait (Retry-After on a 503), when it said so. */
+  retryAfterMs?: number;
+}
+
+function refused(status: number, res: Response) {
+  const e = new RecoveryError(`relay said ${status}`);
+  const s = Number(res.headers?.get?.('Retry-After'));
+  if (status === 503 && Number.isFinite(s) && s > 0) e.retryAfterMs = Math.min(s, 24 * 3600) * 1000;
+  return e;
+}
 
 /** id: where the backup lives on the relay. key: AES-GCM key. signer: Nostr secret key that signs uploads and deletes. */
 export type RecoveryKeys = { id: string; key: Uint8Array<ArrayBuffer>; signer: Uint8Array<ArrayBuffer> };
@@ -141,7 +151,7 @@ export async function putBackup(keys: RecoveryKeys, bundle: Bundle, refresh = fa
   if (body.length > MAX_BACKUP_BYTES) throw new RecoveryError('too large');
   const res = await signedFetch('PUT', `/backup/${keys.id}`, body, keys.signer, refresh ? { 'If-Match': '*' } : {});
   if (res.status === 412) throw new BackupGoneError('gone');
-  if (!res.ok) throw new RecoveryError(`relay said ${res.status}`);
+  if (!res.ok) throw refused(res.status, res);
 }
 
 /** Deletes a backup. A backup that is already gone counts as deleted. */

@@ -2607,7 +2607,7 @@ async function main() {
       const aiLink = `${ORIGIN}/i#${nip19.npubEncode(getPublicKey(aiKey))}&n=${encodeURIComponent('クロード')}&m=${encodeURIComponent('Anthropic Claude')}`;
       await befriendMyAi(a, aiLink);
       const p = a.page;
-      const perms = () => p.evaluate(() => JSON.parse(localStorage.getItem('tegami.ai.permissions') || 'null'));
+      const perms = () => p.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.ai.permissions') || 'null'));
       const sw = (name) => p.getByRole('switch', { name, exact: true });
 
       // Settings → AIの権限: every switch starts off, and the settings row says so.
@@ -2683,7 +2683,7 @@ async function main() {
       const aiHex = getPublicKey(aiKey);
       await befriendMyAi(a, `${ORIGIN}/i#${nip19.npubEncode(aiHex)}&n=${encodeURIComponent('クロード')}&m=${encodeURIComponent('Anthropic Claude')}`);
       const p = a.page;
-      const perms = () => p.evaluate(() => JSON.parse(localStorage.getItem('tegami.ai.permissions') || 'null'));
+      const perms = () => p.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.ai.permissions') || 'null'));
       const sw = (name) => p.getByRole('switch', { name, exact: true });
       const chip = (name) => p.getByRole('radio', { name, exact: true });
       const confirmShown = () => p.getByTestId('ai-confirm').isVisible().catch(() => false);
@@ -2786,13 +2786,13 @@ async function main() {
 
       // A time limit that has passed: the switch is turned off and the log says so.
       await p.evaluate(() => {
-        const v = JSON.parse(localStorage.getItem('tegami.ai.permissions'));
+        const v = JSON.parse(__tegamiStore.getItem('tegami.ai.permissions'));
         v.all.contacts = { until: Math.floor(Date.now() / 1000) - 5 };
-        localStorage.setItem('tegami.ai.permissions', JSON.stringify(v));
+        __tegamiStore.setItem('tegami.ai.permissions', JSON.stringify(v));
       });
       await p.reload();
       await waitText(p, 'AIの使用');
-      await p.waitForFunction(() => JSON.parse(localStorage.getItem('tegami.ai.permissions')).all.contacts === false, null, { timeout: 5000 });
+      await p.waitForFunction(() => JSON.parse(__tegamiStore.getItem('tegami.ai.permissions')).all.contacts === false, null, { timeout: 5000 });
       await p.getByText('AIの記録', { exact: true }).click();
       await waitText(p, '期間が終わったため、自動でオフに戻しました');
       await waitText(p, '写真や動画、ファイル、音声、リンクを含む文や、お金の話に見える文は確認：許可しました');
@@ -2811,7 +2811,7 @@ async function main() {
       const aiLink = `${ORIGIN}/i#${nip19.npubEncode(getPublicKey(generateSecretKey()))}&n=${encodeURIComponent('クロード')}&m=${encodeURIComponent('Anthropic Claude')}`;
       await befriendMyAi(a, aiLink);
       const p = a.page;
-      const perms = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('tegami.ai.permissions') || 'null'));
+      const perms = (page) => page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.ai.permissions') || 'null'));
       // The same settings, whatever order the switches were turned in.
       const same = (x, y) => {
         const sorted = (v) => (v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((key) => [key, sorted(v[key])])) : v);
@@ -3017,9 +3017,9 @@ async function main() {
         const sent = await toAi();
         await openPlus();
         await p2.evaluate((hex) => {
-          const s = JSON.parse(localStorage.getItem('tegami.ai.permissions'));
+          const s = JSON.parse(__tegamiStore.getItem('tegami.ai.permissions'));
           s.friends[hex].read = false;
-          localStorage.setItem('tegami.ai.permissions', JSON.stringify(s));
+          __tegamiStore.setItem('tegami.ai.permissions', JSON.stringify(s));
         }, b.hex);
         await button(p, ASK).click();
         await waitText(p, 'AIの権限で止めました');
@@ -3038,9 +3038,9 @@ async function main() {
 
         // A stranger's chat: never, even with a friend switch stored for them.
         await p.evaluate((hex) => {
-          const s = JSON.parse(localStorage.getItem('tegami.ai.permissions'));
+          const s = JSON.parse(__tegamiStore.getItem('tegami.ai.permissions'));
           s.friends[hex] = { read: true, draft: true };
-          localStorage.setItem('tegami.ai.permissions', JSON.stringify(s));
+          __tegamiStore.setItem('tegami.ai.permissions', JSON.stringify(s));
         }, st.hex);
         await befriend(st, a);
         await st.page.getByPlaceholder('メッセージ').fill('おかねかして');
@@ -3090,12 +3090,12 @@ async function main() {
     };
     const setPerms = (page, update) =>
       page.evaluate((u) => {
-        const s = JSON.parse(localStorage.getItem('tegami.ai.permissions') || '{"all":{},"models":{},"ais":{},"friends":{},"peerAis":{}}');
+        const s = JSON.parse(__tegamiStore.getItem('tegami.ai.permissions') || '{"all":{},"models":{},"ais":{},"friends":{},"peerAis":{}}');
         for (const [layer, v] of Object.entries(u)) {
           if (layer === 'all') Object.assign(s.all, v);
           else for (const [id, sw] of Object.entries(v)) s[layer][id] = { ...s[layer][id], ...sw };
         }
-        localStorage.setItem('tegami.ai.permissions', JSON.stringify(s));
+        __tegamiStore.setItem('tegami.ai.permissions', JSON.stringify(s));
       }, update);
     const storedTexts = (page) => page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.messages') || '[]').map((m) => m.text));
 
@@ -3481,7 +3481,7 @@ async function main() {
       const stop = got.filter((r) => r.kind === 25069).pop();
       assert(content(stop).v === 1 && content(stop).stop === true && typeof content(stop).at === 'number', `the stop signal: ${stop.content}`);
       assert(stop.tags.some((t) => t[0] === 'p' && t[1] === ai.hex), 'the stop signal is not for the AI');
-      const perms = await p.evaluate(() => JSON.parse(localStorage.getItem('tegami.ai.permissions')));
+      const perms = await p.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.ai.permissions')));
       assert(Object.keys(perms.peerAis).length === 0, 'a permission to talk to another AI was kept');
       assert(Object.values(perms.all).every((v) => v === false), 'a switch stayed on');
 
@@ -3560,7 +3560,7 @@ async function main() {
       assert((await a2.page.getByTestId('ai-widened').count()) === 0, 'the line stayed after opening the AI screen');
       // Narrowing is not told.
       await a.page.getByRole('switch', { name: 'トークを読む', exact: true }).click();
-      await a2.page.waitForFunction(() => !JSON.parse(localStorage.getItem('tegami.ai.permissions') || '{}').all?.read, null, { timeout: 15000 });
+      await a2.page.waitForFunction(() => !JSON.parse(__tegamiStore.getItem('tegami.ai.permissions') || '{}').all?.read, null, { timeout: 15000 });
       await a2.page.waitForTimeout(500);
       assert((await a2.page.getByTestId('ai-widened').count()) === 0, 'narrowing was told as widening');
 

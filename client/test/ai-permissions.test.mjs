@@ -121,9 +121,9 @@ test('the log keeps which messages were handed over, only when allowed', () => {
 test('a switch turned off in another tab stops the gate at once', () => {
   assert.equal(gateAi({ ai: AI, model: MODEL, action: 'read', friend: TEST_B }, isFriend), true);
   // Another tab of this browser writes the stored switches; this tab's cache is not told.
-  const stored = JSON.parse(store.get('tegami.ai.permissions'));
+  const stored = JSON.parse(A.sealedRaw('tegami.ai.permissions'));
   stored.friends[TEST_B].read = false;
-  store.set('tegami.ai.permissions', JSON.stringify(stored));
+  A.saveSealed('tegami.ai.permissions', JSON.stringify(stored));
   assert.equal(gateAi({ ai: AI, model: MODEL, action: 'read', friend: TEST_B }, isFriend), false);
   setAiSwitch({ layer: 'friend', id: TEST_B }, 'read', true);
 });

@@ -45,11 +45,11 @@ function test(name, fn) {
 }
 
 test('which names are kept encrypted', () => {
-  for (const name of ['messages', 'contacts', 'groups', 'outbox', 'blocked', 'deleted', 'readAt', 'cleared', 'sync', 'ai.log', 'stamps', 'stampsUsed', 'avatar']) {
+  for (const name of ['messages', 'contacts', 'groups', 'outbox', 'blocked', 'deleted', 'readAt', 'cleared', 'sync', 'ai.log', 'stamps', 'stampsUsed', 'avatar', 'callNetwork', 'ai.permissions']) {
     assert.ok(A.isSealedKey(`tegami.${name}`), name);
     assert.ok(A.isSealedKey(`tegami@ab12cd34.${name}`), name);
   }
-  for (const name of ['vault', 'device', 'account', 'myName', 'setupAt', 'showUnread', 'registration', 'push', 'avatarAt', 'stampsAt', 'ai.permissions']) {
+  for (const name of ['vault', 'device', 'account', 'myName', 'setupAt', 'showUnread', 'registration', 'push', 'avatarAt', 'stampsAt']) {
     assert.ok(!A.isSealedKey(`tegami.${name}`), name);
   }
   assert.ok(!A.isSealedKey('tegami.accounts') && !A.isSealedKey('tegami.theme'));
@@ -217,6 +217,28 @@ test('opening another account closes the open one and writes its last changes', 
   await A.openAtRest('main', SECRET);
   assert.deepEqual(load(k('deleted'), []), ['d1']);
   A.closeAtRest();
+});
+
+test('the own TURN server and the AI switches are kept encrypted, and plain copies from before move in', async () => {
+  const TURN = { relayOnly: true, own: { url: 'turn:turn.test.example:3478', username: 'テストA', credential: 'himitsu-9d2e' } };
+  const PERMS = { all: { read: true }, models: {}, ais: {}, friends: { 'テストA': { read: false } }, peerAis: {} };
+  store.set('tegami.callNetwork', JSON.stringify(TURN));
+  store.set('tegami.ai.permissions', JSON.stringify(PERMS));
+  await A.openAtRest('main', new Uint8Array(32).fill(11));
+  assert.deepEqual(load(k('callNetwork'), null), TURN, 'migrated value reads back');
+  assert.deepEqual(load(k('ai.permissions'), null), PERMS);
+  assert.ok(!store.has('tegami.callNetwork') && !store.has('tegami.ai.permissions'), 'plain copies removed');
+  await A.flushAtRest();
+  assert.ok(raw('tegami.callNetwork') && raw('tegami.ai.permissions'), 'encrypted records written');
+  assert.ok(!everything().includes('himitsu-9d2e') && !everything().includes('turn.test.example'), 'no plain TURN password or address');
+  save(k('callNetwork'), { relayOnly: false, own: null });
+  await A.flushAtRest();
+  A.closeAtRest();
+  assert.deepEqual(load(k('callNetwork'), 'closed'), 'closed', 'closed: reads as empty');
+  await A.openAtRest('main', new Uint8Array(32).fill(11));
+  assert.deepEqual(load(k('callNetwork'), null), { relayOnly: false, own: null }, 'round trip');
+  assert.deepEqual(load(k('ai.permissions'), null), PERMS);
+  A.closeAtRest(true);
 });
 
 await chain;

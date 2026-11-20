@@ -16,7 +16,7 @@
 
 import { useSyncExternalStore } from 'react';
 
-import { k, load, save } from './storage';
+import { k, load, rawOf, save } from './storage';
 
 export type OwnTurn = { url: string; username: string; credential: string };
 export type CallNetwork = { relayOnly: boolean; own: OwnTurn | null };
@@ -24,7 +24,7 @@ export type CallNetwork = { relayOnly: boolean; own: OwnTurn | null };
 const KEY = () => k('callNetwork');
 const EMPTY: CallNetwork = { relayOnly: false, own: null };
 
-let cache: { key: string; value: CallNetwork } | null = null;
+let cache: { key: string; raw: string | null; value: CallNetwork } | null = null;
 const listeners = new Set<() => void>();
 
 function clean(v: unknown): CallNetwork {
@@ -41,14 +41,16 @@ function clean(v: unknown): CallNetwork {
 
 export function getCallNetwork(): CallNetwork {
   const key = KEY();
-  if (!cache || cache.key !== key) cache = { key, value: clean(load(key, EMPTY)) };
+  // Kept encrypted (lib/at-rest.ts): read again when the stored text changed, e.g. once the account has opened.
+  const raw = rawOf(key);
+  if (!cache || cache.key !== key || cache.raw !== raw) cache = { key, raw, value: clean(load(key, EMPTY)) };
   return cache.value;
 }
 
 function put(value: CallNetwork) {
   const key = KEY();
   save(key, value);
-  cache = { key, value };
+  cache = { key, raw: rawOf(key), value };
   for (const l of listeners) l();
 }
 

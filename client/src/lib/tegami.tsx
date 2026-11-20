@@ -88,7 +88,7 @@ import {
 import { bundleSecret, cleanStamps, sendTransfer, type Bundle } from './transfer';
 import { disablePush, enablePush, refreshPush, replaceSubscription, type PushState } from './push';
 import { SIGNAL_KIND, freshSignal, wrapQuiet, wrapSignal } from './signal';
-import { BackupGoneError, type BackupRef, clearLocal, deleteBackup, deriveKeys, loadLocal, makeCode, putBackup, recoveryOnHere, saveLocal, takeRestoredKeys } from './recovery';
+import { BackupGoneError, type BackupRef, RecoveryError, clearLocal, deleteBackup, deriveKeys, loadLocal, makeCode, putBackup, recoveryOnHere, saveLocal, takeRestoredKeys } from './recovery';
 import { createVault, unlockVault, type Vault } from './vault';
 import { TURNSTILE_SITEKEY, askRelay, forgetInviteCode, keptInviteCode, type Registration } from './register';
 import { signedFetch } from './relay-http';
@@ -2874,11 +2874,12 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
           for (const ref of rec.stale) await deleteBackup(ref).catch(() => left.push(ref));
           await saveLocal(secret, { keys: rec.keys, stale: left });
         }
-      }).catch(() => {
-        // Offline or the relay refused: try again in a minute, and at the next change or start.
+      }).catch((e) => {
+        // Offline or the relay refused (503 "not now", 507): try again in a minute, or when the relay said (Retry-After), and at the next change or start.
         refreshed(false);
         clearTimeout(retryTimer.current);
-        retryTimer.current = setTimeout(() => setRecoveryRetry((n) => n + 1), 60_000);
+        const wait = e instanceof RecoveryError && e.retryAfterMs ? Math.max(60_000, e.retryAfterMs) : 60_000;
+        retryTimer.current = setTimeout(() => setRecoveryRetry((n) => n + 1), wait);
       });
     }, 1500);
     return () => clearTimeout(t);

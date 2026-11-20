@@ -19,6 +19,9 @@
 // The iPhone and Android apps have no IndexedDB: the same encrypted records are kept in
 // localStorage (expo-sqlite) under "tegami-store:<name>".
 //
+// callNetwork (the person's own TURN server and its password) and ai.permissions (which AI may do
+// what) were plain until 2026-11-20 and are moved in the same way.
+//
 // What stays plain on purpose (it is needed before the account opens, or holds nothing of
 // a person): the vault, the device vault, the account's name for the list, switches and
 // stamps of time, the notification registration, and the service worker's store (sw-store.ts).
@@ -43,6 +46,8 @@ export const SEALED_NAMES: readonly string[] = [
   'ai.peerNames',
   'ai.groups',
   'ai.ownerCards',
+  'ai.permissions',
+  'callNetwork',
   'ai.sent',
   'noaiChats',
   'stamps',
