@@ -167,6 +167,13 @@ export function Gate({ locked }: { locked: boolean }) {
           <Text style={s.primaryText}>{locked ? 'ひらく' : moved ? 'この端末で使う' : 'はじめる'}</Text>
         </Pressable>
       )}
+      {failed && <Text style={s.notice}>{'パスキーを使えませんでした。\nもう一度押してください。'}</Text>}
+      {missed && (
+        <Text style={s.notice}>
+          パスワード管理アプリの画面が出た時は、その画面で「ブラウザや端末のパスキーを使う」を選んでください。Tegami
+          のパスキーは、始めた時に選んだ場所（Windows、iPhone、Googleなど）に保存されています。
+        </Text>
+      )}
       {!locked && !moved && !unsupported && !twin &&
         (pasting ? (
           <View style={s.paste}>
@@ -235,13 +242,6 @@ export function Gate({ locked }: { locked: boolean }) {
       )}
       {!locked && !twin && passkeysAvailable() && <PasskeyStores />}
       {showInfo && <GateInfo returning={locked} />}
-      {failed && <Text style={s.notice}>パスキーを使えませんでした。もう一度押してください</Text>}
-      {missed && (
-        <Text style={s.notice}>
-          パスワード管理アプリの画面が出た時は、その画面で「ブラウザや端末のパスキーを使う」を選んでください。Tegami
-          のパスキーは、始めた時に選んだ場所（Windows、iPhone、Googleなど）に保存されています。
-        </Text>
-      )}
     </Frame>
   );
 }
