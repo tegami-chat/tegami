@@ -38,7 +38,7 @@ const FEATURES = [
 ];
 
 const STEPS = [
-  { title: 'はじめるを押す', body: '電話番号もメールアドレスもいりません。' },
+  { title: '「はじめる」を押す', body: '電話番号もメールアドレスもいりません。' },
   { title: 'パスキーで鍵を守る', body: 'アカウントの鍵は、この端末の中で作ります。' },
   { title: '友だちを追加する', body: '招待リンクを送るか、QRコードを見せます。' },
 ];
@@ -71,7 +71,7 @@ export function GateInfo() {
           ))}
         </View>
 
-        <Text style={s.heading} role="heading" aria-level={2}>いつもの機能はぜんぶあります。</Text>
+        <Text style={s.heading} role="heading" aria-level={2}>{wide ? 'いつもの機能はぜんぶあります。' : 'いつもの機能は\nぜんぶあります。'}</Text>
         <View style={s.chips}>
           {FEATURES.map((f) => (
             <Text key={f} style={s.chip}>{f}</Text>
@@ -116,7 +116,7 @@ const styles = (c: Palette) =>
     heading: { fontSize: 24, fontWeight: '700', color: c.text, textAlign: 'center' },
     chips: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: -24 },
     chip: { fontSize: 14, color: c.text, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6, overflow: 'hidden' },
-    number: { width: 32, height: 32, borderRadius: 16, backgroundColor: c.selected, color: c.accent, fontSize: 16, fontWeight: '700', textAlign: 'center', lineHeight: 32, overflow: 'hidden' },
+    number: { alignSelf: 'flex-start', width: 32, height: 32, borderRadius: 16, backgroundColor: c.selected, color: c.accent, fontSize: 16, fontWeight: '700', textAlign: 'center', lineHeight: 32, overflow: 'hidden' },
     footer: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line, paddingTop: 20, paddingBottom: 8, gap: 12, alignItems: 'center' },
     links: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: 16, rowGap: 6 },
     link: { fontSize: 12, color: c.muted, textDecorationLine: 'underline' },
