@@ -9,7 +9,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync, existsSync, chmodSync } from 'node:fs';
 import { accountFor, forget, protect, refusePlain, storeKind, unprotect, warnPlain } from './secrets.mjs';
 import { Vault, recordsKey } from './vault.mjs';
-import { cleanForAi, findHold, findSecret } from './screen.mjs';
+import { cleanForAi, findFile, findHold, findLink, findMoney, findSecret } from './screen.mjs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import * as nip17 from 'nostr-tools/nip17';
@@ -43,6 +43,15 @@ export const CONTACTS_KIND = 25065;
 export const PEER_ASK_KIND = 25066;
 export const PEER_RESULT_KIND = 25067;
 export const AI_GROUP_KIND = 10104;
+// A reply the AI may not send with its own key (money, a file, a link, a first reply to someone, or
+// a check that stopped it) goes to the owner's app to be sent in the owner's name, or not:
+// HOLD_ASK_KIND from the AI, HOLD_RESULT_KIND {id, result} from the owner. Not like SEND_ASK_KIND:
+// nobody waits for the answer here, the ask stays on the relay for a day.
+export const HOLD_ASK_KIND = 25071;
+export const HOLD_RESULT_KIND = 25072;
+export const HOLD_TTL = 86400;
+const HOLD_TEXT_MAX = 5000;
+export const HOLD_REASONS = ['CHECK', 'MONEY', 'FILE', 'LINK', 'FIRST'];
 /** Messages a day with one other person's AI, both ways, unless the owner's app gave another limit. */
 export const PEER_DAILY_LIMIT = 20;
 const HEX = /^[0-9a-f]{64}$/;
@@ -312,6 +321,8 @@ export class Agent {
     this.listeners = new Set();
     // Asks for a reply draft. Kept in memory only: they hold a friend's words, never written to disk.
     this.askListeners = new Set();
+    // Told when the owner answered an ask of askOwnerToSend.
+    this.holdListeners = new Set();
     this.seenAsks = new Set();
     // Answers from the owner's app, by the id of the ask they answer.
     this.waiters = new Map();
@@ -323,6 +334,10 @@ export class Agent {
     // Messages sent a day to one chat, and talks with other AIs (two-AI limits).
     this.state.sendCount ??= {};
     this.state.aiTalk ??= {};
+    // People this AI has sent a reply to (by its own key, or the owner pressed 送る), and the asks
+    // still waiting for the owner: id -> { peer, at }. Only the people and the times, never the words.
+    this.state.sentTo ??= {};
+    this.state.holds ??= {};
     // People who said "do not let an AI read what I write" in their profile card, with when.
     this.state.noai ??= {};
     // Other people's AIs already asked about (so one AI writing many times asks the owner once an hour).
@@ -470,6 +485,29 @@ export class Agent {
     this.refreshState();
     const c = this.state.sendCount[room];
     return !(c?.day === day && c.n >= this.settings.dailyReplies);
+  }
+
+  /** Notes that this AI has sent a reply to this chat (the owner is not counted: the owner reads everything). */
+  markSentTo(peer, now = Math.floor(Date.now() / 1000)) {
+    this.refreshState();
+    if (peer === this.owner?.pubkey || this.state.sentTo[peer]) return;
+    this.state.sentTo[peer] = now;
+    this.saveState();
+  }
+
+  /**
+   * Why a reply to this chat does not go out with this AI's own key but to the owner's app first:
+   * 'MONEY', 'FILE', 'LINK' or 'FIRST' (this AI never replied to this person before), else null.
+   * Never for the owner. A person the owner allowed (another person's AI) is not a first reply.
+   */
+  ownerReason(peer, text) {
+    if (peer === this.owner?.pubkey) return null;
+    if (findMoney(String(text)) !== null) return 'MONEY';
+    if (findFile(String(text))) return 'FILE';
+    if (findLink(String(text))) return 'LINK';
+    this.refreshState();
+    if (!this.state.sentTo[peer] && this.contacts.some((c) => c.pubkey === peer)) return 'FIRST';
+    return null;
   }
 
   /** Counts one message this AI sends to a chat today. False when the daily limit is reached. */
@@ -717,6 +755,10 @@ export class Agent {
       }
       return;
     }
+    if (rumor.kind === HOLD_RESULT_KIND) {
+      this.applyHoldResult(rumor);
+      return;
+    }
     if (rumor.kind === AI_GROUP_KIND) {
       this.applyGroup(rumor);
       return;
@@ -841,9 +883,9 @@ export class Agent {
     if (secret) throw Object.assign(new Error(`Not sent: the text looks like it carries a secret (${secret}).`), { code: 'SECRET' });
     // Money talk and links go to the owner's look first: to anyone but the owner, this AI's key never sends them.
     if (!notice && peer !== this.owner?.pubkey) {
-      const hold = findHold(String(text));
+      const hold = findHold(String(text)) ?? (findFile(String(text)) ? 'FILE' : null);
       if (hold)
-        throw Object.assign(new Error(`Not sent: the text looks like ${hold === 'MONEY' ? 'money talk' : 'a link'}; your owner has to see it first.`), { code: hold });
+        throw Object.assign(new Error(`Not sent: the text looks like ${hold === 'MONEY' ? 'money talk' : hold === 'FILE' ? 'a file' : 'a link'}; your owner has to see it first.`), { code: hold });
     }
     const toAi = this.isAiChat(peer);
     const why = toAi ? this.aiTalkCheck(peer, { count: false }) : '';
@@ -862,6 +904,7 @@ export class Agent {
     const rumor = nip59.createRumor({ kind: 14, content: text, tags, created_at: Math.floor(Date.now() / 1000) }, this.secret);
     const wraps = [...members, this.pubkey].map((to) => nip59.createWrap(nip59.createSeal(rumor, this.secret, to), to));
     await this.publish(wraps);
+    if (!notice) this.markSentTo(peer);
     this.receive(wraps[1]);
     return rumor.id;
   }
@@ -961,6 +1004,56 @@ export class Agent {
     const data = { to, text: body, readOthers: readOthers !== false || held, ...(held ? { check: { verdict: 'ASK_OWNER', reason: String(check.reason ?? '').slice(0, 200) } } : {}) };
     const r = await this.askOwner(SEND_ASK_KIND, data, ms);
     return r?.status ?? null;
+  }
+
+  /**
+   * Hands a reply the AI may not send itself to the owner's app: the owner presses 送る (it is sent
+   * in the owner's name, with the mark that an AI wrote it) or 送らない. Nothing waits for the
+   * answer; the ask lives for a day (HOLD_TTL). One chat has one open ask: a newer one replaces it.
+   * `reason`: CHECK (the model check stopped it, `detail` is why), MONEY, FILE, LINK or FIRST.
+   * Returns the ask's id. A secret is never handed over (code SECRET).
+   */
+  async askOwnerToSend(peer, text, reason, detail = '', inReplyTo = '') {
+    const owner = this.owner;
+    if (!owner) throw new Error('No owner yet. Run: tegami-agent add "<your invite link>" --trust');
+    if (this.stopped) throw new Error('Stopped by your owner. Nothing is asked until they resume you.');
+    if (!HOLD_REASONS.includes(reason)) throw new Error(`Unknown reason: ${reason}`);
+    if (!HEX.test(peer)) throw Object.assign(new Error('The owner can send to one person only, not to a group.'), { code: 'GROUP' });
+    const body = String(text).slice(0, HOLD_TEXT_MAX);
+    if (findSecret(body)) throw Object.assign(new Error('Not asked: the text looks like it carries a secret.'), { code: 'SECRET' });
+    await this.connect();
+    const id = randomBytes(16).toString('hex');
+    const toName = this.contacts.find((c) => c.pubkey === peer)?.name;
+    const data = { v: 1, id, to: peer, ...(toName ? { toName: toName.slice(0, 60) } : {}), text: body, reason, ...(detail ? { detail: String(detail).slice(0, 200) } : {}), ...(HEX.test(inReplyTo) ? { inReplyTo } : {}) };
+    const now = Math.floor(Date.now() / 1000);
+    const rumor = nip59.createRumor({ kind: HOLD_ASK_KIND, content: JSON.stringify(data), tags: [['p', owner.pubkey]], created_at: now }, this.secret);
+    await this.publish([wrapExpiring(rumor, this.secret, owner.pubkey, HOLD_TTL)]);
+    this.refreshState();
+    for (const [k, h] of Object.entries(this.state.holds)) if (h.peer === peer || h.at < now - HOLD_TTL) delete this.state.holds[k];
+    this.state.holds[id] = { peer, at: now };
+    this.saveState();
+    return id;
+  }
+
+  /** The owner's answer to an ask of askOwnerToSend: sent means the owner's app sent it, so this AI has now replied to that person. */
+  applyHoldResult(rumor) {
+    if (!this.owner || rumor.pubkey !== this.owner.pubkey) return;
+    let d;
+    try {
+      d = JSON.parse(rumor.content);
+    } catch {
+      return;
+    }
+    this.refreshState();
+    const h = typeof d?.id === 'string' ? this.state.holds[d.id] : null;
+    if (!h) return;
+    delete this.state.holds[d.id];
+    if (d.result === 'sent') {
+      this.countSend(h.peer);
+      this.markSentTo(h.peer, rumor.created_at);
+    }
+    this.saveState();
+    for (const l of this.holdListeners) l({ id: d.id, peer: h.peer, result: String(d.result) });
   }
 
   /** Asks the owner's app whether this AI may talk to another person's AI. */

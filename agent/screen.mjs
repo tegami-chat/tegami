@@ -158,3 +158,15 @@ export function findHold(text) {
   if (findLink(text)) return 'LINK';
   return null;
 }
+
+// ---------- ファイル ----------
+
+// A file, or the way to one, written into the words: a data: address, a file:// address, a
+// Windows path (C:\..., \server\share), or an absolute Unix path or one under the home folder.
+const FILE_PATH =
+  /data:[a-z0-9.+-]+\/[a-z0-9.+-]+[;,]|file:\/\/|(?<![a-z0-9])[a-z]:[\\/][^\s\\/]|\\\\[\w.-]+\\[\w$.-]|(?:^|[\s"'(（「])(?:~\/|\/(?:[\w.-]+\/)+)[\w.-]+/;
+
+/** Whether a text carries a file or a path to one (read in plain, lower-case form like the app does). */
+export function findFile(text) {
+  return FILE_PATH.test(cleanForAi(String(text ?? '')).normalize('NFKC').toLowerCase());
+}

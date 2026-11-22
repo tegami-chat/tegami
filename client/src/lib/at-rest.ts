@@ -43,6 +43,7 @@ export const SEALED_NAMES: readonly string[] = [
   'syncSent',
   'ai.log',
   'ai.proposals',
+  'ai.holds',
   'ai.peerNames',
   'ai.groups',
   'ai.ownerCards',

@@ -73,14 +73,14 @@ export function parseDraft(content: string): { re: string; text: string } | null
 }
 
 /** Seals the rumor for `to` and wraps it with an expiration (nip59.createWrap has no tags). */
-export function wrapExpiring(rumor: ReturnType<typeof nip59.createRumor>, secret: Uint8Array, to: string, now = Math.floor(Date.now() / 1000)) {
+export function wrapExpiring(rumor: ReturnType<typeof nip59.createRumor>, secret: Uint8Array, to: string, now = Math.floor(Date.now() / 1000), ttl = AI_DRAFT_TTL) {
   const seal = nip59.createSeal(rumor, secret, to);
   const key = generateSecretKey();
   return finalizeEvent(
     {
       kind: 1059,
       created_at: now,
-      tags: [['p', to], ['expiration', String(now + AI_DRAFT_TTL)]],
+      tags: [['p', to], ['expiration', String(now + ttl)]],
       content: nip44.encrypt(JSON.stringify(seal), nip44.getConversationKey(key, to)),
     },
     key,
