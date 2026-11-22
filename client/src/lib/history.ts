@@ -12,6 +12,7 @@
 // days, like photos. Photos and files inside the old messages are not carried: only what
 // the message says about them (they open as long as the file server still has them).
 
+import { canGzip, gunzipBytes, gzipBytes } from './gzip';
 import { encryptAndUpload, forgetFile, openFile, validFileRef, type FileRef } from './files';
 import type { CallRecord, Message } from './tegami';
 
@@ -56,18 +57,14 @@ export function historyParts(h: History, partBytes = HISTORY_PART_BYTES, maxPart
   return { parts, left: msgs.length - used };
 }
 
-async function pipe(bytes: Uint8Array<ArrayBuffer>, stream: CompressionStream | DecompressionStream) {
-  return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
-}
-
 /** Compresses, encrypts and uploads each part. Returns what opens them. */
 export async function uploadHistory(h: History, secret: Uint8Array): Promise<FileRef[]> {
   const { parts } = historyParts(h);
-  const gzip = typeof CompressionStream !== 'undefined';
+  const gzip = canGzip();
   const refs: FileRef[] = [];
   for (const part of parts) {
     let bytes = new TextEncoder().encode(part) as Uint8Array<ArrayBuffer>;
-    if (gzip) bytes = (await pipe(bytes, new CompressionStream('gzip'))) as Uint8Array<ArrayBuffer>;
+    if (gzip) bytes = await gzipBytes(bytes);
     refs.push(await encryptAndUpload(bytes, gzip ? 'application/gzip' : 'application/json', secret));
   }
   return refs;
@@ -93,7 +90,7 @@ export async function downloadHistory(refs: FileRef[]): Promise<History> {
       const blob = await openFile(`history:${ref.sha256}`, ref);
       void forgetFile(`history:${ref.sha256}`);
       let bytes = new Uint8Array(await blob.arrayBuffer());
-      if (ref.type === 'application/gzip') bytes = await pipe(bytes, new DecompressionStream('gzip'));
+      if (ref.type === 'application/gzip') bytes = await gunzipBytes(bytes);
       const part = readHistoryPart(new TextDecoder().decode(bytes));
       out.messages.push(...part.messages);
       Object.assign(out.cleared, part.cleared);
