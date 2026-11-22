@@ -465,8 +465,8 @@ async function inboxOf(secret, ready = () => true) {
 
 const results = [];
 async function test(name, fn) {
-  // ONLY=<part of a name> runs just the matching tests.
-  if (process.env.ONLY && !name.includes(process.env.ONLY)) return;
+  // ONLY=<part of a name> runs just the matching tests (several parts: a|b).
+  if (process.env.ONLY && !process.env.ONLY.split('|').some((part) => name.includes(part))) return;
   try {
     await fn();
     results.push([name, true]);
@@ -627,16 +627,19 @@ async function main() {
       const before = (await calls(u.page)).get;
       await button(u.page, '秘密鍵を書き出す').click();
       await waitText(u.page, '昔の会話も読まれます');
+      await shot(u.page, 'export-key-before', '「秘密鍵を書き出す」を押した直後。パスワードを決める前');
       await u.page.getByTestId('export-password').fill('short');
       await u.page.getByTestId('export-password-again').fill('short');
       await u.page.getByTestId('export-run').click();
       await waitText(u.page, '12文字以上');
+      await shot(u.page, 'export-key-short', 'パスワードが12文字に足りない時のエラー');
       const pw = 'correct horse battery';
       await u.page.getByTestId('export-password').fill(pw);
       await u.page.getByTestId('export-password-again').fill(pw);
       await u.page.getByTestId('export-run').click();
       await u.page.getByTestId('exported-key').waitFor({ timeout: 30000 });
       const out = await u.page.getByTestId('exported-key').innerText();
+      await shot(u.page, 'export-key-after', '書き出した後。試験用の鍵なので文字列が写っている');
       assert(out.startsWith('ncryptsec1'), 'not NIP-49 text: ' + out.slice(0, 20));
       assert((await calls(u.page)).get > before, 'the passkey was not asked again');
       const { decrypt } = await import('nostr-tools/nip49');
@@ -5348,6 +5351,169 @@ async function main() {
         const i = document.querySelector('img[alt="写真"]');
         return i && i.complete && i.naturalWidth > 0;
       }, null, { timeout: 15000 });
+      for (const w of [a, b]) await w.context.close();
+    });
+
+
+    await test('Phone AI: key, own chat, reply draft in the composer (unsent), stop', async () => {
+      const a = await person(browser, 'テストA');
+      const b = await person(browser, 'テストB');
+      const p = a.page;
+      const asked = [];
+      await p.route('https://api.anthropic.com/**', async (route) => {
+        const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' };
+        const req = route.request();
+        if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+        const body = JSON.parse(req.postData() || '{}');
+        asked.push({ key: req.headers()['x-api-key'], body });
+        const answer = String(body.system).includes('返事の案') ? '水曜なら空いています。' : 'こんにちは。テストの答えです。';
+        return route.fulfill({ status: 200, headers: { ...cors, 'content-type': 'application/json' }, body: JSON.stringify({ content: [{ type: 'text', text: answer }] }) });
+      });
+      await befriend(b, a);
+      await b.page.getByPlaceholder('メッセージ').fill('来週どこかで会える？');
+      await button(b.page, '送る').click();
+      await befriend(a, b);
+      await waitText(p, '来週どこかで会える？');
+
+      // No key yet: no ask button in the chat, and the screens say so.
+      await button(p, 'その他').click();
+      await p.getByTestId('plus-panel').waitFor();
+      assert((await button(p, 'AIに返事の案を頼む').count()) === 0, 'the ask button shows without a key');
+      await button(p, 'その他').click();
+      await p.goto(ORIGIN + '/settings');
+      await waitText(p, 'スマホのAI');
+      await shot(p, 'phone-ai-settings-row', '設定の一覧。キーを入れる前の「スマホのAI」の行');
+      await p.goto(ORIGIN + '/ai/phone');
+      await waitText(p, 'AIの会社');
+      await shot(p, 'phone-ai-no-key', 'キーを入れる前の画面');
+      await p.goto(ORIGIN + '/ai/phone-chat');
+      await waitText(p, 'キーが入っていません');
+      await shot(p, 'phone-chat-no-key', 'キーが無い時の話す画面');
+
+      // Save a (fake) key: only the last four characters are shown.
+      await p.goto(ORIGIN + '/ai/phone');
+      await waitText(p, 'AIの会社');
+      const KEY = 'sk-ant-test-0000000000000000wxyz';
+      await p.getByLabel('キー', { exact: true }).fill(KEY);
+      await button(p, '保存').click();
+      await waitText(p, '末尾 wxyz');
+      assert(!(await text(p)).includes(KEY), 'the whole key is on screen');
+      await shot(p, 'phone-ai-key-saved', 'キーを保存した後。末尾の4文字だけ出る');
+      assert(!(await leaks(p, KEY)).length, 'the key was stored in the clear');
+      await button(p, 'キーを消す').click();
+      await waitText(p, 'キーを消しますか？');
+      await shot(p, 'phone-ai-remove-key', '「キーを消す」を押した時の確認');
+      await button(p, 'キャンセル').click();
+      await p.goto(ORIGIN + '/settings');
+      await waitText(p, 'キーあり');
+      await shot(p, 'phone-ai-settings-row-with-key', 'キーを入れた後の設定の一覧。「キーあり」と出る');
+
+      // Own chat: one round trip.
+      await p.goto(ORIGIN + '/ai/phone-chat');
+      await p.getByPlaceholder('メッセージ').fill('こんにちは');
+      await button(p, '送る').click();
+      await waitText(p, 'こんにちは。テストの答えです。');
+      await shot(p, 'phone-chat-answer', '1往復した後の話す画面');
+      assert(asked.length === 1 && asked[0].key === KEY, 'the key did not go to the AI company');
+      assert(asked[0].body.messages.at(-1).content === 'こんにちは', 'the ask carried other words');
+
+      // In a chat: the ask button, the first-time notice, the draft in the composer and not sent.
+      await p.goto(ORIGIN + `/chat/${b.hex}`);
+      await waitText(p, '来週どこかで会える？');
+      await button(p, 'その他').click();
+      await p.getByTestId('plus-panel').waitFor();
+      await shot(p, 'phone-draft-plus', '＋を押した時。キーがあると「AIに返事の案を頼む」が出る');
+      await button(p, 'AIに返事の案を頼む').click();
+      await waitText(p, 'AIにトークを読ませますか？');
+      await shot(p, 'phone-draft-notice', '最初の1回だけ出る確認');
+      await button(p, 'キャンセル').click();
+      assert(asked.length === 1, 'something went to the AI after キャンセル');
+      await button(p, 'その他').click();
+      await button(p, 'AIに返事の案を頼む').click();
+      await button(p, '読ませる').click();
+      await p.waitForFunction(() => document.querySelector('textarea[placeholder="メッセージ"]')?.value === '水曜なら空いています。', null, { timeout: 15000 });
+      await shot(p, 'phone-draft-in-composer', '案が入力欄に入った。まだ送られていない');
+      assert(asked.length === 2, 'not exactly one more ask');
+      assert(asked[1].body.messages[0].content.includes('来週どこかで会える？'), 'the chat was not in the ask');
+      await b.page.waitForTimeout(1500);
+      assert(!(await text(b.page)).includes('水曜なら空いています。'), 'the draft was sent without pressing send');
+      await p.getByPlaceholder('メッセージ').fill('');
+
+      // Stop: the own chat refuses, and so does the chat.
+      await p.goto(ORIGIN + '/ai/phone-chat');
+      await waitText(p, 'こんにちは。テストの答えです。');
+      await button(p, '止める').click();
+      await waitText(p, 'AIを止めています');
+      await shot(p, 'phone-chat-stopped', '「止める」を押した後の話す画面');
+      await p.goto(ORIGIN + `/chat/${b.hex}`);
+      await waitText(p, '来週どこかで会える？');
+      await button(p, 'その他').click();
+      await button(p, 'AIに返事の案を頼む').click();
+      await waitText(p, 'AIを止めています');
+      await shot(p, 'phone-draft-stopped', '止めた後に「AIに返事の案を頼む」を押した時の表示');
+      assert(asked.length === 2, 'something went to the AI after stop');
+      for (const w of [a, b]) await w.context.close();
+    });
+
+    await test('AI hold: my AI reply waits for me, 送る sends it marked as AI, 送らない drops it', async () => {
+      const aiKey = generateSecretKey();
+      const aiHex = getPublicKey(aiKey);
+      const a = await person(browser, 'テストA');
+      const b = await person(browser, 'テストB');
+      const p = a.page;
+      await befriend(b, a);
+      await b.page.getByPlaceholder('メッセージ').fill('明日の予定はどう？');
+      await button(b.page, '送る').click();
+      await befriend(a, b);
+      await waitText(p, '明日の予定はどう？');
+      await befriendMyAi(a, `${ORIGIN}/i#${nip19.npubEncode(aiHex)}&n=${encodeURIComponent('クロード')}&m=${encodeURIComponent('Anthropic Claude')}`);
+      const ask = async (data) => {
+        const now = Math.floor(Date.now() / 1000);
+        const id = [...generateSecretKey()].map((x) => x.toString(16).padStart(2, '0')).join('').slice(0, 32);
+        const rumor = nip59.createRumor({ kind: 25071, content: JSON.stringify({ v: 1, id, ...data }), tags: [['p', a.hex]], created_at: now }, aiKey);
+        const seal = nip59.createSeal(rumor, aiKey, a.hex);
+        const k = generateSecretKey();
+        await relaySend(
+          aiKey,
+          finalizeEvent(
+            { kind: 1059, created_at: now, tags: [['p', a.hex], ['expiration', String(now + 86400)]], content: nip44.encrypt(JSON.stringify(seal), nip44.getConversationKey(k, a.hex)) },
+            k,
+          ),
+        );
+        return id;
+      };
+      const hold = p.getByTestId('ai-hold');
+
+      // CHECK: sent in my name with the AI mark.
+      await ask({ to: b.hex, toName: 'テストB', text: '明日なら午後が空いています。', reason: 'CHECK', detail: '返事の中に日時の約束が入っています' });
+      await hold.waitFor({ timeout: 15000 });
+      await waitText(p, 'AIの検査が止めた返事');
+      await shot(p, 'ai-hold-check', 'AIの検査が止めた返事。「送る」「送らない」が出る');
+      await button(p, '送る').click();
+      await hold.waitFor({ state: 'detached', timeout: 10000 });
+      await b.page.goto(`${ORIGIN}/chat/${a.hex}`);
+      await waitText(b.page, '明日なら午後が空いています。');
+      await waitText(b.page, 'AIが書いた');
+      await shot(b.page, 'ai-hold-received-mark', '相手の画面。AIが書いた印が出る');
+
+      // MONEY: 送らない drops it and nothing reaches the other person.
+      await ask({ to: b.hex, toName: 'テストB', text: '3,000円を振り込みます。', reason: 'MONEY' });
+      await hold.waitFor({ timeout: 15000 });
+      await waitText(p, 'お金の話が入った返事');
+      await shot(p, 'ai-hold-money', 'お金の話が入った返事');
+      await button(p, '送らない').click();
+      await hold.waitFor({ state: 'detached', timeout: 10000 });
+      await b.page.waitForTimeout(1500);
+      assert(!(await text(b.page)).includes('3,000円を振り込みます。'), 'a declined reply reached the other person');
+
+      // FIRST: to someone who is not a friend yet (no さん after the key).
+      const stranger = getPublicKey(generateSecretKey());
+      await ask({ to: stranger, text: 'はじめまして。', reason: 'FIRST' });
+      await hold.waitFor({ timeout: 15000 });
+      await waitText(p, '初めての相手への返事');
+      await shot(p, 'ai-hold-first', '初めての相手への返事。友だちではない相手は鍵の短い形で出る');
+      await button(p, '送らない').click();
+      await hold.waitFor({ state: 'detached', timeout: 10000 });
       for (const w of [a, b]) await w.context.close();
     });
 
