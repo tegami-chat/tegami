@@ -527,9 +527,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       function ring(s: Signal, id: string, sdp: string) {
         if (done.current.has(id) || blockedRef.current.includes(s.from)) return;
         const d = s.data;
-        // The iOS app cannot take calls yet: answer "busy" so the caller's screen ends, and note the missed call.
+        // The iOS app cannot take calls yet: do not ring, only note the missed call. No "busy" reply,
+        // because the same account may be open in a browser that can still answer.
         if (Platform.OS !== 'web' && !callsSupported()) {
-          sendSignal(s.from, { t: 'busy', id }).catch(() => {});
           recordCall(s.from, s.from, { video: d.video === true, result: 'missed' }, id);
           markDone(id);
           return;

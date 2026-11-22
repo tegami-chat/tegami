@@ -8,7 +8,16 @@
     "scheme": "tegami",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "chat.tegami.app",
+      "supportsTablet": false,
+      "infoPlist": {
+        "CFBundleDevelopmentRegion": "ja",
+        "CFBundleLocalizations": [
+          "ja",
+          "en"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -34,11 +43,38 @@
         }
       ],
       "expo-sqlite",
-      "expo-secure-store"
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "トークに送る写真やスタンプ、自分のアイコンを選ぶために、写真を使います。",
+          "cameraPermission": "トークに送る写真や動画を撮るためと、友だちのQRコードを読み取るために、カメラを使います。",
+          "microphonePermission": "トークに送る動画を撮る時に、音を録るためにマイクを使います。"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "トークに送る写真や動画を撮るためと、友だちのQRコードを読み取るために、カメラを使います。",
+          "microphonePermission": "トークに送る動画を撮る時に、音を録るためにマイクを使います。",
+          "recordAudioAndroid": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6765f3c0-cb75-4096-b7ee-09f4f6f7d1cf"
+      }
     }
   }
 }
