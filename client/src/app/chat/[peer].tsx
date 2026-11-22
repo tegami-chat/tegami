@@ -13,6 +13,11 @@ import { Palette, usePalette } from '@/constants/theme';
 import { pickedBlob } from '@/lib/picked';
 import { AI_DRAFT_MESSAGES, markReadNoticeSeen, mayDraft, readNoticeSeen } from '@/lib/ai-draft';
 import { chatNoAi, nothingToReadText, saveChatNoAi } from '@/lib/ai-optout';
+import { askPhoneAi, phoneChoice } from '@/lib/phone-ai/ask';
+import { DRAFT_MESSAGES, PhoneAiRefused, buildDraft, refusalText } from '@/lib/phone-ai/guard';
+import { getKeyStore } from '@/lib/phone-ai/key-store';
+import { ProviderError } from '@/lib/phone-ai/providers';
+import { load as loadStored, save as saveStored, k as storeKey } from '@/lib/storage';
 import { aiStageAllows, useAiPermissions } from '@/lib/ai-permissions';
 import { aiApproved, everyoneIn, myAiMayRead } from '@/lib/ai-actions';
 import { useCall } from '@/lib/calls';
@@ -97,6 +102,9 @@ export default function Chat() {
   // the AI whose first ask waits for the one-time notice about leaving the encryption.
   const [aiWaiting, setAiWaiting] = useState<{ id: string; ai: string } | null>(null);
   const [aiNotice, setAiNotice] = useState<string | null>(null);
+  // The reply draft from the AI that runs on this phone with my own key (lib/phone-ai): waiting, and the one-time notice.
+  const [phoneBusy, setPhoneBusy] = useState(false);
+  const [phoneNotice, setPhoneNotice] = useState(false);
   // The gate wants this one ask confirmed by the person (per-ask permission).
   const [aiConfirm, setAiConfirm] = useState<string | null>(null);
   // Why a draft could not be asked for: nothing in the chat may be given to the AI (lib/ai-optout.ts).
@@ -206,6 +214,9 @@ export default function Chat() {
     const isFriend = (pk: string) => contacts.some((x) => x.pubkey === pk && isPerson(x)) && !blocked.includes(pk);
     return contacts.filter((x) => isMyAi(x) && mayDraft(aiPermissions, x, peer, isFriend));
   }, [peer, group, contact, isBlocked, contacts, blocked, aiPermissions]);
+  // The phone's own AI: only when a key is saved, and only in a 1:1 chat with a person.
+  const phoneKeySaved = !!getKeyStore().get(phoneChoice().provider);
+  const canPhoneAsk = phoneKeySaved && !!peer && !group && !!contact && isPerson(contact) && !isBlocked;
   // AIs invited into this group, or called into this 1:1 chat (lib/ai-actions.ts), and my AI
   // friends I could invite. Every member (in a 1:1 chat: the other person) must say yes.
   const withPerson = group || (!!contact && isPerson(contact) && !isBlocked);
@@ -305,6 +316,44 @@ export default function Chat() {
       }
     },
     [peer, askAiDraft, showToast, contact],
+  );
+  const phoneAsk = useCallback(
+    async (confirmed = false) => {
+      setPlusOpen(false);
+      if (!peer || !me || phoneBusy) return;
+      if (!confirmed && !loadStored<boolean>(storeKey('ai.phoneNotice'), false)) {
+        setPhoneNotice(true);
+        return;
+      }
+      const built = buildDraft(
+        messages.filter((m) => m.peer === peer),
+        contact,
+        me,
+        contacts,
+      );
+      if ('refused' in built) {
+        setAiNothing(nothingToReadText(built.refused, contact?.name ?? ''));
+        return;
+      }
+      setPhoneBusy(true);
+      try {
+        const answer = await askPhoneAi({ peer, system: built.system, messages: built.messages });
+        const text = answer.trim();
+        if (!text) {
+          showToast('案が届きませんでした');
+          return;
+        }
+        setDraft((cur) => (cur.trim() ? `${cur}
+${text}` : text));
+        input.current?.focus();
+      } catch (e) {
+        if (e instanceof PhoneAiRefused || e instanceof ProviderError) showToast(e.message, 5000);
+        else showToast('頼めませんでした。もう一度お試しください');
+      } finally {
+        setPhoneBusy(false);
+      }
+    },
+    [peer, me, phoneBusy, messages, contact, contacts, showToast],
   );
   // A different chat: a draft asked for in the last one does not belong here.
   useEffect(() => setAiWaiting(null), [peer]);
@@ -1524,6 +1573,21 @@ export default function Chat() {
                     </Text>
                   </Pressable>
                 ))}
+                {canPhoneAsk && (
+                  <Pressable
+                    role="button"
+                    aria-label="AIに返事の案を頼む"
+                    disabled={phoneBusy}
+                    style={[s.plusItem, phoneBusy && s.disabled]}
+                    onPress={() => void phoneAsk()}>
+                    <View style={s.plusIcon}>
+                      <MaterialIcons name="edit-note" size={24} color={c.text} />
+                    </View>
+                    <Text style={s.plusLabel} numberOfLines={2}>
+                      AIに返事の案を頼む
+                    </Text>
+                  </Pressable>
+                )}
               </View>
             )}
 
@@ -1808,6 +1872,29 @@ export default function Chat() {
                 markReadNoticeSeen();
                 setAiNotice(null);
                 void askDraft(ai);
+              },
+            },
+          ]}
+        />
+      )}
+
+      {phoneNotice && (
+        <Dialog
+          title="AIにトークを読ませますか？"
+          text={`このトークの新しいメッセージを${DRAFT_MESSAGES}通まで、あなたのキーでAIの会社に送ります。送った文はTegamiの暗号化の外に出ます。${
+            contact?.noai
+              ? `${contact.name}さんは、自分の文を相手のAIに読ませない設定にしています。${contact.name}さんの文は送りません。`
+              : '「AIに読ませない」の印が付いた文は送りません。'
+          }`}
+          onClose={() => setPhoneNotice(false)}
+          buttons={[
+            { label: 'キャンセル', variant: 'outlined', onPress: () => setPhoneNotice(false) },
+            {
+              label: '読ませる',
+              onPress: () => {
+                saveStored(storeKey('ai.phoneNotice'), true);
+                setPhoneNotice(false);
+                void phoneAsk(true);
               },
             },
           ]}
