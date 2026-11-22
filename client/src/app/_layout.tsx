@@ -88,6 +88,7 @@ function Shell() {
         <Stack.Screen name="settings/index" options={{ title: '設定', ...top }} />
         <Stack.Screen name="settings/profile" options={{ title: 'プロフィール' }} />
         <Stack.Screen name="settings/account" options={{ title: 'アカウント' }} />
+        <Stack.Screen name="settings/export-key" options={{ title: '秘密鍵を書き出す' }} />
         <Stack.Screen name="settings/privacy" options={{ title: 'プライバシー' }} />
         <Stack.Screen name="settings/talk" options={{ title: 'トーク' }} />
         <Stack.Screen name="accounts" options={{ title: 'アカウント', ...top }} />

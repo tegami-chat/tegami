@@ -5,7 +5,7 @@ import { Image, Modal, Platform, Pressable, Share, StyleSheet, Text, View } from
 
 import { AccountList } from '@/components/account-list';
 import { Dialog } from '@/components/dialog';
-import { ActionRow, Group, SettingsPage, settingsStyles } from '@/components/settings-ui';
+import { ActionRow, Group, LinkRow, SettingsPage, settingsStyles } from '@/components/settings-ui';
 import { Palette, usePalette } from '@/constants/theme';
 import { shortId, useTegami } from '@/lib/tegami';
 
@@ -222,6 +222,10 @@ export default function AccountSettings() {
       {recoveryBehind && !newCode && <Text style={s.note}>友だちや設定の最近の変更を、復旧用にまだ保管できていません。通信を確認してください。</Text>}
       {recoveryFailed === 'make' && <Text style={s.note}>復旧コードを作れませんでした。通信を確認して、もう一度お試しください。</Text>}
       {recoveryFailed === 'off' && <Text style={s.note}>復旧コードを削除できませんでした。通信を確認して、もう一度お試しください。</Text>}
+
+      <Group>
+        <LinkRow label="秘密鍵を書き出す" onPress={() => router.push('/settings/export-key')} />
+      </Group>
 
       <Text style={s.heading}>アカウントの削除</Text>
       <Group>

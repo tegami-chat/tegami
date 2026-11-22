@@ -46,7 +46,7 @@
       [
         "expo-secure-store",
         {
-          "faceIDPermission": false
+          "faceIDPermission": "秘密鍵を書き出す前に、本人か確かめるために使います。"
         }
       ],
       [
