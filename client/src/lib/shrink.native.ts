@@ -33,7 +33,9 @@ async function run(
   blob: Blob,
   plan: (w: number, h: number) => { crop?: { originX: number; originY: number; width: number; height: number }; width: number; height: number; png?: (head: Uint8Array) => boolean },
 ): Promise<Shrunk> {
-  const temp = await toTempFile(blob);
+  // A picked picture is already a File (picked.native.ts): the manipulator reads it where it is.
+  const picked = blob instanceof File;
+  const temp = picked ? blob : await toTempFile(blob);
   let out: File | null = null;
   try {
     const base = await ImageManipulator.ImageManipulator.manipulate(temp.uri).renderAsync();
@@ -42,7 +44,7 @@ async function run(
     if (p.crop) ctx.crop(p.crop);
     ctx.resize({ width: p.width, height: p.height });
     const rendered = await ctx.renderAsync();
-    const png = p.png ? p.png(temp.bytesSync().subarray(0, 26)) : false;
+    const png = p.png ? p.png((await temp.bytes()).subarray(0, 26)) : false;
     const saved = await rendered.saveAsync({
       format: png ? ImageManipulator.SaveFormat.PNG : ImageManipulator.SaveFormat.JPEG,
       compress: png ? 1 : QUALITY,
@@ -51,7 +53,7 @@ async function run(
     const bytes = new Uint8Array(await out.bytes()) as Uint8Array<ArrayBuffer>;
     return { bytes, type: png ? 'image/png' : 'image/jpeg', width: saved.width, height: saved.height };
   } finally {
-    temp.delete();
+    if (!picked) temp.delete();
     try {
       out?.delete();
     } catch {

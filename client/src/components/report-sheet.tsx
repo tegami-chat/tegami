@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { Palette, usePalette } from '@/constants/theme';
+import { useInsets } from '@/lib/insets';
 import { reportMessagesFor, useTegami, type ReportReason } from '@/lib/tegami';
 
 export const REPORT_REASONS: [ReportReason, string][] = [
@@ -27,6 +28,7 @@ export function ReportSheet({
 }) {
   const c = usePalette();
   const s = styles(c);
+  const insets = useInsets();
   const { messages, blocked, report } = useTegami();
   const isBlocked = blocked.includes(peer);
   const [status, setStatus] = useState<'form' | 'sending' | 'done'>('form');
@@ -54,7 +56,7 @@ export function ReportSheet({
 
   return (
     <View style={s.overlay} testID="report-sheet">
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: insets.top, minHeight: 48 + insets.top }]}>
         <Pressable role="button" aria-label="戻る" style={s.backButton} onPress={onClose}>
           <MaterialIcons name="chevron-left" size={24} color={c.text} />
         </Pressable>
@@ -63,7 +65,7 @@ export function ReportSheet({
         </Text>
         <View style={s.headerSpacer} />
       </View>
-      <ScrollView style={s.fill} contentContainerStyle={s.body}>
+      <ScrollView style={s.fill} contentContainerStyle={[s.body, { paddingBottom: 16 + insets.bottom }]}>
         {status === 'done' ? (
           <View style={s.doneCard}>
             <Text style={s.doneTitle}>通報しました</Text>

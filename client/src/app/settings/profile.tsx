@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Avatar } from '@/components/avatar';
 import { SettingsPage, settingsStyles } from '@/components/settings-ui';
 import { Palette, usePalette } from '@/constants/theme';
+import { pickedBlob } from '@/lib/picked';
 import { useTegami } from '@/lib/tegami';
 
 export default function ProfileSettings() {
@@ -20,7 +21,7 @@ export default function ProfileSettings() {
     if (!asset) return;
     setAvatarBusy(true);
     try {
-      const blob = asset.file ?? (await (await fetch(asset.uri)).blob());
+      const blob = await pickedBlob(asset);
       await setMyAvatar(blob);
     } catch {
       // Upload failed: leave as it was.

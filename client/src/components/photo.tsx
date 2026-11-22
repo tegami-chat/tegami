@@ -4,6 +4,7 @@ import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native
 
 import { createVoicePlayer, type VoicePlayer } from '@/components/voice-player';
 import { usePalette } from '@/constants/theme';
+import { useInsets } from '@/lib/insets';
 import { keptFile, openFile, openFileUri, releaseFileUri, type FileRef } from '@/lib/files';
 
 const WIDTH = 240;
@@ -184,6 +185,7 @@ export function Stamp({
 /** Shows a decrypted photo full screen over the chat; long press (or right click) offers save. */
 export function PhotoViewer({ uri, onClose }: { uri: string; onClose: () => void }) {
   const c = usePalette();
+  const insets = useInsets();
   const [menu, setMenu] = useState(false);
 
   useEffect(() => {
@@ -221,7 +223,7 @@ export function PhotoViewer({ uri, onClose }: { uri: string; onClose: () => void
         role="button"
         aria-label="閉じる"
         aria-hidden={menu || undefined}
-        style={styles.viewerClose}>
+        style={[styles.viewerClose, { top: 12 + insets.top }]}>
         <MaterialIcons name="close" size={24} color="#ffffff" />
       </Pressable>
       <Pressable
@@ -254,6 +256,7 @@ export function PhotoViewer({ uri, onClose }: { uri: string; onClose: () => void
 
 /** Shows a decrypted video full screen with native controls and sound. */
 export function VideoViewer({ uri, onClose }: { uri: string; onClose: () => void }) {
+  const insets = useInsets();
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const onKey = (e: KeyboardEvent) => {
@@ -265,7 +268,7 @@ export function VideoViewer({ uri, onClose }: { uri: string; onClose: () => void
 
   return (
     <View style={styles.viewer} testID="video-viewer">
-      <Pressable onPress={onClose} role="button" aria-label="閉じる" style={styles.viewerClose}>
+      <Pressable onPress={onClose} role="button" aria-label="閉じる" style={[styles.viewerClose, { top: 12 + insets.top }]}>
         <MaterialIcons name="close" size={24} color="#ffffff" />
       </Pressable>
       {Platform.OS === 'web' && (

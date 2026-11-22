@@ -10,6 +10,7 @@ import { Dialog } from '@/components/dialog';
 import { FileAttachment, Photo, PhotoViewer, Stamp, Video, VideoViewer, Voice } from '@/components/photo';
 import { ReportSheet } from '@/components/report-sheet';
 import { Palette, usePalette } from '@/constants/theme';
+import { pickedBlob } from '@/lib/picked';
 import { AI_DRAFT_MESSAGES, markReadNoticeSeen, mayDraft, readNoticeSeen } from '@/lib/ai-draft';
 import { chatNoAi, nothingToReadText, saveChatNoAi } from '@/lib/ai-optout';
 import { aiStageAllows, useAiPermissions } from '@/lib/ai-permissions';
@@ -18,6 +19,7 @@ import { useCall } from '@/lib/calls';
 import { cautionFor } from '@/lib/caution';
 import { isFeedback } from '@/lib/feedback';
 import { MAX_FILE_BYTES } from '@/lib/files';
+import { useInsets } from '@/lib/insets';
 import { INFO_BESIDE_MIN, useWide, type PressState } from '@/lib/layout';
 import { AiConfirmNeededError, AiNotAllowedError, AiNothingToReadError, chatName, clock, isGroup, isMyAi, isPerson, personName, useTegami, type Message, type Stamp as StampItem } from '@/lib/tegami';
 
@@ -174,6 +176,7 @@ export default function Chat() {
   // Desktop: the person's details open beside the chat (over it when the window is not wide
   // enough), files can be dropped on the chat, and Esc closes what is open.
   const wide = useWide();
+  const insets = useInsets();
   const { width: windowWidth } = useWindowDimensions();
   const [infoOpen, setInfoOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -717,7 +720,7 @@ export default function Chat() {
     } else {
       const picked = await ImagePicker.launchCameraAsync({ mediaTypes: ['images', 'videos'], quality: 1 });
       const asset = picked.canceled ? null : picked.assets[0];
-      if (asset) blob = asset.file ?? (await (await fetch(asset.uri)).blob());
+      if (asset) blob = await pickedBlob(asset);
     }
     await sendPickedMedia(blob);
   }
@@ -731,7 +734,7 @@ export default function Chat() {
     } else {
       const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 1 });
       const asset = picked.canceled ? null : picked.assets[0];
-      if (asset) blob = asset.file ?? (await (await fetch(asset.uri)).blob());
+      if (asset) blob = await pickedBlob(asset);
     }
     await sendPickedMedia(blob);
   }
@@ -846,7 +849,7 @@ export default function Chat() {
     setSending(true);
     setError(null);
     try {
-      const blob = asset.file ?? (await (await fetch(asset.uri)).blob());
+      const blob = await pickedBlob(asset);
       await makeStamp(blob);
     } catch {
       setError(SEND_ERROR);
@@ -902,8 +905,8 @@ export default function Chat() {
     <View style={s.withInfo}>
     <KeyboardAvoidingView style={s.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={s.fill} aria-hidden={modalOpen} ref={dropArea}>
-        <View style={[s.header, wide && s.headerWide]}>
+      <View style={[s.fill, { paddingBottom: insets.bottom }]} aria-hidden={modalOpen} ref={dropArea}>
+        <View style={[s.header, wide && s.headerWide, { paddingTop: insets.top, minHeight: (wide ? 60 : 48) + insets.top }]}>
           {!wide && (
             <Pressable
               role="button"
@@ -941,7 +944,7 @@ export default function Chat() {
         {callMenuOpen && peer && canCall && (
           <>
             <Pressable style={s.callMenuBackdrop} onPress={() => setCallMenuOpen(false)} aria-label="閉じる" />
-            <View style={s.callMenu} testID="call-menu">
+            <View style={[s.callMenu, { top: 52 + insets.top }]} testID="call-menu">
               {([
                 ['音声通話', 'call', false],
                 ['ビデオ通話', 'videocam', true],

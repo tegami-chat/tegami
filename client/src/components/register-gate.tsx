@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { usePalette } from '@/constants/theme';
+import { useInsets } from '@/lib/insets';
 import { TURNSTILE_SITEKEY } from '@/lib/register';
 import { inviteCodeOf, useTegami } from '@/lib/tegami';
 
@@ -90,9 +91,11 @@ export function RegisterGate() {
   }, [registration, onToken, round]);
 
   const s = styles(c);
+  const insets = useInsets();
+  const pad = { paddingTop: 24 + insets.top, paddingBottom: 24 + insets.bottom };
   if (registration === 'deleted') {
     return (
-      <View style={s.fill}>
+      <View style={[s.fill, pad]}>
         <Text style={s.text}>このアカウントは削除済みです。この端末からも削除してください。</Text>
         <Pressable role="button" onPress={() => void removeFromDevice()}>
           <Text style={s.action}>この端末から削除</Text>
@@ -102,14 +105,14 @@ export function RegisterGate() {
   }
   if (registration === 'blocked') {
     return (
-      <View style={s.fill}>
+      <View style={[s.fill, pad]}>
         <Text style={s.text}>このアカウントは止められています。</Text>
       </View>
     );
   }
   if (Platform.OS !== 'web') {
     return (
-      <View style={s.fill}>
+      <View style={[s.fill, pad]}>
         <Text style={s.title}>招待コードを入れてください</Text>
         <Text style={s.text}>Tegamiは招待で広がります。友だちからもらった招待のリンクかコードを貼ってください。</Text>
         <TextInput
@@ -133,7 +136,7 @@ export function RegisterGate() {
     );
   }
   return (
-    <View style={s.fill}>
+    <View style={[s.fill, pad]}>
       <View ref={box} key={round} />
       {failed && (
         <>

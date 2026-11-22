@@ -8,6 +8,7 @@ import { ThemeSwitch } from '@/components/theme-switch';
 import { Palette, usePalette } from '@/constants/theme';
 import { useWide } from '@/lib/layout';
 import { accounts, accountWithKey, adding, cancelAdd, readyAccounts } from '@/lib/accounts';
+import { useInsets } from '@/lib/insets';
 import { RELAYS, useTegami } from '@/lib/tegami';
 import { restoreFromCode, setRestoredKeys, takeRestoredKeys } from '@/lib/recovery';
 import { arrival, bundleSecret, receiveTransfer, takeLinkKey, transferKey, type Bundle } from '@/lib/transfer';
@@ -257,8 +258,9 @@ export function Gate({ locked }: { locked: boolean }) {
 function Frame({ children, long }: { children: ReactNode; long?: boolean }) {
   const c = usePalette();
   const s = styles(c);
+  const insets = useInsets();
   return (
-    <View style={s.page}>
+    <View style={[s.page, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <View style={s.top}>
         <View style={s.logo}>
           <Image source={ICON} style={s.logoIcon} aria-hidden />

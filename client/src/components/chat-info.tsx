@@ -9,7 +9,9 @@ import { Avatar } from '@/components/avatar';
 import { Dialog } from '@/components/dialog';
 import { ReportSheet } from '@/components/report-sheet';
 import { Palette, usePalette } from '@/constants/theme';
+import { pickedBlob } from '@/lib/picked';
 import { useCall } from '@/lib/calls';
+import { useInsets } from '@/lib/insets';
 import { canManage } from '@/lib/groups';
 import { chatName, isGroup, isMyAi, personName, shortId, useTegami } from '@/lib/tegami';
 
@@ -21,6 +23,7 @@ import { chatName, isGroup, isMyAi, personName, shortId, useTegami } from '@/lib
 export function ChatInfo({ peer, onClose, panel = false }: { peer: string | undefined; onClose: () => void; panel?: boolean }) {
   const c = usePalette();
   const s = styles(c);
+  const insets = useInsets();
   const {
     me,
     myName,
@@ -95,7 +98,7 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
     if (!asset) return;
     setBusy(true);
     try {
-      const blob = asset.file ?? (await (await fetch(asset.uri)).blob());
+      const blob = await pickedBlob(asset);
       await setGroupAvatar(peer, blob);
     } catch {
       // Upload failed: the picture stays as it was.
@@ -115,7 +118,7 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
   return (
     <View style={s.fill}>
       <View style={s.fill} aria-hidden={!!dialog || reporting || !!removing}>
-        <View style={[s.header, panel && s.headerPanel]}>
+        <View style={[s.header, panel && s.headerPanel, { paddingTop: insets.top, minHeight: (panel ? 60 : 48) + insets.top }]}>
           {panel ? (
             <Pressable role="button" aria-label="閉じる" style={s.backButton} onPress={goBack}>
               <MaterialIcons name="close" size={24} color={c.text} />
@@ -126,7 +129,7 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
             </Pressable>
           )}
         </View>
-        <ScrollView style={s.fill} contentContainerStyle={s.body}>
+        <ScrollView style={s.fill} contentContainerStyle={[s.body, { paddingBottom: 32 + insets.bottom }]}>
           <View style={s.profile}>
             <Avatar name={group ? '◎' : displayName} file={group ? groupInfo?.avatar : contact?.avatar} size={76} />
             <Text style={s.name}>{displayName}</Text>
