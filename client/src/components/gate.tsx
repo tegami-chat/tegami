@@ -1,6 +1,6 @@
 import { getPublicKey } from 'nostr-tools/pure';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { AccountList, accountName, goToAccount } from '@/components/account-list';
 import { GateInfo } from '@/components/gate-info';
@@ -87,6 +87,11 @@ export function Gate({ locked }: { locked: boolean }) {
     setUnsupported(false);
     try {
       if (moved) arrival.moved = true;
+      // The iOS app keeps the key in the Keychain (no passkey screen to get through).
+      if (Platform.OS !== 'web' && !locked && !passkeysAvailable()) {
+        await startWithoutPasskey(moved);
+        return;
+      }
       await (locked ? unlock() : start(moved));
     } catch (e) {
       if (e instanceof PasskeyUnsupportedError && !locked) setUnsupported(true);
@@ -147,7 +152,9 @@ export function Gate({ locked }: { locked: boolean }) {
           <Text style={s.notice}>
             {passkeysAvailable()
               ? 'このパスキーの保存先では、鍵を守れませんでした。下の「いま使えるパスキーの保存先」から選んでください。iPhoneでは「設定」→「一般」→「自動入力とパスワード」で「パスワード」を入れると選べるようになります。'
-              : 'このブラウザはパスキーを使えません。'}
+              : Platform.OS === 'web'
+                ? 'このブラウザはパスキーを使えません。'
+                : 'この端末ではパスキーを使えません。'}
           </Text>
           {passkeysAvailable() && (
             <Pressable style={[s.primary, busy && s.busy]} onPress={go} disabled={busy} role="button">
@@ -160,7 +167,7 @@ export function Gate({ locked }: { locked: boolean }) {
             }} disabled={busy} role="button">
             <Text style={s.secondaryText}>パスキーを使わずに始める</Text>
           </Pressable>
-          <Text style={s.small}>パスキーを使わない時は、鍵をこのブラウザの中だけに保存します。</Text>
+          <Text style={s.small}>{Platform.OS === 'web' ? 'パスキーを使わない時は、鍵をこのブラウザの中だけに保存します。' : 'パスキーを使わない時は、鍵をこの端末の中だけに保存します。'}</Text>
         </>
       ) : (
         <Pressable style={[s.primary, busy && s.busy]} onPress={go} disabled={busy} role="button">

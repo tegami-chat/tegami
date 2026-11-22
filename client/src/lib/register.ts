@@ -43,10 +43,16 @@ export async function askRelay(secret: Uint8Array, body: { invite?: string; turn
 // In sessionStorage, so it survives the start screen and a reload, but not the tab.
 const CODE_KEY = 'tegami.inviteCode';
 
+// React Native has no sessionStorage: the iPhone and Android apps keep the code in
+// localStorage (an expo-sqlite file, see platform-setup.native.ts) until a key registers with it.
+function codeStore() {
+  return globalThis.sessionStorage ?? globalThis.localStorage;
+}
+
 export function keepInviteCode(code: string) {
   if (!/^[a-z2-9]{6,32}$/.test(code)) return;
   try {
-    globalThis.sessionStorage?.setItem(CODE_KEY, code);
+    codeStore()?.setItem(CODE_KEY, code);
   } catch {
     // Storage blocked: the code is lost, registering falls back to Turnstile.
   }
@@ -54,7 +60,7 @@ export function keepInviteCode(code: string) {
 
 export function keptInviteCode(): string {
   try {
-    return globalThis.sessionStorage?.getItem(CODE_KEY) ?? '';
+    return codeStore()?.getItem(CODE_KEY) ?? '';
   } catch {
     return '';
   }
@@ -62,7 +68,7 @@ export function keptInviteCode(): string {
 
 export function forgetInviteCode() {
   try {
-    globalThis.sessionStorage?.removeItem(CODE_KEY);
+    codeStore()?.removeItem(CODE_KEY);
   } catch {
     // Nothing to forget.
   }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Platform, Share } from 'react-native';
 
 import { ActionRow, Group, SettingsPage, SwitchRow } from '@/components/settings-ui';
 import { useTegami } from '@/lib/tegami';
@@ -8,6 +9,11 @@ export default function TalkSettings() {
   const [exported, setExported] = useState(false);
 
   function exportFile() {
+    if (Platform.OS !== 'web') {
+      // No file download in the app: the same text goes to the share sheet (save to Files, AirDrop, ...).
+      void Share.share({ message: exportChats() }).then(() => setExported(true), () => {});
+      return;
+    }
     const blob = new Blob([exportChats()], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

@@ -1458,17 +1458,19 @@ export default function Chat() {
 
             {plusOpen && !recordPanel && (
               <View style={s.plusPanel} testID="plus-panel">
-                <Pressable
-                  role="button"
-                  aria-label="ファイル"
-                  disabled={sending}
-                  style={[s.plusItem, sending && s.disabled]}
-                  onPress={pickFile}>
-                  <View style={s.plusIcon}>
-                    <MaterialIcons name="description" size={24} color={c.text} />
-                  </View>
-                  <Text style={s.plusLabel}>ファイル</Text>
-                </Pressable>
+                {Platform.OS === 'web' && (
+                  <Pressable
+                    role="button"
+                    aria-label="ファイル"
+                    disabled={sending}
+                    style={[s.plusItem, sending && s.disabled]}
+                    onPress={pickFile}>
+                    <View style={s.plusIcon}>
+                      <MaterialIcons name="description" size={24} color={c.text} />
+                    </View>
+                    <Text style={s.plusLabel}>ファイル</Text>
+                  </Pressable>
+                )}
                 {canMarkNoAi && (
                   <Pressable
                     role="switch"
@@ -1701,14 +1703,16 @@ export default function Chat() {
                     <MaterialIcons name="send" size={24} color={c.onAccent} />
                   </Pressable>
                 ) : (
-                  <Pressable
-                    role="button"
-                    aria-label="録音"
-                    disabled={sending}
-                    style={[s.barIconBtn, sending && s.disabled]}
-                    onPress={openRecordPanel}>
-                    <MaterialIcons name="mic" size={24} color={c.muted} />
-                  </Pressable>
+                  Platform.OS === 'web' && (
+                    <Pressable
+                      role="button"
+                      aria-label="録音"
+                      disabled={sending}
+                      style={[s.barIconBtn, sending && s.disabled]}
+                      onPress={openRecordPanel}>
+                      <MaterialIcons name="mic" size={24} color={c.muted} />
+                    </Pressable>
+                  )
                 )}
               </View>
             )}

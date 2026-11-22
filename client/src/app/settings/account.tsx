@@ -1,7 +1,7 @@
 import makeQr from 'qrcode-generator';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Image, Modal, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 
 import { AccountList } from '@/components/account-list';
 import { Dialog } from '@/components/dialog';
@@ -169,7 +169,7 @@ export default function AccountSettings() {
       <AccountList />
 
       <Text style={s.heading}>アカウントの守り方</Text>
-      <Text style={s.value}>{protectedByPasskey ? 'パスキーで守っています' : 'このブラウザの中だけに保存しています'}</Text>
+      <Text style={s.value}>{protectedByPasskey ? 'パスキーで守っています' : (Platform.OS === 'web' ? 'このブラウザの中だけに保存しています' : 'この端末の中だけに保存しています')}</Text>
 
       <Text style={s.heading}>ほかの端末</Text>
       {transfer ? (

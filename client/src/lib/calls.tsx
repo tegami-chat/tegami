@@ -13,6 +13,7 @@
 // When I answer or decline on one device, my other devices stop ringing (a copy of the
 // answer/decline goes to my own key).
 
+import { Platform } from 'react-native';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { k, load, save } from './storage';
@@ -526,6 +527,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       function ring(s: Signal, id: string, sdp: string) {
         if (done.current.has(id) || blockedRef.current.includes(s.from)) return;
         const d = s.data;
+        // The iOS app cannot take calls yet: answer "busy" so the caller's screen ends, and note the missed call.
+        if (Platform.OS !== 'web' && !callsSupported()) {
+          sendSignal(s.from, { t: 'busy', id }).catch(() => {});
+          recordCall(s.from, s.from, { video: d.video === true, result: 'missed' }, id);
+          markDone(id);
+          return;
+        }
         l = live.current;
         if (l) {
           if (l.id === id) return;

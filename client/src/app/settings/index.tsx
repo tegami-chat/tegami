@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { Group, LinkRow, SettingsPage, SwitchRow, settingsStyles } from '@/components/settings-ui';
@@ -66,36 +66,45 @@ export default function Settings() {
 
       {recoveryBehind && <Text style={s.note}>友だちや設定の最近の変更を、復旧用にまだ保管できていません。通信を確認してください。</Text>}
       <Group>
-        <LinkRow icon="key" label="アカウント" value={protectedByPasskey ? 'パスキー' : 'このブラウザ'} onPress={() => go('/settings/account')} />
+        <LinkRow icon="key" label="アカウント" value={protectedByPasskey ? 'パスキー' : Platform.OS === 'web' ? 'このブラウザ' : 'この端末'} onPress={() => go('/settings/account')} />
         <LinkRow icon="shield" label="プライバシー" value={blocked.length ? `ブロック ${blocked.length}人` : undefined} onPress={() => go('/settings/privacy')} />
         <LinkRow icon="smart-toy" label="AI" value={aiState} testID="ai-permissions-state" onPress={() => go('/ai')} />
       </Group>
 
       <Group>
-        {pushUsable ? (
+        {pushUsable && Platform.OS === 'web' ? (
           <SwitchRow icon="notifications-none" label="通知" value={push === 'on'} onChange={togglePush} disabled={pushBusy} />
         ) : (
           <View style={s.groupRow}>
             <MaterialIcons name="notifications-none" size={22} color={c.muted} />
             <Text style={s.label}>通知</Text>
-            <Text style={s.rowValue}>使えません</Text>
+            <Text style={s.rowValue}>{Platform.OS === 'web' ? '使えません' : 'まだ使えません'}</Text>
           </View>
         )}
         <LinkRow icon="chat-bubble-outline" label="トーク" onPress={() => go('/settings/talk')} />
-        <LinkRow icon="call" label="通話の中継" value={(callNet.own ? '自分のサーバー' : 'Tegamiのサーバー') + (callNet.relayOnly ? '、常に中継' : '')} onPress={() => go('/call-network')} />
+        {Platform.OS === 'web' && (
+          <LinkRow icon="call" label="通話の中継" value={(callNet.own ? '自分のサーバー' : 'Tegamiのサーバー') + (callNet.relayOnly ? '、常に中継' : '')} onPress={() => go('/call-network')} />
+        )}
         <View style={s.groupRow}>
           <MaterialIcons name="dark-mode" size={22} color={c.muted} />
           <Text style={s.label}>画面の色</Text>
           <ThemeSwitch />
         </View>
       </Group>
-      {push === 'needs-home-screen' && <Text style={s.note}>iPhoneでは、Safariの共有ボタンから「ホーム画面に追加」を選び、ホーム画面のTegamiから開くと通知を使えます。</Text>}
-      {push === 'unsupported' && <Text style={s.note}>このブラウザでは通知を使えません。</Text>}
-      {push === 'denied' && <Text style={s.note}>通知が許可されていません。ブラウザか端末の設定で、Tegamiの通知を許可してください。</Text>}
-      {pushFailed && <Text style={s.note}>通知を設定できませんでした。通信を確認して、もう一度お試しください。</Text>}
+      {Platform.OS === 'web' && push === 'needs-home-screen' && <Text style={s.note}>iPhoneでは、Safariの共有ボタンから「ホーム画面に追加」を選び、ホーム画面のTegamiから開くと通知を使えます。</Text>}
+      {push === 'unsupported' && Platform.OS === 'web' && <Text style={s.note}>このブラウザでは通知を使えません。</Text>}
+      {Platform.OS !== 'web' && <Text style={s.note}>通知はまだiPhoneのアプリでは使えません。</Text>}
+      {Platform.OS === 'web' && push === 'denied' && <Text style={s.note}>通知が許可されていません。ブラウザか端末の設定で、Tegamiの通知を許可してください。</Text>}
+      {Platform.OS === 'web' && pushFailed && <Text style={s.note}>通知を設定できませんでした。通信を確認して、もう一度お試しください。</Text>}
 
       <Group>
         <LinkRow icon="mail-outline" label="Tegamiへの意見" onPress={feedback} />
+        {Platform.OS !== 'web' && (
+          <>
+            <LinkRow icon="privacy-tip" label="プライバシーポリシー" onPress={() => void Linking.openURL('https://tegami.chat/ja/privacy')} />
+            <LinkRow icon="info-outline" label="運営者の情報" onPress={() => void Linking.openURL('https://tegami.chat/ja/about')} />
+          </>
+        )}
       </Group>
     </SettingsPage>
   );

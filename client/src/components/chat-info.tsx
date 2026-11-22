@@ -2,7 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as ImagePicker from 'expo-image-picker';
 import { router, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { ModelTag, OwnerRow } from '@/components/ai-switches';
 import { Avatar } from '@/components/avatar';
@@ -142,7 +142,7 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
           {!group && peer && (
             <View style={s.actionRow}>
               {/* An AI does not take calls: no call button on its screen. */}
-              {!(contact?.model || (contact && isMyAi(contact))) && (
+              {Platform.OS === 'web' && !(contact?.model || (contact && isMyAi(contact))) && (
                 <Pressable
                   role="button"
                   aria-label="ビデオ通話"
