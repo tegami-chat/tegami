@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Image, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { usePalette } from '@/constants/theme';
-import { openFile, type FileRef } from '@/lib/files';
+import { openFileUri, releaseFileUri, type FileRef } from '@/lib/files';
 
 /** A round avatar, or a round placeholder with the first character of the name. */
 export function Avatar({ name, file, size = 36 }: { name: string; file?: FileRef | null; size?: number }) {
@@ -17,16 +17,19 @@ export function Avatar({ name, file, size = 36 }: { name: string; file?: FileRef
     }
     let url: string | null = null;
     let alive = true;
-    openFile(`avatar:${file.sha256}`, file)
-      .then((blob) => {
-        if (!alive) return;
-        url = URL.createObjectURL(blob);
+    openFileUri(`avatar:${file.sha256}`, file)
+      .then((made) => {
+        if (!alive) {
+          releaseFileUri(made);
+          return;
+        }
+        url = made;
         setLoaded({ sha: file.sha256, uri: url });
       })
       .catch(() => alive && setLoaded(null));
     return () => {
       alive = false;
-      if (url) URL.revokeObjectURL(url);
+      if (url) releaseFileUri(url);
     };
   }, [file?.url, file?.sha256, file?.key, file?.nonce]);
 

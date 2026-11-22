@@ -8,6 +8,7 @@ import { Image, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextI
 import { ModelTag } from '@/components/ai-switches';
 import { Avatar } from '@/components/avatar';
 import { Palette, usePalette } from '@/constants/theme';
+import { NativeQrScanner, scanQrFromLibrary } from '@/components/qr-scanner';
 import { pairCodeOf } from '@/lib/ai-pair';
 import { keepInviteCode } from '@/lib/register';
 import {
@@ -169,7 +170,18 @@ export default function Add() {
   }
 
   async function pickQrImage() {
-    if (Platform.OS !== 'web') return;
+    if (Platform.OS !== 'web') {
+      setScanError(null);
+      try {
+        const raw = await scanQrFromLibrary();
+        if (raw === undefined) return;
+        if (!raw) setScanError('招待リンクを読み取れません');
+        else applyScannedQr(raw);
+      } catch {
+        setScanError('招待リンクを読み取れません');
+      }
+      return;
+    }
     const file = await pickImageFile();
     if (!file) return;
     setScanError(null);
@@ -410,6 +422,7 @@ export default function Add() {
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
               )}
+              {Platform.OS !== 'web' && <NativeQrScanner onScan={applyScannedQr} />}
               <View style={s.squareOverlay} pointerEvents="none" />
             </View>
           )}

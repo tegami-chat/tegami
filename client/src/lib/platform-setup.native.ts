@@ -50,3 +50,17 @@ if (typeof g.TextDecoder !== 'function') {
     }
   };
 }
+
+// React Native's Blob (a picked photo from fetch(uri).blob()) has no arrayBuffer(). The
+// app reads photos, videos and files with it, so add it with the FileReader that is there.
+const BlobClass = (globalThis as unknown as { Blob?: { prototype: { arrayBuffer?: () => Promise<ArrayBuffer> } } }).Blob;
+if (BlobClass && typeof BlobClass.prototype.arrayBuffer !== 'function') {
+  BlobClass.prototype.arrayBuffer = function arrayBuffer(this: Blob) {
+    return new Promise<ArrayBuffer>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as ArrayBuffer);
+      reader.onerror = () => reject(reader.error ?? new Error('could not read the file'));
+      reader.readAsArrayBuffer(this);
+    });
+  };
+}

@@ -2,8 +2,9 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useRef, useState } from 'react';
 import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { createVoicePlayer, type VoicePlayer } from '@/components/voice-player';
 import { usePalette } from '@/constants/theme';
-import { keptFile, openFile, type FileRef } from '@/lib/files';
+import { keptFile, openFile, openFileUri, releaseFileUri, type FileRef } from '@/lib/files';
 
 const WIDTH = 240;
 const STAMP_SIDE = 160;
@@ -23,16 +24,19 @@ export function Photo({ id, file, onOpen }: { id: string; file: FileRef; onOpen?
   useEffect(() => {
     let url: string | null = null;
     let alive = true;
-    openFile(id, file)
-      .then((blob) => {
-        if (!alive) return;
-        url = URL.createObjectURL(blob);
+    openFileUri(id, file)
+      .then((made) => {
+        if (!alive) {
+          releaseFileUri(made);
+          return;
+        }
+        url = made;
         setUri(url);
       })
       .catch((e: Error) => alive && setError(e.message === 'gone' ? 'gone' : 'failed'));
     return () => {
       alive = false;
-      if (url) URL.revokeObjectURL(url);
+      if (url) releaseFileUri(url);
     };
   }, [id, file]);
 
@@ -79,16 +83,19 @@ export function Stamp({
     let url: string | null = null;
     let alive = true;
     setError(null);
-    openFile(`stamp:${file.sha256}`, file)
-      .then((blob) => {
-        if (!alive) return;
-        url = URL.createObjectURL(blob);
+    openFileUri(`stamp:${file.sha256}`, file)
+      .then((made) => {
+        if (!alive) {
+          releaseFileUri(made);
+          return;
+        }
+        url = made;
         setLoaded({ sha: file.sha256, uri: url });
       })
       .catch((e: Error) => alive && setError(e.message === 'gone' ? 'gone' : 'failed'));
     return () => {
       alive = false;
-      if (url) URL.revokeObjectURL(url);
+      if (url) releaseFileUri(url);
     };
   }, [file.url, file.sha256, file.key, file.nonce]);
 
@@ -298,16 +305,19 @@ export function Video({ id, file, onOpen }: { id: string; file: FileRef; onOpen?
   useEffect(() => {
     let url: string | null = null;
     let alive = true;
-    openFile(id, file)
-      .then((blob) => {
-        if (!alive) return;
-        url = URL.createObjectURL(blob);
+    openFileUri(id, file)
+      .then((made) => {
+        if (!alive) {
+          releaseFileUri(made);
+          return;
+        }
+        url = made;
         setUri(url);
       })
       .catch((e: Error) => alive && setError(e.message === 'gone' ? 'gone' : 'failed'));
     return () => {
       alive = false;
-      if (url) URL.revokeObjectURL(url);
+      if (url) releaseFileUri(url);
     };
   }, [id, file]);
 
@@ -353,7 +363,11 @@ export function Video({ id, file, onOpen }: { id: string; file: FileRef; onOpen?
     );
   }
   if (!uri || Platform.OS !== 'web') {
-    return <View style={[styles.videoFrame, { backgroundColor: c.line }]} testID={uri ? 'video-message' : undefined} />;
+    return (
+      <View style={[styles.videoFrame, { backgroundColor: c.line }, uri && styles.videoNote]} testID={uri ? 'video-message' : undefined}>
+        {uri && <Text style={[styles.note, { color: c.muted }]}>この動画はまだiPhoneのアプリでは再生できません</Text>}
+      </View>
+    );
   }
   return (
     <Pressable
@@ -548,6 +562,7 @@ export function Voice({ id, file }: { id: string; file: FileRef }) {
   const [bars, setBars] = useState<number[]>(() => waveCache.get(id) ?? FALLBACK_WAVE);
   const [error, setError] = useState<'gone' | 'failed' | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const nativePlayer = useRef<VoicePlayer | null>(null);
 
   useEffect(() => {
     if (file.duration !== undefined) setDuration(file.duration);
@@ -556,12 +571,16 @@ export function Voice({ id, file }: { id: string; file: FileRef }) {
   useEffect(() => {
     let url: string | null = null;
     let alive = true;
-    openFile(id, file)
-      .then((blob) => {
-        if (!alive) return;
-        url = URL.createObjectURL(blob);
+    openFileUri(id, file)
+      .then((made) => {
+        if (!alive) {
+          releaseFileUri(made);
+          return;
+        }
+        url = made;
         setUri(url);
-        return decodeWaveform(id, blob);
+        // No waveform on the phone (it needs the browser's audio decoder): the bars stay at their default.
+        return Platform.OS === 'web' ? fetch(made).then((r) => r.blob()).then((blob) => decodeWaveform(id, blob)) : undefined;
       })
       .then((w) => {
         if (alive && w) setBars(w);
@@ -569,11 +588,29 @@ export function Voice({ id, file }: { id: string; file: FileRef }) {
       .catch((e: Error) => alive && setError(e.message === 'gone' ? 'gone' : 'failed'));
     return () => {
       alive = false;
-      if (url) URL.revokeObjectURL(url);
+      if (url) releaseFileUri(url);
     };
   }, [id, file]);
 
+  useEffect(
+    () => () => {
+      nativePlayer.current?.remove();
+      nativePlayer.current = null;
+    },
+    [uri],
+  );
+
   function togglePlay() {
+    if (Platform.OS !== 'web') {
+      if (!uri) return;
+      nativePlayer.current ??= createVoicePlayer(uri, {
+        onPlaying: setPlaying,
+        onProgress: setProgress,
+        onDuration: (d) => file.duration === undefined && setDuration(d),
+      });
+      nativePlayer.current.toggle();
+      return;
+    }
     const el = audioRef.current;
     if (!el) return;
     if (el.paused) {
@@ -651,6 +688,7 @@ export function Voice({ id, file }: { id: string; file: FileRef }) {
 const styles = StyleSheet.create({
   frame: { borderRadius: 12, overflow: 'hidden', maxWidth: '100%' },
   videoWrap: { width: WIDTH, maxWidth: '100%', borderRadius: 12, overflow: 'hidden', position: 'relative' },
+  videoNote: { alignItems: 'center', justifyContent: 'center', padding: 12 },
   videoFrame: { width: WIDTH, height: 150, borderRadius: 12, overflow: 'hidden', maxWidth: '100%' },
   videoCorner: {
     position: 'absolute',
