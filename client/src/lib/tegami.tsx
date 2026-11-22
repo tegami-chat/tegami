@@ -105,6 +105,8 @@ import { SIGNAL_KIND, freshSignal, wrapQuiet, wrapSignal } from './signal';
 import { type Page, catchUp } from './catch-up';
 import { BackupGoneError, type BackupRef, RecoveryError, clearLocal, deleteBackup, deriveKeys, loadLocal, makeCode, putBackup, recoveryOnHere, saveLocal, takeRestoredKeys } from './recovery';
 import { createVault, unlockVault, type Vault } from './vault';
+import { canVerifyOwner, verifyOwner } from './export-auth';
+import { exportEncryptedKey as sealKey } from './key-export';
 import { TURNSTILE_SITEKEY, askRelay, forgetInviteCode, keptInviteCode, type Registration } from './register';
 import { signedFetch } from './relay-http';
 import { STUN, iceServers } from './turn';
@@ -412,6 +414,10 @@ type TegamiState = {
   recoveryOn: boolean;
   /** Makes a new recovery code and uploads the backup; an earlier code stops working. Returns the code (shown once). */
   makeRecoveryCode: () => Promise<string>;
+  /** Whether this device can prove the owner is present before the key is written out (a passkey in the browser; Face ID or the passcode on a phone). */
+  canExportKey: boolean;
+  /** Asks the owner to prove it, then returns the secret key as NIP-49 text (ncryptsec1...). Shown once by the caller; never stored. */
+  exportEncryptedKey: (password: string, again: string) => Promise<string>;
   /** Deletes the backup from the relay and turns recovery off. */
   turnOffRecovery: () => Promise<void>;
   /** The backup has not been refreshed for several tries in a row (offline, relay refused). */
@@ -2946,6 +2952,14 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     return code;
   }, [secret, currentBundle, enqueue, refreshed]);
 
+  const exportEncryptedKey = useCallback(
+    async (password: string, again: string) => {
+      if (!secret) throw new Error('not open');
+      return sealKey({ secret, password, again, verify: () => verifyOwner(vault, secret) });
+    },
+    [secret, vault],
+  );
+
   const turnOffRecovery = useCallback(async () => {
     if (!secret) throw new Error('not open');
     await enqueue(async () => {
@@ -3041,6 +3055,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     recoveryOn,
     recoveryBehind: recoveryOn && recoveryFailures >= RECOVERY_FAILURES_SHOWN,
     makeRecoveryCode,
+    canExportKey: canVerifyOwner(vault),
+    exportEncryptedKey,
     turnOffRecovery,
     setNotifications,
     sendSignal,

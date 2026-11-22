@@ -616,6 +616,37 @@ async function main() {
       await u.context.close();
     });
 
+    await test('Writing the key out: asks for the passkey again, gives NIP-49 text, drops it on leaving', async () => {
+      const u = await newUser(browser);
+      await button(u.page, 'はじめる').click();
+      await waitOpen(u.page);
+      await u.page.goto(ORIGIN + '/settings/account');
+      await u.page.waitForFunction(() => document.body.innerText.includes('ロックを解除') || document.body.innerText.includes('秘密鍵を書き出す'), null, { timeout: 15000 });
+      if ((await text(u.page)).includes('ロックを解除')) await button(u.page, 'ロックを解除').click();
+      await waitText(u.page, '秘密鍵を書き出す');
+      const before = (await calls(u.page)).get;
+      await button(u.page, '秘密鍵を書き出す').click();
+      await waitText(u.page, '昔の会話も読まれます');
+      await u.page.getByTestId('export-password').fill('short');
+      await u.page.getByTestId('export-password-again').fill('short');
+      await u.page.getByTestId('export-run').click();
+      await waitText(u.page, '12文字以上');
+      const pw = 'correct horse battery';
+      await u.page.getByTestId('export-password').fill(pw);
+      await u.page.getByTestId('export-password-again').fill(pw);
+      await u.page.getByTestId('export-run').click();
+      await u.page.getByTestId('exported-key').waitFor({ timeout: 30000 });
+      const out = await u.page.getByTestId('exported-key').innerText();
+      assert(out.startsWith('ncryptsec1'), 'not NIP-49 text: ' + out.slice(0, 20));
+      assert((await calls(u.page)).get > before, 'the passkey was not asked again');
+      const { decrypt } = await import('nostr-tools/nip49');
+      assert(decrypt(out, pw).length === 32, 'decrypt gave the wrong size');
+      assert(!(await leaks(u.page, out)).length, 'the exported text was stored');
+      await button(u.page, '閉じる').click();
+      assert(!(await text(u.page)).includes('ncryptsec1'), 'the text stayed on screen');
+      await u.context.close();
+    });
+
     await test('Locked account: other screens stay behind the gate', async () => {
       const u = await newUser(browser);
       await button(u.page, 'はじめる').click();
