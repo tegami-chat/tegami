@@ -64,15 +64,15 @@ export default function ExportKey() {
   if (!canExportKey) {
     return (
       <SettingsPage>
-        <Text style={s.value}>パスキーを付けると書き出せます。</Text>
+        <Text style={s.value}>このアカウントはパスキーで守っていないため、このブラウザでは書き出せません。</Text>
       </SettingsPage>
     );
   }
 
   return (
     <SettingsPage>
-      <Text style={s.value}>ほかのアプリでプロフィールに本名を出すと、この鍵の公開鍵と本名が結び付きます。</Text>
-      <Text style={s.value}>書き出した文字とパスワードの両方を盗まれると、昔の会話も読まれます。</Text>
+      <Text style={s.value}>ほかのアプリでプロフィールに本名を出すと、このアカウントがあなたのものだと分かります。</Text>
+      <Text style={s.value}>書き出した文字とパスワードの両方を盗まれると、昔の会話も他人に読まれます。</Text>
       {result ? (
         <View style={[s.card, s.result]}>
           <Text style={s.code} selectable testID="exported-key">
@@ -87,7 +87,7 @@ export default function ExportKey() {
         </View>
       ) : (
         <>
-          <Text style={s.heading}>パスワード</Text>
+          <Text style={s.heading}>新しく決めるパスワード</Text>
           <TextInput
             style={s.input}
             value={password}
@@ -98,7 +98,7 @@ export default function ExportKey() {
             editable={!busy}
             testID="export-password"
           />
-          <Text style={s.heading}>もう一度</Text>
+          <Text style={s.heading}>パスワードをもう一度</Text>
           <TextInput
             style={s.input}
             value={again}
@@ -110,12 +110,12 @@ export default function ExportKey() {
             testID="export-password-again"
           />
           <Pressable style={[s.inlineBtn, busy && s.busy]} onPress={run} disabled={busy} role="button" testID="export-run">
-            <Text style={s.action}>{busy ? '暗号化しています' : '書き出す'}</Text>
+            <Text style={s.action}>{busy ? '書き出しています' : '書き出す'}</Text>
           </Pressable>
           {failed && <Text style={s.note}>{message[failed]}</Text>}
         </>
       )}
-      <Text style={s.note}>Amethyst、Amber、nostrudel、Jumble、nos2x で読み込めます。Damus と Primal は読み込めない見込みです。</Text>
+      <Text style={s.note}>Amethyst、Amber、nostrudel、Jumble、nos2xで読み込めます。DamusとPrimalは読み込めないかもしれません。</Text>
     </SettingsPage>
   );
 }

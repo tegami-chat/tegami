@@ -28,7 +28,7 @@ export interface ApiKeyStore {
 /** The account is not open, so a key cannot be kept encrypted: nothing is written. */
 export class KeyStoreClosedError extends Error {
   constructor() {
-    super('アカウントを開いてから、キーを保存してください。');
+    super('パスキーでロックを解除してから、APIキーを保存してください。');
     this.name = 'KeyStoreClosedError';
   }
 }

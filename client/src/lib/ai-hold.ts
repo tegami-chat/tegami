@@ -120,7 +120,7 @@ export function declineHold(list: AiHold[], id: string): { holds: AiHold[]; hold
 
 /** The heading of a waiting reply, by why it waits. */
 export const HOLD_TITLES: Record<HoldReason, string> = {
-  CHECK: 'AIの検査が止めた返事',
+  CHECK: '安全の確認で止めた返事',
   MONEY: 'お金の話が入った返事',
   FILE: 'ファイルが入った返事',
   LINK: 'リンクが入った返事',
@@ -129,5 +129,5 @@ export const HOLD_TITLES: Record<HoldReason, string> = {
 
 /** known: the one it is for is in my friends (otherwise `to` is the short form of the key, with no さん). */
 export function holdExplain(aiName: string, to: string, known: boolean) {
-  return `${aiName}が${to}${known ? 'さん' : ''}に送ろうとしています。送ると、あなたの名前で送られ、相手の画面には AI が書いたと出ます。`;
+  return `${aiName}が${to}${known ? 'さん' : ''}に送ろうとしています。送ると、あなたの名前で届き、相手の画面には「AIが書いた」と出ます。`;
 }

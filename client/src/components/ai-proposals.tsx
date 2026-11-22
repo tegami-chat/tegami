@@ -59,7 +59,7 @@ export function AiProposals() {
     return (
       <View style={s.overlay} role="dialog" aria-modal testID="ai-proposal">
         <View style={s.card}>
-          <Text style={s.title}>AIの権限で止めました</Text>
+          <Text style={s.title}>この返事は送れませんでした</Text>
           <Pressable role="button" aria-label="OK" onPress={() => setStopped(false)} style={[s.button, s.buttonMain]}>
             <Text style={[s.buttonText, s.buttonTextMain]}>OK</Text>
           </Pressable>

@@ -626,7 +626,7 @@ async function main() {
       await waitText(u.page, '秘密鍵を書き出す');
       const before = (await calls(u.page)).get;
       await button(u.page, '秘密鍵を書き出す').click();
-      await waitText(u.page, '昔の会話も読まれます');
+      await waitText(u.page, '昔の会話も他人に読まれます');
       await shot(u.page, 'export-key-before', '「秘密鍵を書き出す」を押した直後。パスワードを決める前');
       await u.page.getByTestId('export-password').fill('short');
       await u.page.getByTestId('export-password-again').fill('short');
@@ -3056,7 +3056,7 @@ async function main() {
           __tegamiStore.setItem('tegami.ai.permissions', JSON.stringify(s));
         }, b.hex);
         await button(p, ASK).click();
-        await waitText(p, 'AIの権限で止めました');
+        await waitText(p, 'この返事は送れませんでした');
         await p.waitForTimeout(1000);
         assert((await toAi()) === sent, 'the AI got the chat after the switch was turned off');
         await openPlus();
@@ -3401,7 +3401,7 @@ async function main() {
       await p.getByTestId('ai-proposal').waitFor({ timeout: 15000 });
       await setPerms(p, { friends: { [b.hex]: { send: false } } });
       await button(p, '送る').click();
-      await waitText(p, 'AIの権限で止めました');
+      await waitText(p, 'この返事は送れませんでした');
       await button(p, 'OK').click();
       assert((await ai.answer(25063, id, 'stopped')).status === 'stopped', 'not stopped after the switch went off');
 
@@ -5385,28 +5385,28 @@ async function main() {
       await shot(p, 'phone-ai-settings-row', '設定の一覧。キーを入れる前の「スマホのAI」の行');
       await p.goto(ORIGIN + '/ai/phone');
       await waitText(p, 'AIの会社');
-      await shot(p, 'phone-ai-no-key', 'キーを入れる前の画面');
+      await shot(p, 'phone-ai-no-key', 'APIキーを入れる前の画面');
       await p.goto(ORIGIN + '/ai/phone-chat');
-      await waitText(p, 'キーが入っていません');
-      await shot(p, 'phone-chat-no-key', 'キーが無い時の話す画面');
+      await waitText(p, 'APIキーが入っていません');
+      await shot(p, 'phone-chat-no-key', 'APIキーが無い時の話す画面');
 
       // Save a (fake) key: only the last four characters are shown.
       await p.goto(ORIGIN + '/ai/phone');
       await waitText(p, 'AIの会社');
       const KEY = 'sk-ant-test-0000000000000000wxyz';
-      await p.getByLabel('キー', { exact: true }).fill(KEY);
-      await button(p, '保存').click();
-      await waitText(p, '末尾 wxyz');
+      await p.getByLabel('APIキー', { exact: true }).fill(KEY);
+      await button(p, 'APIキーを保存').click();
+      await waitText(p, '最後の4文字：wxyz');
       assert(!(await text(p)).includes(KEY), 'the whole key is on screen');
-      await shot(p, 'phone-ai-key-saved', 'キーを保存した後。末尾の4文字だけ出る');
+      await shot(p, 'phone-ai-key-saved', 'APIキーを保存した後。最後の4文字だけ出る');
       assert(!(await leaks(p, KEY)).length, 'the key was stored in the clear');
-      await button(p, 'キーを消す').click();
-      await waitText(p, 'キーを消しますか？');
-      await shot(p, 'phone-ai-remove-key', '「キーを消す」を押した時の確認');
+      await button(p, 'APIキーを消す').click();
+      await waitText(p, 'APIキーを消しますか？');
+      await shot(p, 'phone-ai-remove-key', '「APIキーを消す」を押した時の確認');
       await button(p, 'キャンセル').click();
       await p.goto(ORIGIN + '/settings');
-      await waitText(p, 'キーあり');
-      await shot(p, 'phone-ai-settings-row-with-key', 'キーを入れた後の設定の一覧。「キーあり」と出る');
+      await waitText(p, '設定済み');
+      await shot(p, 'phone-ai-settings-row-with-key', 'APIキーを入れた後の設定の一覧。「設定済み」と出る');
 
       // Own chat: one round trip.
       await p.goto(ORIGIN + '/ai/phone-chat');
@@ -5442,7 +5442,7 @@ async function main() {
       // Stop: the own chat refuses, and so does the chat.
       await p.goto(ORIGIN + '/ai/phone-chat');
       await waitText(p, 'こんにちは。テストの答えです。');
-      await button(p, '止める').click();
+      await button(p, '返事を止める').click();
       await waitText(p, 'AIを止めています');
       await shot(p, 'phone-chat-stopped', '「止める」を押した後の話す画面');
       await p.goto(ORIGIN + `/chat/${b.hex}`);
@@ -5487,8 +5487,8 @@ async function main() {
       // CHECK: sent in my name with the AI mark.
       await ask({ to: b.hex, toName: 'テストB', text: '明日なら午後が空いています。', reason: 'CHECK', detail: '返事の中に日時の約束が入っています' });
       await hold.waitFor({ timeout: 15000 });
-      await waitText(p, 'AIの検査が止めた返事');
-      await shot(p, 'ai-hold-check', 'AIの検査が止めた返事。「送る」「送らない」が出る');
+      await waitText(p, '安全の確認で止めた返事');
+      await shot(p, 'ai-hold-check', '安全の確認で止めた返事。「送る」「送らない」が出る');
       await button(p, '送る').click();
       await hold.waitFor({ state: 'detached', timeout: 10000 });
       await b.page.goto(`${ORIGIN}/chat/${a.hex}`);

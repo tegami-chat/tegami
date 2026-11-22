@@ -37,7 +37,7 @@ export default function PhoneAiScreen() {
       setTyped('');
       setError(null);
     } catch (e) {
-      setError(e instanceof KeyStoreClosedError ? e.message : 'キーを保存できませんでした。');
+      setError(e instanceof KeyStoreClosedError ? e.message : 'APIキーを保存できませんでした。もう一度お試しください。');
     }
   }
 
@@ -48,17 +48,17 @@ export default function PhoneAiScreen() {
         {PROVIDER_LIST.map((p) => (
           <View key={p.id} style={st.groupRow}>
             <Text style={st.label}>{p.name}</Text>
-            {p.id === choice.provider ? <Text style={st.rowValue}>選んでいます</Text> : null}
+            {p.id === choice.provider ? <Text style={st.rowValue}>選択中</Text> : null}
           </View>
         ))}
       </Group>
 
-      <Text style={st.heading}>キー</Text>
-      <Text style={st.note}>AIの会社の画面で、使える金額の上限を付けたキーを作ってから入れてください。キーはこの端末の中に、メッセージと同じ鍵で暗号化して保存します。</Text>
-      <Pressable role="link" aria-label="Anthropicのキーの画面を開く" onPress={() => void Linking.openURL(KEYS_URL)}>
-        <Text style={st.action}>Anthropicのキーの画面を開く</Text>
+      <Text style={st.heading}>APIキー</Text>
+      <Text style={st.note}>AIを使うと、使った分のお金がかかります。AIの会社の画面で使える金額の上限を決めてから、APIキーを作って入れてください。APIキーはこの端末だけに暗号化して保存し、ほかの端末には移りません。</Text>
+      <Pressable role="link" aria-label="AnthropicのAPIキーの画面を開く" onPress={() => void Linking.openURL(KEYS_URL)}>
+        <Text style={st.action}>AnthropicのAPIキーの画面を開く</Text>
       </Pressable>
-      {saved ? <Text style={st.value}>保存したキー：末尾 {keyTail(saved)}</Text> : null}
+      {saved ? <Text style={st.value}>保存したAPIキーの最後の4文字：{keyTail(saved)}</Text> : null}
       <TextInput
         style={s.input}
         value={typed}
@@ -66,24 +66,24 @@ export default function PhoneAiScreen() {
           setTyped(v);
           setError(null);
         }}
-        placeholder={saved ? '新しいキーを入れると置き換えます' : 'キーを入れる'}
+        placeholder={saved ? '新しいAPIキーを入れると入れ替わります' : 'APIキーを入れる'}
         placeholderTextColor={c.muted}
         secureTextEntry
         autoCapitalize="none"
         autoCorrect={false}
         autoComplete="off"
-        aria-label="キー"
+        aria-label="APIキー"
       />
       {error ? <Text style={s.warn}>{error}</Text> : null}
       <Group>
-        <ActionRow label="保存" onPress={saveKey} disabled={!typed.trim()} />
-        {saved ? <ActionRow label="キーを消す" danger onPress={() => setRemoving(true)} /> : null}
+        <ActionRow label="APIキーを保存" onPress={saveKey} disabled={!typed.trim()} />
+        {saved ? <ActionRow label="APIキーを消す" danger onPress={() => setRemoving(true)} /> : null}
       </Group>
 
-      <Text style={st.heading}>モデル</Text>
+      <Text style={st.heading}>AIモデル</Text>
       <Group>
         {provider.models.map((m) => (
-          <LinkRow key={m.id} label={m.name} value={m.id === choice.model ? '選んでいます' : undefined} onPress={() => pickModel(m.id)} />
+          <LinkRow key={m.id} label={m.name} value={m.id === choice.model ? '選択中' : undefined} onPress={() => pickModel(m.id)} />
         ))}
       </Group>
 
@@ -93,8 +93,8 @@ export default function PhoneAiScreen() {
 
       {removing && (
         <Dialog
-          title="キーを消しますか？"
-          text="この端末に保存したキーを消します。AIの会社の側のキーは、そのまま残ります。"
+          title="APIキーを消しますか？"
+          text="この端末に保存したAPIキーを消します。AIの会社で作ったAPIキーは消えないので、使わないならAIの会社の画面で消してください。"
           onClose={() => setRemoving(false)}
           buttons={[
             { label: 'キャンセル', variant: 'outlined', onPress: () => setRemoving(false) },

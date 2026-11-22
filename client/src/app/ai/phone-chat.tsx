@@ -45,7 +45,7 @@ export default function PhoneChatScreen() {
       setText('');
     } catch (e) {
       if (e instanceof PhoneAiRefused || e instanceof ProviderError) setError(e.message);
-      else if ((e as { name?: string })?.name !== 'AbortError') setError('うまくいきませんでした。もう一度試してください。');
+      else if ((e as { name?: string })?.name !== 'AbortError') setError('返事をもらえませんでした。もう一度お試しください。');
     } finally {
       setBusy(false);
       abort.current = null;
@@ -88,7 +88,7 @@ export default function PhoneChatScreen() {
         ) : null}
       </ScrollView>
       <View style={s.bar}>
-        <Pressable role="button" aria-label="止める" style={s.stop} onPress={stop}>
+        <Pressable role="button" aria-label="返事を止める" style={s.stop} onPress={stop}>
           <MaterialIcons name="stop-circle" size={26} color={c.danger} />
         </Pressable>
         <TextInput

@@ -71,7 +71,7 @@ export default function Settings() {
         <LinkRow icon="key" label="アカウント" value={protectedByPasskey ? 'パスキー' : Platform.OS === 'web' ? 'このブラウザ' : 'この端末'} onPress={() => go('/settings/account')} />
         <LinkRow icon="shield" label="プライバシー" value={blocked.length ? `ブロック ${blocked.length}人` : undefined} onPress={() => go('/settings/privacy')} />
         <LinkRow icon="smart-toy" label="AI" value={aiState} testID="ai-permissions-state" onPress={() => go('/ai')} />
-        <LinkRow icon="phone-iphone" label="スマホのAI" value={getKeyStore().get(phoneChoice().provider) ? 'キーあり' : undefined} onPress={() => go('/ai/phone')} />
+        <LinkRow icon="phone-iphone" label="スマホのAI" value={getKeyStore().get(phoneChoice().provider) ? '設定済み' : undefined} onPress={() => go('/ai/phone')} />
       </Group>
 
       <Group>

@@ -35,8 +35,8 @@ export class ProviderError extends Error {
   }
 }
 
-export const KEY_WRONG_TEXT = 'キーが違います。キーを入れ直してください。';
-export const LIMIT_TEXT = '使いすぎです。しばらくしてから、もう一度試してください。';
+export const KEY_WRONG_TEXT = 'APIキーが正しくありません。設定の「スマホのAI」で入れ直してください。';
+export const LIMIT_TEXT = 'いまは使える回数の上限に達しています。しばらく待ってから、もう一度お試しください。';
 
 export const anthropic: AiProvider = {
   id: 'anthropic',
@@ -64,16 +64,16 @@ export const anthropic: AiProvider = {
       });
     } catch (e) {
       if ((e as { name?: string })?.name === 'AbortError') throw e;
-      throw new ProviderError('other', '通信できませんでした。電波を確かめて、もう一度試してください。');
+      throw new ProviderError('other', '通信できませんでした。電波を確かめて、もう一度お試しください。');
     }
     if (res.status === 401) throw new ProviderError('key', KEY_WRONG_TEXT);
     if (res.status === 429) throw new ProviderError('limit', LIMIT_TEXT);
-    if (!res.ok) throw new ProviderError('other', `AIの会社から、うまく返事が来ませんでした（${res.status}）。`);
+    if (!res.ok) throw new ProviderError('other', `AIの会社から返事をもらえませんでした。しばらくしてから、もう一度お試しください（エラー${res.status}）。`);
     let data: { content?: { type?: string; text?: string }[] };
     try {
       data = await res.json();
     } catch {
-      throw new ProviderError('other', 'AIの会社の返事を読めませんでした。');
+      throw new ProviderError('other', 'AIの会社からの返事を読み取れませんでした。もう一度お試しください。');
     }
     const text = (data.content ?? [])
       .filter((b) => b?.type === 'text' && typeof b.text === 'string')

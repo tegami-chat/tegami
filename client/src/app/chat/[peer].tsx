@@ -340,7 +340,7 @@ export default function Chat() {
         const answer = await askPhoneAi({ peer, system: built.system, messages: built.messages });
         const text = answer.trim();
         if (!text) {
-          showToast('案が届きませんでした');
+          showToast('返事の案が届きませんでした。もう一度お試しください');
           return;
         }
         setDraft((cur) => (cur.trim() ? `${cur}
@@ -348,7 +348,7 @@ ${text}` : text));
         input.current?.focus();
       } catch (e) {
         if (e instanceof PhoneAiRefused || e instanceof ProviderError) showToast(e.message, 5000);
-        else showToast('頼めませんでした。もう一度お試しください');
+        else showToast('AIに返事の案を頼めませんでした。もう一度お試しください');
       } finally {
         setPhoneBusy(false);
       }
@@ -1881,10 +1881,10 @@ ${text}` : text));
       {phoneNotice && (
         <Dialog
           title="AIにトークを読ませますか？"
-          text={`このトークの新しいメッセージを${DRAFT_MESSAGES}通まで、あなたのキーでAIの会社に送ります。送った文はTegamiの暗号化の外に出ます。${
+          text={`このトークの新しいメッセージを${DRAFT_MESSAGES}通まで、あなたのAPIキーでAIの会社に送ります。送ったメッセージはAIの会社も読めます。返事の案は入力欄に入るだけで、自動では送りません。${
             contact?.noai
-              ? `${contact.name}さんは、自分の文を相手のAIに読ませない設定にしています。${contact.name}さんの文は送りません。`
-              : '「AIに読ませない」の印が付いた文は送りません。'
+              ? `${contact.name}さんは自分のメッセージを相手のAIに読ませない設定にしています。${contact.name}さんのメッセージは送りません。`
+              : '「AIに読ませない」の印が付いたメッセージは送りません。'
           }`}
           onClose={() => setPhoneNotice(false)}
           buttons={[
