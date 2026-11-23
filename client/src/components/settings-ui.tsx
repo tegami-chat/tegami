@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { Palette, usePalette } from '@/constants/theme';
+import { tapSelect } from '@/lib/haptics';
 
 export const settingsStyles = (c: Palette) =>
   StyleSheet.create({
@@ -68,7 +69,7 @@ export function LinkRow({ label, value, onPress, testID, icon }: { label: string
   const c = usePalette();
   const s = settingsStyles(c);
   return (
-    <Pressable style={s.groupRow} onPress={onPress} role="button" aria-label={label}>
+    <Pressable style={({ pressed }) => [s.groupRow, pressed && { backgroundColor: c.hover }]} onPress={onPress} role="button" aria-label={label}>
       {icon ? <MaterialIcons name={icon} size={22} color={c.muted} /> : null}
       <Text style={s.label}>{label}</Text>
       {value ? (
@@ -94,7 +95,10 @@ export function SwitchRow({ label, value, onChange, disabled, icon }: { label: s
         thumbColor="#ffffff"
         {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}
         value={value}
-        onValueChange={onChange}
+        onValueChange={(on) => {
+          tapSelect();
+          onChange(on);
+        }}
         disabled={disabled}
         aria-label={label}
       />
@@ -104,9 +108,10 @@ export function SwitchRow({ label, value, onChange, disabled, icon }: { label: s
 
 /** A row that does something right away (no other screen). */
 export function ActionRow({ label, onPress, danger, disabled }: { label: string; onPress: () => void; danger?: boolean; disabled?: boolean }) {
-  const s = settingsStyles(usePalette());
+  const c = usePalette();
+  const s = settingsStyles(c);
   return (
-    <Pressable style={[s.groupRow, disabled && s.busy]} onPress={onPress} disabled={disabled} role="button" aria-label={label}>
+    <Pressable style={({ pressed }) => [s.groupRow, disabled && s.busy, pressed && { backgroundColor: c.hover }]} onPress={onPress} disabled={disabled} role="button" aria-label={label}>
       <Text style={danger ? s.dangerAction : s.action}>{label}</Text>
     </Pressable>
   );

@@ -1,6 +1,8 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import { ActionSheetIOS, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Palette, usePalette } from '@/constants/theme';
+import { tapLight } from '@/lib/haptics';
 
 export type MenuSheetItem = {
   label: string;
@@ -9,7 +11,31 @@ export type MenuSheetItem = {
 };
 
 /** Menu sheet shown on long press or right click on a row, with an optional target name header. */
-export function MenuSheet({
+export function MenuSheet(props: { title?: string; items: MenuSheetItem[]; onClose?: () => void }) {
+  // iPhone: the system's action sheet. The browser and Android keep the card below.
+  return Platform.OS === 'ios' ? <SystemSheet {...props} /> : <MenuCard {...props} />;
+}
+
+/** The system's action sheet: opened once when this appears, and nothing is drawn here. */
+function SystemSheet({ title, items, onClose }: { title?: string; items: MenuSheetItem[]; onClose?: () => void }) {
+  useEffect(() => {
+    tapLight();
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        title,
+        options: [...items.map((i) => i.label), 'キャンセル'],
+        cancelButtonIndex: items.length,
+        destructiveButtonIndex: items.flatMap((i, n) => (i.danger ? [n] : [])),
+      },
+      (n) => (n === items.length ? onClose?.() : items[n]?.onPress()),
+    );
+    // Once, when it appears.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+}
+
+function MenuCard({
   title,
   items,
   onClose,

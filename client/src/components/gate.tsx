@@ -146,7 +146,7 @@ export function Gate({ locked }: { locked: boolean }) {
       {twin ? (
         <>
           <Text style={s.notice}>{`このアカウントは、この端末にすでにあります（${accountName(twin)}）`}</Text>
-          <Pressable style={s.primary} onPress={() => {
+          <Pressable style={({ pressed }) => [s.primary, pressed && s.pressed]} onPress={() => {
               takeRestoredKeys(); // a code for that account must not stay waiting for another one
               goToAccount(twin.id);
             }} role="button">
@@ -163,7 +163,7 @@ export function Gate({ locked }: { locked: boolean }) {
                 : 'この端末ではパスキーを使えません。'}
           </Text>
           {passkeysAvailable() && (
-            <Pressable style={[s.primary, busy && s.busy]} onPress={go} disabled={busy} role="button">
+            <Pressable style={({ pressed }) => [s.primary, busy && s.busy, pressed && s.pressed]} onPress={go} disabled={busy} role="button">
               <Text style={s.primaryText}>保存先を選び直す</Text>
             </Pressable>
           )}
@@ -176,7 +176,7 @@ export function Gate({ locked }: { locked: boolean }) {
           <Text style={s.small}>{Platform.OS === 'web' ? 'パスキーを使わない時は、鍵をこのブラウザの中だけに保存します。' : 'パスキーを使わない時は、鍵をこの端末の中だけに保存します。'}</Text>
         </>
       ) : (
-        <Pressable style={[s.primary, busy && s.busy]} onPress={go} disabled={busy} role="button">
+        <Pressable style={({ pressed }) => [s.primary, busy && s.busy, pressed && s.pressed]} onPress={go} disabled={busy} role="button">
           <Text style={s.primaryText}>{locked ? 'ロックを解除' : moved ? 'この端末で使う' : 'はじめる'}</Text>
         </Pressable>
       )}
@@ -227,7 +227,7 @@ export function Gate({ locked }: { locked: boolean }) {
           </View>
         ) : (
           <>
-            <Pressable style={s.outlined} onPress={() => setPasting(true)} role="button">
+            <Pressable style={({ pressed }) => [s.outlined, pressed && s.pressed]} onPress={() => setPasting(true)} role="button">
               <Text style={s.outlinedText}>ほかの端末から受け取る</Text>
             </Pressable>
             <Pressable style={s.quiet} onPress={() => setRestoring('input')} role="button">
@@ -376,6 +376,8 @@ const styles = (c: Palette) =>
     primary: { backgroundColor: c.accent, borderRadius: 999, height: 52, width: '100%', maxWidth: 320, alignItems: 'center', justifyContent: 'center' },
     primaryText: { color: c.onAccent, fontSize: 17, fontWeight: '600' },
     busy: { opacity: 0.5 },
+    // Pressed: the same dip on every button of this screen.
+    pressed: { opacity: 0.6 },
     // As easy to see as 「はじめる」: the same size, outlined instead of filled.
     outlined: { borderWidth: 1.5, borderColor: c.accent, borderRadius: 999, height: 52, width: '100%', maxWidth: 320, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
     outlinedText: { color: c.accent, fontSize: 17, fontWeight: '600' },

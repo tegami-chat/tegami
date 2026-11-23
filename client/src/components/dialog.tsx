@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Palette, usePalette } from '@/constants/theme';
 
@@ -9,7 +10,40 @@ export type DialogButton = {
 };
 
 /** Centered confirmation card on a dim background, used in place of browser confirm(). */
-export function Dialog({
+export function Dialog(props: {
+  title?: string;
+  text?: string;
+  buttons: DialogButton[];
+  stacked?: boolean;
+  onClose?: () => void;
+}) {
+  // The phone apps show the system's alert; the browser keeps the card below.
+  return Platform.OS === 'web' ? <DialogCard {...props} /> : <SystemAlert {...props} />;
+}
+
+const CANCEL = ['キャンセル', 'やめる', '閉じる'];
+
+/** The system's alert: opened once when this appears, and nothing is drawn here. */
+function SystemAlert({ title, text, buttons, onClose }: { title?: string; text?: string; buttons: DialogButton[]; onClose?: () => void }) {
+  useEffect(() => {
+    // A cancel (outside the alert, Android's back) closes it like the card's background does.
+    Alert.alert(
+      title ?? text ?? '',
+      title ? text : undefined,
+      buttons.map((b) => ({
+        text: b.label,
+        style: b.variant === 'danger' ? 'destructive' : b.variant === 'text' || CANCEL.includes(b.label) ? 'cancel' : 'default',
+        onPress: b.onPress,
+      })),
+      { cancelable: !!onClose, onDismiss: onClose },
+    );
+    // Once, when it appears: the buttons of a later render are not a new alert.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+}
+
+function DialogCard({
   title,
   text,
   buttons,
