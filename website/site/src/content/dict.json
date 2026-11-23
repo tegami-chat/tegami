@@ -2064,8 +2064,8 @@
   "ja": "端末の紛失、故障、データの削除などにより失われたデータと復旧コードを、運営者が復元することはできません。"
  },
  "tm.8.3": {
-  "en": "If the user suffers damage because of the operator's default or tort caused by the operator's slight negligence (negligence other than intentional conduct or gross negligence), the operator is liable only for ordinary damage that directly and actually arose.",
-  "ja": "運営者の債務不履行または不法行為により利用者に損害が生じた場合、それが運営者の軽過失（故意または重大な過失ではない過失）によるときは、運営者は、直接かつ現実に生じた通常の損害に限り賠償の責任を負います。"
+  "en": "If the user suffers damage because of the operator's default or tort caused by the operator's slight negligence (negligence other than intentional conduct or gross negligence), the operator is liable only for ordinary damage that directly and actually arose (excluding lost profits), up to a maximum of 10,000 yen.",
+  "ja": "運営者の債務不履行または不法行為により利用者に損害が生じた場合、それが運営者の軽過失（故意または重大な過失ではない過失）によるときは、運営者は、直接かつ現実に生じた通常の損害（逸失利益を除きます）に限り、1万円を上限として賠償の責任を負います。"
  },
  "tm.9.h": {
   "en": "11. Changes to these terms",
