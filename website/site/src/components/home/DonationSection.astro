@@ -18,8 +18,8 @@ const uses: [string, IconName][] = [['server', 'server'], ['notify', 'bell'], ['
   <SectionHeading title={x('don.h')} lead={x('don.t')} align="center" />
   <ul class="grid grid-cols-2 gap-x-6 gap-y-4 text-left lg:grid-cols-4">
     {uses.map(([k, icon]) => (
-      <li class="flex items-start gap-3">
-        <Icon name={icon} class="mt-1 h-5 w-5 text-accent" />
+      <li class="flex items-center gap-3">
+        <Icon name={icon} class="h-5 w-5 shrink-0 text-accent" />
         <span class="block"><span class="emphasis block"><Fragment set:html={x('don.' + k + '.h')} /></span><span class="block text-small text-fg-muted"><Fragment set:html={x('don.' + k + '.t')} /></span></span>
       </li>
     ))}

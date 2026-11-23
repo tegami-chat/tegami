@@ -9,17 +9,17 @@ import { useWide } from '@/lib/layout';
 const PILLARS: { icon: PillarIconName; title: string; body: string }[] = [
   {
     icon: 'no-ads',
-    title: 'プラットフォームから自由に。',
+    title: 'プラットフォームから自由に',
     body: '追いかけてくる広告も、見たくないニュースも、やりたくないゲームも、いらない機能も、全部ありません。あなたの個人情報を広告や営業のために売ることもありません。',
   },
   {
     icon: 'ai-friend',
-    title: 'AIを自由に使う。',
+    title: 'AIを自由に使う',
     body: '自分のAIを、友だちとしてつなげられます。MCP（AIとツールをつなぐ仕組み）を使えば、AIがメッセージを読んだり送ったりできます。AIを使わないことも、相手のAIに自分の文を読ませないことも、あなたの自由です。',
   },
   {
     icon: 'no-peeking',
-    title: '誰にも覗かれない。',
+    title: '誰にも覗かれない',
     body: 'メッセージは端末の中で暗号化してから送り、端末に保存します。Tegamiのサーバーを通る間も暗号化したままなので、運営者にも読めません。',
   },
 ];

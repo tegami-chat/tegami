@@ -24,24 +24,24 @@
   "ja": "安全の仕組みを見る"
  },
  "p1.h": {
-  "en": "Free from big platforms.",
-  "ja": "プラットフォームから自由に。"
+  "en": "Free from big platforms",
+  "ja": "プラットフォームから自由に"
  },
  "p1.t": {
   "en": "No creepy ads, no news you didn't ask for, no games, no unwanted features. None of it. And your personal data is never sold for advertising or marketing.",
   "ja": "追いかけてくる広告も、見たくないニュースも、やりたくないゲームも、いらない機能も、全部ありません。あなたの個人情報を広告や営業のために売ることもありません。"
  },
  "p2.h": {
-  "en": "Use AI your way.",
-  "ja": "AIを自由に使う。"
+  "en": "Use AI your way",
+  "ja": "AIを自由に使う"
  },
  "p2.t": {
   "en": "Connect your own AI as a friend in your chat list, and let it read and send messages through MCP. You're just as free to not use AI at all, or to keep other people's AIs from reading your messages.",
   "ja": "自分のAIを、友だちとしてつなげられます。MCP（AIとツールをつなぐ仕組み）を使えば、AIがメッセージを読んだり送ったりできます。AIを使わないことも、相手のAIに自分の文を読ませないことも、あなたの自由です。"
  },
  "p3.h": {
-  "en": "No one else can read them.",
-  "ja": "誰にも覗かれない。"
+  "en": "No one else can read them",
+  "ja": "誰にも覗かれない"
  },
  "p3.t": {
   "en": "Messages are encrypted on your device before they're sent, and saved on your device. They stay encrypted on Tegami's servers, so not even we can read them.",
@@ -128,8 +128,16 @@
   "ja": "好きなAIを選べる"
  },
  "ai.pick.t": {
-  "en": "Run a small program (tegami-agent) on your computer to connect Claude Code, Claude, Gemini or OpenAI models (with your own API key), or an AI that runs on your computer. You choose which one.",
-  "ja": "自分のパソコンで小さなプログラム（tegami-agent）を動かすと、Claude Codeのほか、自分のAPIキーを使うClaude、Gemini、OpenAIのモデルや、パソコンで動くAIをつなげます。どのAIにするかは、あなたが選びます。"
+  "en": "Connect an AI agent that runs on your own computer and use it as tegami-agent. Besides Claude Code and Codex, you can freely connect models such as Claude, OpenAI and Gemini with your own API key.",
+  "ja": "自分のPC上で動くAIエージェントと接続し、tegami-agentとして利用することが可能です。Claude CodeやCodexのほか、APIキーを使うClaude、OpenAI、Geminiのモデルなど、自由につなぐことが出来ます。"
+ },
+ "ai.ctrl.h": {
+  "en": "Control Tegami from your AI",
+  "ja": "AIからTegamiを操作する"
+ },
+ "ai.ctrl.t": {
+  "en": "Use Tegami from the AI you already use every day, and have it send messages for you.",
+  "ja": "普段利用しているAIからTegamiを操作し、自由にメッセージを送ることが可能になります。"
  },
  "ai.talk.h": {
   "en": "Talk with your AI",
@@ -172,8 +180,8 @@
   "ja": "自分でカスタマイズする"
  },
  "ai.own.t": {
-  "en": "Connect your own program that writes the replies, and you have your own bot.",
-  "ja": "返事を書く自分のプログラムをつなげば、自分だけのボットを作れます。"
+  "en": "We are building the tools to make Tegami work the way you imagine. For example, connect a program that writes replies automatically, and you have your own bot.",
+  "ja": "自分が考えた使い方を実現できるような環境を整えていきます。たとえば、自動で返事を書くプログラムをつなげば、自分だけのボットを作れます。"
  },
  "mk.h": {
   "en": "Make Tegami yours.",
