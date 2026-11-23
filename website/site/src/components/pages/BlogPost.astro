@@ -5,12 +5,12 @@ import Section from '~/components/ui/Section.astro';
 import SectionHeading from '~/components/ui/SectionHeading.astro';
 import Prose from '~/components/ui/Prose.astro';
 import { t, type Lang } from '~/site';
-import { blogPath, type Post } from '~/lib/blog';
+import { blogPath, slugOf, type Post } from '~/lib/blog';
 export interface Props { post: Post; lang: Lang }
 const { post, lang } = Astro.props;
 const meta = { title: post.data.title + ' | Tegami', desc: post.data.description };
 ---
-<Base name="blog" lang={lang} meta={meta} path={blogPath(lang, post.id)}>
+<Base name="blog" lang={lang} meta={meta} path={blogPath(lang, slugOf(post))}>
 <main>
 <Section rhythm="page" width="prose">
 <SectionHeading level={1} title={post.data.title} flush />

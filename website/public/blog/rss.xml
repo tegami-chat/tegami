@@ -5,6 +5,12 @@
     <link>https://tegami.chat/blog</link>
     <description>News from Tegami.</description>
     <language>en</language>
-
+    <item>
+      <title>Introducing Tegami</title>
+      <link>https://tegami.chat/blog/2026-11-launch</link>
+      <guid isPermaLink="true">https://tegami.chat/blog/2026-11-launch</guid>
+      <pubDate>Mon, 23 Nov 2026 00:00:00 GMT</pubDate>
+      <description>Why I started building Tegami, an open-source messaging app with no ads.</description>
+    </item>
   </channel>
 </rss>

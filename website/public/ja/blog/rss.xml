@@ -5,6 +5,12 @@
     <link>https://tegami.chat/ja/blog</link>
     <description>Tegamiからのお知らせ。</description>
     <language>ja</language>
-
+    <item>
+      <title>Tegami を始めました</title>
+      <link>https://tegami.chat/ja/blog/2026-11-launch</link>
+      <guid isPermaLink="true">https://tegami.chat/ja/blog/2026-11-launch</guid>
+      <pubDate>Mon, 23 Nov 2026 00:00:00 GMT</pubDate>
+      <description>広告の無い、オープンソースのメッセージアプリ Tegami を作り始めた理由を書きました。</description>
+    </item>
   </channel>
 </rss>

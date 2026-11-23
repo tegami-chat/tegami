@@ -8,6 +8,9 @@ export type Post = CollectionEntry<'blog'>;
 export const postsOf = async (lang: Lang): Promise<Post[]> =>
   (await getCollection('blog', (p) => !p.data.draft && p.data.lang === lang)).sort((a, b) => b.data.date.localeCompare(a.data.date) || a.id.localeCompare(b.id));
 
+// The address name of a post: its file name without the language folder.
+export const slugOf = (p: Post): string => p.id.split('/').pop()!;
+
 export const blogPath = (lang: Lang, slug?: string): string => (lang === 'ja' ? '/ja/blog' : '/blog') + (slug ? '/' + slug : '');
 
 const esc = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
@@ -17,7 +20,7 @@ export const feed = async (lang: Lang): Promise<Response> => {
   const posts = await postsOf(lang);
   const base = 'https://tegami.chat';
   const items = posts.map((p) => {
-    const url = base + blogPath(lang, p.id);
+    const url = base + blogPath(lang, slugOf(p));
     return `    <item>
       <title>${esc(p.data.title)}</title>
       <link>${url}</link>

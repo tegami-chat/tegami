@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { readFileSync, existsSync } from 'node:fs';
 import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
+import { satteri } from '@astrojs/markdown-satteri';
+import externalLinks from './src/lib/rehype-external-links.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -16,6 +18,7 @@ export default defineConfig({
   site: 'https://tegami.chat',
   outDir: './dist',
   output: 'static',
+  markdown: { processor: satteri({ hastPlugins: [externalLinks] }) },
   // how.html and ja/how.html, the same file names as before.
   build: {
     format: 'file',
