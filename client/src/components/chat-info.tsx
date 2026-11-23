@@ -1,11 +1,12 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as ImagePicker from 'expo-image-picker';
-import { router, type Href } from 'expo-router';
+import { Stack, router, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { ModelTag, OwnerRow } from '@/components/ai-switches';
 import { Avatar } from '@/components/avatar';
+import { BackButton } from '@/components/back-button';
 import { Dialog } from '@/components/dialog';
 import { ReportSheet } from '@/components/report-sheet';
 import { Palette, usePalette } from '@/constants/theme';
@@ -24,6 +25,8 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
   const c = usePalette();
   const s = styles(c);
   const insets = useInsets();
+  // On the phone apps the system's top bar (with the person's name) replaces Tegami's own.
+  const nativeBar = Platform.OS !== 'web' && !panel;
   const {
     me,
     myName,
@@ -117,18 +120,19 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
 
   return (
     <View style={s.fill}>
+      {nativeBar && <Stack.Screen options={{ headerShown: true, title: displayName }} />}
       <View style={s.fill} aria-hidden={!!dialog || reporting || !!removing}>
-        <View style={[s.header, panel && s.headerPanel, { paddingTop: insets.top, minHeight: (panel ? 60 : 48) + insets.top }]}>
-          {panel ? (
-            <Pressable role="button" aria-label="閉じる" style={s.backButton} onPress={goBack}>
-              <MaterialIcons name="close" size={24} color={c.text} />
-            </Pressable>
-          ) : (
-            <Pressable role="button" aria-label="戻る" style={s.backButton} onPress={goBack}>
-              <MaterialIcons name="chevron-left" size={24} color={c.text} />
-            </Pressable>
-          )}
-        </View>
+        {!nativeBar && (
+          <View style={[s.header, panel && s.headerPanel, { paddingTop: insets.top, minHeight: (panel ? 60 : 48) + insets.top }]}>
+            {panel ? (
+              <Pressable role="button" aria-label="閉じる" style={s.backButton} onPress={goBack}>
+                <MaterialIcons name="close" size={24} color={c.text} />
+              </Pressable>
+            ) : (
+              <BackButton onPress={goBack} />
+            )}
+          </View>
+        )}
         <ScrollView style={s.fill} contentContainerStyle={[s.body, { paddingBottom: 32 + insets.bottom }]}>
           <View style={s.profile}>
             <Avatar name={group ? '◎' : displayName} file={group ? groupInfo?.avatar : contact?.avatar} size={76} />

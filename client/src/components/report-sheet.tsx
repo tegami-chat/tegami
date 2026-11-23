@@ -1,7 +1,7 @@
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
+import { BackButton } from '@/components/back-button';
 import { Palette, usePalette } from '@/constants/theme';
 import { useInsets } from '@/lib/insets';
 import { reportMessagesFor, useTegami, type ReportReason } from '@/lib/tegami';
@@ -57,9 +57,7 @@ export function ReportSheet({
   return (
     <View style={s.overlay} testID="report-sheet">
       <View style={[s.header, { paddingTop: insets.top, minHeight: 48 + insets.top }]}>
-        <Pressable role="button" aria-label="戻る" style={s.backButton} onPress={onClose}>
-          <MaterialIcons name="chevron-left" size={24} color={c.text} />
-        </Pressable>
+        <BackButton onPress={onClose} />
         <Text style={s.headerTitle} numberOfLines={1}>
           通報
         </Text>

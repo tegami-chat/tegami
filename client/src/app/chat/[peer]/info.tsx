@@ -1,4 +1,5 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { Platform } from 'react-native';
 
 import { ChatInfo } from '@/components/chat-info';
 
@@ -11,7 +12,7 @@ export default function ChatInfoScreen() {
   }
   return (
     <>
-      <Stack.Screen options={{ headerShown: false }} />
+      <Stack.Screen options={{ headerShown: Platform.OS !== 'web' }} />
       <ChatInfo peer={peer} onClose={goBack} />
     </>
   );

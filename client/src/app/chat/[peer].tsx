@@ -1,10 +1,12 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, router, useIsFocused, useLocalSearchParams, type Href } from 'expo-router';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
+import { HeaderHeightContext } from 'expo-router/react-navigation';
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
+import { BackButton } from '@/components/back-button';
 import { ChatInfo } from '@/components/chat-info';
 import { Dialog } from '@/components/dialog';
 import { FileAttachment, Photo, PhotoViewer, Stamp, Video, VideoViewer, Voice } from '@/components/photo';
@@ -19,6 +21,7 @@ import { useCall } from '@/lib/calls';
 import { cautionFor } from '@/lib/caution';
 import { isFeedback } from '@/lib/feedback';
 import { MAX_FILE_BYTES } from '@/lib/files';
+import { tapLight } from '@/lib/haptics';
 import { useInsets } from '@/lib/insets';
 import { INFO_BESIDE_MIN, useWide, type PressState } from '@/lib/layout';
 import { AiConfirmNeededError, AiNotAllowedError, AiNothingToReadError, chatName, clock, isGroup, isMyAi, isPerson, personName, useTegami, type Message, type Stamp as StampItem } from '@/lib/tegami';
@@ -177,6 +180,9 @@ export default function Chat() {
   // enough), files can be dropped on the chat, and Esc closes what is open.
   const wide = useWide();
   const insets = useInsets();
+  // The phone apps use the system's top bar; the browser draws its own (below).
+  const nativeBar = Platform.OS !== 'web';
+  const headerHeight = useContext(HeaderHeightContext) ?? 0;
   const { width: windowWidth } = useWindowDimensions();
   const [infoOpen, setInfoOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -878,6 +884,7 @@ export default function Chat() {
     const text = draft.trim();
     if (!text || !peer || isBlocked) return;
     setError(null);
+    tapLight();
     // Never lost: without a connection it waits in the chat and goes out later.
     setDraft('');
     try {
@@ -903,19 +910,32 @@ export default function Chat() {
 
   return (
     <View style={s.withInfo}>
-    <KeyboardAvoidingView style={s.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Stack.Screen options={{ headerShown: false }} />
+    <KeyboardAvoidingView style={s.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={nativeBar ? headerHeight : 0}>
+      <Stack.Screen
+        options={
+          nativeBar
+            ? {
+                headerShown: true,
+                title,
+                headerRight: peer
+                  ? () => (
+                      <Pressable
+                        role="button"
+                        aria-label="メニュー"
+                        style={s.headerIconBtn}
+                        onPress={() => router.push(`/chat/${encodeURIComponent(peer)}/info` as Href)}>
+                        <MaterialIcons name="menu" size={24} color={c.text} />
+                      </Pressable>
+                    )
+                  : undefined,
+              }
+            : { headerShown: false }
+        }
+      />
       <View style={[s.fill, { paddingBottom: insets.bottom }]} aria-hidden={modalOpen} ref={dropArea}>
+        {!nativeBar && (
         <View style={[s.header, wide && s.headerWide, { paddingTop: insets.top, minHeight: (wide ? 60 : 48) + insets.top }]}>
-          {!wide && (
-            <Pressable
-              role="button"
-              aria-label="戻る"
-              style={s.headerIconBtn}
-              onPress={() => (router.canGoBack() ? router.back() : router.replace('/' as Href))}>
-              <MaterialIcons name="chevron-left" size={24} color={c.text} />
-            </Pressable>
-          )}
+          {!wide && <BackButton onPress={() => (router.canGoBack() ? router.back() : router.replace('/' as Href))} />}
           {wide && peer && <Avatar name={group ? '◎' : (contact?.name ?? title)} file={group ? groupInfo?.avatar : contact?.avatar} size={36} />}
           <Text style={[s.headerTitle, wide && s.headerTitleWide]} numberOfLines={1} testID="chat-title">
             {title}
@@ -940,6 +960,7 @@ export default function Chat() {
             </View>
           )}
         </View>
+        )}
 
         {callMenuOpen && peer && canCall && (
           <>

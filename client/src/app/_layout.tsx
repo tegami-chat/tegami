@@ -1,10 +1,10 @@
 // First: the iPhone and Android apps fill in what the browser has (localStorage, crypto).
 import '@/lib/platform-setup';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Stack, router, usePathname, type ErrorBoundaryProps, type Href } from 'expo-router';
 import { useEffect } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 
+import { BackButton } from '@/components/back-button';
 import { AiConfirm } from '@/components/ai-confirm';
 import { AiProposals } from '@/components/ai-proposals';
 import { CallScreen } from '@/components/call-screen';
@@ -49,18 +49,9 @@ function parentOf(path: string) {
   return '/';
 }
 
-function BackButton() {
-  const c = usePalette();
+function StackBackButton() {
   const path = usePathname();
-  return (
-    <Pressable
-      role="button"
-      aria-label="戻る"
-      style={{ width: 44, height: 44, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
-      onPress={() => (router.canGoBack() ? router.back() : router.replace(parentOf(path) as Href))}>
-      <MaterialIcons name="chevron-left" size={24} color={c.text} />
-    </Pressable>
-  );
+  return <BackButton onPress={() => (router.canGoBack() ? router.back() : router.replace(parentOf(path) as Href))} />;
 }
 
 function Shell() {
@@ -87,8 +78,11 @@ function Shell() {
           headerStyle: { backgroundColor: c.background },
           headerTintColor: c.text,
           headerShadowVisible: false,
-          headerBackVisible: false,
-          headerLeft: () => <BackButton />,
+          // The phone apps keep the system's back button and the swipe from the edge;
+          // the browser has no such button, so it gets Tegami's own.
+          ...(Platform.OS === 'web'
+            ? { headerBackVisible: false, headerLeft: () => <StackBackButton /> }
+            : { headerBackButtonDisplayMode: 'minimal' as const }),
           contentStyle: { backgroundColor: c.background },
         }}>
         <Stack.Screen name="index" options={{ title: 'Tegami', headerLeft: () => null }} />
@@ -108,8 +102,9 @@ function Shell() {
         <Stack.Screen name="ai/log" options={{ title: 'AIの記録' }} />
         <Stack.Screen name="ai-about/[id]" options={{ title: 'AIの詳しい情報' }} />
         <Stack.Screen name="call-network" options={{ title: '通話の中継' }} />
-        <Stack.Screen name="chat/[peer]" options={{ headerShown: false }} />
-        <Stack.Screen name="chat/[peer]/info" options={{ headerShown: false }} />
+        {/* The browser draws its own top bar for these two; the phone apps use the system's. */}
+        <Stack.Screen name="chat/[peer]" options={{ headerShown: Platform.OS !== 'web', title: '' }} />
+        <Stack.Screen name="chat/[peer]/info" options={{ headerShown: Platform.OS !== 'web', title: '' }} />
       </Stack>
   );
   return (

@@ -1,4 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import { Link, router, usePathname, type Href } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -8,9 +9,10 @@ import { accountName } from '@/components/account-list';
 import { Badge, ChatRow } from '@/components/chat-row';
 import { Dialog } from '@/components/dialog';
 import { MenuSheet } from '@/components/menu-sheet';
-import { Palette, usePalette } from '@/constants/theme';
+import { Palette, useMode, usePalette } from '@/constants/theme';
 import { readyAccounts, useAccounts, useNewMarks } from '@/lib/accounts';
 import { useCall } from '@/lib/calls';
+import { tapSelect } from '@/lib/haptics';
 import { FEEDBACK_NAME, FEEDBACK_PUBKEY, closeFeedback, isFeedback, useFeedbackOpened } from '@/lib/feedback';
 import { focusSearch, onFocusSearch, openChat, useListTab, type PressState } from '@/lib/layout';
 import { excerpt, matchesName, searchMessages } from '@/lib/search';
@@ -36,6 +38,7 @@ function openPeer(pathname: string): string | undefined {
  */
 export function ChatList({ wide = false }: { wide?: boolean }) {
   const c = usePalette();
+  const mode = useMode();
   const s = styles(c);
   const { myName, myAvatar, contacts, groups, messages, unread, blocked, removeContact, deleteChat, block, aiWidenedAt } = useTegami();
   const { startCall } = useCall();
@@ -137,6 +140,19 @@ export function ChatList({ wide = false }: { wide?: boolean }) {
               </Pressable>
             </Link>
           )}
+        </View>
+      ) : Platform.OS !== 'web' ? (
+        // The phone apps: the system's segmented control, with a tap when it moves.
+        <View style={s.segmentRow}>
+          <SegmentedControl
+            values={['トーク', '友だち']}
+            selectedIndex={phoneTab === 'chats' ? 0 : 1}
+            appearance={mode}
+            onChange={(e) => {
+              tapSelect();
+              setTab(e.nativeEvent.selectedSegmentIndex === 0 ? 'chats' : 'friends');
+            }}
+          />
         </View>
       ) : (
       <View style={s.topSwitch}>
@@ -468,6 +484,7 @@ const styles = (c: Palette) =>
     accountButton: { minHeight: 44, flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
     columnTitle: { fontSize: 20, fontWeight: '700', color: c.text },
     headerButton: { minHeight: 44, minWidth: 44, paddingHorizontal: 10, paddingVertical: 4, alignItems: 'center', justifyContent: 'center' },
+    segmentRow: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 8 },
     topSwitch: {
       flexDirection: 'row',
       alignItems: 'center',
