@@ -42,7 +42,7 @@ export function refusalText(r: Refusal): string {
     case 'stopped':
       return 'AIを止めています。設定の「AI」でスイッチを1つオンにすると、また使えます。';
     case 'noKey':
-      return 'APIキーが入っていません。設定の「スマホのAI」で入れてください。';
+      return 'APIキーが入っていません。設定の「AIのAPIキー」で入れてください。';
     case 'daily':
       return `この相手には、今日はもう${PHONE_DAILY_MAX}回頼みました。明日またお使いください。`;
     case 'secret':

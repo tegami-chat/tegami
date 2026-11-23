@@ -1,12 +1,14 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Stack } from 'expo-router';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { MenuSheet } from '@/components/menu-sheet';
 import { Palette, usePalette } from '@/constants/theme';
-import { askPhoneAi, clearPhoneChat, loadPhoneChat, phoneChoice, savePhoneChat, type PhoneLine } from '@/lib/phone-ai/ask';
+import { askPhoneAi, clearPhoneChat, loadPhoneChat, phoneChoice, savePhoneChat, savePhoneChoice, type PhoneLine } from '@/lib/phone-ai/ask';
 import { PhoneAiRefused, SELF_SYSTEM, markStopped, phoneAiStopped, refusalText } from '@/lib/phone-ai/guard';
 import { getKeyStore } from '@/lib/phone-ai/key-store';
-import { ProviderError } from '@/lib/phone-ai/providers';
+import { ProviderError, getProvider } from '@/lib/phone-ai/providers';
 import { useTegami } from '@/lib/tegami';
 
 /** The owner's own chat with the AI that runs from this phone (no friend is involved). */
@@ -19,6 +21,8 @@ export default function PhoneChatScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stopped, setStopped] = useState(phoneAiStopped());
+  const [choice, setChoice] = useState(() => phoneChoice());
+  const [picking, setPicking] = useState(false);
   const abort = useRef<AbortController | null>(null);
   const scroll = useRef<ScrollView>(null);
   const hasKey = !!getKeyStore().get(phoneChoice().provider);
@@ -60,8 +64,21 @@ export default function PhoneChatScreen() {
     void stopAi();
   }, [stopAi]);
 
+  const provider = getProvider(choice.provider);
+  const modelName = provider.models.find((m) => m.id === choice.model)?.name ?? choice.model;
+
   return (
     <KeyboardAvoidingView style={s.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <Pressable role="button" aria-label="モデルを選ぶ" testID="phone-model" style={s.model} onPress={() => setPicking(true)}>
+              <Text style={s.modelText}>{modelName}</Text>
+              <MaterialIcons name="arrow-drop-down" size={22} color={c.text} />
+            </Pressable>
+          ),
+        }}
+      />
       <ScrollView ref={scroll} style={s.fill} contentContainerStyle={s.body} onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: false })}>
         {lines.map((l, i) => (
           <View key={`${l.at}-${i}`} style={[s.bubble, l.role === 'user' ? s.mine : s.theirs]}>
@@ -104,12 +121,30 @@ export default function PhoneChatScreen() {
           <MaterialIcons name="send" size={22} color="#ffffff" />
         </Pressable>
       </View>
+      {picking ? (
+        <MenuSheet
+          onClose={() => setPicking(false)}
+          items={provider.models.map((m) => ({
+            label: m.name,
+            testID: `phone-model-${m.id}`,
+            checked: m.id === choice.model,
+            onPress: () => {
+              const next = { ...choice, model: m.id };
+              savePhoneChoice(next);
+              setChoice(next);
+              setPicking(false);
+            },
+          }))}
+        />
+      ) : null}
     </KeyboardAvoidingView>
   );
 }
 
 const styles = (c: Palette) =>
   StyleSheet.create({
+    model: { flexDirection: 'row', alignItems: 'center', minHeight: 44, paddingLeft: 8 },
+    modelText: { fontSize: 15, color: c.text },
     fill: { flex: 1, backgroundColor: c.background },
     body: { padding: 16, gap: 10, maxWidth: 560, width: '100%', alignSelf: 'center' },
     bubble: { maxWidth: '85%', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10 },

@@ -1,15 +1,13 @@
-import { router, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, TextInput } from 'react-native';
 
 import { Dialog } from '@/components/dialog';
-import { ActionRow, Group, LinkRow, SettingsPage, settingsStyles } from '@/components/settings-ui';
+import { Dropdown } from '@/components/dropdown';
+import { ActionRow, Group, SettingsPage, settingsStyles } from '@/components/settings-ui';
 import { Palette, usePalette } from '@/constants/theme';
-import { phoneChoice, savePhoneChoice } from '@/lib/phone-ai/ask';
+import { chooseProvider, phoneChoice, savePhoneChoice } from '@/lib/phone-ai/ask';
 import { KeyStoreClosedError, getKeyStore, keyTail } from '@/lib/phone-ai/key-store';
 import { PROVIDER_LIST, getProvider } from '@/lib/phone-ai/providers';
-
-const KEYS_URL = 'https://console.anthropic.com/settings/keys';
 
 export default function PhoneAiScreen() {
   const c = usePalette();
@@ -22,10 +20,12 @@ export default function PhoneAiScreen() {
   const [error, setError] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
 
-  function pickModel(model: string) {
-    const next = { ...choice, model };
-    setChoice(next);
-    savePhoneChoice(next);
+  function pickProvider(id: string) {
+    if (id === choice.provider) return;
+    setChoice(chooseProvider(id));
+    setSaved(getKeyStore().get(id));
+    setTyped('');
+    setError(null);
   }
 
   function saveKey() {
@@ -43,20 +43,19 @@ export default function PhoneAiScreen() {
 
   return (
     <SettingsPage>
-      <Text style={st.heading}>AIの会社</Text>
-      <Group>
-        {PROVIDER_LIST.map((p) => (
-          <View key={p.id} style={st.groupRow}>
-            <Text style={st.label}>{p.name}</Text>
-            {p.id === choice.provider ? <Text style={st.rowValue}>選択中</Text> : null}
-          </View>
-        ))}
-      </Group>
+      <Text style={st.heading} role="heading">プロバイダー</Text>
+      <Dropdown
+        label="プロバイダー"
+        options={PROVIDER_LIST.map((p) => ({ value: p.id, label: p.name }))}
+        value={choice.provider}
+        onChange={pickProvider}
+        testID="phone-provider"
+        optionTestID="phone-provider"
+      />
 
-      <Text style={st.heading}>APIキー</Text>
-      <Text style={st.note}>AIを使うと、使った分のお金がかかります。AIの会社の画面で使える金額の上限を決めてから、APIキーを作って入れてください。APIキーはこの端末だけに暗号化して保存し、ほかの端末には移りません。</Text>
-      <Pressable role="link" aria-label="AnthropicのAPIキーの画面を開く" onPress={() => void Linking.openURL(KEYS_URL)}>
-        <Text style={st.action}>AnthropicのAPIキーの画面を開く</Text>
+      <Text style={st.heading} role="heading">APIキー</Text>
+      <Pressable role="link" aria-label={`${provider.name}のAPIキーを作る`} onPress={() => void Linking.openURL(provider.keyUrl)}>
+        <Text style={st.action}>{provider.name}のAPIキーを作る</Text>
       </Pressable>
       {saved ? <Text style={st.value}>保存したAPIキーの最後の4文字：{keyTail(saved)}</Text> : null}
       <TextInput
@@ -80,16 +79,19 @@ export default function PhoneAiScreen() {
         {saved ? <ActionRow label="APIキーを消す" danger onPress={() => setRemoving(true)} /> : null}
       </Group>
 
-      <Text style={st.heading}>AIモデル</Text>
-      <Group>
-        {provider.models.map((m) => (
-          <LinkRow key={m.id} label={m.name} value={m.id === choice.model ? '選択中' : undefined} onPress={() => pickModel(m.id)} />
-        ))}
-      </Group>
-
-      <Group>
-        <LinkRow icon="smart-toy" label="スマホのAIと話す" onPress={() => router.push('/ai/phone-chat' as Href)} />
-      </Group>
+      <Text style={st.heading} role="heading">モデル</Text>
+      <Dropdown
+        label="モデル"
+        options={provider.models.map((m) => ({ value: m.id, label: m.name }))}
+        value={choice.model}
+        onChange={(id) => {
+          const next = { ...choice, model: id };
+          savePhoneChoice(next);
+          setChoice(next);
+        }}
+        testID="phone-model-select"
+        optionTestID="phone-model-row"
+      />
 
       {removing && (
         <Dialog

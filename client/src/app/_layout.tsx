@@ -98,8 +98,8 @@ function Shell() {
         <Stack.Screen name="ai/index" options={{ title: 'AI' }} />
         <Stack.Screen name="ai/[layer]/[id]" options={{ title: 'AIの権限' }} />
         <Stack.Screen name="ai/log" options={{ title: 'AIの記録' }} />
-        <Stack.Screen name="ai/phone" options={{ title: 'スマホのAI' }} />
-        <Stack.Screen name="ai/phone-chat" options={{ title: 'スマホのAIと話す' }} />
+        <Stack.Screen name="ai/phone" options={{ title: 'AIのAPIキー' }} />
+        <Stack.Screen name="ai/phone-chat" options={{ title: 'AI' }} />
         <Stack.Screen name="ai-about/[id]" options={{ title: 'AIの詳しい情報' }} />
         <Stack.Screen name="call-network" options={{ title: '通話の中継' }} />
         <Stack.Screen name="chat/[peer]" options={{ headerShown: false }} />

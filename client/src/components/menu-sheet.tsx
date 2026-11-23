@@ -1,3 +1,4 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Palette, usePalette } from '@/constants/theme';
@@ -5,6 +6,8 @@ import { Palette, usePalette } from '@/constants/theme';
 export type MenuSheetItem = {
   label: string;
   danger?: boolean;
+  checked?: boolean;
+  testID?: string;
   onPress: () => void;
 };
 
@@ -35,9 +38,11 @@ export function MenuSheet({
           <Pressable
             key={item.label}
             role="button"
+            testID={item.testID}
             style={[s.sheetRow, (i > 0 || !!title) && s.sheetLine]}
             onPress={item.onPress}>
             <Text style={[s.sheetText, item.danger && { color: c.danger }]}>{item.label}</Text>
+            {item.checked ? <MaterialIcons name="check" size={20} color={c.accent} /> : null}
           </Pressable>
         ))}
       </View>
@@ -83,6 +88,8 @@ const styles = (c: Palette) =>
       minHeight: 48,
       paddingHorizontal: 20,
       paddingVertical: 12,
+      flexDirection: 'row',
+      gap: 8,
       alignItems: 'center',
       justifyContent: 'center',
     },

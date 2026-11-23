@@ -13,8 +13,8 @@
 import { atRestOpen } from '../at-rest';
 import { k, load, save } from '../storage';
 
-/** The AI companies this app can call. */
-export type ProviderId = 'anthropic';
+/** An AI company's id: a key of PROVIDERS in providers.ts. */
+export type ProviderId = string;
 
 export interface ApiKeyStore {
   /** Where the keys live. 'device' means this device only. */

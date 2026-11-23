@@ -5,14 +5,14 @@ import { findSecret } from '../ai-screen';
 import { k, load, save } from '../storage';
 import { PhoneAiRefused, phoneAiStopped, phoneMayAsk, recordPhoneAsk } from './guard';
 import { getKeyStore, type ProviderId } from './key-store';
-import { getProvider, type ChatMessage } from './providers';
+import { callProvider, getProvider, hasProvider, type ChatMessage } from './providers';
 
 /** Which company and which model the person chose (not secret; kept plain). */
 export type PhoneChoice = { provider: ProviderId; model: string };
 
 export function phoneChoice(): PhoneChoice {
   const c = load<Partial<PhoneChoice>>(k('ai.phoneChoice'), {});
-  const provider: ProviderId = 'anthropic';
+  const provider: ProviderId = hasProvider(c.provider) ? c.provider : 'anthropic';
   const p = getProvider(provider);
   const model = p.models.some((m) => m.id === c.model) ? (c.model as string) : p.defaultModel;
   return { provider, model };
@@ -20,6 +20,13 @@ export function phoneChoice(): PhoneChoice {
 
 export function savePhoneChoice(c: PhoneChoice) {
   save(k('ai.phoneChoice'), c);
+}
+
+/** Switching company puts the model back to that company's default. The keys of the others stay. */
+export function chooseProvider(provider: ProviderId): PhoneChoice {
+  const next = { provider, model: getProvider(provider).defaultModel };
+  savePhoneChoice(next);
+  return next;
 }
 
 export type AskArgs = {
@@ -44,7 +51,7 @@ export async function askPhoneAi({ peer, system, messages, signal, fetchImpl }: 
   if (!phoneMayAsk(peer)) throw new PhoneAiRefused('daily');
   if (findSecret(system) || messages.some((m) => findSecret(m.content))) throw new PhoneAiRefused('secret');
   recordPhoneAsk(peer);
-  const answer = await getProvider(provider).call({ key, model, system, messages, signal, fetchImpl });
+  const answer = await callProvider(provider, { key, model, system, messages, signal, fetchImpl });
   if (findSecret(answer)) throw new PhoneAiRefused('secretReply');
   return answer;
 }

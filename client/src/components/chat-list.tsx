@@ -12,6 +12,8 @@ import { Palette, usePalette } from '@/constants/theme';
 import { readyAccounts, useAccounts, useNewMarks } from '@/lib/accounts';
 import { useCall } from '@/lib/calls';
 import { FEEDBACK_NAME, FEEDBACK_PUBKEY, closeFeedback, isFeedback, useFeedbackOpened } from '@/lib/feedback';
+import { getKeyStore } from '@/lib/phone-ai/key-store';
+import { phoneChoice } from '@/lib/phone-ai/ask';
 import { focusSearch, onFocusSearch, openChat, useListTab, type PressState } from '@/lib/layout';
 import { excerpt, matchesName, searchMessages } from '@/lib/search';
 import { chatName, isGroup, strangers, useTegami, type Contact, type Message } from '@/lib/tegami';
@@ -42,7 +44,10 @@ export function ChatList({ wide = false }: { wide?: boolean }) {
   const [phoneTab, setTab] = useState<'chats' | 'friends'>('chats');
   const railTab = useListTab();
   const tab = wide ? railTab : phoneTab;
-  const selected = openPeer(usePathname());
+  const pathname = usePathname();
+  const selected = openPeer(pathname);
+  // The row for the phone's own AI, once the chosen company has a key (read again when the screen changes).
+  const phoneAi = !!getKeyStore().get(phoneChoice().provider);
   const searchField = useRef<TextInput>(null);
   const [friendMenu, setFriendMenu] = useState<Contact | null>(null);
   const [confirmFriend, setConfirmFriend] = useState<{ kind: 'delete' | 'block'; contact: Contact } | null>(null);
@@ -288,6 +293,20 @@ export function ChatList({ wide = false }: { wide?: boolean }) {
               keyExtractor={(r) => r.room}
               ListHeaderComponent={
                 <>
+                  {phoneAi && (
+                    <Pressable
+                      style={({ hovered }: PressState) => [s.friendRow, hovered && s.hovered, wide && pathname.startsWith('/ai/phone-chat') && s.selectedRow]}
+                      role="button"
+                      testID="phone-ai-row"
+                      onPress={() => router.push('/ai/phone-chat' as Href)}>
+                      <View style={s.aiIcon}>
+                        <MaterialIcons name="smart-toy" size={22} color={c.muted} />
+                      </View>
+                      <View style={s.friendBody}>
+                        <Text style={s.friendName}>AI</Text>
+                      </View>
+                    </Pressable>
+                  )}
                   {aiWidenedAt > 0 && (
                     <Pressable style={s.strangers} onPress={() => router.push('/ai' as Href)} role="button" testID="ai-widened">
                       <Text style={s.strangersText}>ほかの端末でAIの権限が増えました。心当たりがなければ確認してください</Text>
@@ -539,6 +558,7 @@ const styles = (c: Palette) =>
       borderBottomColor: c.line,
       paddingVertical: 6,
     },
+    aiIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, alignItems: 'center', justifyContent: 'center' },
     friendName: { fontSize: 16, fontWeight: '600', color: c.text },
     friendModel: { fontSize: 13, fontWeight: '400', color: c.muted },
     strangers: {

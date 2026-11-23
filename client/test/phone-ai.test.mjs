@@ -92,7 +92,7 @@ test('名前は暗号化の対象で、引き継ぎ、復旧、端末間の台�
 
 test('Anthropic の呼び出しのヘッダーと本文', async () => {
   const f = fakeFetch(200, { content: [{ type: 'text', text: 'こん' }, { type: 'tool_use' }, { type: 'text', text: 'にちは' }] });
-  const out = await P.anthropic.call({ key: KEY, model: 'claude-sonnet-5-5', system: 'S', messages: [{ role: 'user', content: 'U' }], fetchImpl: f });
+  const out = await P.callProvider('anthropic', { key: KEY, model: 'claude-sonnet-5-5', system: 'S', messages: [{ role: 'user', content: 'U' }], fetchImpl: f });
   assert.equal(out, 'こんにちは');
   const { url, init } = f.calls[0];
   assert.equal(url, 'https://api.anthropic.com/v1/messages');
@@ -102,16 +102,67 @@ test('Anthropic の呼び出しのヘッダーと本文', async () => {
   assert.equal(init.headers['content-type'], 'application/json');
   assert.equal(init.headers['anthropic-dangerous-direct-browser-access'], 'true');
   assert.deepEqual(JSON.parse(init.body), { model: 'claude-sonnet-5-5', max_tokens: 1024, system: 'S', messages: [{ role: 'user', content: 'U' }] });
-  assert.equal(P.anthropic.defaultModel, 'claude-sonnet-5-5');
-  assert.deepEqual(P.anthropic.models.map((m) => m.id), ['claude-sonnet-5-5', 'claude-haiku-5-5']);
+  assert.equal(P.PROVIDERS.anthropic.defaultModel, 'claude-sonnet-5-5');
+  assert.deepEqual(P.PROVIDERS.anthropic.models.map((m) => m.id), ['claude-fable-5-2', 'claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5']);
 });
 
 test('401 と 429 とそれ以外のエラー文', async () => {
   const args = { key: KEY, model: 'm', system: '', messages: [] };
-  await assert.rejects(P.anthropic.call({ ...args, fetchImpl: fakeFetch(401, {}) }), (e) => e.kind === 'key' && e.message === P.KEY_WRONG_TEXT);
-  await assert.rejects(P.anthropic.call({ ...args, fetchImpl: fakeFetch(429, {}) }), (e) => e.kind === 'limit' && e.message === P.LIMIT_TEXT);
-  await assert.rejects(P.anthropic.call({ ...args, fetchImpl: fakeFetch(500, {}) }), (e) => e.kind === 'other' && e.message.includes('500'));
-  await assert.rejects(P.anthropic.call({ ...args, fetchImpl: async () => { throw new TypeError('network'); } }), (e) => e.kind === 'other');
+  await assert.rejects(P.callProvider('anthropic', { ...args, fetchImpl: fakeFetch(401, {}) }), (e) => e.kind === 'key' && e.message === P.KEY_WRONG_TEXT);
+  await assert.rejects(P.callProvider('anthropic', { ...args, fetchImpl: fakeFetch(429, {}) }), (e) => e.kind === 'limit' && e.message === P.LIMIT_TEXT);
+  await assert.rejects(P.callProvider('anthropic', { ...args, fetchImpl: fakeFetch(500, {}) }), (e) => e.kind === 'other' && e.message.includes('500'));
+  await assert.rejects(P.callProvider('anthropic', { ...args, fetchImpl: async () => { throw new TypeError('network'); } }), (e) => e.kind === 'other');
+});
+
+test('OpenAI と Google の呼び方：URL、Authorization、本文、取り出し', async () => {
+  assert.deepEqual(P.PROVIDER_LIST.map((p) => p.id), ['anthropic', 'openai', 'google']);
+  assert.deepEqual(P.PROVIDERS.openai.models.map((m) => m.id), ['gpt-6.2-astra', 'gpt-6.2-sol', 'gpt-6.1-terra', 'gpt-6-luna']);
+  assert.deepEqual(P.PROVIDERS.google.models.map((m) => m.id), ['gemini-4-carbon', 'gemini-4-neon', 'gemini-4-hydrogen', 'gemini-4-argon']);
+  assert.equal(P.PROVIDERS.openai.defaultModel, 'gpt-6.2-sol');
+  assert.equal(P.PROVIDERS.google.defaultModel, 'gemini-4-carbon');
+  const history = [{ role: 'user', content: 'U1' }, { role: 'assistant', content: 'A1' }, { role: 'user', content: 'U2' }];
+  for (const [id, base] of [['openai', 'https://api.openai.com/v1'], ['google', 'https://generativelanguage.googleapis.com/v1beta/openai']]) {
+    const f = fakeFetch(200, { choices: [{ message: { role: 'assistant', content: 'やあ' } }] });
+    const out = await P.callProvider(id, { key: KEY, model: 'm1', system: 'S', messages: history, fetchImpl: f });
+    assert.equal(out, 'やあ');
+    const { url, init } = f.calls[0];
+    assert.equal(url, `${base}/chat/completions`);
+    assert.equal(init.method, 'POST');
+    assert.deepEqual(Object.keys(init.headers).sort(), ['Authorization', 'content-type'], 'no extra headers');
+    assert.equal(init.headers.Authorization, `Bearer ${KEY}`);
+    const body = JSON.parse(init.body);
+    assert.equal(body.model, 'm1');
+    assert.deepEqual(body.messages[0], { role: 'system', content: 'S' });
+    assert.deepEqual(body.messages.slice(1), history);
+    assert.equal(body.max_completion_tokens, 1024);
+  }
+  const args = { key: KEY, model: 'm', system: '', messages: [] };
+  const googleBad = (text) => async () => ({ ok: false, status: 400, text: async () => text, json: async () => ({}) });
+  await assert.rejects(P.callProvider('openai', { ...args, fetchImpl: fakeFetch(401, {}) }), (e) => e.kind === 'key');
+  await assert.rejects(P.callProvider('google', { ...args, fetchImpl: googleBad('[{"error":{"message":"API key not valid. Please pass a valid API key."}}]') }), (e) => e.kind === 'key');
+  await assert.rejects(P.callProvider('google', { ...args, fetchImpl: googleBad('{"error":{"details":[{"reason":"API_KEY_INVALID"}]}}') }), (e) => e.kind === 'key');
+  await assert.rejects(P.callProvider('google', { ...args, fetchImpl: googleBad('{"error":"bad request"}') }), (e) => e.kind === 'other' && e.message.includes('400'));
+  await assert.rejects(P.callProvider('openai', { ...args, fetchImpl: fakeFetch(429, {}) }), (e) => e.kind === 'limit');
+  await assert.rejects(P.callProvider('openai', { ...args, fetchImpl: fakeFetch(500, {}) }), (e) => e.kind === 'other');
+});
+
+test('会社の選択：表に無い会社は Anthropic、モデルは会社の一覧から、切り替えで既定に戻る', () => {
+  save(k('ai.phoneChoice'), { provider: 'nowhere', model: 'x' });
+  assert.deepEqual(Q.phoneChoice(), { provider: 'anthropic', model: 'claude-sonnet-5-5' });
+  save(k('ai.phoneChoice'), { provider: 'openai', model: 'claude-opus-5-5' });
+  assert.deepEqual(Q.phoneChoice(), { provider: 'openai', model: 'gpt-6.2-sol' });
+  Q.savePhoneChoice({ provider: 'openai', model: 'gpt-6-luna' });
+  assert.equal(Q.phoneChoice().model, 'gpt-6-luna');
+  assert.deepEqual(Q.chooseProvider('google'), { provider: 'google', model: 'gemini-4-carbon' });
+  assert.deepEqual(Q.phoneChoice(), { provider: 'google', model: 'gemini-4-carbon' });
+  KS.getKeyStore().set('openai', 'openai-key-1234');
+  KS.getKeyStore().set('google', 'google-key-5678');
+  Q.chooseProvider('openai');
+  assert.equal(KS.getKeyStore().get('google'), 'google-key-5678', 'the other company keeps its key');
+  assert.equal(KS.getKeyStore().get('anthropic'), KEY);
+  KS.getKeyStore().remove('openai');
+  KS.getKeyStore().remove('google');
+  Q.chooseProvider('anthropic');
 });
 
 const draftArgs = (text = 'こんにちは') => ({ peer: F, system: 'S', messages: [{ role: 'user', content: text }] });
