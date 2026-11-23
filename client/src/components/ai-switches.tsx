@@ -146,6 +146,8 @@ export function AiSwitches({ scope, blocked, name }: { scope: Scope; blocked?: (
                 trackColor={{ false: c.line, true: c.accent }}
                 thumbColor="#ffffff"
                 {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}
+                // RN's iOS Switch sets alignSelf: 'flex-start' itself, which beats the row's alignItems: 'center'.
+                style={{ alignSelf: 'center' }}
                 value={on}
                 disabled={off}
                 onValueChange={(v) => turn(a, v)}
