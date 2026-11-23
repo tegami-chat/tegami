@@ -94,6 +94,8 @@ function Shell() {
         <Stack.Screen name="settings/export-key" options={{ title: '秘密鍵を書き出す' }} />
         <Stack.Screen name="settings/privacy" options={{ title: 'プライバシー' }} />
         <Stack.Screen name="settings/talk" options={{ title: 'トーク' }} />
+        <Stack.Screen name="settings/terms" options={{ title: '利用規約' }} />
+        <Stack.Screen name="settings/policy" options={{ title: 'プライバシーポリシー' }} />
         <Stack.Screen name="accounts" options={{ title: 'アカウント', ...top }} />
         <Stack.Screen name="i" options={{ headerShown: false }} />
         <Stack.Screen name="link" options={{ title: '', headerLeft: () => null }} />

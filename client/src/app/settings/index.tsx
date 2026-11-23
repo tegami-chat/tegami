@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { Group, LinkRow, SettingsPage, SwitchRow, settingsStyles } from '@/components/settings-ui';
@@ -102,12 +102,8 @@ export default function Settings() {
 
       <Group>
         <LinkRow icon="mail-outline" label="Tegamiへの意見" onPress={feedback} />
-        {Platform.OS !== 'web' && (
-          <>
-            <LinkRow icon="description" label="利用規約" onPress={() => void Linking.openURL('https://tegami.chat/ja/terms')} />
-            <LinkRow icon="privacy-tip" label="プライバシーポリシー" onPress={() => void Linking.openURL('https://tegami.chat/ja/privacy')} />
-          </>
-        )}
+        <LinkRow icon="description" label="利用規約" onPress={() => go('/settings/terms')} />
+        <LinkRow icon="privacy-tip" label="プライバシーポリシー" onPress={() => go('/settings/policy')} />
       </Group>
     </SettingsPage>
   );
