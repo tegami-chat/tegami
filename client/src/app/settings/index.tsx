@@ -106,7 +106,6 @@ export default function Settings() {
           <>
             <LinkRow icon="description" label="利用規約" onPress={() => void Linking.openURL('https://tegami.chat/ja/terms')} />
             <LinkRow icon="privacy-tip" label="プライバシーポリシー" onPress={() => void Linking.openURL('https://tegami.chat/ja/privacy')} />
-            <LinkRow icon="info-outline" label="運営者の情報" onPress={() => void Linking.openURL('https://tegami.chat/ja/about')} />
           </>
         )}
       </Group>

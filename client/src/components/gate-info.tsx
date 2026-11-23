@@ -54,7 +54,6 @@ const LINKS = [
   { label: 'よくある質問', href: 'https://tegami.chat/ja/faq' },
   { label: '稼働状況', href: 'https://tegami.chat/ja/status' },
   { label: 'プライバシーポリシー', href: 'https://tegami.chat/ja/privacy' },
-  { label: '運営者情報', href: 'https://tegami.chat/ja/about' },
   { label: 'GitHub', href: 'https://github.com/tegami-chat/tegami' },
 ];
 
