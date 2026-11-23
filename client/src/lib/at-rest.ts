@@ -48,6 +48,8 @@ export const SEALED_NAMES: readonly string[] = [
   'ai.groups',
   'ai.ownerCards',
   'ai.permissions',
+  'ai.mark',
+  'ai.marked',
   'callNetwork',
   'ai.sent',
   'ai.apiKeys',
@@ -235,7 +237,7 @@ export function removeSealed(key: string) {
 // the tab that changed it writes the encrypted copy. Where there is no BroadcastChannel (the
 // phone apps) nothing happens.
 
-const SHARED_NAMES = new Set(['ai.permissions', 'callNetwork']);
+const SHARED_NAMES = new Set(['ai.permissions', 'ai.mark', 'callNetwork']);
 type Shared = { account: string; key: string; raw: string | null };
 const changeListeners = new Set<() => void>();
 /** Calls `l` when another tab changed a shared name (so a hook can read it again). Returns the way to stop. */

@@ -3,6 +3,7 @@ import { router, type Href } from 'expo-router';
 import { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { AiMarkAll } from '@/components/ai-mark-settings';
 import { AiOptOutSettings } from '@/components/ai-optout-settings';
 import { AiSwitches, ModelTag } from '@/components/ai-switches';
 import { Avatar } from '@/components/avatar';
@@ -71,6 +72,9 @@ export default function AiPermissionsScreen() {
           <Text style={s.danger}>すべてオフにする</Text>
         </Pressable>
       )}
+
+      <Text style={s.heading}>相手に見せる印</Text>
+      <AiMarkAll />
 
       {ais.length > 0 && (
         <>

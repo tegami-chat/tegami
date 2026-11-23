@@ -62,6 +62,7 @@ import {
   type AiGroups,
   type AiProposal,
 } from './ai-actions';
+import { aiMarkWanted, getAiMark, markedBy, rememberMarked } from './ai-mark';
 import {
   AI_HOLD_RESULT_KIND,
   HOLD_TTL,
@@ -1088,7 +1089,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
           const replyTo = replyOf(rumor.tags);
           // Written by an AI in the sender's name (not an AI writing as itself).
           const byAi = rumor.kind === 14 ? aiOf(rumor.tags) : undefined;
-          const writtenByAi = byAi && byAi.pubkey !== rumor.pubkey ? byAi : undefined;
+          // My own message sent without the mark is still marked on this device (lib/ai-mark.ts).
+          const writtenByAi = byAi && byAi.pubkey !== rumor.pubkey ? byAi : rumor.pubkey === me && rumor.kind === 14 ? markedBy(rumor.id) : undefined;
           // An AI friend writing as itself: its owner's card, or none (concern 4).
           if (byAi && byAi.pubkey === rumor.pubkey && rumor.pubkey !== me) takeOwnerRef.current(rumor.pubkey, rumor.tags, rumor.created_at);
           if (isGroup(peer) && !gidOf(peer)) {
@@ -2442,8 +2444,11 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const sendFromAi = useCallback(
     (peer: string, text: string, ai: Contact, at?: number) => {
       const by = { pubkey: ai.pubkey, ...(ai.model ? { model: ai.model } : {}), ...(ai.name ? { name: ai.name } : {}) };
-      const { rumor, wraps } = build(peer, 14, text, [aiTag(by)], at);
+      // Whether the friend's screen gets the mark is my taste (lib/ai-mark.ts); my own screen keeps it either way.
+      const marked = aiMarkWanted(getAiMark(), ai.pubkey, peer);
+      const { rumor, wraps } = build(peer, 14, text, marked ? [aiTag(by)] : [], at);
       if (messagesRef.current.some((m) => m.id === rumor.id) || outbox.current.some((o) => o.id === rumor.id)) return;
+      if (!marked) rememberMarked(rumor.id, by);
       recordAiSent(peer);
       saveBox([...outbox.current, { id: rumor.id, peer, at: rumor.created_at, wraps, done: [] }]);
       addMessage({ id: rumor.id, from: me!, peer, text, at: rumor.created_at, pending: 'sending', ai: by });

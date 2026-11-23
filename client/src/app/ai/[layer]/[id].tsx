@@ -2,6 +2,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AiSwitches, ModelTag, OwnerRow } from '@/components/ai-switches';
+import { AiMarkChoose } from '@/components/ai-mark-settings';
 import { Avatar } from '@/components/avatar';
 import { Palette, usePalette } from '@/constants/theme';
 import { FRIEND_ACTIONS, READ_ONLY, setAiSwitches, switchValue, useAiPermissions, type AiAction } from '@/lib/ai-permissions';
@@ -41,6 +42,12 @@ export default function AiLayerScreen() {
         <Pressable style={s.card} onPress={() => setAiSwitches({ layer, id }, READ_ONLY)} role="button">
           <Text style={s.action}>読むと下書きだけにする</Text>
         </Pressable>
+      )}
+      {(layer === 'ai' || layer === 'friend') && (
+        <>
+          <Text style={s.heading}>相手に見せる印</Text>
+          <AiMarkChoose layer={layer} id={id} />
+        </>
       )}
       {layer === 'ai' && <PeerAis ai={id} grants={p.peerAis} onRevoke={(peer) => void revokePeerAi(id, peer)} />}
       <View style={{ height: 40 }} />

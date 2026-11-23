@@ -5618,6 +5618,64 @@ async function main() {
       for (const w of [a, b]) await w.context.close();
     });
 
+    await test('AI mark off: my AI reply is sent without the mark; the friend sees none, I still see it', async () => {
+      const aiKey = generateSecretKey();
+      const aiHex = getPublicKey(aiKey);
+      const a = await person(browser, 'テストA');
+      const b = await person(browser, 'テストB');
+      const p = a.page;
+      await befriend(b, a);
+      await b.page.getByPlaceholder('メッセージ').fill('今日はどう？');
+      await button(b.page, '送る').click();
+      await befriend(a, b);
+      await waitText(p, '今日はどう？');
+      await befriendMyAi(a, `${ORIGIN}/i#${nip19.npubEncode(aiHex)}&n=${encodeURIComponent('クロード')}&m=${encodeURIComponent('Anthropic Claude')}`);
+      const ask = async (data) => {
+        const now = Math.floor(Date.now() / 1000);
+        const id = [...generateSecretKey()].map((x) => x.toString(16).padStart(2, '0')).join('').slice(0, 32);
+        const rumor = nip59.createRumor({ kind: 25071, content: JSON.stringify({ v: 1, id, ...data }), tags: [['p', a.hex]], created_at: now }, aiKey);
+        const seal = nip59.createSeal(rumor, aiKey, a.hex);
+        const k = generateSecretKey();
+        await relaySend(
+          aiKey,
+          finalizeEvent(
+            { kind: 1059, created_at: now, tags: [['p', a.hex], ['expiration', String(now + 86400)]], content: nip44.encrypt(JSON.stringify(seal), nip44.getConversationKey(k, a.hex)) },
+            k,
+          ),
+        );
+        return id;
+      };
+      const hold = p.getByTestId('ai-hold');
+
+      // The default is to mark: the friend sees it, and no line about it is in the window.
+      await ask({ to: b.hex, toName: 'テストB', text: '午前なら空いています。', reason: 'CHECK' });
+      await hold.waitFor({ timeout: 15000 });
+      assert((await p.getByTestId('ai-mark-off').count()) === 0, 'a line about the mark showed while marking');
+      await button(p, '送る').click();
+      await hold.waitFor({ state: 'detached', timeout: 10000 });
+      await b.page.goto(`${ORIGIN}/chat/${a.hex}`);
+      await waitText(b.page, '午前なら空いています。');
+      await waitText(b.page, 'AIが書いた');
+
+      // All off: the window says so, the friend sees no mark, and I still do.
+      await p.goto(ORIGIN + '/ai');
+      await p.getByRole('switch', { name: 'AIが書いたメッセージに印を付ける' }).click();
+      await shot(p, 'ai-mark-all-off', '「相手に見せる印」を付けないにした画面');
+      await ask({ to: b.hex, toName: 'テストB', text: '午後なら空いています。', reason: 'CHECK' });
+      await hold.waitFor({ timeout: 15000 });
+      await waitText(p, '相手の画面に「AIが書いた」の印は付きません。');
+      await shot(p, 'ai-mark-off-hold', '印を付けない設定の承認の窓。小さく1行出る');
+      await button(p, '送る').click();
+      await hold.waitFor({ state: 'detached', timeout: 10000 });
+      await b.page.goto(`${ORIGIN}/chat/${a.hex}`);
+      await waitText(b.page, '午後なら空いています。');
+      assert((await text(b.page)).split('AIが書いた').length - 1 === 1, 'the friend sees a mark on the unmarked message');
+      await p.goto(`${ORIGIN}/chat/${b.hex}`);
+      await waitText(p, '午後なら空いています。');
+      assert((await text(p)).split('AIが書いた').length - 1 === 2, 'my own screen lost the mark');
+      for (const w of [a, b]) await w.context.close();
+    });
+
   } finally {
     await browser.close();
     server.close();

@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Palette, usePalette } from '@/constants/theme';
 import { HOLD_TITLES, holdExplain } from '@/lib/ai-hold';
+import { aiMarkWanted, useAiMark } from '@/lib/ai-mark';
 import { useAiAsk } from '@/lib/ai-permissions';
 import { personName, useTegami } from '@/lib/tegami';
 
@@ -16,6 +17,7 @@ export function AiProposals() {
   const asking = useAiAsk();
   const { status, aiProposals, acceptAiProposal, declineAiProposal, aiHolds, acceptAiHold, declineAiHold, contacts } = useTegami();
   const [stopped, setStopped] = useState(false);
+  const mark = useAiMark();
   const prop = aiProposals[0];
   const hold = prop ? undefined : aiHolds[0];
   if (status !== 'open' || asking || (!prop && !hold && !stopped)) return null;
@@ -38,6 +40,11 @@ export function AiProposals() {
               {hold.text}
             </Text>
           </View>
+          {!aiMarkWanted(mark, hold.ai, hold.to) && (
+            <Text style={s.explain} testID="ai-mark-off">
+              相手の画面に「AIが書いた」の印は付きません。
+            </Text>
+          )}
           <View style={s.buttons}>
             <Pressable
               role="button"
@@ -82,6 +89,11 @@ export function AiProposals() {
             {prop.text}
           </Text>
         </View>
+        {!aiMarkWanted(mark, prop.ai, prop.to) && (
+          <Text style={s.explain} testID="ai-mark-off">
+            相手の画面に「AIが書いた」の印は付きません。
+          </Text>
+        )}
         <View style={s.buttons}>
           <Pressable
             role="button"
