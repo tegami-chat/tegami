@@ -14,6 +14,10 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
   try { saved = localStorage.getItem('starlight-theme') || localStorage.getItem('theme'); } catch {}
   if (!saved) document.documentElement.classList.toggle('dark', e.matches);
 });
+// Remember a choice in the language menu, so theme-init.js stops sending this browser to the Japanese pages.
+document.querySelectorAll('[data-lang-menu] a[hreflang]').forEach((a) => {
+  a.addEventListener('click', () => { try { localStorage.setItem('lang', a.hreflang); } catch {} });
+});
 // Close the language menu and the phone menu on a click outside them, or on a link inside them.
 document.addEventListener('click', (e) => {
   document.querySelectorAll('[data-lang-menu][open], [data-menu][open]').forEach((d) => {
