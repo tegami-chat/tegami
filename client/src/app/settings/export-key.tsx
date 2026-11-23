@@ -148,7 +148,8 @@ export default function ExportKey() {
 const styles = (c: Palette) =>
   StyleSheet.create({
     result: { alignItems: 'center', gap: 12 },
-    code: { fontSize: 13, color: c.text, textAlign: 'center', fontFamily: 'monospace' },
+    // The NIP-49 text is one long word: let it break anywhere so it stays inside the card.
+    code: { fontSize: 13, color: c.text, textAlign: 'left', fontFamily: 'monospace', alignSelf: 'stretch', ...({ wordBreak: 'break-all' } as object) },
     input: {
       minHeight: 44,
       borderRadius: 12,
