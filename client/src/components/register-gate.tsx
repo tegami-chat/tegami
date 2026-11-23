@@ -10,6 +10,7 @@ import { usePalette } from '@/constants/theme';
 import { useInsets } from '@/lib/insets';
 import { TURNSTILE_SITEKEY } from '@/lib/register';
 import { inviteCodeOf, useTegami } from '@/lib/tegami';
+import { arrival } from '@/lib/transfer';
 
 type TurnstileApi = {
   render: (el: HTMLElement, opts: Record<string, unknown>) => string;
@@ -131,6 +132,17 @@ export function RegisterGate() {
         {refused && <Text style={s.text}>このコードは使えませんでした。もう一度確かめてください。</Text>}
         <Pressable role="button" disabled={!pasted.trim() || checking} onPress={() => void registerWithPasted()}>
           <Text style={s.action}>{checking ? '確認中' : '始める'}</Text>
+        </Pressable>
+        {/* Moving an account from another device needs no invite: drop the empty key made a moment
+            ago and open the first screen with the paste field for the moving link. */}
+        <Pressable
+          role="button"
+          disabled={checking}
+          onPress={() => {
+            arrival.pasting = true;
+            void removeFromDevice();
+          }}>
+          <Text style={s.action}>ほかの端末から受け取る</Text>
         </Pressable>
       </View>
     );

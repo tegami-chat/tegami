@@ -30,7 +30,12 @@ export function Gate({ locked }: { locked: boolean }) {
   const [moving, setMoving] = useState<Moving | null>(key ? { state: 'fetching' } : null);
   // Pasting the link by hand: an iPhone Home Screen app keeps its own storage, and a
   // scanned QR code opens Safari, so the link has to be pasted into the app itself.
-  const [pasting, setPasting] = useState(false);
+  const [pasting, setPasting] = useState(() => {
+    // Sent here by the invite screen's 「ほかの端末から受け取る」: open the paste field at once.
+    const sent = !locked && arrival.pasting;
+    arrival.pasting = false;
+    return sent;
+  });
   const [pasted, setPasted] = useState('');
 
   function receivePasted() {
@@ -222,8 +227,8 @@ export function Gate({ locked }: { locked: boolean }) {
           </View>
         ) : (
           <>
-            <Pressable style={s.secondary} onPress={() => setPasting(true)} role="button">
-              <Text style={s.secondaryText}>ほかの端末から受け取る</Text>
+            <Pressable style={s.outlined} onPress={() => setPasting(true)} role="button">
+              <Text style={s.outlinedText}>ほかの端末から受け取る</Text>
             </Pressable>
             <Pressable style={s.quiet} onPress={() => setRestoring('input')} role="button">
               <Text style={s.quietText}>復旧コードを使う</Text>
@@ -371,6 +376,9 @@ const styles = (c: Palette) =>
     primary: { backgroundColor: c.accent, borderRadius: 999, height: 52, width: '100%', maxWidth: 320, alignItems: 'center', justifyContent: 'center' },
     primaryText: { color: c.onAccent, fontSize: 17, fontWeight: '600' },
     busy: { opacity: 0.5 },
+    // As easy to see as 「はじめる」: the same size, outlined instead of filled.
+    outlined: { borderWidth: 1.5, borderColor: c.accent, borderRadius: 999, height: 52, width: '100%', maxWidth: 320, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+    outlinedText: { color: c.accent, fontSize: 17, fontWeight: '600' },
     secondary: { paddingVertical: 12, paddingHorizontal: 24 },
     secondaryText: { color: c.accent, fontSize: 15, fontWeight: '600' },
     quiet: { paddingVertical: 6, paddingHorizontal: 24 },

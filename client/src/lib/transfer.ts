@@ -27,7 +27,7 @@ export const TRANSFER_SECONDS = 10 * 60;
 
 // Set when this device has just taken over an account through a link, so the /link
 // screen sends the person to their chats instead of saying an account is already here.
-export const arrival = { moved: false };
+export const arrival = { moved: false, pasting: false };
 
 // The one-time key from a link (https://app.tegami.chat/link#k=...). Taken out of the
 // address bar as soon as the app loads, before the router reads the address, so a
