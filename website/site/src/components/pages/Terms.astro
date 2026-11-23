@@ -36,7 +36,7 @@ const x = (k: string) => t(k, lang);
   <p><Fragment set:html={x('tm.3.p')} /></p>
 
   <ol>
-    {['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'].map((n) => <li><Fragment set:html={x('tm.3.' + n)} /></li>)}
+    {['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'].map((n) => <li><Fragment set:html={x('tm.3.' + n)} /></li>)}
   </ol>
 
   <h2><Fragment set:html={x('tm.4.h')} /></h2>
@@ -60,6 +60,20 @@ const x = (k: string) => t(k, lang);
     <li><Fragment set:html={x('tm.6.1')} /></li>
     <li><Fragment set:html={x('tm.6.key')} /></li>
     <li><Fragment set:html={x('tm.6.2')} /></li>
+  </ol>
+
+  <h2><Fragment set:html={x('tm.rights.h')} /></h2>
+
+  <ol>
+    <li><Fragment set:html={x('tm.rights.1')} /></li>
+    <li><Fragment set:html={x('tm.rights.2')} /></li>
+  </ol>
+
+  <h2><Fragment set:html={x('tm.leave.h')} /></h2>
+
+  <ol>
+    <li><Fragment set:html={x('tm.leave.1')} /></li>
+    <li><Fragment set:html={x('tm.leave.2')} /></li>
   </ol>
 
   <h2><Fragment set:html={x('tm.7.h')} /></h2>

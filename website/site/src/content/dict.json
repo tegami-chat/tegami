@@ -1960,8 +1960,8 @@
   "ja": "本サービスのサーバーに過度の負荷をかける行為その他本サービスの運営を妨げる行為"
  },
  "tm.3.10": {
-  "en": "Encourage any of the conduct above.",
-  "ja": "前各号の行為を助長する行為"
+  "en": "Provide benefits to organized crime groups or other antisocial forces.",
+  "ja": "暴力団その他の反社会的勢力に利益を提供する行為"
  },
  "tm.4.h": {
   "en": "4. Reporting and blocking",
@@ -2015,9 +2015,33 @@
   "en": "These terms apply to a message sent by an AI friend as a message sent by the user who owns it.",
   "ja": "AIの友だちが送信したメッセージには、その持ち主の利用者が送信したメッセージとして本規約が適用されます。"
  },
+ "tm.rights.h": {
+  "en": "7. Rights to what you send",
+  "ja": "7. 送った内容の権利"
+ },
+ "tm.rights.1": {
+  "en": "The rights to messages, photos and other content that a user sends remain with the user or the rightful owner. The operator does not acquire these rights.",
+  "ja": "利用者が送ったメッセージ、写真その他の内容の権利は、利用者または正当な権利者に残ります。運営者は、これらの権利を取得しません。"
+ },
+ "tm.rights.2": {
+  "en": "The operator uses content attached to a report only to review the report and to take the measures in section 5.",
+  "ja": "運営者は、通報で添付された内容を、通報の確認と第5節の措置のためにだけ利用します。"
+ },
+ "tm.leave.h": {
+  "en": "8. Deleting your account",
+  "ja": "8. アカウントの削除"
+ },
+ "tm.leave.1": {
+  "en": "Users can delete their account at any time from \"Delete account\" in the settings. A deleted account cannot be restored.",
+  "ja": "利用者は、設定の「アカウントを削除」から、いつでもアカウントを削除できます。削除したアカウントは元に戻せません。"
+ },
+ "tm.leave.2": {
+  "en": "Messages that have already reached the other person remain on that person's device.",
+  "ja": "相手の端末に届いたメッセージは、相手の端末に残ります。"
+ },
  "tm.7.h": {
-  "en": "7. Changes, interruption and end of the service",
-  "ja": "7. 本サービスの変更、中断、終了"
+  "en": "9. Changes, interruption and end of the service",
+  "ja": "9. 本サービスの変更、中断、終了"
  },
  "tm.7.1": {
   "en": "The operator may change the content of the service or interrupt its provision when necessary, such as for maintenance or to respond to failures.",
@@ -2028,8 +2052,8 @@
   "ja": "運営者は、本サービスを終了する場合、やむを得ない場合を除き、事前にtegami.chatと本サービスの公式アカウントでお知らせします。"
  },
  "tm.8.h": {
-  "en": "8. Disclaimer of warranty and limit of liability",
-  "ja": "8. 保証の否認と責任の制限"
+  "en": "10. Disclaimer of warranty and limit of liability",
+  "ja": "10. 保証の否認と責任の制限"
  },
  "tm.8.1": {
   "en": "The operator does not guarantee that the service is free of defects or that messages will always be delivered.",
@@ -2044,24 +2068,24 @@
   "ja": "運営者の債務不履行または不法行為により利用者に損害が生じた場合、故意または重大な過失がある場合を除き、運営者は、直接かつ現実に生じた通常の損害に限り賠償の責任を負います。"
  },
  "tm.9.h": {
-  "en": "9. Changes to these terms",
-  "ja": "9. 本規約の変更"
+  "en": "11. Changes to these terms",
+  "ja": "11. 本規約の変更"
  },
  "tm.9.p": {
   "en": "The operator may change these terms in accordance with Article 548-4 of the Civil Code of Japan when the change conforms to the general interest of users or is reasonable. When the operator changes them, the operator will announce in advance, on tegami.chat and on the official account of the service, that the terms will be changed, the content of the changed terms, and the date the change takes effect.",
   "ja": "運営者は、変更が利用者の一般の利益に適合する場合、または変更に合理的な理由がある場合に、民法第548条の4の定めに従い、本規約を変更することがあります。変更する場合は、本規約を変更すること、変更後の本規約の内容、および変更の効力が生じる日を、事前にtegami.chatと本サービスの公式アカウントでお知らせします。"
  },
  "tm.10.h": {
-  "en": "10. Governing law",
-  "ja": "10. 準拠法"
+  "en": "12. Governing law and jurisdiction",
+  "ja": "12. 準拠法と管轄裁判所"
  },
  "tm.10.p": {
-  "en": "These terms are interpreted in accordance with the laws of Japan.",
-  "ja": "本規約は、日本法に従って解釈します。"
+  "en": "These terms are interpreted in accordance with the laws of Japan. Any dispute between the operator and a user concerning these terms or the service shall be subject to the exclusive jurisdiction of the district court having jurisdiction over the operator's address as the court of first instance.",
+  "ja": "本規約は、日本法に従って解釈します。本規約または本サービスに関して運営者と利用者の間で紛争が生じた場合は、運営者の住所地を管轄する地方裁判所を第一審の専属的合意管轄裁判所とします。"
  },
  "tm.11.h": {
-  "en": "11. Contact",
-  "ja": "11. お問い合わせ窓口"
+  "en": "13. Contact",
+  "ja": "13. お問い合わせ窓口"
  },
  "tm.11.p": {
   "en": "Questions about the service and these terms are accepted at hello@tegami.chat. We use emails we receive only to respond to them. The operator's address will be given without delay on request.",
@@ -2294,5 +2318,9 @@
  "donate.qr": {
   "en": "QR code for the Lightning address hello@tegami.chat",
   "ja": "Lightningアドレス hello@tegami.chat のQRコード"
+ },
+ "tm.3.11": {
+  "en": "Encourage any of the conduct above.",
+  "ja": "前各号の行為を助長する行為"
  }
 }
