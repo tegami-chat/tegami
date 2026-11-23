@@ -45,7 +45,7 @@ export const t = (key: string, lang: Lang): string => {
 
 // The /compare page was taken off on 2026-11-19. To bring it back: add 'compare' to PAGES, restore PATH and META entries (compare: '/compare'), the Footer link and the Compare entry in PageView.astro. Compare.astro and its dict keys are kept.
 // The /roadmap page was taken off on 2026-11-20. To bring it back: add 'roadmap' to PAGES, restore the PATH and META entries (roadmap: '/roadmap'), the 'Tegamiのロードマップ案_2026-11-14.html' link entry, the Footer link and the Roadmap entry in PageView.astro. Roadmap.astro and its dict keys are kept.
-export const PAGES = ['index', 'how', 'faq', 'about', 'status', 'privacy', 'donate'] as const;
+export const PAGES = ['index', 'how', 'faq', 'about', 'status', 'privacy', 'terms', 'donate'] as const;
 export type PageName = (typeof PAGES)[number];
 
 const PATH: Record<PageName, string> = {
@@ -55,6 +55,7 @@ const PATH: Record<PageName, string> = {
   about: '/about',
   status: '/status',
   privacy: '/privacy',
+  terms: '/terms',
   donate: '/donate',
 };
 export const pathOf = (name: PageName, lang: Lang): string =>
@@ -76,6 +77,10 @@ export const META: Record<PageName, Record<Lang, { title: string; desc: string }
   privacy: {
     en: { title: 'Privacy policy | Tegami', desc: 'What Tegami keeps, why, and for how long.' },
     ja: { title: 'プライバシーポリシー | Tegami', desc: 'Tegamiが何を、なぜ、どれだけの期間預かるか。' },
+  },
+  terms: {
+    en: { title: 'Terms of service | Tegami', desc: 'The conditions for using Tegami.' },
+    ja: { title: '利用規約 | Tegami', desc: 'Tegamiの利用条件。' },
   },
   about: {
     en: { title: 'About us | Tegami', desc: 'Who runs Tegami, and how to contact us.' },

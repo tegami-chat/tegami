@@ -1,6 +1,6 @@
 import { getPublicKey } from 'nostr-tools/pure';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { AccountList, accountName, goToAccount } from '@/components/account-list';
 import { GateInfo } from '@/components/gate-info';
@@ -162,6 +162,7 @@ export function Gate({ locked }: { locked: boolean }) {
                 ? 'このブラウザはパスキーを使えません。'
                 : 'この端末ではパスキーを使えません。'}
           </Text>
+          <Consent />
           {passkeysAvailable() && (
             <Pressable style={({ pressed }) => [s.primary, busy && s.busy, pressed && s.pressed]} onPress={go} disabled={busy} role="button">
               <Text style={s.primaryText}>保存先を選び直す</Text>
@@ -176,9 +177,12 @@ export function Gate({ locked }: { locked: boolean }) {
           <Text style={s.small}>{Platform.OS === 'web' ? 'パスキーを使わない時は、鍵をこのブラウザの中だけに保存します。' : 'パスキーを使わない時は、鍵をこの端末の中だけに保存します。'}</Text>
         </>
       ) : (
-        <Pressable style={({ pressed }) => [s.primary, busy && s.busy, pressed && s.pressed]} onPress={go} disabled={busy} role="button">
-          <Text style={s.primaryText}>{locked ? 'ロックを解除' : moved ? 'この端末で使う' : 'はじめる'}</Text>
-        </Pressable>
+        <>
+          {!locked && <Consent />}
+          <Pressable style={({ pressed }) => [s.primary, busy && s.busy, pressed && s.pressed]} onPress={go} disabled={busy} role="button">
+            <Text style={s.primaryText}>{locked ? 'ロックを解除' : moved ? (Platform.OS === 'web' ? 'この端末で使う' : '同意してこの端末で使う') : Platform.OS === 'web' ? 'はじめる' : '同意してはじめる'}</Text>
+          </Pressable>
+        </>
       )}
       {failed && <Text style={s.notice}>{'パスキーを使えませんでした。\nもう一度押してください。'}</Text>}
       {missed && (
@@ -300,6 +304,23 @@ function Welcome() {
   );
 }
 
+/**
+ * Phone apps only (App Store 1.2): starting means agreeing to the terms. The web version is unchanged.
+ * The caller shows it only where a button starts the app; it also hides itself on the web.
+ */
+function Consent() {
+  const s = styles(usePalette());
+  if (Platform.OS === 'web') return null;
+  return (
+    <Text style={s.consent}>
+      <Text style={s.consentLink} role="link" onPress={() => void Linking.openURL('https://tegami.chat/ja/terms')}>利用規約</Text>
+      と
+      <Text style={s.consentLink} role="link" onPress={() => void Linking.openURL('https://tegami.chat/ja/privacy')}>プライバシーポリシー</Text>
+      に同意して始めます。
+    </Text>
+  );
+}
+
 /** The first lines of tegami.chat: what Tegami is, and the two promises. */
 function Hero() {
   const c = usePalette();
@@ -386,6 +407,8 @@ const styles = (c: Palette) =>
     quiet: { paddingVertical: 6, paddingHorizontal: 24 },
     quietText: { color: c.muted, fontSize: 14 },
     small: { fontSize: 12, color: c.muted, textAlign: 'center', maxWidth: 320 },
+    consent: { fontSize: 12, color: c.muted, textAlign: 'center', maxWidth: 340, lineHeight: 20, marginBottom: 4 },
+    consentLink: { color: c.accent, textDecorationLine: 'underline' },
     notice: { fontSize: 14, color: c.muted, textAlign: 'center', maxWidth: 320, lineHeight: 22 },
     paste: { width: '100%', maxWidth: 320, alignItems: 'center', gap: 4 },
     pasteInput: {
