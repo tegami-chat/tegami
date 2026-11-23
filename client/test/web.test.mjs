@@ -5681,6 +5681,7 @@ async function main() {
       assert((await text(b.page)).includes('Anthropic Claude') === false, 'the model showed before the mark was pressed');
       await badge.click();
       await waitText(b.page, 'Anthropic Claude');
+      await shot(b.page, 'ai-mark-pressed', 'AIマークを押すとモデルの名前が出る');
       await badge.click();
       assert((await text(b.page)).includes('Anthropic Claude') === false, 'the model stayed after the second press');
       await shot(p, 'ai-mark-my-screen', '送った本人の画面。印を付けずに送った分にも印が出る');
