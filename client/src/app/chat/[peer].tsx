@@ -16,9 +16,8 @@ import { Palette, usePalette } from '@/constants/theme';
 import { pickedBlob } from '@/lib/picked';
 import { AI_DRAFT_MESSAGES, markReadNoticeSeen, mayDraft, readNoticeSeen } from '@/lib/ai-draft';
 import { chatNoAi, nothingToReadText, saveChatNoAi } from '@/lib/ai-optout';
-import { askPhoneAi, phoneChoice } from '@/lib/phone-ai/ask';
+import { askPhoneAi, usePhoneKeySaved } from '@/lib/phone-ai/ask';
 import { DRAFT_MESSAGES, PhoneAiRefused, buildDraft, refusalText } from '@/lib/phone-ai/guard';
-import { getKeyStore } from '@/lib/phone-ai/key-store';
 import { ProviderError } from '@/lib/phone-ai/providers';
 import { load as loadStored, save as saveStored, k as storeKey } from '@/lib/storage';
 import { aiStageAllows, useAiPermissions } from '@/lib/ai-permissions';
@@ -222,7 +221,7 @@ export default function Chat() {
     return contacts.filter((x) => isMyAi(x) && mayDraft(aiPermissions, x, peer, isFriend));
   }, [peer, group, contact, isBlocked, contacts, blocked, aiPermissions]);
   // The phone's own AI: only when a key is saved, and only in a 1:1 chat with a person.
-  const phoneKeySaved = !!getKeyStore().get(phoneChoice().provider);
+  const phoneKeySaved = usePhoneKeySaved();
   const canPhoneAsk = phoneKeySaved && !!peer && !group && !!contact && isPerson(contact) && !isBlocked;
   // AIs invited into this group, or called into this 1:1 chat (lib/ai-actions.ts), and my AI
   // friends I could invite. Every member (in a 1:1 chat: the other person) must say yes.

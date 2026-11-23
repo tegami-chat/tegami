@@ -1,10 +1,12 @@
 // Asking the phone's own AI: the one way every screen does it, so every ask passes the limits
 // in guard.ts. The key comes from getKeyStore() and the call goes to the AI company directly.
 
+import { useSyncExternalStore } from 'react';
+
 import { findSecret } from '../ai-screen';
 import { k, load, save } from '../storage';
 import { PhoneAiRefused, phoneAiStopped, phoneMayAsk, recordPhoneAsk } from './guard';
-import { getKeyStore, type ProviderId } from './key-store';
+import { getKeyStore, notifyPhoneAiChanged, subscribePhoneAi, type ProviderId } from './key-store';
 import { callProvider, getProvider, hasProvider, type ChatMessage } from './providers';
 
 /** Which company and which model the person chose (not secret; kept plain). */
@@ -20,6 +22,16 @@ export function phoneChoice(): PhoneChoice {
 
 export function savePhoneChoice(c: PhoneChoice) {
   save(k('ai.phoneChoice'), c);
+  notifyPhoneAiChanged();
+}
+
+/** True while the chosen company has a saved key. Screens that show it update when a key or the choice changes. */
+export function usePhoneKeySaved(): boolean {
+  return useSyncExternalStore(
+    subscribePhoneAi,
+    () => !!getKeyStore().get(phoneChoice().provider),
+    () => false,
+  );
 }
 
 /** Switching company puts the model back to that company's default. The keys of the others stay. */

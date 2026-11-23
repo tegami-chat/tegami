@@ -14,8 +14,7 @@ import { readyAccounts, useAccounts, useNewMarks } from '@/lib/accounts';
 import { useCall } from '@/lib/calls';
 import { tapSelect } from '@/lib/haptics';
 import { FEEDBACK_NAME, FEEDBACK_PUBKEY, closeFeedback, isFeedback, useFeedbackOpened } from '@/lib/feedback';
-import { getKeyStore } from '@/lib/phone-ai/key-store';
-import { phoneChoice } from '@/lib/phone-ai/ask';
+import { usePhoneKeySaved } from '@/lib/phone-ai/ask';
 import { focusSearch, onFocusSearch, openChat, useListTab, type PressState } from '@/lib/layout';
 import { excerpt, matchesName, searchMessages } from '@/lib/search';
 import { chatName, isGroup, strangers, useTegami, type Contact, type Message } from '@/lib/tegami';
@@ -49,8 +48,8 @@ export function ChatList({ wide = false }: { wide?: boolean }) {
   const tab = wide ? railTab : phoneTab;
   const pathname = usePathname();
   const selected = openPeer(pathname);
-  // The row for the phone's own AI, once the chosen company has a key (read again when the screen changes).
-  const phoneAi = !!getKeyStore().get(phoneChoice().provider);
+  // The row for the phone's own AI, once the chosen company has a key.
+  const phoneAi = usePhoneKeySaved();
   const searchField = useRef<TextInput>(null);
   const [friendMenu, setFriendMenu] = useState<Contact | null>(null);
   const [confirmFriend, setConfirmFriend] = useState<{ kind: 'delete' | 'block'; contact: Contact } | null>(null);

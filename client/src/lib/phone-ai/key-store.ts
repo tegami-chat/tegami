@@ -35,6 +35,21 @@ export class KeyStoreClosedError extends Error {
 
 const NAME = 'ai.apiKeys';
 
+const listeners = new Set<() => void>();
+
+/** Calls back when a saved key or the chosen company changes. Returns the way to stop listening. */
+export function subscribePhoneAi(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/** Tells every screen that watches the phone's AI (the list of chats, the settings) to read it again. */
+export function notifyPhoneAiChanged() {
+  for (const l of [...listeners]) l();
+}
+
 type Keys = Partial<Record<ProviderId, string>>;
 
 export const deviceKeyStore: ApiKeyStore = {
@@ -46,11 +61,13 @@ export const deviceKeyStore: ApiKeyStore = {
   set(provider, key) {
     if (!atRestOpen()) throw new KeyStoreClosedError();
     save(k(NAME), { ...load<Keys>(k(NAME), {}), [provider]: key.trim() });
+    notifyPhoneAiChanged();
   },
   remove(provider) {
     if (!atRestOpen()) return;
     const { [provider]: _, ...rest } = load<Keys>(k(NAME), {});
     save(k(NAME), rest);
+    notifyPhoneAiChanged();
   },
 };
 
@@ -64,6 +81,7 @@ export function getKeyStore(): ApiKeyStore {
 /** Replaces the store (for a future cross-device store, and for tests). */
 export function setKeyStore(store: ApiKeyStore) {
   current = store;
+  notifyPhoneAiChanged();
 }
 
 /** The last 4 characters, the only part of a saved key the screen shows. */

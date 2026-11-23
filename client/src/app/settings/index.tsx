@@ -11,8 +11,7 @@ import { AI_ACTIONS, READ_ONLY, switchValue, useAiPermissions } from '@/lib/ai-p
 import { useCallNetwork } from '@/lib/call-network';
 import { FEEDBACK_PUBKEY, openFeedback } from '@/lib/feedback';
 import { pushState, type PushState } from '@/lib/push';
-import { phoneChoice } from '@/lib/phone-ai/ask';
-import { getKeyStore } from '@/lib/phone-ai/key-store';
+import { usePhoneKeySaved } from '@/lib/phone-ai/ask';
 import { shortId, useTegami } from '@/lib/tegami';
 
 /**
@@ -24,6 +23,7 @@ export default function Settings() {
   const c = usePalette();
   const s = { ...settingsStyles(c), ...styles(c) };
   const { myName, myAvatar, me, protectedByPasskey, blocked, myNoAi, setNotifications, recoveryBehind } = useTegami();
+  const phoneKeySaved = usePhoneKeySaved();
   const callNet = useCallNetwork();
   const aiPerm = useAiPermissions();
   const aiOn = AI_ACTIONS.some((a) => switchValue(aiPerm, { layer: 'all' }, a));
@@ -71,7 +71,7 @@ export default function Settings() {
         <LinkRow icon="key" label="アカウント" value={protectedByPasskey ? 'パスキー' : Platform.OS === 'web' ? 'このブラウザ' : 'この端末'} onPress={() => go('/settings/account')} />
         <LinkRow icon="shield" label="プライバシー" value={blocked.length ? `ブロック ${blocked.length}人` : undefined} onPress={() => go('/settings/privacy')} />
         <LinkRow icon="smart-toy" label="AI" value={aiState} testID="ai-permissions-state" onPress={() => go('/ai')} />
-        <LinkRow icon="phone-iphone" label="AIのAPIキー" value={getKeyStore().get(phoneChoice().provider) ? '設定済み' : undefined} onPress={() => go('/ai/phone')} />
+        <LinkRow icon="phone-iphone" label="AIのAPIキー" value={phoneKeySaved ? '設定済み' : undefined} onPress={() => go('/ai/phone')} />
       </Group>
 
       <Group>
