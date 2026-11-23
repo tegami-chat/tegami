@@ -1,4 +1,4 @@
-// 「相手に見せる印」: whether the friend's screen shows 「AIが書いた」 on what my AI wrote in my
+// 「AIマーク」: whether the friend's screen shows the AI mark on what my AI wrote in my
 // name (lib/ai-mark.ts). All AIs on the AI page; one AI or one friend on its own page.
 
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
@@ -9,18 +9,18 @@ import { isMyAi, useTegami } from '@/lib/tegami';
 
 const CHOICES: { value: AiMarkChoice; label: string }[] = [
   { value: 'follow', label: '上の設定に合わせる' },
-  { value: 'on', label: '付ける' },
-  { value: 'off', label: '付けない' },
+  { value: 'on', label: '表示' },
+  { value: 'off', label: '非表示' },
 ];
 
-const nowText = (on: boolean) => (on ? 'いまは付けます' : 'いまは付けません');
+const nowText = (on: boolean) => (on ? 'いまは表示' : 'いまは非表示');
 
 /** The switch for every AI. */
 export function AiMarkAll() {
   const c = usePalette();
   const s = styles(c);
   const m = useAiMark();
-  const label = 'AIが書いたメッセージに印を付ける';
+  const label = 'AIマークを表示する';
   return (
     <View style={s.card}>
       <View style={s.row}>
@@ -54,7 +54,7 @@ export function AiMarkChoose({ layer, id }: { layer: 'ai' | 'friend'; id: string
   })();
   return (
     <View style={s.card}>
-      <View style={s.terms} role="radiogroup" aria-label="相手に見せる印">
+      <View style={s.terms} role="radiogroup" aria-label="AIマーク">
         {CHOICES.map((o) => {
           const picked = o.value === choice;
           return (
@@ -62,7 +62,7 @@ export function AiMarkChoose({ layer, id }: { layer: 'ai' | 'friend'; id: string
               key={o.value}
               role="radio"
               aria-checked={picked}
-              aria-label={`印：${o.label}`}
+              aria-label={`AIマーク：${o.label}`}
               onPress={() => setAiMarkChoice(layer, id, o.value)}
               style={[s.term, picked && s.termPicked]}>
               <Text style={[s.termText, picked && s.termTextPicked]}>{o.label}</Text>

@@ -73,7 +73,7 @@ export default function AiPermissionsScreen() {
         </Pressable>
       )}
 
-      <Text style={s.heading}>相手に見せる印</Text>
+      <Text style={s.heading}>AIマーク</Text>
       <AiMarkAll />
 
       {ais.length > 0 && (

@@ -8,7 +8,7 @@
 //             waits on this device for the owner to press 送る; with "send without asking" the
 //             gate lets it go (photos, files, voice and money are always asked: needsConfirm).
 //             What is sent carries an ["ai", <AI key>, <model>, <name>] tag, and the friend's
-//             app shows「AIが書いた」(philosophy #102).
+//             app shows the AI mark(philosophy #102).
 //   contacts  the AI gets the list of friends (people only, not other AIs or blocked people).
 //   otherAi   the AI may talk to another person's AI: asked once in the confirm window, kept
 //             for a day or 30 days, can be taken back, with a daily limit (philosophy #84).

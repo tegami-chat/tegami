@@ -69,7 +69,7 @@ export function ChatRow({
         </View>
         <View style={s.bottom}>
           {last?.ai ? (
-            <View style={s.aiMark} aria-label="AIが書いた" testID="ai-written">
+            <View style={s.aiMark} aria-label="AIマーク" testID="ai-written">
               <MaterialIcons name="smart-toy" size={14} color={c.muted} />
               <Text style={s.aiMarkText}>AI</Text>
             </View>

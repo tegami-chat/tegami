@@ -138,7 +138,7 @@ export type Message = {
   replyTo?: string;
   /** A line about a change to the group (someone added, the name changed). text holds it. */
   notice?: true;
-  /** Written by an AI in the sender's name (lib/ai-actions.ts): shown as「AIが書いた」. */
+  /** Written by an AI in the sender's name (lib/ai-actions.ts): shown as the AI mark. */
   ai?: { pubkey: string; model?: string; name?: string };
   /** Never given to an AI: marked「AIに読ませない」or meant not to stay (lib/ai-optout.ts). */
   noai?: true;

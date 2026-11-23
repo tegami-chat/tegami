@@ -45,7 +45,7 @@ export default function AiLayerScreen() {
       )}
       {(layer === 'ai' || layer === 'friend') && (
         <>
-          <Text style={s.heading}>相手に見せる印</Text>
+          <Text style={s.heading}>AIマーク</Text>
           <AiMarkChoose layer={layer} id={id} />
         </>
       )}

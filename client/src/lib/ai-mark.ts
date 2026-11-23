@@ -1,4 +1,4 @@
-// Whether the friend's screen shows the 「AIが書いた」 mark on what my AI wrote in my name.
+// Whether the friend's screen shows the AI mark on what my AI wrote in my name.
 // A taste, not a permission: a lower layer may overrule the one above it (unlike the switches in
 // lib/ai-permissions.ts, where a lower layer only narrows). Nothing here lets an AI do more.
 //

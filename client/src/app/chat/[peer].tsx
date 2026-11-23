@@ -5,6 +5,7 @@ import { HeaderHeightContext } from 'expo-router/react-navigation';
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 
+import { AiBadge } from '@/components/ai-badge';
 import { Avatar } from '@/components/avatar';
 import { BackButton } from '@/components/back-button';
 import { ChatInfo } from '@/components/chat-info';
@@ -1245,22 +1246,20 @@ ${text}` : text));
                     {item.text}
                   </Text>
                 )}
-                {item.ai && (
-                  <Text style={s.aiMark} testID="ai-mark">
-                    AIが書いた{item.ai.model ? `（${item.ai.model}）` : ''}
-                  </Text>
-                )}
                 {item.noai && !(mine && myNoAi) && !(!mine && contacts.some((x) => x.pubkey === item.from && x.noai)) && (
                   <View style={s.noAiMark} testID="noai-mark">
                     <MaterialIcons name="visibility-off" size={12} color={c.muted} />
                     <Text style={s.aiMarkInline}>AIに読ませない</Text>
                   </View>
                 )}
-                <Text style={s.time}>
-                  {unsent
-                    ? '未送信'
-                    : new Date(item.at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </Text>
+                <View style={s.footer}>
+                  {item.ai && <AiBadge model={item.ai.model} />}
+                  <Text style={s.time}>
+                    {unsent
+                      ? '未送信'
+                      : new Date(item.at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </View>
               </View>
             );
 
@@ -2292,14 +2291,14 @@ const styles = (c: Palette) =>
     replyClose: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
     text: { fontSize: 16, color: c.text, lineHeight: 22, userSelect: 'none' },
     author: { fontSize: 12, color: c.accent, fontWeight: '600', marginBottom: 2 },
-    aiMark: { fontSize: 11, color: c.muted, marginTop: 4 },
+    footer: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', gap: 6, marginTop: 2 },
     noAiMark: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 },
     aiMarkInline: { fontSize: 11, color: c.muted },
     aiGroupBtn: { minHeight: 36, borderRadius: 18, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: c.line },
     aiGroupBtnMain: { backgroundColor: c.accent, borderColor: c.accent },
     aiGroupBtnText: { fontSize: 13, fontWeight: '600', color: c.text },
     aiGroupBtnTextMain: { color: '#ffffff' },
-    time: { fontSize: 11, color: c.muted, alignSelf: 'flex-end', marginTop: 2 },
+    time: { fontSize: 11, color: c.muted },
     waiting: { opacity: 0.6 },
     full: { maxWidth: '100%' },
     mineWrap: { alignSelf: 'flex-end', alignItems: 'flex-end', maxWidth: '78%' },

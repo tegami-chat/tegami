@@ -3415,10 +3415,10 @@ async function main() {
       assert((await ai.answer(25063, id, 'sent')).status === 'sent', 'the AI was not told it was sent');
       await b.page.goto(ORIGIN + `/chat/${a.hex}`);
       await waitText(b.page, 'じゃあ11時は？');
-      await waitText(b.page, 'AIが書いた（Anthropic Claude）');
-      await shot(b.page, 'ai-written-mark', '受け取った側。AIが書いたメッセージには「AIが書いた」とモデルが出る');
+      await b.page.getByRole('button', { name: 'AIマーク、Anthropic Claude' }).first().waitFor({ timeout: 10000 });
+      await shot(b.page, 'ai-written-mark', '受け取った側。AIが書いたメッセージには吹き出しにAIマークが付く');
       await p.goto(ORIGIN + `/chat/${b.hex}`);
-      await waitText(p, 'AIが書いた（Anthropic Claude）');
+      await p.getByRole('button', { name: 'AIマーク、Anthropic Claude' }).first().waitFor({ timeout: 10000 });
 
       // Opening the app again: the relay hands the same ask out again, and nothing is sent twice.
       await p.reload();
@@ -5594,8 +5594,8 @@ async function main() {
       await hold.waitFor({ state: 'detached', timeout: 10000 });
       await b.page.goto(`${ORIGIN}/chat/${a.hex}`);
       await waitText(b.page, '明日なら午後が空いています。');
-      await waitText(b.page, 'AIが書いた');
-      await shot(b.page, 'ai-hold-received-mark', '相手の画面。AIが書いた印が出る');
+      await b.page.getByTestId('ai-written').first().waitFor({ timeout: 10000 });
+      await shot(b.page, 'ai-hold-received-mark', '相手の画面。AIマークが出る');
 
       // MONEY: 送らない drops it and nothing reaches the other person.
       await ask({ to: b.hex, toName: 'テストB', text: '3,000円を振り込みます。', reason: 'MONEY' });
@@ -5655,31 +5655,40 @@ async function main() {
       await hold.waitFor({ state: 'detached', timeout: 10000 });
       await b.page.goto(`${ORIGIN}/chat/${a.hex}`);
       await waitText(b.page, '午前なら空いています。');
-      await waitText(b.page, 'AIが書いた');
-      await shot(b.page, 'ai-mark-friend-sees', '印を付けた時に相手の画面に出る印');
+      await b.page.getByTestId('ai-written').first().waitFor({ timeout: 10000 });
+      await shot(b.page, 'ai-mark-friend-sees', 'AIマークを表示にした時に相手の画面に出る印');
 
       // All off: the window says so, the friend sees no mark, and I still do.
       await p.goto(ORIGIN + '/ai');
-      await p.getByRole('switch', { name: 'AIが書いたメッセージに印を付ける' }).click();
-      await shot(p, 'ai-mark-all-off', '「相手に見せる印」を付けないにした画面');
+      await p.getByRole('switch', { name: 'AIマークを表示する' }).click();
+      await shot(p, 'ai-mark-all-off', '「AIマーク」を非表示にした画面');
       await ask({ to: b.hex, toName: 'テストB', text: '午後なら空いています。', reason: 'CHECK' });
       await hold.waitFor({ timeout: 15000 });
-      await waitText(p, '相手の画面に「AIが書いた」の印は付きません。');
-      await shot(p, 'ai-mark-off-hold', '印を付けない設定の承認の窓。小さく1行出る');
+      await waitText(p, 'このメッセージには、相手の画面でAIマークが出ません。');
+      await shot(p, 'ai-mark-off-hold', 'AIマークを非表示にした設定の承認の窓。小さく1行出る');
       await button(p, '送る').click();
       await hold.waitFor({ state: 'detached', timeout: 10000 });
       await b.page.goto(`${ORIGIN}/chat/${a.hex}`);
       await waitText(b.page, '午後なら空いています。');
-      assert((await text(b.page)).split('AIが書いた').length - 1 === 1, 'the friend sees a mark on the unmarked message');
+      assert((await b.page.getByRole('button', { name: /^AIマーク/ }).count()) === 1, 'the friend sees a mark on the unmarked message');
       await p.goto(`${ORIGIN}/chat/${b.hex}`);
       await waitText(p, '午後なら空いています。');
-      assert((await text(p)).split('AIが書いた').length - 1 === 2, 'my own screen lost the mark');
+      assert((await p.getByRole('button', { name: /^AIマーク/ }).count()) === 2, 'my own screen lost the mark');
+      // Pressing the mark on the friend's screen shows the model's name, and pressing again hides it.
+      await b.page.goto(`${ORIGIN}/chat/${a.hex}`);
+      await waitText(b.page, '午後なら空いています。');
+      const badge = b.page.getByTestId('ai-written').first();
+      assert((await text(b.page)).includes('Anthropic Claude') === false, 'the model showed before the mark was pressed');
+      await badge.click();
+      await waitText(b.page, 'Anthropic Claude');
+      await badge.click();
+      assert((await text(b.page)).includes('Anthropic Claude') === false, 'the model stayed after the second press');
       await shot(p, 'ai-mark-my-screen', '送った本人の画面。印を付けずに送った分にも印が出る');
       await p.goto(`${ORIGIN}/ai/ai/${aiHex}`);
-      await waitText(p, '相手に見せる印');
+      await waitText(p, 'AIマーク');
       await shot(p, 'ai-mark-ai-layer', 'AI友だち1人の設定の画面');
       await p.goto(`${ORIGIN}/ai/friend/${b.hex}`);
-      await waitText(p, '相手に見せる印');
+      await waitText(p, 'AIマーク');
       await shot(p, 'ai-mark-friend-layer', '友だち1人の設定の画面');
       for (const w of [a, b]) await w.context.close();
     });
