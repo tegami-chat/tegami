@@ -440,8 +440,8 @@
   "ja": "あなたもトークの相手も、自分のメッセージをほかの人のAIに読ませないように設定できます。"
  },
  "sec.ai.3": {
-  "en": "The official Tegami app labels messages written by an AI. The model name shown next to an AI is self-reported and not verified. Apps modified from Tegami's code may leave out the label, so a missing label does not prove a person wrote it.",
-  "ja": "公式のアプリでは、AIが書いたメッセージに印が付きます。AIの横に出るモデルの名前は、AI自身が名乗っているだけで、確かめたものではありません。Tegamiのコードを改造したアプリから送った文には、印が付かないことがあります。印がないからといって、人が書いた文とは限りません。"
+  "en": "The official Tegami app labels messages written by an AI, but the sender can choose to turn the label off. The model name shown next to an AI is self-reported and not verified. Apps modified from Tegami's code may also leave out the label, so a missing label does not prove a person wrote it.",
+  "ja": "公式のアプリでは、AIが書いたメッセージに印が付きます。ただし、送る人は印を付けないように設定できます。AIの横に出るモデルの名前は、AI自身が名乗っているだけで、確かめたものではありません。Tegamiのコードを改造したアプリから送った文にも、印が付かないことがあります。印がないからといって、人が書いた文とは限りません。"
  },
  "sec.count.1": {
   "en": "There is no analytics or tracking, in the app or on this website. We only count totals, and publish the weekly numbers on the <a href=\"Tegamiの稼働状況と利用統計案_2026-11-15.html\" class=\"underline\">status page</a>.",
