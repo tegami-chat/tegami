@@ -139,3 +139,16 @@ export function findMoney(text: string): MoneyKind | null {
   if (MONEY_SOFT.test(t) && ASK.test(t)) return 'amountAsk';
   return null;
 }
+
+// ---------- ファイル ----------
+
+// A file, or the way to one, written into the words: a data: address, a file:// address, a
+// Windows path (C:\..., \server\share), or an absolute Unix path or one under the home folder.
+// Same as FILE_PATH in agent/screen.mjs.
+const FILE_PATH =
+  /data:[a-z0-9.+-]+\/[a-z0-9.+-]+[;,]|file:\/\/|(?<![a-z0-9])[a-z]:[\\/][^\s\\/]|\\\\[\w.-]+\\[\w$.-]|(?:^|[\s"'(（「])(?:~\/|\/(?:[\w.-]+\/)+)[\w.-]+/;
+
+/** Whether a text carries a file or a path to one (read in plain, lower-case form). */
+export function findFile(text: string): boolean {
+  return FILE_PATH.test(cleanForAi(String(text ?? '')).normalize('NFKC').toLowerCase());
+}

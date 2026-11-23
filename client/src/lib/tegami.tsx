@@ -35,6 +35,7 @@ import {
   AI_CONTACTS_ASK_KIND,
   AI_CONTACTS_KIND,
   AI_GROUP_KIND,
+  AI_HOLD_ASK_KIND,
   AI_PEER_ASK_KIND,
   AI_PEER_RESULT_KIND,
   AI_SEND_ASK_KIND,
@@ -61,6 +62,19 @@ import {
   type AiGroups,
   type AiProposal,
 } from './ai-actions';
+import {
+  AI_HOLD_RESULT_KIND,
+  HOLD_TTL,
+  acceptHold,
+  declineHold,
+  expireHolds,
+  freshHold,
+  loadHolds,
+  receiveHold,
+  saveHolds,
+  type AiHold,
+  type HoldResult,
+} from './ai-hold';
 import { clearNewMark } from './sw-store';
 import { createDeviceVault, deviceVaultAvailable, openDeviceVault, type DeviceVault } from './device-vault';
 import { setCrashReports } from './crash';
@@ -91,6 +105,8 @@ import { SIGNAL_KIND, freshSignal, wrapQuiet, wrapSignal } from './signal';
 import { type Page, catchUp } from './catch-up';
 import { BackupGoneError, type BackupRef, RecoveryError, clearLocal, deleteBackup, deriveKeys, loadLocal, makeCode, putBackup, recoveryOnHere, saveLocal, takeRestoredKeys } from './recovery';
 import { createVault, unlockVault, type Vault } from './vault';
+import { canVerifyOwner, verifyOwner } from './export-auth';
+import { exportEncryptedKey as sealKey } from './key-export';
 import { TURNSTILE_SITEKEY, askRelay, forgetInviteCode, keptInviteCode, type Registration } from './register';
 import { signedFetch } from './relay-http';
 import { STUN, iceServers } from './turn';
@@ -368,6 +384,11 @@ type TegamiState = {
   /** Sends a waiting AI message in my name (the gate is asked again). False when the gate stops it. */
   acceptAiProposal: (id: string) => Promise<boolean>;
   declineAiProposal: (id: string) => void;
+  /** Replies my AI friends may not send with their own key, waiting for me (lib/ai-hold.ts). */
+  aiHolds: AiHold[];
+  /** Sends a waiting reply in my name, with the mark that an AI wrote it. The result is what the AI is told. */
+  acceptAiHold: (id: string) => Promise<HoldResult | undefined>;
+  declineAiHold: (id: string) => void;
   /** AIs invited to my groups, and every member's answer (philosophy #72). */
   aiGroups: AiGroups;
   /** The people an AI in this chat is agreed with: everyone but me (for a g-<gid> group, its members now). */
@@ -393,6 +414,10 @@ type TegamiState = {
   recoveryOn: boolean;
   /** Makes a new recovery code and uploads the backup; an earlier code stops working. Returns the code (shown once). */
   makeRecoveryCode: () => Promise<string>;
+  /** Whether this device can prove the owner is present before the key is written out (a passkey in the browser; Face ID or the passcode on a phone). */
+  canExportKey: boolean;
+  /** Asks the owner to prove it, then returns the secret key as NIP-49 text (ncryptsec1...). Shown once by the caller; never stored. */
+  exportEncryptedKey: (password: string, again: string) => Promise<string>;
   /** Deletes the backup from the relay and turns recovery off. */
   turnOffRecovery: () => Promise<void>;
   /** The backup has not been refreshed for several tries in a row (offline, relay refused). */
@@ -644,6 +669,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     // What my AI friends asked for and the AIs in groups (lib/ai-actions.ts) are encrypted too.
     setAiGroups(loadAiGroups());
     setAiProposals(loadProposals());
+    setAiHolds(loadHolds());
     // Photos kept before they were encrypted are encrypted now (lib/files.ts).
     const fileIds: string[] = [];
     for (const m of stored) if (m.file) fileIds.push(m.id);
@@ -804,6 +830,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   // When my other device last let AIs do more (lib/ai-permissions.ts aiWidened); 0 when seen.
   const [aiWidenedAt, setAiWidenedAt] = useState(() => load<number>(k('ai.widened'), 0));
   aiProposalsRef.current = aiProposals;
+  const [aiHolds, setAiHolds] = useState<AiHold[]>([]);
+  const aiHoldsRef = useRef<AiHold[]>(aiHolds);
+  aiHoldsRef.current = aiHolds;
   // Set below, once the functions it needs exist: handles an AI ask or a group answer.
   const aiRumorRef = useRef<(rumor: ReturnType<typeof nip59.createRumor>) => void>(() => {});
   /**
@@ -2374,10 +2403,11 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
 
   /** A short answer to my AI: for it only, and gone from the relay in 10 minutes. */
   const tellAi = useCallback(
-    async (ai: string, kind: number, data: Record<string, unknown>) => {
+    async (ai: string, kind: number, data: Record<string, unknown>, ttl?: number) => {
       if (!secret || !pool.current) return;
-      const rumor = nip59.createRumor({ kind, content: JSON.stringify(data), tags: [['p', ai]], created_at: Math.floor(Date.now() / 1000) }, secret);
-      await publishOne(pool.current, RELAYS, wrapExpiring(rumor, secret, ai), authRef.current ?? undefined).catch(() => false);
+      const now = Math.floor(Date.now() / 1000);
+      const rumor = nip59.createRumor({ kind, content: JSON.stringify(data), tags: [['p', ai]], created_at: now }, secret);
+      await publishOne(pool.current, RELAYS, wrapExpiring(rumor, secret, ai, now, ttl), authRef.current ?? undefined).catch(() => false);
     },
     [secret],
   );
@@ -2454,6 +2484,52 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     },
     [putProposals, tellAi],
   );
+
+  const putHolds = useCallback((next: AiHold[]) => {
+    aiHoldsRef.current = next;
+    saveHolds(next);
+    setAiHolds(next);
+  }, []);
+
+  /** The answer to a waiting reply goes to the AI for a day, so an AI whose computer is off hears it later. */
+  const tellHold = useCallback((ai: string, id: string, result: HoldResult) => void tellAi(ai, AI_HOLD_RESULT_KIND, { id, result }, HOLD_TTL), [tellAi]);
+
+  const acceptAiHold = useCallback(
+    async (id: string) => {
+      const prop = aiHoldsRef.current.find((x) => x.id === id);
+      const ai = prop ? contactsRef.current.find((c) => c.pubkey === prop.ai && isMyAi(c)) : undefined;
+      const r = acceptHold(aiHoldsRef.current, id, ai, (plan) => ai && sendFromAi(plan.to, plan.text, ai, plan.at), { stopped: load<boolean>(k('ai.stopped'), false) });
+      if (!r.result) return undefined;
+      putHolds(r.holds);
+      if (r.ai) tellHold(r.ai, id, r.result);
+      return r.result;
+    },
+    [putHolds, sendFromAi, tellHold],
+  );
+
+  const declineAiHold = useCallback(
+    (id: string) => {
+      const r = declineHold(aiHoldsRef.current, id);
+      if (!r.hold) return;
+      putHolds(r.holds);
+      tellHold(r.hold.ai, id, 'declined');
+    },
+    [putHolds, tellHold],
+  );
+
+  // A waiting reply is dropped after a day (the AI is told, if it is still listening).
+  useEffect(() => {
+    if (!secret) return;
+    const sweep = () => {
+      const r = expireHolds(aiHoldsRef.current);
+      if (!r.expired.length) return;
+      putHolds(r.holds);
+      for (const h of r.expired) tellHold(h.ai, h.id, 'expired');
+    };
+    sweep();
+    const t = setInterval(sweep, 60_000);
+    return () => clearInterval(t);
+  }, [secret, putHolds, tellHold]);
 
   /** How many messages at the end of this chat an AI wrote in my name, with nobody writing after them. */
   const aiInARow = useCallback(
@@ -2655,6 +2731,15 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     }
     // Only my own AI (the mark, never the model name it gives: NIP-46 says the same of names).
     const ai = contactsRef.current.find((c) => c.pubkey === rumor.pubkey && isMyAi(c));
+    if (ai && rumor.kind === AI_HOLD_ASK_KIND) {
+      // A reply my AI may not send itself: it waits for me for a day (lib/ai-hold.ts).
+      if (!freshHold(rumor.created_at) || handledAsk(rumor.id)) return;
+      markHandled(rumor.id);
+      const r = receiveHold(aiHoldsRef.current, ai, rumor, { stopped: load<boolean>(k('ai.stopped'), false) });
+      if (r.holds !== aiHoldsRef.current) putHolds(r.holds);
+      if (r.id && r.result) tellHold(ai.pubkey, r.id, r.result);
+      return;
+    }
     if (!ai || !freshAsk(rumor.created_at) || handledAsk(rumor.id)) return;
     if (rumor.kind !== AI_SEND_ASK_KIND && rumor.kind !== AI_CONTACTS_ASK_KIND && rumor.kind !== AI_PEER_ASK_KIND) return;
     markHandled(rumor.id);
@@ -2867,6 +2952,14 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     return code;
   }, [secret, currentBundle, enqueue, refreshed]);
 
+  const exportEncryptedKey = useCallback(
+    async (password: string, again: string) => {
+      if (!secret) throw new Error('not open');
+      return sealKey({ secret, password, again, verify: () => verifyOwner(vault, secret) });
+    },
+    [secret, vault],
+  );
+
   const turnOffRecovery = useCallback(async () => {
     if (!secret) throw new Error('not open');
     await enqueue(async () => {
@@ -2962,6 +3055,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     recoveryOn,
     recoveryBehind: recoveryOn && recoveryFailures >= RECOVERY_FAILURES_SHOWN,
     makeRecoveryCode,
+    canExportKey: canVerifyOwner(vault),
+    exportEncryptedKey,
     turnOffRecovery,
     setNotifications,
     sendSignal,
@@ -2973,6 +3068,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     aiProposals,
     acceptAiProposal,
     declineAiProposal,
+    aiHolds,
+    acceptAiHold,
+    declineAiHold,
     aiGroups,
     aiMembersOf,
     inviteAiToGroup,

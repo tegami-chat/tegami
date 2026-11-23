@@ -17,7 +17,6 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { heldNotice } from './check.mjs';
 import { OTHERS_WARNING, parseInvite, shortId } from './lib.mjs';
-import { findHold } from './screen.mjs';
 
 const text = (value) => ({ content: [{ type: 'text', text: typeof value === 'string' ? value : JSON.stringify(value, null, 2) }] });
 
@@ -115,6 +114,18 @@ export async function startMcp(agent, { check = async () => ({ verdict: 'ASK_OWN
     },
   );
 
+  /** Hands a message to the owner's app to send or not. A group has no such way yet: the owner is told in a plain message. */
+  async function askOwner(c, body, reason, detail, said) {
+    try {
+      await agent.askOwnerToSend(c.pubkey, body, reason, detail);
+      return `${said} Your owner was asked in the app.`;
+    } catch (e) {
+      if (e.code !== 'GROUP') return `${said} Your owner could not be asked: ${e.message}`;
+      if (agent.owner) await agent.send(agent.owner.pubkey, heldNotice(c.name, detail || reason, body), { notice: true }).catch(() => {});
+      return `${said} Your owner was told.`;
+    }
+  }
+
   server.registerTool(
     'tegami_send',
     {
@@ -126,18 +137,15 @@ export async function startMcp(agent, { check = async () => ({ verdict: 'ASK_OWN
       const c = target(to);
       if (!c) return text(`Unknown contact: ${to}`);
       if (c.pubkey !== agent.owner?.pubkey) {
-        const hold = findHold(body);
+        // The owner's app sends it in the owner's name, or not (press 送る); this AI's key does not.
+        const hold = agent.ownerReason(c.pubkey, body);
         if (hold) {
-          const reason = hold === 'MONEY' ? 'it looks like money talk' : 'it has a link';
-          if (agent.owner) await agent.send(agent.owner.pubkey, heldNotice(c.name, reason, body), { notice: true }).catch(() => {});
-          return text(`Not sent: ${reason}, so your owner has to see it first (code ${hold}). Your owner was told.`);
+          const reason = { MONEY: 'it looks like money talk', FILE: 'it has a file', LINK: 'it has a link', FIRST: 'this is the first message to this person' }[hold];
+          return text(await askOwner(c, body, hold, '', `Not sent: ${reason}, so your owner has to see it first (code ${hold}).`));
         }
         const kind = c.pubkey.includes(',') ? 'group' : agent.isTrusted(c.pubkey) ? 'trusted' : agent.contacts.some((x) => x.pubkey === c.pubkey) ? 'contact' : 'peerAi';
         const v = await check({ text: body, context: contextFor(c.pubkey), to: kind });
-        if (v.verdict !== 'SAFE') {
-          if (agent.owner) await agent.send(agent.owner.pubkey, heldNotice(c.name, v.reason, body), { notice: true }).catch(() => {});
-          return text(`Not sent: the AI check (AIの検査) held it for your owner (${v.reason}). Your owner was told.`);
-        }
+        if (v.verdict !== 'SAFE') return text(await askOwner(c, body, 'CHECK', v.reason, `Not sent: the AI check (AIの検査) held it for your owner (${v.reason}).`));
       }
       try {
         await agent.send(c.pubkey, body);

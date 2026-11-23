@@ -59,7 +59,7 @@ import { BACKENDS, backendLabel, loadBackend, loadKeys, makeResponder, ownEnv, s
 import { Agent, DRAFT_TTL, PAIR_TTL, loadSettings, needsInit, parseAsk, parseInvite, saveSettings, shortId } from './lib.mjs';
 import { qrHtml, qrTerminal } from './qr.mjs';
 import { CHECK_SYSTEM, heldNotice, modelCheck } from './check.mjs';
-import { cleanForAi, findHold } from './screen.mjs';
+import { cleanForAi } from './screen.mjs';
 
 export { ownEnv };
 
@@ -288,16 +288,17 @@ const commands = {
           const text = await reply(prompt, { peer });
           // AIの検査, stage 2: a reply to anyone but the owner is checked first; it waits otherwise.
           if (text.trim() && peer !== agent.owner?.pubkey) {
-            // Fixed rules first (no model): money talk and links are never sent in this AI's name.
-            const hold = findHold(text);
-            if (hold) {
-              await holdForOwner(name, hold === 'MONEY' ? 'the reply looks like money talk' : 'the reply has a link', text.trim());
+            // Fixed rules first (no model): money, a file, a link and a first reply to someone never
+            // go out with this AI's key; the owner's app decides (press 送る, sent in the owner's name).
+            const why = agent.ownerReason(peer, text.trim());
+            if (why) {
+              await holdForOwner(peer, name, why, '', text.trim(), batch);
               markReplied(batch);
               continue;
             }
             const c = await check({ text: text.trim(), context: prompt, to: 'trusted' });
             if (c.verdict !== 'SAFE') {
-              await holdForOwner(name, c.reason, text.trim());
+              await holdForOwner(peer, name, 'CHECK', c.reason, text.trim(), batch);
               markReplied(batch);
               continue;
             }
@@ -313,11 +314,19 @@ const commands = {
       }
       busy = false;
     }
-    /** The check held a reply: it is not sent, the log says so, and the owner is told. */
-    async function holdForOwner(name, reason, text) {
-      log(`AIの検査 held a reply to ${name}: ${reason}`);
+    /**
+     * A reply this AI may not send with its own key: it is not sent, the log says so, and the owner's
+     * app gets it to send or not. A group has no such way yet: the owner is told in a plain message.
+     */
+    async function holdForOwner(peer, name, reason, detail, text, batch) {
+      log(`AIの検査 held a reply to ${name}: ${reason}${detail ? ` (${detail})` : ''}`);
       if (!agent.owner) return;
-      await agent.send(agent.owner.pubkey, heldNotice(name, reason, text), { notice: true }).catch((e) => log(`could not tell the owner: ${e.message}`));
+      try {
+        await agent.askOwnerToSend(peer, text, reason, detail, batch.at(-1)?.id);
+      } catch (e) {
+        if (e.code === 'GROUP') await agent.send(agent.owner.pubkey, heldNotice(name, detail || reason, text), { notice: true }).catch((x) => log(`could not tell the owner: ${x.message}`));
+        else log(`could not ask the owner to send the reply to ${name}: ${e.message}`);
+      }
     }
     /** Once a day per chat: tells the owner that the daily limit stopped the replies. */
     async function tellOwnerLimit(peer, name) {

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Palette, usePalette } from '@/constants/theme';
+import { HOLD_TITLES, holdExplain } from '@/lib/ai-hold';
 import { useAiAsk } from '@/lib/ai-permissions';
 import { personName, useTegami } from '@/lib/tegami';
 
@@ -13,16 +14,52 @@ export function AiProposals() {
   const c = usePalette();
   const s = styles(c);
   const asking = useAiAsk();
-  const { status, aiProposals, acceptAiProposal, declineAiProposal, contacts } = useTegami();
+  const { status, aiProposals, acceptAiProposal, declineAiProposal, aiHolds, acceptAiHold, declineAiHold, contacts } = useTegami();
   const [stopped, setStopped] = useState(false);
   const prop = aiProposals[0];
-  if (status !== 'open' || asking || (!prop && !stopped)) return null;
+  const hold = prop ? undefined : aiHolds[0];
+  if (status !== 'open' || asking || (!prop && !hold && !stopped)) return null;
+
+  if (hold) {
+    const ai = personName(hold.ai, contacts);
+    const known = contacts.some((x) => x.pubkey === hold.to);
+    const to = personName(hold.to, contacts);
+    return (
+      <View style={s.overlay} role="dialog" aria-modal testID="ai-hold">
+        <View style={s.card}>
+          <Text style={s.title}>{HOLD_TITLES[hold.reason]}</Text>
+          <Text style={s.explain}>{holdExplain(ai, to, known)}</Text>
+          <View style={s.line}>
+            <Text style={s.key}>宛先</Text>
+            <Text style={s.big}>{to}</Text>
+          </View>
+          <View style={s.box}>
+            <Text style={s.content} numberOfLines={8}>
+              {hold.text}
+            </Text>
+          </View>
+          <View style={s.buttons}>
+            <Pressable
+              role="button"
+              aria-label="送る"
+              onPress={() => void acceptAiHold(hold.id).then((r) => setStopped(r !== 'sent'))}
+              style={[s.button, s.buttonMain]}>
+              <Text style={[s.buttonText, s.buttonTextMain]}>送る</Text>
+            </Pressable>
+            <Pressable role="button" aria-label="送らない" onPress={() => declineAiHold(hold.id)} style={[s.button, s.buttonOutlined]}>
+              <Text style={s.buttonText}>送らない</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   if (!prop) {
     return (
       <View style={s.overlay} role="dialog" aria-modal testID="ai-proposal">
         <View style={s.card}>
-          <Text style={s.title}>AIの権限で止めました</Text>
+          <Text style={s.title}>この返事は送れませんでした</Text>
           <Pressable role="button" aria-label="OK" onPress={() => setStopped(false)} style={[s.button, s.buttonMain]}>
             <Text style={[s.buttonText, s.buttonTextMain]}>OK</Text>
           </Pressable>
@@ -78,6 +115,7 @@ const styles = (c: Palette) =>
     },
     card: { width: '100%', maxWidth: 380, backgroundColor: c.surface, borderRadius: 16, padding: 20, gap: 14, borderWidth: 1, borderColor: c.line },
     title: { fontSize: 16, fontWeight: '700', color: c.text, lineHeight: 23 },
+    explain: { fontSize: 14, color: c.muted, lineHeight: 21 },
     line: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
     key: { fontSize: 13, color: c.muted },
     big: { fontSize: 22, fontWeight: '700', color: c.text, flexShrink: 1 },

@@ -175,6 +175,9 @@ try {
   await fetch(`${HTTP}/_trust`, { method: 'POST', body: JSON.stringify({ pubkey: friend.pk }) });
   await friend.pair(ai, second.code, friend.link(await inviteCode(friend.sk)));
   check('a running watcher accepts a pairing too', await watch.waitOut(`Paired with ${shortId(friend.pk)}`));
+  // A first reply to a person goes to the owner's app first (the reasons are tested in check.test.mjs); here it is told this AI already replied to them.
+  local.markSentTo(friend.pk);
+  await sleep(700);
   await friend.send(ai, 'はじめまして');
   check('and then answers that person right away', !!(await friend.waitFor((t) => t === 'local: テストB: はじめまして')));
   check('each person starts their own conversation', seen.at(-1).messages.length === 2);
@@ -188,6 +191,8 @@ try {
   await fetch(`${HTTP}/_trust`, { method: 'POST', body: JSON.stringify({ pubkey: later.pk }) });
   await start(['add', later.link(), '--trust']).done;
   await sleep(500);
+  local.markSentTo(later.pk);
+  await sleep(700);
   await later.send(ai, 'よろしく');
   check('a running watcher sees contacts trusted by another command', !!(await later.waitFor((t) => t === 'local: あとから: よろしく')));
 

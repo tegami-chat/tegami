@@ -91,6 +91,7 @@ function Shell() {
         <Stack.Screen name="settings/index" options={{ title: '設定', ...top }} />
         <Stack.Screen name="settings/profile" options={{ title: 'プロフィール' }} />
         <Stack.Screen name="settings/account" options={{ title: 'アカウント' }} />
+        <Stack.Screen name="settings/export-key" options={{ title: '秘密鍵を書き出す' }} />
         <Stack.Screen name="settings/privacy" options={{ title: 'プライバシー' }} />
         <Stack.Screen name="settings/talk" options={{ title: 'トーク' }} />
         <Stack.Screen name="accounts" options={{ title: 'アカウント', ...top }} />
@@ -100,6 +101,8 @@ function Shell() {
         <Stack.Screen name="ai/index" options={{ title: 'AI' }} />
         <Stack.Screen name="ai/[layer]/[id]" options={{ title: 'AIの権限' }} />
         <Stack.Screen name="ai/log" options={{ title: 'AIの記録' }} />
+        <Stack.Screen name="ai/phone" options={{ title: 'AIのAPIキー' }} />
+        <Stack.Screen name="ai/phone-chat" options={{ title: 'AI' }} />
         <Stack.Screen name="ai-about/[id]" options={{ title: 'AIの詳しい情報' }} />
         <Stack.Screen name="call-network" options={{ title: '通話の中継' }} />
         {/* The browser draws its own top bar for these two; the phone apps use the system's. */}

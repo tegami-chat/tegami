@@ -104,5 +104,11 @@ const mixed = [...linkTexts, ...plainTexts, ...fixture.money, ...fixture.everyda
 check('hold: the watcher holds exactly what the app asks the owner about, for every line', mixed.every((t) => (agent.findHold(t) !== null) === perm.needsConfirm({ kind: 'text', text: t })));
 check('hold: money is MONEY and a link alone is LINK', agent.findHold('三万円貸してくれない？') === 'MONEY' && agent.findHold('www.example.com') === 'LINK');
 
+// Files (findFile): a data: address, file://, and paths. The app and the watcher answer the same.
+const fileTexts = ['data:image/png;base64,AAAA', 'file:///home/a/b.txt', 'C:\\Users\\a\\b.txt', 'D:/work/b.pdf', '\\\\server\\share\\a.docx', '見て /home/a/b.txt', '/etc/passwd/x', '~/Documents/a.pdf'];
+const notFileTexts = ['明日の10時でどう？', '4/5 と 6/7 で迷ってる', 'https://example.com/a/b', 'and/or どっちでも', '会議は A:B の比率で', 'ありがとう。また今度ね'];
+for (const t of fileTexts) check(`file: ${t}`, agent.findFile(t) && app.findFile(t));
+for (const t of notFileTexts) check(`not a file: ${t}`, !agent.findFile(t) && !app.findFile(t));
+
 console.log(failures ? `\n${failures} failed` : '\nall passed');
 process.exit(failures ? 1 : 0);

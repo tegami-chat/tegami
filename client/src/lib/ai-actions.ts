@@ -36,6 +36,12 @@ export const AI_CONTACTS_ASK_KIND = 25064;
 export const AI_CONTACTS_KIND = 25065;
 export const AI_PEER_ASK_KIND = 25066;
 export const AI_PEER_RESULT_KIND = 25067;
+/**
+ * A reply my AI may not send with its own key (lib/ai-hold.ts): from the AI to me, and my answer
+ * back. Unlike the asks above it lives for a day, and nobody waits for the answer.
+ */
+export const AI_HOLD_ASK_KIND = 25071;
+export const AI_HOLD_RESULT_KIND = 25072;
 /** An invitation of an AI into a group, and the members' answers. Kept by the relay like messages. */
 export const AI_GROUP_KIND = 10104;
 /**
@@ -45,7 +51,7 @@ export const AI_GROUP_KIND = 10104;
  * replying and sending (its own replies, its MCP tools, its talks with other AIs) until stop false.
  */
 export const AI_STOP_KIND = 25069;
-export const AI_ACTION_KINDS = [AI_SEND_ASK_KIND, AI_SEND_RESULT_KIND, AI_CONTACTS_ASK_KIND, AI_CONTACTS_KIND, AI_PEER_ASK_KIND, AI_PEER_RESULT_KIND, AI_GROUP_KIND];
+export const AI_ACTION_KINDS = [AI_SEND_ASK_KIND, AI_SEND_RESULT_KIND, AI_CONTACTS_ASK_KIND, AI_CONTACTS_KIND, AI_PEER_ASK_KIND, AI_PEER_RESULT_KIND, AI_HOLD_ASK_KIND, AI_GROUP_KIND];
 
 /** Seconds an ask lives; older asks are not handled. */
 export const AI_ASK_TTL = 600;
