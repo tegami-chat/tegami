@@ -3198,6 +3198,7 @@ async function main() {
         await shot(bp, 'noai-here', 'このトークで「AIに読ませない」をオンにした時。入力欄の上に出る');
         await button(bp, '送る').click();
         await bp.getByTestId('noai-mark').waitFor();
+        assert((await bp.getByTestId('noai-mark').getByRole('img', { name: 'AIに読ませない' }).count()) === 1, 'the bubble mark has no 「AIに読ませない」 label');
         // Settings lists the chat under「相手のAI」, and 解除 there turns the chat's switch off.
         await bp.goto(ORIGIN + '/ai');
         await waitText(bp, 'AIに読ませないトーク');
@@ -5589,6 +5590,7 @@ async function main() {
       await ask({ to: b.hex, toName: 'テストB', text: '明日なら午後が空いています。', reason: 'CHECK', detail: '返事の中に日時の約束が入っています' });
       await hold.waitFor({ timeout: 15000 });
       await waitText(p, '安全の確認で止めた返事');
+      assert((await hold.getByTestId('ai-mark-preview').count()) === 1, 'the sample in the window shows no AI mark');
       await shot(p, 'ai-hold-check', '安全の確認で止めた返事。「送る」「送らない」が出る');
       await button(p, '送る').click();
       await hold.waitFor({ state: 'detached', timeout: 10000 });
@@ -5651,6 +5653,7 @@ async function main() {
       await ask({ to: b.hex, toName: 'テストB', text: '午前なら空いています。', reason: 'CHECK' });
       await hold.waitFor({ timeout: 15000 });
       assert((await p.getByTestId('ai-mark-off').count()) === 0, 'a line about the mark showed while marking');
+      assert((await hold.getByTestId('ai-mark-preview').count()) === 1, 'the sample shows no AI mark while marking');
       await button(p, '送る').click();
       await hold.waitFor({ state: 'detached', timeout: 10000 });
       await b.page.goto(`${ORIGIN}/chat/${a.hex}`);
@@ -5665,6 +5668,7 @@ async function main() {
       await ask({ to: b.hex, toName: 'テストB', text: '午後なら空いています。', reason: 'CHECK' });
       await hold.waitFor({ timeout: 15000 });
       await waitText(p, '相手の画面でAIマークが出ません。');
+      assert((await hold.getByTestId('ai-mark-preview').count()) === 0, 'the sample shows an AI mark while the mark is off');
       await shot(p, 'ai-mark-off-hold', 'AIマークを非表示にした設定の承認の窓。小さく1行出る');
       await button(p, '送る').click();
       await hold.waitFor({ state: 'detached', timeout: 10000 });

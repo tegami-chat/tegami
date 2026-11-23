@@ -5,7 +5,7 @@ import { HeaderHeightContext } from 'expo-router/react-navigation';
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 
-import { AiBadge } from '@/components/ai-badge';
+import { AiBadge, NoAiBadge } from '@/components/ai-badge';
 import { Avatar } from '@/components/avatar';
 import { BackButton } from '@/components/back-button';
 import { ChatInfo } from '@/components/chat-info';
@@ -1248,7 +1248,7 @@ ${text}` : text));
                 )}
                 {item.noai && !(mine && myNoAi) && !(!mine && contacts.some((x) => x.pubkey === item.from && x.noai)) && (
                   <View style={s.noAiMark} testID="noai-mark">
-                    <MaterialIcons name="visibility-off" size={12} color={c.muted} />
+                    <NoAiBadge size={12} />
                     <Text style={s.aiMarkInline}>AIに読ませない</Text>
                   </View>
                 )}
@@ -1503,7 +1503,7 @@ ${text}` : text));
 
             {canMarkNoAi && noAiHere && !recordPanel && (
               <View style={s.replyBar} testID="noai-here">
-                <MaterialIcons name="visibility-off" size={18} color={c.accent} />
+                <NoAiBadge size={14} color={c.accent} />
                 <View style={s.replyBody}>
                   <Text style={s.quoteName} numberOfLines={1}>
                     AIに読ませない
@@ -1554,7 +1554,7 @@ ${text}` : text));
                       toggleNoAiHere();
                     }}>
                     <View style={[s.plusIcon, noAiHere && s.plusIconOn]}>
-                      <MaterialIcons name="visibility-off" size={24} color={noAiHere ? c.onAccent : c.text} />
+                      <NoAiBadge size={16} color={noAiHere ? c.onAccent : c.text} />
                     </View>
                     <Text style={s.plusLabel}>AIに読ませない</Text>
                   </Pressable>

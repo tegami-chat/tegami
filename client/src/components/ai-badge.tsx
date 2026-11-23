@@ -5,6 +5,41 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Palette, usePalette } from '@/constants/theme';
 
+/** 「AIに読ませない」の印: 線で囲った「AI」に、左上から右下への斜めの線を重ねる。size は印の高さの目安（文字の大きさ）。 */
+export function NoAiBadge({ size = 12, color, testID }: { size?: number; color?: string; testID?: string }) {
+  const c = usePalette();
+  const col = color ?? c.muted;
+  const w = Math.round(size * 1.6);
+  const h = Math.round(size * 1.2);
+  const len = Math.sqrt(w * w + h * h);
+  const deg = (Math.atan2(h, w) * 180) / Math.PI;
+  const thick = Math.max(1, Math.round(size / 10));
+  return (
+    <View
+      role="img"
+      aria-label="AIに読ませない"
+      accessibilityLabel="AIに読ませない"
+      testID={testID}
+      style={{ width: w, height: h }}>
+      <View style={{ width: w, height: h, borderWidth: 1, borderColor: col, borderRadius: 4, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontSize: Math.round(size * 0.65), lineHeight: Math.round(size * 0.8), color: col, fontWeight: '600' }}>AI</Text>
+      </View>
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          left: (w - len) / 2,
+          top: (h - thick) / 2,
+          width: len,
+          height: thick,
+          backgroundColor: col,
+          transform: [{ rotate: `${deg}deg` }],
+        }}
+      />
+    </View>
+  );
+}
+
 export function AiBadge({ model, testID = 'ai-written', size = 11 }: { model?: string; testID?: string; size?: number }) {
   const c = usePalette();
   const s = styles(c, size);

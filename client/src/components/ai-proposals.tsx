@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { AiBadge } from '@/components/ai-badge';
 import { Palette, usePalette } from '@/constants/theme';
 import { HOLD_TITLES, holdExplain } from '@/lib/ai-hold';
 import { aiMarkWanted, useAiMark } from '@/lib/ai-mark';
@@ -35,6 +36,11 @@ export function AiProposals() {
             <Text style={s.content} numberOfLines={8}>
               {hold.text}
             </Text>
+            {aiMarkWanted(mark, hold.ai, hold.to) && (
+              <View style={s.markRow}>
+                <AiBadge model={contacts.find((x) => x.pubkey === hold.ai)?.model} testID="ai-mark-preview" />
+              </View>
+            )}
           </View>
           {!aiMarkWanted(mark, hold.ai, hold.to) && (
             <Text style={s.explain} testID="ai-mark-off">
@@ -84,6 +90,11 @@ export function AiProposals() {
           <Text style={s.content} numberOfLines={8}>
             {prop.text}
           </Text>
+          {aiMarkWanted(mark, prop.ai, prop.to) && (
+            <View style={s.markRow}>
+              <AiBadge model={contacts.find((x) => x.pubkey === prop.ai)?.model} testID="ai-mark-preview" />
+            </View>
+          )}
         </View>
         {!aiMarkWanted(mark, prop.ai, prop.to) && (
           <Text style={s.explain} testID="ai-mark-off">
@@ -128,6 +139,7 @@ const styles = (c: Palette) =>
     key: { fontSize: 13, color: c.muted },
     big: { fontSize: 22, fontWeight: '700', color: c.text, flexShrink: 1 },
     box: { backgroundColor: c.background, borderRadius: 12, borderWidth: 1, borderColor: c.line, padding: 14, gap: 6 },
+    markRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' },
     content: { fontSize: 17, color: c.text, lineHeight: 25 },
     buttons: { gap: 8, marginTop: 2 },
     button: { minHeight: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
