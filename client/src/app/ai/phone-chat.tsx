@@ -1,10 +1,12 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Stack } from 'expo-router';
+import { HeaderHeightContext } from 'expo-router/react-navigation';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { MenuSheet } from '@/components/menu-sheet';
 import { Palette, usePalette } from '@/constants/theme';
+import { useInsets } from '@/lib/insets';
 import { askPhoneAi, clearPhoneChat, loadPhoneChat, phoneChoice, savePhoneChat, savePhoneChoice, type PhoneLine } from '@/lib/phone-ai/ask';
 import { PhoneAiRefused, SELF_SYSTEM, markStopped, phoneAiStopped, refusalText } from '@/lib/phone-ai/guard';
 import { getKeyStore } from '@/lib/phone-ai/key-store';
@@ -16,6 +18,9 @@ export default function PhoneChatScreen() {
   const c = usePalette();
   const s = styles(c);
   const { stopAi } = useTegami();
+  const insets = useInsets();
+  // Same as the chat screen: the navigation bar above is part of what the keyboard has to clear.
+  const headerHeight = useContext(HeaderHeightContext) ?? 0;
   const [lines, setLines] = useState<PhoneLine[]>(() => loadPhoneChat());
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -68,7 +73,7 @@ export default function PhoneChatScreen() {
   const modelName = provider.models.find((m) => m.id === choice.model)?.name ?? choice.model;
 
   return (
-    <KeyboardAvoidingView style={s.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={s.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'web' ? 0 : headerHeight}>
       <Stack.Screen
         options={{
           headerRight: () => (
@@ -104,7 +109,7 @@ export default function PhoneChatScreen() {
           </Pressable>
         ) : null}
       </ScrollView>
-      <View style={s.bar}>
+      <View style={[s.bar, { paddingBottom: 10 + insets.bottom }]}>
         <Pressable role="button" aria-label="返事を止める" style={s.stop} onPress={stop}>
           <MaterialIcons name="stop-circle" size={26} color={c.danger} />
         </Pressable>
