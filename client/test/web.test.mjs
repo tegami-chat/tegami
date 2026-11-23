@@ -5656,6 +5656,7 @@ async function main() {
       await b.page.goto(`${ORIGIN}/chat/${a.hex}`);
       await waitText(b.page, '午前なら空いています。');
       await waitText(b.page, 'AIが書いた');
+      await shot(b.page, 'ai-mark-friend-sees', '印を付けた時に相手の画面に出る印');
 
       // All off: the window says so, the friend sees no mark, and I still do.
       await p.goto(ORIGIN + '/ai');
@@ -5673,6 +5674,13 @@ async function main() {
       await p.goto(`${ORIGIN}/chat/${b.hex}`);
       await waitText(p, '午後なら空いています。');
       assert((await text(p)).split('AIが書いた').length - 1 === 2, 'my own screen lost the mark');
+      await shot(p, 'ai-mark-my-screen', '送った本人の画面。印を付けずに送った分にも印が出る');
+      await p.goto(`${ORIGIN}/ai/ai/${aiHex}`);
+      await waitText(p, '相手に見せる印');
+      await shot(p, 'ai-mark-ai-layer', 'AI友だち1人の設定の画面');
+      await p.goto(`${ORIGIN}/ai/friend/${b.hex}`);
+      await waitText(p, '相手に見せる印');
+      await shot(p, 'ai-mark-friend-layer', '友だち1人の設定の画面');
       for (const w of [a, b]) await w.context.close();
     });
 
