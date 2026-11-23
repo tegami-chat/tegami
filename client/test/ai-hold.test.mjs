@@ -188,7 +188,7 @@ test('each reason has a heading, and the explanation names the AI and the person
   assert.deepEqual(Object.keys(H.HOLD_TITLES).sort(), ['CHECK', 'FILE', 'FIRST', 'LINK', 'MONEY']);
   assert.equal(H.HOLD_TITLES.CHECK, '安全の確認で止めた返事');
   assert.equal(H.HOLD_TITLES.FIRST, '初めての相手への返事');
-  assert.equal(H.holdExplain('クロード', 'テストB', true), 'クロードがテストBさんに送ろうとしています。送ると、あなたの名前で届き、相手の画面には「AIが書いた」と出ます。');
+  assert.equal(H.holdExplain('クロード', 'テストB', true), 'あなたの名前で、クロードがテストBさんにメッセージを送ろうとしています。');
   assert.ok(!H.holdExplain('クロード', 'npub1abc…wxyz', false).includes('さん'));
   for (const t of [...Object.values(H.HOLD_TITLES), H.holdExplain('a', 'b', true)]) assert.ok(!t.includes('・'));
 });

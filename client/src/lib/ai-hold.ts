@@ -129,5 +129,5 @@ export const HOLD_TITLES: Record<HoldReason, string> = {
 
 /** known: the one it is for is in my friends (otherwise `to` is the short form of the key, with no さん). */
 export function holdExplain(aiName: string, to: string, known: boolean) {
-  return `${aiName}が${to}${known ? 'さん' : ''}に送ろうとしています。送ると、あなたの名前で届き、相手の画面には「AIが書いた」と出ます。`;
+  return `あなたの名前で、${aiName}が${to}${known ? 'さん' : ''}にメッセージを送ろうとしています。`;
 }
