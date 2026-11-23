@@ -1992,8 +1992,8 @@
   "ja": "（2）その利用者による招待の停止"
  },
  "tm.5.2": {
-  "en": "If necessary to prevent abuse from spreading, the operator may also take the actions in the preceding paragraph against users reached by following invitations from the violating user (up to 10 levels).",
-  "ja": "運営者は、不正行為の広がりを防ぐために必要な場合、違反した利用者から招待をたどった先の利用者（10段まで）にも、前項の措置をとることができます。"
+  "en": "If necessary to prevent abuse from spreading, the operator may also take the actions in the preceding paragraph against users reached by following invitations from the violating user.",
+  "ja": "運営者は、不正行為の広がりを防ぐために必要な場合、違反した利用者から招待をたどった先の利用者にも、前項の措置をとることができます。"
  },
  "tm.5.3": {
   "en": "Because messages are stored on the user's device, the operator cannot delete messages on the user's device.",
