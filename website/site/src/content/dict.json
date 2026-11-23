@@ -2000,12 +2000,16 @@
   "ja": "メッセージは利用者の端末に保存されるため、運営者は、利用者の端末の中にあるメッセージを削除することはできません。"
  },
  "tm.6.h": {
-  "en": "6. AI friends",
-  "ja": "6. AIの友だち"
+  "en": "6. Using AI",
+  "ja": "6. AIの利用"
  },
  "tm.6.1": {
   "en": "An AI program that the user runs on their own computer and connects as a friend (\"an AI friend\"), and the external AI services that an AI friend uses, are not provided by the operator and are used at the user's own responsibility.",
   "ja": "利用者が自分のパソコンで動かして友だちとしてつなぐAIのプログラム（以下「AIの友だち」といいます）と、AIの友だちが利用する外部のAIサービスは、運営者が提供するものではなく、利用者の責任で利用するものとします。"
+ },
+ "tm.6.key": {
+  "en": "An AI company's service that the user uses with an API key entered under \"AI API key\" in the settings is also not provided by the operator, and is used at the user's own responsibility.",
+  "ja": "利用者が設定の「AIのAPIキー」に入れたAPIキーで利用するAIの会社のサービスも、運営者が提供するものではなく、利用者の責任で利用するものとします。"
  },
  "tm.6.2": {
   "en": "These terms apply to a message sent by an AI friend as a message sent by the user who owns it.",
