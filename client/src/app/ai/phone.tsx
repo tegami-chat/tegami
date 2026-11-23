@@ -37,15 +37,15 @@ export default function PhoneAiScreen() {
       setTyped('');
       setError(null);
     } catch (e) {
-      setError(e instanceof KeyStoreClosedError ? e.message : 'APIキーを保存できませんでした。もう一度お試しください。');
+      setError(e instanceof KeyStoreClosedError ? e.message : 'APIキーを保存できませんでした。');
     }
   }
 
   return (
     <SettingsPage>
-      <Text style={st.heading} role="heading">プロバイダー</Text>
+      <Text style={st.heading} role="heading">AIの会社</Text>
       <Dropdown
-        label="プロバイダー"
+        label="AIの会社"
         options={PROVIDER_LIST.map((p) => ({ value: p.id, label: p.name }))}
         value={choice.provider}
         onChange={pickProvider}
@@ -57,7 +57,7 @@ export default function PhoneAiScreen() {
       <Pressable role="link" aria-label={`${provider.name}のAPIキーを作る`} onPress={() => void Linking.openURL(provider.keyUrl)}>
         <Text style={st.action}>{provider.name}のAPIキーを作る</Text>
       </Pressable>
-      {saved ? <Text style={st.value}>保存したAPIキーの最後の4文字：{keyTail(saved)}</Text> : null}
+      {saved ? <Text style={st.value}>最後の4文字：{keyTail(saved)}</Text> : null}
       <TextInput
         style={s.input}
         value={typed}
@@ -65,7 +65,7 @@ export default function PhoneAiScreen() {
           setTyped(v);
           setError(null);
         }}
-        placeholder={saved ? '新しいAPIキーを入れると入れ替わります' : 'APIキーを入れる'}
+        placeholder={saved ? '新しいAPIキーを入れる' : 'APIキーを入れる'}
         placeholderTextColor={c.muted}
         secureTextEntry
         autoCapitalize="none"
@@ -96,7 +96,7 @@ export default function PhoneAiScreen() {
       {removing && (
         <Dialog
           title="APIキーを消しますか？"
-          text="この端末に保存したAPIキーを消します。AIの会社で作ったAPIキーは消えないので、使わないならAIの会社の画面で消してください。"
+          text="この端末からだけ消えます。使わないならAIの会社の画面でも消してください。"
           onClose={() => setRemoving(false)}
           buttons={[
             { label: 'キャンセル', variant: 'outlined', onPress: () => setRemoving(false) },

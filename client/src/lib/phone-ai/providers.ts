@@ -43,14 +43,14 @@ export class ProviderError extends Error {
 }
 
 export const KEY_WRONG_TEXT = 'APIキーが正しくありません。設定の「AIのAPIキー」で入れ直してください。';
-export const LIMIT_TEXT = 'いまは使える回数の上限に達しています。しばらく待ってから、もう一度お試しください。';
+export const LIMIT_TEXT = '使える回数の上限に達しています。しばらく待ってからお試しください。';
 
 async function send(f: typeof fetch, url: string, init: RequestInit): Promise<Response> {
   try {
     return await f(url, init);
   } catch (e) {
     if ((e as { name?: string })?.name === 'AbortError') throw e;
-    throw new ProviderError('other', '通信できませんでした。電波を確かめて、もう一度お試しください。');
+    throw new ProviderError('other', '通信できませんでした。電波を確かめてください。');
   }
 }
 
@@ -65,14 +65,14 @@ async function failIfBad(res: Response) {
     } catch {}
     if (/API key not valid|API_KEY_INVALID/.test(body)) throw new ProviderError('key', KEY_WRONG_TEXT);
   }
-  if (!res.ok) throw new ProviderError('other', `AIの会社から返事をもらえませんでした。しばらくしてから、もう一度お試しください（エラー${res.status}）。`);
+  if (!res.ok) throw new ProviderError('other', `AIの会社から返事をもらえませんでした（エラー${res.status}）。`);
 }
 
 async function readJson<T>(res: Response): Promise<T> {
   try {
     return (await res.json()) as T;
   } catch {
-    throw new ProviderError('other', 'AIの会社からの返事を読み取れませんでした。もう一度お試しください。');
+    throw new ProviderError('other', 'AIの会社からの返事を読み取れませんでした。');
   }
 }
 

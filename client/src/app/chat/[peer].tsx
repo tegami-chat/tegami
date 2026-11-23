@@ -347,7 +347,7 @@ export default function Chat() {
         const answer = await askPhoneAi({ peer, system: built.system, messages: built.messages });
         const text = answer.trim();
         if (!text) {
-          showToast('返事の案が届きませんでした。もう一度お試しください');
+          showToast('返事の案が届きませんでした');
           return;
         }
         setDraft((cur) => (cur.trim() ? `${cur}
@@ -355,7 +355,7 @@ ${text}` : text));
         input.current?.focus();
       } catch (e) {
         if (e instanceof PhoneAiRefused || e instanceof ProviderError) showToast(e.message, 5000);
-        else showToast('AIに返事の案を頼めませんでした。もう一度お試しください');
+        else showToast('AIに返事の案を頼めませんでした');
       } finally {
         setPhoneBusy(false);
       }
@@ -1596,7 +1596,7 @@ ${text}` : text));
                 {canPhoneAsk && (
                   <Pressable
                     role="button"
-                    aria-label="AIに返事の案を頼む"
+                    aria-label="AIで返事を書く"
                     disabled={phoneBusy}
                     style={[s.plusItem, phoneBusy && s.disabled]}
                     onPress={() => void phoneAsk()}>
@@ -1604,7 +1604,7 @@ ${text}` : text));
                       <MaterialIcons name="edit-note" size={24} color={c.text} />
                     </View>
                     <Text style={s.plusLabel} numberOfLines={2}>
-                      AIに返事の案を頼む
+                      AIで返事を書く
                     </Text>
                   </Pressable>
                 )}
@@ -1877,9 +1877,9 @@ ${text}` : text));
       {aiNotice && (
         <Dialog
           title="AIにトークを読ませますか？"
-          text={`このトークの新しいメッセージを${AI_DRAFT_MESSAGES}通まで、${personName(aiNotice, contacts)}に渡します。渡したメッセージはTegamiの暗号化の外に出て、AIを動かす会社に届くことがあります。${
+          text={`新しいメッセージを${AI_DRAFT_MESSAGES}通まで、${personName(aiNotice, contacts)}に渡します。暗号化の外に出て、AIの会社に届くことがあります。${
             contact?.noai
-              ? `${contact.name}さんは、自分の文を相手のAIに読ませない設定にしています。${contact.name}さんの文は渡しません。`
+              ? `相手の設定により、${contact.name}さんの文は渡しません。`
               : '「AIに読ませない」の印が付いた文は渡しません。'
           }`}
           onClose={() => setAiNotice(null)}
@@ -1901,9 +1901,9 @@ ${text}` : text));
       {phoneNotice && (
         <Dialog
           title="AIにトークを読ませますか？"
-          text={`このトークの新しいメッセージを${DRAFT_MESSAGES}通まで、あなたのAPIキーでAIの会社に送ります。送ったメッセージはAIの会社も読めます。返事の案は入力欄に入るだけで、自動では送りません。${
+          text={`新しいメッセージを${DRAFT_MESSAGES}通まで、あなたのAPIキーでAIの会社に送ります。AIの会社も読めます。${
             contact?.noai
-              ? `${contact.name}さんは自分のメッセージを相手のAIに読ませない設定にしています。${contact.name}さんのメッセージは送りません。`
+              ? `相手の設定により、${contact.name}さんのメッセージは送りません。`
               : '「AIに読ませない」の印が付いたメッセージは送りません。'
           }`}
           onClose={() => setPhoneNotice(false)}

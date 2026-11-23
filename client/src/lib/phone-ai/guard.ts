@@ -40,17 +40,17 @@ export class PhoneAiRefused extends Error {
 export function refusalText(r: Refusal): string {
   switch (r) {
     case 'stopped':
-      return 'AIを止めています。設定の「AI」でスイッチを1つオンにすると、また使えます。';
+      return 'AIを止めています。設定の「AI」でオンにしてください。';
     case 'noKey':
-      return 'APIキーが入っていません。設定の「AIのAPIキー」で入れてください。';
+      return '設定の「AIのAPIキー」でAPIキーを入れてください。';
     case 'daily':
       return `この相手には、今日はもう${PHONE_DAILY_MAX}回頼みました。明日またお使いください。`;
     case 'secret':
-      return '秘密鍵や大事な番号に見える文字が入っているため、AIに送りませんでした。その部分を消してから、もう一度お試しください。';
+      return '秘密鍵や大事な番号に見える文字はAIに送れません。その部分を消してください。';
     case 'secretReply':
-      return 'AIの返事に秘密鍵や大事な番号に見える文字が入っていたため、表示しませんでした。聞き方を変えて、もう一度お試しください。';
+      return 'AIの返事に秘密鍵や大事な番号に見える文字があったため、表示しませんでした。';
     case 'optout':
-      return '相手が自分のメッセージをAIに読ませない設定にしているため、返事の案を作れません。';
+      return '相手がAIに読ませない設定にしているため、返事の案を作れません。';
     case 'marked':
       return '相手のメッセージにはすべて「AIに読ませない」の印が付いているため、返事の案を作れません。';
     case 'empty':

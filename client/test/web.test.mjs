@@ -5418,7 +5418,7 @@ async function main() {
       // No key yet: no ask button in the chat, and the screens say so.
       await button(p, 'その他').click();
       await p.getByTestId('plus-panel').waitFor();
-      assert((await button(p, 'AIに返事の案を頼む').count()) === 0, 'the ask button shows without a key');
+      assert((await button(p, 'AIで返事を書く').count()) === 0, 'the ask button shows without a key');
       await button(p, 'その他').click();
       await p.goto(ORIGIN + '/settings');
       await waitText(p, 'AIのAPIキー');
@@ -5432,7 +5432,7 @@ async function main() {
       await shot(p, 'phone-ai-no-key', 'APIキーを入れる前の画面');
       assert((await p.getByTestId('phone-ai-row').count()) === 0, 'the AI row shows in the chat list without a key');
       await p.goto(ORIGIN + '/ai/phone-chat');
-      await waitText(p, 'APIキーが入っていません');
+      await waitText(p, '設定の「AIのAPIキー」でAPIキーを入れてください');
       await shot(p, 'phone-chat-no-key', 'APIキーが無い時の話す画面');
 
       // Save a (fake) key: only the last four characters are shown.
@@ -5523,14 +5523,14 @@ async function main() {
       await waitText(p, '来週どこかで会える？');
       await button(p, 'その他').click();
       await p.getByTestId('plus-panel').waitFor();
-      await shot(p, 'phone-draft-plus', '＋を押した時。キーがあると「AIに返事の案を頼む」が出る');
-      await button(p, 'AIに返事の案を頼む').click();
+      await shot(p, 'phone-draft-plus', '＋を押した時。キーがあると「AIで返事を書く」が出る');
+      await button(p, 'AIで返事を書く').click();
       await waitText(p, 'AIにトークを読ませますか？');
       await shot(p, 'phone-draft-notice', '最初の1回だけ出る確認');
       await button(p, 'キャンセル').click();
       assert(asked.length === 2, 'something went to the AI after キャンセル');
       await button(p, 'その他').click();
-      await button(p, 'AIに返事の案を頼む').click();
+      await button(p, 'AIで返事を書く').click();
       await button(p, '読ませる').click();
       await p.waitForFunction(() => document.querySelector('textarea[placeholder="メッセージ"]')?.value === '水曜なら空いています。', null, { timeout: 15000 });
       await shot(p, 'phone-draft-in-composer', '案が入力欄に入った。まだ送られていない');
@@ -5549,9 +5549,9 @@ async function main() {
       await p.goto(ORIGIN + `/chat/${b.hex}`);
       await waitText(p, '来週どこかで会える？');
       await button(p, 'その他').click();
-      await button(p, 'AIに返事の案を頼む').click();
+      await button(p, 'AIで返事を書く').click();
       await waitText(p, 'AIを止めています');
-      await shot(p, 'phone-draft-stopped', '止めた後に「AIに返事の案を頼む」を押した時の表示');
+      await shot(p, 'phone-draft-stopped', '止めた後に「AIで返事を書く」を押した時の表示');
       assert(asked.length === 3, 'something went to the AI after stop');
       for (const w of [a, b]) await w.context.close();
     });
@@ -5664,7 +5664,7 @@ async function main() {
       await shot(p, 'ai-mark-all-off', '「AIマーク」を非表示にした画面');
       await ask({ to: b.hex, toName: 'テストB', text: '午後なら空いています。', reason: 'CHECK' });
       await hold.waitFor({ timeout: 15000 });
-      await waitText(p, 'このメッセージには、相手の画面でAIマークが出ません。');
+      await waitText(p, '相手の画面でAIマークが出ません。');
       await shot(p, 'ai-mark-off-hold', 'AIマークを非表示にした設定の承認の窓。小さく1行出る');
       await button(p, '送る').click();
       await hold.waitFor({ state: 'detached', timeout: 10000 });

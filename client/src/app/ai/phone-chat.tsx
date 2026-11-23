@@ -49,7 +49,7 @@ export default function PhoneChatScreen() {
       setText('');
     } catch (e) {
       if (e instanceof PhoneAiRefused || e instanceof ProviderError) setError(e.message);
-      else if ((e as { name?: string })?.name !== 'AbortError') setError('返事をもらえませんでした。もう一度お試しください。');
+      else if ((e as { name?: string })?.name !== 'AbortError') setError('返事をもらえませんでした。');
     } finally {
       setBusy(false);
       abort.current = null;

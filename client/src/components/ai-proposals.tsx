@@ -31,10 +31,6 @@ export function AiProposals() {
         <View style={s.card}>
           <Text style={s.title}>{HOLD_TITLES[hold.reason]}</Text>
           <Text style={s.explain}>{holdExplain(ai, to, known)}</Text>
-          <View style={s.line}>
-            <Text style={s.key}>宛先</Text>
-            <Text style={s.big}>{to}</Text>
-          </View>
           <View style={s.box}>
             <Text style={s.content} numberOfLines={8}>
               {hold.text}
@@ -42,7 +38,7 @@ export function AiProposals() {
           </View>
           {!aiMarkWanted(mark, hold.ai, hold.to) && (
             <Text style={s.explain} testID="ai-mark-off">
-              このメッセージには、相手の画面でAIマークが出ません。
+              相手の画面でAIマークが出ません。
             </Text>
           )}
           <View style={s.buttons}>
@@ -91,7 +87,7 @@ export function AiProposals() {
         </View>
         {!aiMarkWanted(mark, prop.ai, prop.to) && (
           <Text style={s.explain} testID="ai-mark-off">
-            このメッセージには、相手の画面でAIマークが出ません。
+            相手の画面でAIマークが出ません。
           </Text>
         )}
         <View style={s.buttons}>

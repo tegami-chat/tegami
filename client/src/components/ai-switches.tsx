@@ -118,11 +118,17 @@ export function AiSwitches({ scope, blocked, name }: { scope: Scope; blocked?: (
     setAiSwitch(scope, a, on);
   };
 
+  // When every row has the same reason, it is said once above the card instead of under each row.
+  const whys = actions.map((a) => blocked?.(a) ?? null);
+  const sharedWhy = whys.length > 1 && whys[0] !== null && whys.every((w) => w === whys[0]) ? whys[0] : null;
+
   return (
+    <View style={s.group}>
+    {sharedWhy ? <Text style={s.sharedWhy}>{sharedWhy}</Text> : null}
     <View style={s.card}>
       {actions.map((a, i) => {
-        const why = blocked?.(a) ?? null;
-        const off = why !== null;
+        const why = sharedWhy ? null : (blocked?.(a) ?? null);
+        const off = (blocked?.(a) ?? null) !== null;
         const on = !off && switchValue(p, scope, a);
         const raw = rawValue(p, scope, a);
         const term = termOf(raw);
@@ -188,11 +194,14 @@ export function AiSwitches({ scope, blocked, name }: { scope: Scope; blocked?: (
         />
       </Modal>
     </View>
+    </View>
   );
 }
 
 const styles = (c: Palette) =>
   StyleSheet.create({
+    group: { gap: 6 },
+    sharedWhy: { fontSize: 12, color: c.muted },
     card: { backgroundColor: c.surface, borderRadius: 12, borderWidth: 1, borderColor: c.line, overflow: 'hidden' },
     item: { paddingHorizontal: 14 },
     row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 52 },

@@ -59,7 +59,6 @@ export default function AiPermissionsScreen() {
   return (
     <ScrollView style={s.fill} contentContainerStyle={s.body}>
       <Text style={s.heading}>自分のAI</Text>
-      <Text style={s.note}>自分のAIにできることは、オンにしたものだけです。最初はすべてオフです。</Text>
       <Text style={s.heading}>AIの使用</Text>
       <AiSwitches scope={{ layer: 'all' }} />
       {!readOnly && (
