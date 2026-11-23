@@ -10,10 +10,12 @@ import { AiProposals } from '@/components/ai-proposals';
 import { CallScreen } from '@/components/call-screen';
 import { DesktopShell } from '@/components/desktop-shell';
 import { Gate } from '@/components/gate';
+import { NameGate, useNameAsked } from '@/components/name-gate';
 import { RegisterGate } from '@/components/register-gate';
 import { usePalette } from '@/constants/theme';
 import { goToAccount } from '@/components/account-list';
 import { accountByKey, accounts, useAccounts } from '@/lib/accounts';
+import { k, load } from '@/lib/storage';
 import { takeOpenRequest } from '@/lib/sw-store';
 import { CallProvider } from '@/lib/calls';
 import { useWide } from '@/lib/layout';
@@ -63,13 +65,20 @@ function BackButton() {
 
 function Shell() {
   const c = usePalette();
-  const { status, registration } = useTegami();
+  const { status, registration, myName } = useTegami();
   const wide = useWide();
+  const [nameAsked, markNameAsked] = useNameAsked();
   if (status === 'loading') return null;
   // Every screen stays behind the gate until the account is open.
   if (status !== 'open') return <Gate locked={status === 'locked'} />;
   // Not registered with the relay (no invite code): the Turnstile check first.
   if (registration === 'needed' || registration === 'blocked' || registration === 'deleted') return <RegisterGate />;
+  // A new account: ask once for a name (an account moved from another device brings its own).
+  // The stored name is read too, because the state fills in a moment after the account opens.
+  const named = myName.trim() || load<string>(k('myName'), '').trim();
+  // The screens stay mounted under the name screen: an invite link's page must run (it keeps the
+  // invite code) before the relay is asked, and a person asked for a name sees nothing else meanwhile.
+  const askName = !named && !nameAsked && (registration === 'checking' || registration === 'ok');
   // Desktop: the pages the rail and the list open have no back button (the list stays beside them).
   const top = wide ? { headerLeft: () => null } : {};
   const stack = (
@@ -106,6 +115,11 @@ function Shell() {
   return (
     <CallProvider>
       {wide ? <DesktopShell>{stack}</DesktopShell> : stack}
+      {askName && (
+        <View style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}>
+          <NameGate onDone={markNameAsked} />
+        </View>
+      )}
       {/* Over every screen: an incoming call shows wherever the person is. */}
       <CallScreen />
       {/* Over every screen: an AI waiting for the user's answer. */}

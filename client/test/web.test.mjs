@@ -239,12 +239,25 @@ const infoArea = (page) => (NARROW ? page : page.getByRole('complementary'));
 const closeInfo = (page) => button(page, NARROW ? '戻る' : '閉じる').click();
 
 async function waitOpen(page) {
-  await page.waitForFunction(() => {
-    const t = document.body.innerText;
-    return !!document.querySelector('[aria-label="友だち追加"]') && !t.includes('はじめる') && !t.includes('ロックを解除');
-  }, null, { timeout: 15000 }).catch(async () => {
-    throw new Error(`account did not open (page: ${(await text(page)).replace(/\s+/g, ' ').slice(0, 160)})`);
-  });
+  const skip = page.getByRole('button', { name: 'あとで決める' });
+  const isOpen = () =>
+    page.evaluate(() => {
+      const t = document.body.innerText;
+      return !!document.querySelector('[aria-label="友だち追加"]') && !t.includes('はじめる') && !t.includes('ロックを解除');
+    });
+  for (const end = Date.now() + 15000; Date.now() < end; ) {
+    // A new account is asked for a name first; most tests do not care about it.
+    if (await skip.isVisible().catch(() => false)) await skip.click().catch(() => {});
+    else if (await isOpen().catch(() => false)) return;
+    await page.waitForTimeout(100);
+  }
+  throw new Error(`account did not open (page: ${(await text(page)).replace(/\s+/g, ' ').slice(0, 160)})`);
+}
+/** A new account asks for a name first; tests that open an invite link right after starting skip it. */
+async function skipName(page) {
+  const skip = page.getByRole('button', { name: 'あとで決める' });
+  await skip.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
+  if (await skip.isVisible().catch(() => false)) await skip.click();
 }
 /** The moving link's key leaves the address bar (within a moment of loading). */
 async function keyLeavesAddressBar(page) {
@@ -505,6 +518,19 @@ async function main() {
   });
 
   try {
+    await test('Name screen: a new account is asked for a name once, and the name is kept', async () => {
+      const u = await newUser(browser, { prf: false });
+      await button(u.page, 'はじめる').click();
+      await button(u.page, 'パスキーを使わずに始める').click();
+      await waitText(u.page, '名前を入れてください');
+      await u.page.getByPlaceholder('相手に表示される名前').fill('テスト太郎');
+      await button(u.page, '決める').click();
+      await u.page.waitForFunction(() => !!document.querySelector('[aria-label="友だち追加"]'), null, { timeout: 15000 });
+      await u.page.goto(ORIGIN + '/settings/profile');
+      await u.page.waitForFunction(() => [...document.querySelectorAll('input')].some((i) => i.value === 'テスト太郎'), null, { timeout: 15000 });
+      assert(!(await text(u.page)).includes('名前を入れてください'), 'asked again');
+    });
+
     await test('PRF at create: starts with one prompt, reopens with the passkey', async () => {
       const u = await newUser(browser);
       await button(u.page, 'はじめる').click();
@@ -655,6 +681,7 @@ async function main() {
       await b.page.goto(link.replace('https://app.tegami.chat', ORIGIN));
       await button(b.page, 'はじめる').click();
       await button(b.page, 'パスキーを使わずに始める').click();
+      await skipName(b.page);
       await waitText(b.page, 'マイQRコード');
       assert((await b.page.getByPlaceholder('表示する名前').inputValue()) === 'あ', 'name not carried by the invite');
       await button(b.page, '追加').click();
@@ -2578,6 +2605,7 @@ async function main() {
         await c.page.goto(a.link.replace('https://app.tegami.chat', ORIGIN));
         await button(c.page, 'はじめる').click();
         await button(c.page, 'パスキーを使わずに始める').click();
+        await skipName(c.page);
         await waitText(c.page, 'マイQRコード');
         const cLink = (await text(c.page)).match(/https:\/\/app\.tegami\.chat\/i#\S+/)[0];
         const cHex = nip19.decode(cLink.match(/npub1[0-9a-z]+/)[0]).data;
@@ -4832,6 +4860,7 @@ async function main() {
       assert((await ink()) === 'rgb(23, 29, 25)', `light ink: ${await ink()}`);
       // After starting, the same switch is in the settings.
       await button(page, 'はじめる').click();
+      await waitOpen(page);
       await openSettings(page);
       await waitText(page, '画面の色');
       await button(page, 'ダーク').click();
