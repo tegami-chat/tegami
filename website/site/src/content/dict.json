@@ -1596,8 +1596,8 @@
   "ja": "AIの友だちとは別に、利用者は設定の「AIのAPIキー」に、自分で契約したAIの会社のAPIキーを入れて使えます。この場合、本サービスの公式のアプリは、次の2つの場面に限り、利用者の端末から利用者が選んだAIの会社へ情報を直接送ります。どの会社のAIを使うかは、利用者が選びます。"
  },
  "pv.ai.phone.1": {
-  "en": "Reply drafts: when you tap \"Ask the AI for a reply draft\" in a chat, the app sends up to the 20 most recent text messages in that chat, including your own (each cut to 2,000 characters). Only the first time you use this, the app asks you before sending",
-  "ja": "返事の案：利用者がトークで「AIに返事の案を頼む」を押した時は、そのトークの文字のメッセージのうち新しいものから20通までを送ります（利用者自身のメッセージを含みます。1通あたり2,000文字を超える分は切ります）。この機能を初めて使う1回だけ、送る前に確認の画面を出します"
+  "en": "Reply drafts: when you tap \"Write a reply with AI\" in a chat, the app sends up to the 20 most recent text messages in that chat, including your own (each cut to 2,000 characters). Only the first time you use this, the app asks you before sending",
+  "ja": "返事の案：利用者がトークで「AIで返事を書く」を押した時は、そのトークの文字のメッセージのうち新しいものから20通までを送ります（利用者自身のメッセージを含みます。1通あたり2,000文字を超える分は切ります）。この機能を初めて使う1回だけ、送る前に確認の画面を出します"
  },
  "pv.ai.phone.2": {
   "en": "Your chat with the AI: when you open \"AI\" from your chat list and talk to it, the app sends what you write, together with the earlier messages of that chat (up to 50)",
@@ -1864,8 +1864,8 @@
   "ja": "<a href=\"mailto:hello@tegami.chat\">hello@tegami.chat</a>"
  },
  "pv.date": {
-  "en": "Established: November 15, 2026<br>Revised: November 20, 2026",
-  "ja": "制定日：2026年11月15日<br>改定日：2026年11月20日、2026年◯月◯日"
+  "en": "Established: November 15, 2026<br>Revised: November 20, 2026, December 1, 2026",
+  "ja": "制定日：2026年11月15日<br>改定日：2026年11月20日、2026年12月1日"
  },
  "tm.h": {
   "en": "Terms of service",
