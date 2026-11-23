@@ -6,10 +6,12 @@ import Header from '~/components/Header.astro';
 import Footer from '~/components/Footer.astro';
 import { META, pathOf, type Lang, type PageName } from '~/site';
 
-export interface Props { name: PageName; lang: Lang; scripts?: string[] }
-const { name, lang, scripts = [] } = Astro.props;
-const meta = META[name][lang];
-const url = (l: Lang) => new URL(pathOf(name, l), 'https://tegami.chat').toString();
+// meta and path are for a page that is not in PAGES (a blog post): it has its own title, and only its own language.
+export interface Props { name: PageName; lang: Lang; scripts?: string[]; meta?: { title: string; desc: string }; path?: string }
+const { name, lang, scripts = [], meta: own, path } = Astro.props;
+const meta = own ?? META[name][lang];
+const url = (l: Lang) => new URL(path ?? pathOf(name, l), 'https://tegami.chat').toString();
+// The language menu of a post goes to the lists; the hreflang links name only the post's own language.
 const alternates = { en: pathOf(name, 'en'), ja: pathOf(name, 'ja') };
 ---
 <!doctype html>
@@ -22,11 +24,14 @@ const alternates = { en: pathOf(name, 'en'), ja: pathOf(name, 'ja') };
     <meta property="og:title" content={meta.title} />
     <meta property="og:description" content={meta.desc} />
     <meta property="og:url" content={url(lang)} />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={path ? 'article' : 'website'} />
     <link rel="canonical" href={url(lang)} />
+    {path ? <link rel="alternate" hreflang={lang} href={url(lang)} /> : <>
     <link rel="alternate" hreflang="en" href={url('en')} />
     <link rel="alternate" hreflang="ja" href={url('ja')} />
     <link rel="alternate" hreflang="x-default" href={url('en')} />
+    </>}
+    {path && <link rel="alternate" type="application/rss+xml" href={pathOf('blog', lang) + '/rss.xml'} />}
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <script is:inline src="/theme-init.js"></script>
   </head>

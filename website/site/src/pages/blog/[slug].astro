@@ -1,0 +1,13 @@
+---
+// One English blog post. Drafts are not in the list, so they get no page.
+import { render } from 'astro:content';
+import BlogPost from '~/components/pages/BlogPost.astro';
+import { postsOf } from '~/lib/blog';
+
+export async function getStaticPaths() {
+  return (await postsOf('en')).map((post) => ({ params: { slug: post.id }, props: { post } }));
+}
+const { post } = Astro.props;
+const { Content } = await render(post);
+---
+<BlogPost post={post} lang="en"><Content /></BlogPost>

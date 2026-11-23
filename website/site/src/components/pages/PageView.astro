@@ -9,6 +9,7 @@ import Status from '~/components/pages/Status.astro';
 import Privacy from '~/components/pages/Privacy.astro';
 import Terms from '~/components/pages/Terms.astro';
 import Donate from '~/components/pages/Donate.astro';
+import Blog from '~/components/pages/Blog.astro';
 import type { Lang, PageName } from '~/site';
 
 export interface Props { name: PageName; lang: Lang }
@@ -27,4 +28,5 @@ const scripts = name === 'index' ? ['/diff.js'] : [...(DOC.includes(name) ? ['/d
   {name === 'privacy' && <Privacy lang={lang} />}
   {name === 'terms' && <Terms lang={lang} />}
   {name === 'donate' && <Donate lang={lang} />}
+  {name === 'blog' && <Blog lang={lang} />}
 </Base>

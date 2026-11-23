@@ -1,0 +1,26 @@
+---
+// The list of posts in one language, newest first.
+import Section from '~/components/ui/Section.astro';
+import SectionHeading from '~/components/ui/SectionHeading.astro';
+import { t, type Lang } from '~/site';
+import { postsOf, blogPath } from '~/lib/blog';
+const { lang = 'en' } = Astro.props as { lang?: Lang };
+const x = (k: string) => t(k, lang);
+const posts = await postsOf(lang);
+---
+<main>
+<Section rhythm="page" width="prose">
+<SectionHeading level={1} title={x('nav.blog')} />
+{posts.length === 0
+  ? <p class="text-fg-muted">{x('blog.empty')}</p>
+  : <ul class="divide-y divide-line">
+      {posts.map((p) => (
+        <li class="py-4">
+          <p class="text-caption text-fg-muted"><time datetime={p.data.date}>{p.data.date}</time></p>
+          <h2 class="text-subsection"><a href={blogPath(lang, p.id)} class="hover:underline">{p.data.title}</a></h2>
+          <p class="mt-2 text-fg-muted">{p.data.description}</p>
+        </li>
+      ))}
+    </ul>}
+</Section>
+</main>

@@ -2,7 +2,7 @@
 
 Astro のプロジェクトで、見た目は自作です。テンプレートは使っていません。
 
-トップ、安全の仕組み、よくある質問、運営者情報、他アプリとの比較、ロードマップ、稼働状況、プライバシーポリシーの8ページを、英語（`/`）と日本語（`/ja/`）で作ります。開発者向けのページは `..\docs`（Starlight）です。
+トップ、安全の仕組み、よくある質問、運営者情報、他アプリとの比較、ロードマップ、稼働状況、プライバシーポリシーの8ページとブログを、英語（`/`）と日本語（`/ja/`）で作ります。開発者向けのページは `..\docs`（Starlight）です。
 
 ## 構成
 
@@ -12,6 +12,15 @@ Astro のプロジェクトで、見た目は自作です。テンプレート�
 - `src/components/pages/`：ほかのページ。`PageView.astro` がページ名から選ぶ。
 - `src/styles/global.css`：Tailwind CSS 4。色（forest、nostr、paper、night）とフォントは `@theme` に置く。
 - `src/site.ts`：ページの一覧、ページ名と説明、`t(key, lang)`。
+
+## ブログ
+
+記事は `src/content/blog/` に Markdown で置く。ファイル名がそのまま URL になる（`2026-11-launch.md` は `/blog/2026-11-launch` と `/ja/blog/2026-11-launch` の片方）。
+
+- 先頭に `title`、`description`、`date`（YYYY-MM-DD）、`lang`（`ja` か `en`）を書く。`draft: true` は省略すると false。
+- `draft: true` の記事は、ページも一覧も RSS も出ない。
+- 一覧は `/blog`（英語）と `/ja/blog`（日本語）。言語ごとに新しい順。RSS は `/blog/rss.xml` と `/ja/blog/rss.xml`。
+- `build.mjs` が `blog/` と `ja/blog/` を `..public` へ写す。
 
 ## ビルド
 

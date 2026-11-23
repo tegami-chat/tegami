@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Tegami blog</title>
+    <link>https://tegami.chat/blog</link>
+    <description>News from Tegami.</description>
+    <language>en</language>
+
+  </channel>
+</rss>

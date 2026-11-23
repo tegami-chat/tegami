@@ -33,6 +33,11 @@ for (const f of readdirSync('site/dist').filter((f) => f.endsWith('.html'))) {
   copyFileSync(`site/dist/${f}`, f === 'ja.html' ? 'public/ja/index.html' : `public/${f}`);
 }
 for (const f of readdirSync('site/dist/ja').filter((f) => f.endsWith('.html'))) copyFileSync(`site/dist/ja/${f}`, `public/ja/${f}`);
+// The blog: posts and the RSS feed live in folders (blog/ and ja/blog/); the lists are blog.html and ja/blog.html above.
+for (const d of ['blog', 'ja/blog']) {
+  rmSync('public/' + d, { recursive: true, force: true });
+  if (existsSync('site/dist/' + d)) cpSync('site/dist/' + d, 'public/' + d, { recursive: true });
+}
 // Their scripts, styles and the page scripts (the animation, the status check and the theme setup).
 rmSync('public/_site', { recursive: true, force: true });
 cpSync('site/dist/_site', 'public/_site', { recursive: true });

@@ -2107,6 +2107,18 @@
   "en": "FAQ",
   "ja": "よくある質問"
  },
+ "nav.blog": {
+  "en": "Blog",
+  "ja": "ブログ"
+ },
+ "blog.empty": {
+  "en": "No posts yet.",
+  "ja": "まだ記事はありません。"
+ },
+ "blog.back": {
+  "en": "All posts",
+  "ja": "記事の一覧"
+ },
  "nav.menu": {
   "en": "Menu",
   "ja": "メニュー"
