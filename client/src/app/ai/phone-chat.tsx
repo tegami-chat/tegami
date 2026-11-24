@@ -2,7 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Stack } from 'expo-router';
 import { HeaderHeightContext } from 'expo-router/react-navigation';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { MenuSheet } from '@/components/menu-sheet';
 import { Palette, usePalette } from '@/constants/theme';
@@ -19,6 +19,17 @@ export default function PhoneChatScreen() {
   const s = styles(c);
   const { stopAi } = useTegami();
   const insets = useInsets();
+  // While the keyboard is up it covers the home indicator, so the bar needs no room for it.
+  const [keyboardUp, setKeyboardUp] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    const show = Keyboard.addListener('keyboardWillShow', () => setKeyboardUp(true));
+    const hide = Keyboard.addListener('keyboardWillHide', () => setKeyboardUp(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
   // Same as the chat screen: the navigation bar above is part of what the keyboard has to clear.
   const headerHeight = useContext(HeaderHeightContext) ?? 0;
   const [lines, setLines] = useState<PhoneLine[]>(() => loadPhoneChat());
@@ -109,7 +120,7 @@ export default function PhoneChatScreen() {
           </Pressable>
         ) : null}
       </ScrollView>
-      <View style={[s.bar, { paddingBottom: 10 + insets.bottom }]}>
+      <View style={[s.bar, { paddingBottom: 10 + (keyboardUp ? 0 : insets.bottom) }]}>
         <Pressable role="button" aria-label="返事を止める" style={s.stop} onPress={stop}>
           <MaterialIcons name="stop-circle" size={26} color={c.danger} />
         </Pressable>

@@ -8,7 +8,6 @@
     "scheme": "tegami",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
       "bundleIdentifier": "chat.tegami.app",
       "supportsTablet": false,
       "infoPlist": {
