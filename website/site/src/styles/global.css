@@ -130,6 +130,8 @@
 
 :lang(ja) h1, :lang(ja) h2, :lang(ja) h3, :lang(ja) th, :lang(ja) td, :lang(ja) summary, :lang(ja) li { word-break: auto-phrase; }
 :lang(ja) p { word-break: auto-phrase; text-wrap: pretty; }
+/* Long reading text (terms, policy): Safari applies pretty to every line and leaves a wide gap on the right, so plain wrapping there. */
+:lang(ja) .prose p { text-wrap: wrap; }
 h1, h2, h3 { text-wrap: balance; }
 /* Cells of the comparison matrix are narrow: let the Japanese break between any characters so that no column grows wide. */
 :lang(ja) .matrix td, :lang(ja) .matrix th { word-break: normal; }
