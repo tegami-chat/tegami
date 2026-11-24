@@ -318,7 +318,7 @@ type TegamiState = {
   /** My own name, shared through my invite link and my profile card. */
   myName: string;
   setMyName: (name: string) => void;
-  /** My「自分の文を相手のAIに読ませない」(lib/ai-optout.ts). Told to friends, synced to my devices. */
+  /** My「自分のメッセージを相手のAIに読ませない」(lib/ai-optout.ts). Told to friends, synced to my devices. */
   myNoAi: boolean;
   setMyNoAi: (on: boolean) => Promise<void>;
   /** My own profile picture, shared privately with contacts only. */
@@ -622,7 +622,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   const [myAvatar, setMyAvatarState] = useState<FileRef | null>(null);
   const myAvatarRef = useRef<FileRef | null>(null);
   myAvatarRef.current = myAvatar;
-  // My「自分の文を相手のAIに読ませない」(lib/ai-optout.ts): in my profile card and my ledger.
+  // My「自分のメッセージを相手のAIに読ませない」(lib/ai-optout.ts): in my profile card and my ledger.
   const [myNoAiState, setMyNoAiState] = useState(false);
   const myNoAiRef = useRef(false);
   myNoAiRef.current = myNoAiState;
@@ -1377,7 +1377,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     // When each item last changed, so later changes on my other devices merge in correctly.
     // Without it (an older version), what came along counts as the oldest state.
     ledgerRef.current = moved.sync ? cleanEntries(moved.sync) : null;
-    // My「自分の文を相手のAIに読ませない」comes along in the ledger (lib/ai-optout.ts).
+    // My「自分のメッセージを相手のAIに読ませない」comes along in the ledger (lib/ai-optout.ts).
     const movedNoAi = ledgerRef.current?.['p:noai']?.v === 1;
     saveMyNoAi(movedNoAi);
     myNoAiRef.current = movedNoAi;
@@ -1505,7 +1505,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       if (!targets.length) return;
       const at = Math.max(Math.floor(Date.now() / 1000), lastProfileAt.current + 1);
       lastProfileAt.current = at;
-      // noai: my「自分の文を相手のAIに読ませない」(lib/ai-optout.ts), always said, on or off.
+      // noai: my「自分のメッセージを相手のAIに読ませない」(lib/ai-optout.ts), always said, on or off.
       const content = JSON.stringify({ name: myNameRef.current, avatar, noai: myNoAiRef.current });
       await Promise.all(
         targets.map((to) => {
@@ -1553,7 +1553,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   );
 
   /**
-   * My「自分の文を相手のAIに読ませない」(lib/ai-optout.ts): kept here, written into my ledger for
+   * My「自分のメッセージを相手のAIに読ませない」(lib/ai-optout.ts): kept here, written into my ledger for
    * my other devices (the effect below stampSection), and told to every friend in my profile card.
    */
   const setMyNoAi = useCallback(

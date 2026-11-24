@@ -179,7 +179,7 @@ export function AiSwitches({ scope, blocked, name }: { scope: Scope; blocked?: (
       <Modal transparent visible={confirmAutosend} onRequestClose={() => setConfirmAutosend(false)}>
         <Dialog
           title="「確認なしで送る」をオンにしますか？"
-          text={`AIが確認の画面を出さずに、あなたの名前で${name ? `${name}に` : ''}メッセージを送れるようになります。ただし、写真や動画、ファイル、音声、リンクを含む文や、お金の話に見える文は、オンにしても送る前に確認の画面が出ます。`}
+          text={`AIが確認の画面を出さずに、あなたの名前で${name ? `${name}に` : ''}メッセージを送れるようになります。ただし、写真や動画、ファイル、音声、リンクを含むメッセージや、お金の話に見えるメッセージは、オンにしても送る前に確認の画面が出ます。`}
           stacked
           onClose={() => setConfirmAutosend(false)}
           buttons={[

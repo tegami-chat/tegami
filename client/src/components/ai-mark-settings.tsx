@@ -13,7 +13,7 @@ const CHOICES: { value: AiMarkChoice; label: string }[] = [
   { value: 'off', label: '非表示' },
 ];
 
-const nowText = (on: boolean) => (on ? 'いまは表示' : 'いまは非表示');
+const nowText = (on: boolean) => (on ? '現在は表示' : '現在は非表示');
 
 /** The switch for every AI. */
 export function AiMarkAll() {

@@ -44,7 +44,7 @@ export function AiProposals() {
           </View>
           {!aiMarkWanted(mark, hold.ai, hold.to) && (
             <Text style={s.explain} testID="ai-mark-off">
-              相手の画面でAIマークが出ません。
+              相手の画面にはAIマークが出ません。
             </Text>
           )}
           <View style={s.buttons}>
@@ -98,7 +98,7 @@ export function AiProposals() {
         </View>
         {!aiMarkWanted(mark, prop.ai, prop.to) && (
           <Text style={s.explain} testID="ai-mark-off">
-            相手の画面でAIマークが出ません。
+            相手の画面にはAIマークが出ません。
           </Text>
         )}
         <View style={s.buttons}>

@@ -406,7 +406,7 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
       {dialog === 'myAi' && peer && (
         <Dialog
           title={`${personName(peer, contacts)}を自分のAIにしますか？`}
-          text="自分のパソコンで動かしているAIだけを選んでください。自分のAIは、AIの権限で許したことを、あなたの名前で代わりにできるようになります。"
+          text="自分のパソコンで動かしているAIだけを選んでください。自分のAIは、「AIの権限」で許可したことを、あなたの名前で代わりにできるようになります。"
           stacked
           onClose={() => setDialog(null)}
           buttons={[
@@ -426,7 +426,7 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
       {dialog === 'block' && peer && (
         <Dialog
           title={`${personName(peer, contacts)}をブロックしますか？`}
-          text="ブロックした相手とはメッセージの送受信ができなくなります。相手には伝わりません。"
+          text="ブロックした相手とはメッセージのやり取りができなくなります。ブロックしたことは相手に知らされません。"
           stacked
           onClose={() => setDialog(null)}
           buttons={[
@@ -481,7 +481,7 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
 
       {dialog === 'delete' && peer && (
         <Dialog
-          text={`${chatName(peer, contacts, groups)}${group ? 'の' : 'との'}トークを削除しますか？この端末から消えます。`}
+          text={`${chatName(peer, contacts, groups)}${group ? 'の' : 'との'}トークをこの端末から削除しますか？相手の端末からは消えません。`}
           onClose={() => setDialog(null)}
           buttons={[
             {

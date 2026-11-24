@@ -18,9 +18,9 @@ export function AiOptOutSettings() {
     <>
       <Text style={s.heading}>相手のAI</Text>
       <Group>
-        <SwitchRow label="自分の文を相手のAIに読ませない" value={myNoAi} onChange={(on) => void setMyNoAi(on).catch(() => {})} />
+        <SwitchRow label="自分のメッセージを相手のAIに読ませない" value={myNoAi} onChange={(on) => void setMyNoAi(on).catch(() => {})} />
       </Group>
-      <Text style={s.note}>オンにすると、友だちの公式のTegamiは、あなたの文を下書きなどでAIに渡しません。改造したアプリには効きません。</Text>
+      <Text style={s.note}>オンにすると、相手が使っている公式のTegamiは、あなたのメッセージを下書きなどでAIに渡しません。改造したアプリには効きません。</Text>
       {!myNoAi && rooms.length > 0 && (
         <>
           <Text style={s.subheading}>AIに読ませないトーク</Text>

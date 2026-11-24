@@ -2,7 +2,7 @@
 //
 // Two ways to say no, both kept by the official app only (a changed app does not follow them):
 //
-// - A person can turn on「自分の文を相手のAIに読ませない」in the settings. The choice travels in
+// - A person can turn on「自分のメッセージを相手のAIに読ませない」in the settings. The choice travels in
 //   the private profile card (rumor kind 10100, field `noai: true`) to every friend, and to my
 //   own devices in the ledger (own-sync.ts, entry "p:noai"). While it is on, every message I
 //   send also carries the tag below, so it holds even for a friend whose app has not seen my
@@ -67,9 +67,9 @@ export function nothingToRead(list: Readable[], friend: Person | undefined, me: 
 
 /** The line shown to the person for each reason (the chat screen's dialog). */
 export function nothingToReadText(reason: NothingToRead, name: string): string {
-  if (reason === 'optout') return `${name}さんは、自分の文を相手のAIに読ませない設定にしています。${name}さんの文はAIに渡しません。`;
-  if (reason === 'marked') return `${name}さんの文には、どれも「AIに読ませない」の印が付いています。印の付いた文はAIに渡しません。`;
-  return `${name}さんの文がまだないので、下書きを頼めません。`;
+  if (reason === 'optout') return `${name}さんは自分のメッセージを相手のAIに読ませない設定にしているため、AIに渡せません。`;
+  if (reason === 'marked') return `${name}さんのメッセージにはすべて「AIに読ませない」の印が付いているため、AIに渡せません。`;
+  return `${name}さんのメッセージがまだないため、下書きを頼めません。`;
 }
 
 // ---------- my own choice (this device; my other devices get it through the ledger) ----------

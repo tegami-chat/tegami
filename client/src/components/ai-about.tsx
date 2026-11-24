@@ -35,7 +35,7 @@ export function AiAbout({ id }: { id: string }) {
               </View>
             </View>
           </View>
-          <Text style={s.note}>{o ? `${owner}が自分の鍵で署名しています。本名や本人確認の印ではありません。` : '持ち主の署名がありません。誰が動かしているAIか確かめられません。'}</Text>
+          <Text style={s.note}>{o ? `${owner}が自分のアカウントの秘密鍵で署名しています。本名や本人確認の印ではありません。` : '持ち主の署名がありません。誰が動かしているAIか確かめられません。'}</Text>
         </View>
       )}
       <View testID="ai-self">

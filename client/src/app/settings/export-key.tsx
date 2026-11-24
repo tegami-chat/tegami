@@ -68,7 +68,7 @@ export default function ExportKey() {
   const message = {
     short: `パスワードは${MIN_PASSWORD}文字以上にしてください。`,
     mismatch: 'パスワードが一致しません。',
-    unverified: '本人確認ができなかったため、書き出しませんでした。',
+    unverified: '本人確認ができなかったため、書き出しませんでした。もう一度試してください。',
     failed: '書き出せませんでした。もう一度お試しください。',
   };
 
@@ -82,12 +82,13 @@ export default function ExportKey() {
 
   return (
     <SettingsPage>
-      <Text style={s.value}>秘密鍵を、決めたパスワードで暗号化したNIP-49の形（ncryptsec）で書き出します。</Text>
+      <Text style={s.value}>ほかのNostrのアプリでこのアカウントを使う時に書き出します。ここで決めるパスワードで秘密鍵を暗号化し、NIP-49の形（ncryptsec）の文字列にします。</Text>
       {result ? (
         <View style={[s.card, s.result]}>
           <Text style={s.code} selectable testID="exported-key">
             {result}
           </Text>
+          <Text style={s.note}>書き出した文字列とパスワードは、別々の場所に保管してください。</Text>
           <Pressable style={s.inlineBtn} onPress={copy} role="button">
             <Text style={s.action}>{copied ? 'コピーしました' : 'コピー'}</Text>
           </Pressable>
@@ -97,7 +98,7 @@ export default function ExportKey() {
         </View>
       ) : (
         <>
-          <Text style={s.heading}>パスワード（12文字以上）</Text>
+          <Text style={s.heading}>書き出しに使うパスワード（12文字以上）</Text>
           <TextInput
             style={s.input}
             value={password}
@@ -108,7 +109,7 @@ export default function ExportKey() {
             editable={!busy}
             testID="export-password"
           />
-          <Text style={s.heading}>パスワードをもう一度</Text>
+          <Text style={s.heading}>同じパスワードをもう一度</Text>
           <TextInput
             style={s.input}
             value={again}
@@ -129,9 +130,9 @@ export default function ExportKey() {
         <Dialog
           title="秘密鍵を書き出しますか？"
           text={
-            '書き出した文字とパスワードがあれば、誰でもこのアカウントとしてメッセージを送れ、これまでのトークも読めます。\n\n' +
-            '書き出した秘密鍵は取り消せません。漏れた時は、新しいアカウントを作り直すしかありません。\n\n' +
-            'ほかのアプリのプロフィールに本名を書くと、このアカウントがあなたのものだと誰にでも分かります。'
+            '書き出した文字列とパスワードの両方を知った人は、あなたになりすましてメッセージを送れます。これまでのトークも読めます。\n\n' +
+            '秘密鍵は後から変えられません。他人に知られた時は、新しいアカウントを作り直すしかありません。\n\n' +
+            'ほかのNostrのアプリのプロフィールは、誰でも見られます。そこに本名を書くと、このアカウントがあなたのものだと分かります。'
           }
           stacked
           onClose={() => setAsking(false)}

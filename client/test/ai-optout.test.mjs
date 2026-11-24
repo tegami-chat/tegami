@@ -60,7 +60,7 @@ test('why a draft cannot be asked for', () => {
   assert.equal(O.nothingToRead([msg(F, 'やあ', { noai: true })], { pubkey: F }, ME), 'marked');
   assert.equal(O.nothingToRead([msg(ME, '私だけ')], { pubkey: F }, ME), 'empty');
   assert.equal(O.nothingToRead([msg(F, 'やあ', { noai: true }), msg(F, 'ふつう')], { pubkey: F }, ME), null);
-  assert.match(O.nothingToReadText('optout', 'テストB'), /テストBさんは、自分の文を相手のAIに読ませない設定/);
+  assert.match(O.nothingToReadText('optout', 'テストB'), /テストBさんは自分のメッセージを相手のAIに読ませない設定/);
 });
 
 test('a profile card from before says nothing about noai', () => {

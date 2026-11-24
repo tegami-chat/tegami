@@ -48,7 +48,7 @@ export function refusalText(r: Refusal): string {
     case 'secret':
       return '秘密鍵や大事な番号に見える文字はAIに送れません。その部分を消してください。';
     case 'secretReply':
-      return 'AIの返事に秘密鍵や大事な番号に見える文字があったため、表示しませんでした。';
+      return 'AIの返事に秘密鍵や大事な番号に見える文字があったため、表示しませんでした。もう一度頼むか、自分で返事を書いてください。';
     case 'optout':
       return '相手がAIに読ませない設定にしているため、返事の案を作れません。';
     case 'marked':

@@ -317,7 +317,7 @@ export default function Chat() {
           setAiNothing(nothingToReadText(e.reason, contact ? displayName(contact) : ''));
           return;
         }
-        showToast(e instanceof AiNotAllowedError ? 'AIの権限で止めました' : '頼めませんでした。もう一度お試しください');
+        showToast(e instanceof AiNotAllowedError ? 'AIの権限で止めました。設定の「AI」で許可を変えられます。' : '頼めませんでした。もう一度お試しください');
       }
     },
     [peer, askAiDraft, showToast, contact],
@@ -345,7 +345,7 @@ export default function Chat() {
         const answer = await askPhoneAi({ peer, system: built.system, messages: built.messages });
         const text = answer.trim();
         if (!text) {
-          showToast('返事の案が届きませんでした');
+          showToast('返事の案が届きませんでした。もう一度試してください。');
           return;
         }
         setDraft((cur) => (cur.trim() ? `${cur}
@@ -353,7 +353,7 @@ ${text}` : text));
         input.current?.focus();
       } catch (e) {
         if (e instanceof PhoneAiRefused || e instanceof ProviderError) showToast(e.message, 5000);
-        else showToast('AIに返事の案を頼めませんでした');
+        else showToast('AIに返事の案を頼めませんでした。もう一度試してください。');
       } finally {
         setPhoneBusy(false);
       }
@@ -373,7 +373,7 @@ ${text}` : text));
     });
     const t = setTimeout(() => {
       setAiWaiting(null);
-      showToast('下書きが届きませんでした');
+      showToast('下書きが届きませんでした。もう一度試してください。');
     }, AI_DRAFT_WAIT_MS);
     return () => {
       off();
@@ -1371,7 +1371,7 @@ ${text}` : text));
                       <Text style={s.cautionTitle}>お金やリンクの話に注意してください</Text>
                     </View>
                     <Text style={s.cautionBody}>
-                      この相手は友だちではありません。お金の振り込みやリンクを開くよう求められたら、詐欺かもしれません。
+                      この相手は友だちではありません。お金を振り込むことやリンクを開くよう求められたら、詐欺かもしれません。
                     </Text>
                     <View style={s.cautionButtons}>
                       <Pressable
@@ -1610,7 +1610,7 @@ ${text}` : text));
                 </View>
                 {!recording && !recorded ? (
                   <>
-                    <Text style={s.recordHint}>ボタンをタップして録音してください</Text>
+                    <Text style={s.recordHint}>ボタンを押して録音してください</Text>
                     <View style={s.recordControls}>
                       <Pressable
                         role="button"
@@ -1863,10 +1863,10 @@ ${text}` : text));
       {aiNotice && (
         <Dialog
           title="AIにトークを読ませますか？"
-          text={`新しいメッセージを${AI_DRAFT_MESSAGES}通まで、${personName(aiNotice, contacts)}に渡します。暗号化の外に出て、AIの会社に届くことがあります。${
+          text={`新しいメッセージを${AI_DRAFT_MESSAGES}通まで、${personName(aiNotice, contacts)}に渡します。AIの種類によっては、暗号化していないメッセージがAIの会社に届きます。${
             contact?.noai
-              ? `相手の設定により、${displayName(contact)}さんの文は渡しません。`
-              : '「AIに読ませない」の印が付いた文は渡しません。'
+              ? `相手の設定により、${displayName(contact)}さんのメッセージは渡しません。`
+              : '「AIに読ませない」の印が付いたメッセージは渡しません。'
           }`}
           onClose={() => setAiNotice(null)}
           buttons={[
@@ -1887,7 +1887,7 @@ ${text}` : text));
       {phoneNotice && (
         <Dialog
           title="AIにトークを読ませますか？"
-          text={`新しいメッセージを${DRAFT_MESSAGES}通まで、あなたのAPIキーでAIの会社に送ります。AIの会社も読めます。${
+          text={`新しいメッセージを${DRAFT_MESSAGES}通まで、設定したAPIキーを使ってAIの会社に送ります。AIの会社も読めます。${
             contact?.noai
               ? `相手の設定により、${displayName(contact)}さんのメッセージは送りません。`
               : '「AIに読ませない」の印が付いたメッセージは送りません。'
@@ -1955,7 +1955,7 @@ ${text}` : text));
 
       {deletingId && (
         <Dialog
-          text="このメッセージはこの端末でのみ削除されます。相手の端末からは削除されません。"
+          text="このメッセージはこの端末からだけ削除します。相手の端末からは消えません。"
           onClose={() => setDeletingId(null)}
           buttons={[
             {
@@ -1964,7 +1964,7 @@ ${text}` : text));
               onPress: () => setDeletingId(null),
             },
             {
-              label: 'この端末でのみ削除',
+              label: 'この端末から削除',
               variant: 'danger',
               onPress: () => {
                 deleteMessage(deletingId);
@@ -1978,7 +1978,7 @@ ${text}` : text));
       {blockingPeer && (
         <Dialog
           title={`${personName(blockingPeer, contacts)}をブロックしますか？`}
-          text="ブロックした相手とはメッセージの送受信ができなくなります。相手には伝わりません。"
+          text="ブロックした相手とはメッセージのやり取りができなくなります。ブロックしたことは相手に知らされません。"
           stacked
           onClose={() => setBlockingPeer(null)}
           buttons={[

@@ -23,7 +23,7 @@
 // - the AI log: it records what happened on one device.
 // - a friend's「AIに読ませない」: like the picture, it comes from the friend's profile card.
 //
-// My own「自分の文を相手のAIに読ませない」is one entry, "p:noai" (value 1 while on), so all my
+// My own「自分のメッセージを相手のAIに読ませない」is one entry, "p:noai" (value 1 while on), so all my
 // devices tell my friends the same (lib/ai-optout.ts).
 
 import { AI_ACTIONS, AI_LIMIT_KEYS, clampLimit, cleanAiPermissions, type AiLimits, type AiPermissions } from './ai-permissions';
@@ -47,7 +47,7 @@ export const BASELINE_AT = 1;
 export type Entry = { at: number; v?: unknown; local?: true };
 export type Ledger = Record<string, Entry>;
 export type Section = 'c' | 'g' | 'b' | 'a' | 'p';
-/** noai: my「自分の文を相手のAIに読ませない」(lib/ai-optout.ts). */
+/** noai: my「自分のメッセージを相手のAIに読ませない」(lib/ai-optout.ts). */
 export type AccountLists = { contacts: Contact[]; groups: Group[]; blocked: string[]; ai: AiPermissions; noai?: boolean };
 
 const HEX = /^[0-9a-f]{64}$/;

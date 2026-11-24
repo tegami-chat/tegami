@@ -78,7 +78,7 @@ export function AccountList({ add = true }: { add?: boolean }) {
         {removing && (
           <Dialog
             title={`${accountName(removing)}をこの端末から削除しますか？`}
-            text="この端末のトーク履歴と設定が消えます。ほかの端末か復旧コードがあれば、このアカウントに戻れます。"
+            text="この端末のトーク履歴と設定が消えます。ほかの端末も復旧コードも無い時は、このアカウントに二度と戻れません。"
             onClose={() => setRemoving(null)}
             buttons={[
               { label: 'キャンセル', variant: 'outlined', onPress: () => setRemoving(null) },

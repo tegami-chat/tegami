@@ -119,7 +119,7 @@ export function Gate({ locked }: { locked: boolean }) {
           <Text style={s.notice}>ほかの端末から受け取っています</Text>
         ) : (
           <>
-            <Text style={s.notice}>このリンクは使えません。リンクは作ってから10分で使えなくなります。元の端末の設定で、もう一度作ってください。</Text>
+            <Text style={s.notice}>このリンクは使えません。リンクは作ってから10分で使えなくなります。元の端末の「設定」→「アカウント」で、もう一度作ってください。</Text>
             <Pressable style={s.secondary} onPress={() => {
                 // Starting fresh from a dead link: after starting, go to the chats, not /link.
                 arrival.moved = true;
@@ -145,7 +145,7 @@ export function Gate({ locked }: { locked: boolean }) {
       )}
       {twin ? (
         <>
-          <Text style={s.notice}>{`このアカウントは、この端末にすでにあります（${accountName(twin)}）`}</Text>
+          <Text style={s.notice}>{`アカウント「${accountName(twin)}」は、すでにこの端末にあります。`}</Text>
           <Pressable style={({ pressed }) => [s.primary, pressed && s.pressed]} onPress={() => {
               takeRestoredKeys(); // a code for that account must not stay waiting for another one
               goToAccount(twin.id);
@@ -157,9 +157,9 @@ export function Gate({ locked }: { locked: boolean }) {
         <>
           <Text style={s.notice}>
             {passkeysAvailable()
-              ? 'このパスキーの保存先では、鍵を守れませんでした。下の「いま使えるパスキーの保存先」から選んでください。iPhoneでは「設定」→「一般」→「自動入力とパスワード」で「パスワード」を入れると選べるようになります。'
+              ? 'このパスキーの保存先では、秘密鍵を守れませんでした。下の「いま使えるパスキーの保存先」から選んでください。iPhoneでは「設定」→「一般」→「自動入力とパスワード」で「パスワード」をオンにすると選べるようになります。'
               : Platform.OS === 'web'
-                ? 'このブラウザはパスキーを使えません。'
+                ? 'このブラウザではパスキーを使えません。'
                 : 'この端末ではパスキーを使えません。'}
           </Text>
           <Consent />
@@ -174,7 +174,7 @@ export function Gate({ locked }: { locked: boolean }) {
             }} disabled={busy} role="button">
             <Text style={s.secondaryText}>パスキーを使わずに始める</Text>
           </Pressable>
-          <Text style={s.small}>{Platform.OS === 'web' ? 'パスキーを使わない時は、鍵をこのブラウザの中だけに保存します。' : 'パスキーを使わない時は、鍵をこの端末の中だけに保存します。'}</Text>
+          <Text style={s.small}>{Platform.OS === 'web' ? 'パスキーを使わない時は、秘密鍵をこのブラウザの中だけに保存します。' : 'パスキーを使わない時は、秘密鍵をこの端末の中だけに保存します。'}</Text>
         </>
       ) : (
         <>
@@ -187,8 +187,8 @@ export function Gate({ locked }: { locked: boolean }) {
       {failed && <Text style={s.notice}>{'パスキーを使えませんでした。\nもう一度押してください。'}</Text>}
       {missed && (
         <Text style={s.notice}>
-          パスワード管理アプリの画面が出た時は、その画面で「ブラウザや端末のパスキーを使う」を選んでください。Tegami
-          のパスキーは、始めた時に選んだ場所（Windows、iPhone、Googleなど）に保存されています。
+          パスワード管理アプリの画面が出た時は、その画面で「ブラウザや端末のパスキーを使う」を選んでください。
+          Tegamiのパスキーは、始めた時に選んだ場所（Windows、iPhone、Googleなど）に保存されています。
         </Text>
       )}
       {!locked && !moved && !unsupported && !twin &&
@@ -225,7 +225,7 @@ export function Gate({ locked }: { locked: boolean }) {
               autoFocus
             />
             <Pressable style={s.secondary} onPress={restore} disabled={!code.trim() || restoring === 'checking'} role="button">
-              <Text style={s.secondaryText}>{restoring === 'checking' ? '確認中' : '復旧'}</Text>
+              <Text style={s.secondaryText}>{restoring === 'checking' ? '確認中' : '復旧する'}</Text>
             </Pressable>
             {restoring === 'failed' && <Text style={s.notice}>コードが正しくありません。もう一度確認してください。</Text>}
           </View>
@@ -298,7 +298,7 @@ function Welcome() {
   return (
     <View style={s.hero}>
       <Text style={s.welcome} role="heading" aria-level={1}>{name ? `おかえりなさい、${name}さん` : "おかえりなさい"}</Text>
-      <Text style={s.kicker}>トークは暗号化して、この端末にあります。</Text>
+      <Text style={s.kicker}>トークは暗号化してこの端末に保存しています。</Text>
       <Text style={s.welcomeBody}>パスキーでロックを解除すると、続きから使えます。</Text>
     </View>
   );
@@ -335,7 +335,7 @@ function Hero() {
     <View style={s.hero}>
       <Text style={s.beta}>ベータ版</Text>
       <Text style={s.kicker}>
-        <Text style={s.nostr}>Nostrで動く</Text>、オープンソースのメッセージアプリ
+        <Text style={s.nostr}>Nostrで動く</Text>オープンソースのメッセージアプリ
       </Text>
       <Text style={h1} role="heading" aria-level={1}>
         トークは

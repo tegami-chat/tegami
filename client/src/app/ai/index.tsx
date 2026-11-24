@@ -63,7 +63,7 @@ export default function AiPermissionsScreen() {
       <AiSwitches scope={{ layer: 'all' }} />
       {!readOnly && (
         <Pressable style={s.card} onPress={() => setAiSwitches({ layer: 'all' }, READ_ONLY)} role="button">
-          <Text style={s.action}>読むと下書きだけにする</Text>
+          <Text style={s.action}>読むことと下書きだけにする</Text>
         </Pressable>
       )}
       {anyOn && (

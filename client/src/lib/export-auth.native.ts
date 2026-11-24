@@ -7,7 +7,7 @@ import * as SecureStore from 'expo-secure-store';
 import type { Vault } from './vault';
 
 const GATE_ID = 'tegami.export-gate';
-const PROMPT = '秘密鍵を書き出す前に、本人か確かめます';
+const PROMPT = '秘密鍵を書き出す前に本人確認をします';
 const OPTIONS: SecureStore.SecureStoreOptions = {
   keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
   requireAuthentication: true,

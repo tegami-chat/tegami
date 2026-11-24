@@ -141,7 +141,7 @@ export default function AccountSettings() {
       {confirm === 'here' && (
         <Dialog
           title={`${accountLabel}をこの端末から削除しますか？`}
-          text="この端末のトーク履歴と設定が消えます。ほかの端末か復旧コードがあれば、このアカウントに戻れます。"
+          text="この端末のトーク履歴と設定が消えます。ほかの端末も復旧コードも無い時は、このアカウントに二度と戻れません。"
           onClose={() => setConfirm(null)}
           buttons={[
             { label: 'キャンセル', variant: 'outlined', onPress: () => setConfirm(null) },
@@ -169,7 +169,7 @@ export default function AccountSettings() {
       <AccountList />
 
       <Text style={s.heading}>アカウントの守り方</Text>
-      <Text style={s.value}>{protectedByPasskey ? 'パスキーで守っています' : (Platform.OS === 'web' ? 'このブラウザの中だけに保存しています' : 'この端末の中だけに保存しています')}</Text>
+      <Text style={s.value}>{protectedByPasskey ? 'パスキーで守っています' : (Platform.OS === 'web' ? '秘密鍵はこのブラウザの中だけに保存しています' : '秘密鍵はこの端末の中だけに保存しています')}</Text>
 
       <Text style={s.heading}>ほかの端末</Text>
       {transfer ? (
@@ -219,7 +219,7 @@ export default function AccountSettings() {
           <ActionRow label="復旧コードを作る" onPress={makeCode} disabled={recoveryBusy} />
         </Group>
       )}
-      {recoveryBehind && !newCode && <Text style={s.note}>友だちや設定の最近の変更を、復旧用にまだ保管できていません。通信を確認してください。</Text>}
+      {recoveryBehind && !newCode && <Text style={s.note}>友だちや設定の最新の変更を、まだ復旧用に保存できていません。通信を確認してください。</Text>}
       {recoveryFailed === 'make' && <Text style={s.note}>復旧コードを作れませんでした。通信を確認して、もう一度お試しください。</Text>}
       {recoveryFailed === 'off' && <Text style={s.note}>復旧コードを削除できませんでした。通信を確認して、もう一度お試しください。</Text>}
 

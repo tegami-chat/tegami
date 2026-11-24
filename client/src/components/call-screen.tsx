@@ -141,7 +141,7 @@ export function CallScreen() {
         {(call.phase === 'outgoing' || call.phase === 'connecting' || call.phase === 'active') && (
           <>
             <Round
-              label={call.muted ? 'ミュート解除' : 'ミュート'}
+              label={call.muted ? 'マイクをオン' : 'マイクをオフ'}
               icon={call.muted ? 'mic-off' : 'mic'}
               color={KEY}
               onPress={toggleMute}

@@ -368,7 +368,7 @@ export function Video({ id, file, onOpen }: { id: string; file: FileRef; onOpen?
   if (!uri || Platform.OS !== 'web') {
     return (
       <View style={[styles.videoFrame, { backgroundColor: c.line }, uri && styles.videoNote]} testID={uri ? 'video-message' : undefined}>
-        {uri && <Text style={[styles.note, { color: c.muted }]}>この動画はまだiPhoneのアプリでは再生できません</Text>}
+        {uri && <Text style={[styles.note, { color: c.muted }]}>この動画は、iPhoneのアプリではまだ再生できません</Text>}
       </View>
     );
   }
@@ -417,7 +417,7 @@ export function Video({ id, file, onOpen }: { id: string; file: FileRef; onOpen?
 
 function formatBytes(size?: number): string {
   if (!size || !Number.isInteger(size) || size <= 0) return '';
-  if (size < 1024) return '1 KB未満';
+  if (size < 1024) return '1KB未満';
   if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
@@ -428,7 +428,7 @@ function formatExpiry(at: number): string {
   const day = d.getDate();
   const hh = String(d.getHours()).padStart(2, '0');
   const mm = String(d.getMinutes()).padStart(2, '0');
-  return `有効期間：${m}/${day} ${hh}:${mm}`;
+  return `保存期間：${m}/${day} ${hh}:${mm}`;
 }
 
 /** A general file in a chat bubble: icon, name, expiry/kept status and size; tapping saves it. */
@@ -476,7 +476,7 @@ export function FileAttachment({ id, file, at }: { id: string; file: FileRef; at
   const periodLine = kept
     ? 'この端末に保存済み'
     : expired
-      ? '有効期間が過ぎました'
+      ? '保存期間が過ぎました'
       : formatExpiry(uploadedAt);
 
   return (
@@ -626,7 +626,7 @@ export function Voice({ id, file }: { id: string; file: FileRef }) {
   if (error) {
     return (
       <Text style={[styles.note, { color: c.muted }]}>
-        {error === 'gone' ? '音声の保存期間（30日）が過ぎました' : '音声を開けませんでした'}
+        {error === 'gone' ? '音声メッセージの保存期間（30日）が過ぎました' : '音声メッセージを開けませんでした'}
       </Text>
     );
   }

@@ -107,7 +107,7 @@ export function RegisterGate() {
   if (registration === 'blocked') {
     return (
       <View style={[s.fill, pad]}>
-        <Text style={s.text}>このアカウントは止められています。</Text>
+        <Text style={s.text}>このアカウントは利用を止めています。心当たりが無い時は、hello@tegami.chat にお問い合わせください。</Text>
       </View>
     );
   }
@@ -115,7 +115,7 @@ export function RegisterGate() {
     return (
       <View style={[s.fill, pad]}>
         <Text style={s.title}>招待コードを入れてください</Text>
-        <Text style={s.text}>Tegamiは招待で広がります。友だちからもらった招待のリンクかコードを貼ってください。</Text>
+        <Text style={s.text}>Tegamiは招待で広がります。友だちからもらった招待リンクか招待コードを貼ってください。</Text>
         <TextInput
           style={s.input}
           value={pasted}
@@ -123,7 +123,7 @@ export function RegisterGate() {
             setPasted(t);
             setRefused(false);
           }}
-          placeholder="招待のリンクかコード"
+          placeholder="招待リンクか招待コード"
           placeholderTextColor={c.muted}
           autoCapitalize="none"
           autoCorrect={false}

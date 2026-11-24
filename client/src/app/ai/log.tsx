@@ -7,19 +7,19 @@ import { personName, useTegami, type Contact } from '@/lib/tegami';
 
 const STOPPED_BY: Record<Layer, string> = {
   all: '「AIの使用」でオフ',
-  model: 'モデルの設定でオフ',
+  model: '「AIモデル」の設定でオフ',
   ai: 'このAIの設定でオフ',
   friend: 'この友だちの設定でオフ',
   stranger: '相手が友だちではないため',
   needs: '「確認してから送る」がオフ',
   expired: '期間が終わったためオフ',
   ask: '毎回確認',
-  always: '写真や動画、ファイル、音声、リンクを含む文や、お金の話に見える文は確認',
+  always: '写真や動画、ファイル、音声、リンクを含むメッセージや、お金の話に見えるメッセージは確認',
   firstPeer: '初めて話すほかの人のAI',
   stage: 'このアプリではまだ使えない機能のため',
   limit: '送る量の上限に達したため',
-  secret: '秘密鍵、復旧コード、カード番号に見える文のため',
-  others: 'ほかの人の文を読んだ後の送信は確認',
+  secret: '秘密鍵、復旧コード、カード番号に見えるメッセージのため',
+  others: 'ほかの人のメッセージを読んだ後の送信は確認',
 };
 
 /** Why a permission given for a while ended early (lib/ai-permissions.ts endAiGrants). */

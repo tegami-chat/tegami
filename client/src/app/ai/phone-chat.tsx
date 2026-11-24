@@ -65,7 +65,7 @@ export default function PhoneChatScreen() {
       setText('');
     } catch (e) {
       if (e instanceof PhoneAiRefused || e instanceof ProviderError) setError(e.message);
-      else if ((e as { name?: string })?.name !== 'AbortError') setError('返事をもらえませんでした。');
+      else if ((e as { name?: string })?.name !== 'AbortError') setError('返事をもらえませんでした。もう一度試してください。');
     } finally {
       setBusy(false);
       abort.current = null;
@@ -110,13 +110,13 @@ export default function PhoneChatScreen() {
         {lines.length ? (
           <Pressable
             role="button"
-            aria-label="会話を消す"
+            aria-label="会話を削除"
             style={s.clear}
             onPress={() => {
               clearPhoneChat();
               setLines([]);
             }}>
-            <Text style={s.clearText}>会話を消す</Text>
+            <Text style={s.clearText}>会話を削除</Text>
           </Pressable>
         ) : null}
       </ScrollView>

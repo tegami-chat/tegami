@@ -62,12 +62,12 @@ export default function CallNetworkScreen() {
       </View>
       <Text style={s.note}>
         {n.relayOnly
-          ? '相手にIPアドレス（ネット上の住所）が見えません。中継のサーバーを使えない時は、通話がつながりません。'
+          ? '相手にIPアドレス（ネット上の住所）が見えません。中継サーバーを使えない時は、通話がつながりません。'
           : '直接つながる通話では、相手にIPアドレス（ネット上の住所）が見えます。'}
       </Text>
 
-      <Text style={s.heading}>中継のサーバー</Text>
-      <View style={s.list} role="radiogroup" aria-label="中継のサーバー">
+      <Text style={s.heading}>中継サーバー</Text>
+      <View style={s.list} role="radiogroup" aria-label="中継サーバー">
         <Pressable style={s.row} onPress={useTegamiServer} role="radio" aria-checked={!editing} aria-label="Tegamiのサーバー">
           <View style={s.rowText}>
             <Text style={s.label}>Tegamiのサーバー</Text>

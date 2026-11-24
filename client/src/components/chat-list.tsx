@@ -324,7 +324,7 @@ export function ChatList({ wide = false }: { wide?: boolean }) {
                   )}
                   {aiWidenedAt > 0 && (
                     <Pressable style={s.strangers} onPress={() => router.push('/ai' as Href)} role="button" testID="ai-widened">
-                      <Text style={s.strangersText}>ほかの端末でAIの権限が増えました。心当たりがなければ確認してください</Text>
+                      <Text style={s.strangersText}>ほかの端末でAIの権限が増えました。心当たりがなければ設定の「AI」で確認してください。</Text>
                       <MaterialIcons name="chevron-right" size={22} color={c.muted} />
                     </Pressable>
                   )}
@@ -427,7 +427,7 @@ export function ChatList({ wide = false }: { wide?: boolean }) {
       {confirmFriend?.kind === 'block' && (
         <Dialog
           title={`${displayName(confirmFriend.contact)}をブロックしますか？`}
-          text="ブロックした相手とはメッセージの送受信ができなくなります。相手には伝わりません。"
+          text="ブロックした相手とはメッセージのやり取りができなくなります。ブロックしたことは相手に知らされません。"
           onClose={() => setConfirmFriend(null)}
           buttons={[
             {
@@ -471,7 +471,7 @@ export function ChatList({ wide = false }: { wide?: boolean }) {
 
       {confirmChat && (
         <Dialog
-          text={`${chatName(confirmChat, contacts, groups)}${isGroup(confirmChat) ? 'の' : 'との'}トークを削除しますか？この端末から消えます。`}
+          text={`${chatName(confirmChat, contacts, groups)}${isGroup(confirmChat) ? 'の' : 'との'}トークをこの端末から削除しますか？相手の端末からは消えません。`}
           onClose={() => setConfirmChat(null)}
           buttons={[
             {

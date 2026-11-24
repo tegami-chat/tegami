@@ -66,7 +66,7 @@ export default function Settings() {
         <MaterialIcons name="chevron-right" size={22} color={c.muted} />
       </Pressable>
 
-      {recoveryBehind && <Text style={s.note}>友だちや設定の最近の変更を、復旧用にまだ保管できていません。通信を確認してください。</Text>}
+      {recoveryBehind && <Text style={s.note}>友だちや設定の最新の変更を、まだ復旧用に保存できていません。通信を確認してください。</Text>}
       <Group>
         <LinkRow icon="key" label="アカウント" value={protectedByPasskey ? 'パスキー' : Platform.OS === 'web' ? 'このブラウザ' : 'この端末'} onPress={() => go('/settings/account')} />
         <LinkRow icon="shield" label="プライバシー" value={blocked.length ? `ブロック ${blocked.length}人` : undefined} onPress={() => go('/settings/privacy')} />
@@ -96,7 +96,7 @@ export default function Settings() {
       </Group>
       {Platform.OS === 'web' && push === 'needs-home-screen' && <Text style={s.note}>iPhoneでは、Safariの共有ボタンから「ホーム画面に追加」を選び、ホーム画面のTegamiから開くと通知を使えます。</Text>}
       {push === 'unsupported' && Platform.OS === 'web' && <Text style={s.note}>このブラウザでは通知を使えません。</Text>}
-      {Platform.OS !== 'web' && <Text style={s.note}>通知はまだiPhoneのアプリでは使えません。</Text>}
+      {Platform.OS !== 'web' && <Text style={s.note}>通知は、iPhoneのアプリではまだ使えません。</Text>}
       {Platform.OS === 'web' && push === 'denied' && <Text style={s.note}>通知が許可されていません。ブラウザか端末の設定で、Tegamiの通知を許可してください。</Text>}
       {Platform.OS === 'web' && pushFailed && <Text style={s.note}>通知を設定できませんでした。通信を確認して、もう一度お試しください。</Text>}
 

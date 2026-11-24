@@ -47,7 +47,7 @@ export function LegalView({ name }: { name: LegalName }) {
       {l.items.map((item, i) => (
         <View key={i} style={s.item}>
           <View style={s.itemRow}>
-            <Text style={s.mark}>{l.type === 'ol' ? `${i + 1}.` : '・'}</Text>
+            <Text style={s.mark}>{l.type === 'ol' ? `${i + 1}.` : '•'}</Text>
             <View style={s.fill}>{rich(item.text)}</View>
           </View>
           {item.sub?.map((sub, j) => <View key={j}>{list(sub, depth + 1)}</View>)}

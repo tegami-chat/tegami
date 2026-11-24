@@ -76,7 +76,7 @@ export default function PhoneAiScreen() {
       {error ? <Text style={s.warn}>{error}</Text> : null}
       <Group>
         <ActionRow label="APIキーを保存" onPress={saveKey} disabled={!typed.trim()} />
-        {saved ? <ActionRow label="APIキーを消す" danger onPress={() => setRemoving(true)} /> : null}
+        {saved ? <ActionRow label="APIキーを削除" danger onPress={() => setRemoving(true)} /> : null}
       </Group>
 
       <Text style={st.heading} role="heading">モデル</Text>
@@ -95,13 +95,13 @@ export default function PhoneAiScreen() {
 
       {removing && (
         <Dialog
-          title="APIキーを消しますか？"
-          text="この端末からだけ消えます。使わないならAIの会社の画面でも消してください。"
+          title="APIキーを削除しますか？"
+          text="この端末からだけ消えます。使わないならAIの会社のサイトでも削除してください。"
           onClose={() => setRemoving(false)}
           buttons={[
             { label: 'キャンセル', variant: 'outlined', onPress: () => setRemoving(false) },
             {
-              label: '消す',
+              label: '削除',
               variant: 'danger',
               onPress: () => {
                 getKeyStore().remove(choice.provider);

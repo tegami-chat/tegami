@@ -559,7 +559,7 @@ async function main() {
     await test('No PRF (enabled: false): offers retry and starting without a passkey', async () => {
       const u = await newUser(browser, { prf: false });
       await button(u.page, 'はじめる').click();
-      await waitText(u.page, 'このパスキーの保存先では、鍵を守れませんでした');
+      await waitText(u.page, 'このパスキーの保存先では、秘密鍵を守れませんでした');
       assert(await button(u.page, '保存先を選び直す').isVisible(), 'no retry button');
       await button(u.page, 'パスキーを使わずに始める').click();
       await waitOpen(u.page);
@@ -576,7 +576,7 @@ async function main() {
     await test('Password manager without PRF (no result, passkey not offered back): no silent failure', async () => {
       const u = await newUser(browser, { wrap: { stripCreatePrf: 'all', failGet: true } });
       await button(u.page, 'はじめる').click();
-      await waitText(u.page, 'このパスキーの保存先では、鍵を守れませんでした');
+      await waitText(u.page, 'このパスキーの保存先では、秘密鍵を守れませんでした');
       assert(await button(u.page, '保存先を選び直す').isVisible(), 'no retry button');
       assert(!(await storage(u.page))['tegami.vault'], 'a vault was saved anyway');
       await u.context.close();
@@ -606,7 +606,7 @@ async function main() {
     await test('No WebAuthn: starts without a passkey, no retry offered', async () => {
       const u = await newUser(browser, { wrap: { noWebAuthn: true }, authenticator: false });
       await button(u.page, 'はじめる').click();
-      await waitText(u.page, 'このブラウザはパスキーを使えません');
+      await waitText(u.page, 'このブラウザではパスキーを使えません');
       assert(!(await button(u.page, '保存先を選び直す').count()), 'retry shown without WebAuthn');
       await button(u.page, 'パスキーを使わずに始める').click();
       await waitOpen(u.page);
@@ -1012,7 +1012,7 @@ async function main() {
       // The same link once more: this device has that account already, so it offers to switch.
       await b.page.goto(moveLink);
       await button(b.page, 'アカウントを追加して受け取る').click();
-      await waitText(b.page, 'このアカウントは、この端末にすでにあります（えー）');
+      await waitText(b.page, 'アカウント「えー」は、すでにこの端末にあります。');
       await button(b.page, '切り替える').click();
       await waitOpen(b.page);
       await waitText(b.page, 'えー ▾');
@@ -1433,8 +1433,8 @@ async function main() {
         await b.page.evaluate(() => document.querySelector('audio[data-call="remote-audio"]')?.srcObject?.getAudioTracks()[0]?.readyState === 'live'),
         'no remote audio on B',
       );
-      await button(a.page, 'ミュート').click();
-      await button(a.page, 'ミュート解除').waitFor();
+      await button(a.page, 'マイクをオフ').click();
+      await button(a.page, 'マイクをオン').waitFor();
       await button(a.page, '通話を終了').click();
       await waitText(b.page, '通話が終了しました');
       await b.page.waitForFunction(() => window.__pcs.every((p) => p.connectionState === 'closed'), null, { timeout: 5000 });
@@ -1721,7 +1721,7 @@ async function main() {
         const u = await newUser(browser, { prf: false });
         await button(u.page, '復旧コードを使う').click();
         await u.page.getByPlaceholder('復旧コード').fill(code);
-        await button(u.page, '復旧').click();
+        await button(u.page, '復旧する').click();
         await u.page.waitForFunction(() => /受け取りました|コードが正しくありません/.test(document.body.innerText), null, { timeout: 15000 });
         const t = await text(u.page);
         if (!use) await u.context.close();
@@ -1786,7 +1786,7 @@ async function main() {
 
       // The relay cannot be reached: after 3 failed refreshes in a row, settings says so
       // in one line; the next successful refresh takes the line away.
-      const BEHIND = '友だちや設定の最近の変更を、復旧用にまだ保管できていません';
+      const BEHIND = '友だちや設定の最新の変更を、まだ復旧用に保存できていません';
       await a.page.goto(ORIGIN + '/settings/account');
       await openIfLocked(a.page, '復旧コードを削除');
       await waitText(a.page, '復旧コードを削除');
@@ -2750,7 +2750,7 @@ async function main() {
       await p.getByText('テストB', { exact: true }).click();
       await waitText(p, 'テストBとのトークでAIができること');
       assert(await sw('トークを読む').isDisabled(), 'friend switch can be turned on while all AI is off');
-      await waitText(p, '「AIの使用」でオフになっています');
+      await waitText(p, '「AIの使用」がオフなので、ここでは変えられません');
       await p.goBack();
       await sw('トークを読む').click();
       assert((await perms()).all.read === true, 'all.read was not saved');
@@ -2775,7 +2775,7 @@ async function main() {
       await p.goBack();
       await p.getByText('クロード', { exact: true }).click();
       assert(await sw('トークを読む').isDisabled(), 'the AI switch is not locked by its model');
-      await waitText(p, '「Anthropic Claude」でオフになっています');
+      await waitText(p, '「Anthropic Claude」がオフなので、ここでは変えられません');
       await shot(p, 'ai-permissions-locked', 'AIの権限：モデルでオフになった AI');
       await p.goBack();
 
@@ -2818,11 +2818,11 @@ async function main() {
       // Read only in one go.
       await p.goto(ORIGIN + '/ai');
       await waitText(p, 'AIの使用');
-      await button(p, '読むと下書きだけにする').click();
+      await button(p, '読むことと下書きだけにする').click();
       let now = await perms();
       assert(now.all.contacts === true && now.all.read === true && now.all.draft === true, 'read only did not turn reading on');
       assert(!now.all.send && !now.all.autosend && !now.all.otherAi, 'read only turned sending on');
-      assert(!(await button(p, '読むと下書きだけにする').isVisible().catch(() => false)), 'the read-only button stays while already read only');
+      assert(!(await button(p, '読むことと下書きだけにする').isVisible().catch(() => false)), 'the read-only button stays while already read only');
 
       // How long: a switch that is on shows its term; one hour sets a time limit.
       await chip('トークを読む：1時間').click();
@@ -2847,7 +2847,7 @@ async function main() {
       // テストB: read only, then sending (sending without asking asks once there too, with the name).
       await p.getByText('テストB', { exact: true }).click();
       await waitText(p, 'テストBとのトークでAIができること');
-      await button(p, '読むと下書きだけにする').click();
+      await button(p, '読むことと下書きだけにする').click();
       await sw('確認してから送る').click();
       await sw('確認なしで送る').click();
       await waitText(p, 'あなたの名前でテストBに');
@@ -2866,7 +2866,7 @@ async function main() {
       await p.getByTestId('ai-confirm').waitFor();
       await waitText(p, 'クロードが送ろうとしています');
       // The window says why it came up although 確認なしで送る is on.
-      await waitText(p, 'ほかの人が書いた文を読んだ後は、毎回確かめてから送ります');
+      await waitText(p, 'ほかの人が書いたメッセージを読んだ後は、毎回確かめてから送ります');
       await shot(p, 'ai-confirm-others', 'ほかの人の文を読んだAIが確認なしで送ろうとした時の確認');
       await button(p, '送らない').click();
       assert((await answer()) === false, 'refusing after reading others still sent');
@@ -2874,7 +2874,7 @@ async function main() {
       await p.getByTestId('ai-confirm').waitFor();
       await waitText(p, 'クロードが送ろうとしています');
       await waitText(p, '宛先');
-      await waitText(p, '写真や動画、ファイル、音声、リンクを含む文や、お金の話に見える文は、送る前に確認の画面が出ます');
+      await waitText(p, '写真や動画、ファイル、音声、リンクを含むメッセージや、お金の話に見えるメッセージは、送る前に確認の画面が出ます');
       await shot(p, 'ai-confirm-photo', 'AI が写真を確認なしで送ろうとした時の確認（宛先と中身を大きく出す）');
       await button(p, '送る').click();
       assert((await answer()) === true, 'sending the photo was not allowed');
@@ -2915,7 +2915,7 @@ async function main() {
       await p.waitForFunction(() => JSON.parse(__tegamiStore.getItem('tegami.ai.permissions')).all.contacts === false, null, { timeout: 5000 });
       await p.getByText('AIの記録', { exact: true }).click();
       await waitText(p, '期間が終わったため、自動でオフに戻しました');
-      await waitText(p, '写真や動画、ファイル、音声、リンクを含む文や、お金の話に見える文は確認：許可しました');
+      await waitText(p, '写真や動画、ファイル、音声、リンクを含むメッセージや、お金の話に見えるメッセージは確認：許可しました');
       await waitText(p, '初めて話すほかの人のAI：許可しました');
       await waitText(p, 'クロード：ほかの人のAIと話す（テストCのAI）');
       assert(!(await p.getByText(/npub1/).count()), 'the log shows the other AI by its key');
@@ -2998,7 +2998,7 @@ async function main() {
       const r = await newUser(browser, { prf: false });
       await button(r.page, '復旧コードを使う').click();
       await r.page.getByPlaceholder('復旧コード').fill(code);
-      await button(r.page, '復旧').click();
+      await button(r.page, '復旧する').click();
       await waitText(r.page, '受け取りました');
       await button(r.page, 'この端末で使う').click();
       await button(r.page, 'パスキーを使わずに始める').click();
@@ -3281,7 +3281,7 @@ async function main() {
         await button(p, 'その他').click();
         await button(p, 'クロードに下書きを頼む').click();
         await waitText(p, 'AIにトークを読ませますか？');
-        await waitText(p, '「AIに読ませない」の印が付いた文は渡しません。');
+        await waitText(p, '「AIに読ませない」の印が付いたメッセージは渡しません。');
         await shot(p, 'noai-notice', '最初のお知らせ。印の付いた文は渡さないと書く');
         await button(p, '読ませる').click();
         await p.waitForFunction(() => document.querySelector('textarea[placeholder="メッセージ"]')?.value.startsWith('echo:'), null, { timeout: 15000 });
@@ -3302,9 +3302,9 @@ async function main() {
         await button(b2.page, 'パスキーを使わずに始める').click();
         await waitOpen(b2.page);
         await bp.goto(ORIGIN + '/ai');
-        const mySwitch = (page) => page.getByRole('switch', { name: '自分の文を相手のAIに読ませない', exact: true });
+        const mySwitch = (page) => page.getByRole('switch', { name: '自分のメッセージを相手のAIに読ませない', exact: true });
         await mySwitch(bp).click();
-        await shot(bp, 'noai-setting', '設定の「AI」。自分の文を相手のAIに読ませない');
+        await shot(bp, 'noai-setting', '設定の「AI」。自分のメッセージを相手のAIに読ませない');
         await b2.page.waitForFunction(() => localStorage.getItem('tegami.noai') === 'true', null, { timeout: 15000 });
         await b2.page.goto(ORIGIN + '/ai');
         await mySwitch(b2.page).waitFor();
@@ -3322,7 +3322,7 @@ async function main() {
         await button(p, 'その他').click();
         await button(p, 'クロードに下書きを頼む').click();
         await waitText(p, '下書きを頼めません');
-        await waitText(p, 'テストBさんは、自分の文を相手のAIに読ませない設定にしています。');
+        await waitText(p, 'テストBさんは自分のメッセージを相手のAIに読ませない設定にしているため、AIに渡せません。');
         await shot(p, 'noai-refused', '相手が断っている時に下書きを頼んだ時');
         await p.waitForTimeout(1000);
         assert((await toAi()) === later, 'something went to the AI from a friend who said no');
@@ -3400,10 +3400,10 @@ async function main() {
         await noText(bp, '持ち主：未確認', 500);
         // The details: what the signature proves, apart from what the AI says of itself.
         await button(bp, 'AIの詳しい情報').click();
-        await waitText(bp, 'あおいが自分の鍵で署名しています。本名や本人確認の印ではありません。');
+        await waitText(bp, 'あおいが自分のアカウントの秘密鍵で署名しています。本名や本人確認の印ではありません。');
         await waitText(bp, 'claude-opus-5-5');
         const signed = await text(bp);
-        assert(signed.includes('署名で確かめた情報') && /持ち主\s*\S?\s*あおい/.test(signed) && signed.includes('あおいが自分の鍵で署名しています。本名や本人確認の印ではありません。'), `the signed part: ${signed}`);
+        assert(signed.includes('署名で確かめた情報') && /持ち主\s*\S?\s*あおい/.test(signed) && signed.includes('あおいが自分のアカウントの秘密鍵で署名しています。本名や本人確認の印ではありません。'), `the signed part: ${signed}`);
         const self = signed;
         assert(/AIの名前\s*クロード/.test(self) && /使っているサービス\s*Anthropic Claude/.test(self) && /使っているAIモデル\s*claude-opus-5-5/.test(self), `the AI's own info: ${self}`);
         await shot(bp, 'ai-about', 'AIの詳しい情報の画面');
@@ -3672,7 +3672,7 @@ async function main() {
       await a.page.getByRole('switch', { name: 'トークを読む', exact: true }).click();
       await a2.page.goto(ORIGIN + '/');
       await a2.page.getByTestId('ai-widened').waitFor({ timeout: 20000 });
-      await waitText(a2.page, 'ほかの端末でAIの権限が増えました。心当たりがなければ確認してください');
+      await waitText(a2.page, 'ほかの端末でAIの権限が増えました。心当たりがなければ設定の「AI」で確認してください');
       await shot(a2.page, 'ai-widened', 'トーク一覧：ほかの端末でAIの権限が広がった時の1行');
       await a2.page.getByTestId('ai-widened').click();
       await waitText(a2.page, 'AIの使用');
@@ -3849,7 +3849,7 @@ async function main() {
       await shot(a.page, 'chat-detail', '「メニュー」を押した時に出る詳細の画面（ビデオ通話・ブロック・通報・トークを削除）');
       await button(a.page, 'ブロック').click();
       await waitText(a.page, 'びーをブロックしますか？');
-      await waitText(a.page, 'ブロックした相手とはメッセージの送受信ができなくなります。相手には伝わりません。');
+      await waitText(a.page, 'ブロックした相手とはメッセージのやり取りができなくなります。ブロックしたことは相手に知らされません。');
       assert(await button(a.page, 'ブロックして通報').isVisible(), 'no block-and-report button');
       await shot(a.page, 'block-dialog', '「ブロック」を押した時に出る確認のダイアログ');
       await button(a.page, 'ブロック').click();
@@ -3957,7 +3957,7 @@ async function main() {
       await button(b.page, '送る').click();
       await b.page.waitForFunction(() => !document.body.innerText.includes('未送信'), null, { timeout: 10000 });
       const cautionTitle = 'お金やリンクの話に注意してください';
-      const cautionBody = 'この相手は友だちではありません。お金の振り込みやリンクを開くよう求められたら、詐欺かもしれません。';
+      const cautionBody = 'この相手は友だちではありません。お金を振り込むことやリンクを開くよう求められたら、詐欺かもしれません。';
       assert(!(await text(b.page)).includes(cautionTitle), 'the caution shows under my own message');
 
       await a.page.goto(ORIGIN + '/');
@@ -4205,7 +4205,7 @@ async function main() {
 
       await button(a.page, 'メニュー').click();
       await button(a.page, 'トークを削除').click();
-      await waitText(a.page, 'ばんりとのトークを削除しますか？この端末から消えます。');
+      await waitText(a.page, 'ばんりとのトークをこの端末から削除しますか？相手の端末からは消えません。');
       await shot(a.page, 'delete-chat-confirm', '「トークを削除」を押した時に出る確認');
       await button(a.page, '削除').click();
       await waitOpen(a.page);
@@ -4302,7 +4302,7 @@ async function main() {
       await button(a.page, '閉じる').waitFor({ timeout: 5000 });
       await shot(a.page, 'chat-menu', 'トーク一覧の行を長押しした時に出るメニュー');
       await button(a.page, '削除').click();
-      await waitText(a.page, 'ばんりとのトークを削除しますか？この端末から消えます。');
+      await waitText(a.page, 'ばんりとのトークをこの端末から削除しますか？相手の端末からは消えません。');
       await shot(a.page, 'chat-delete-dialog', 'トーク一覧のメニューで「削除」を押した時に出る確認');
       await button(a.page, '削除').click();
       await noText(a.page, 'ばんりからの手紙', 500);
@@ -4499,7 +4499,7 @@ async function main() {
       const r = await newUser(browser, { prf: false });
       await button(r.page, '復旧コードを使う').click();
       await r.page.getByPlaceholder('復旧コード').fill(code);
-      await button(r.page, '復旧').click();
+      await button(r.page, '復旧する').click();
       await waitText(r.page, 'あゆみさんのアカウントを受け取りました');
       await button(r.page, 'この端末で使う').click();
       await button(r.page, 'パスキーを使わずに始める').click();
@@ -4536,7 +4536,7 @@ async function main() {
       const o = await newUser(browser, { prf: false });
       await button(o.page, '復旧コードを使う').click();
       await o.page.getByPlaceholder('復旧コード').fill(oldCode);
-      await button(o.page, '復旧').click();
+      await button(o.page, '復旧する').click();
       await waitText(o.page, 'むかしさんのアカウントを受け取りました');
       await button(o.page, 'この端末で使う').click();
       await button(o.page, 'パスキーを使わずに始める').click();
@@ -4717,7 +4717,7 @@ async function main() {
       await bFile.waitFor({ timeout: 15000 });
       const fileText = await bFile.innerText();
       assert(fileText.includes('見積書.txt'), `file message text: ${fileText}`);
-      assert(fileText.includes('有効期間：'), `file message missing expiry: ${fileText}`);
+      assert(fileText.includes('保存期間：'), `file message missing expiry: ${fileText}`);
       assert(fileText.includes('サイズ：'), `file message missing size: ${fileText}`);
       await shot(b.page, 'video-file', '動画とファイルが届いたトーク');
 
@@ -4747,7 +4747,7 @@ async function main() {
       await befriend(a, b);
 
       await button(a.page, '録音').click();
-      await waitText(a.page, 'ボタンをタップして録音してください');
+      await waitText(a.page, 'ボタンを押して録音してください');
       await button(a.page, '録音を開始').waitFor({ timeout: 5000 });
       await shot(a.page, 'record-panel', '「録音」を押した時に出るパネル（録音する前）');
       await button(a.page, '録音を開始').click();
@@ -4890,9 +4890,9 @@ async function main() {
       await longPress(target);
       await panel.waitFor();
       await panel.getByRole('button', { name: '削除', exact: true }).click();
-      await waitText(a.page, 'このメッセージはこの端末でのみ削除されます。相手の端末からは削除されません。');
+      await waitText(a.page, 'このメッセージはこの端末からだけ削除します。相手の端末からは消えません。');
       await shot(a.page, 'delete-message-dialog', 'メッセージのパネルで「削除」を押した時に出る確認のダイアログ');
-      await button(a.page, 'この端末でのみ削除').click();
+      await button(a.page, 'この端末から削除').click();
       await noText(a.page, '長押しで消す手紙', 500);
       assert((await text(a.page)).includes('残る手紙'), 'other message disappeared');
       assert((await text(b.page)).includes('長押しで消す手紙'), "deleted message disappeared from friend's device");
@@ -5500,9 +5500,9 @@ async function main() {
       assert(!(await text(p)).includes(KEY), 'the whole key is on screen');
       await shot(p, 'phone-ai-key-saved', 'APIキーを保存した後。最後の4文字だけ出る');
       assert(!(await leaks(p, KEY)).length, 'the key was stored in the clear');
-      await button(p, 'APIキーを消す').click();
-      await waitText(p, 'APIキーを消しますか？');
-      await shot(p, 'phone-ai-remove-key', '「APIキーを消す」を押した時の確認');
+      await button(p, 'APIキーを削除').click();
+      await waitText(p, 'APIキーを削除しますか？');
+      await shot(p, 'phone-ai-remove-key', '「APIキーを削除」を押した時の確認');
       await button(p, 'キャンセル').click();
       await p.goto(ORIGIN + '/settings');
       await waitText(p, '設定済み');
@@ -5721,7 +5721,7 @@ async function main() {
       await shot(p, 'ai-mark-all-off', '「AIマーク」を非表示にした画面');
       await ask({ to: b.hex, toName: 'テストB', text: '午後なら空いています。', reason: 'CHECK' });
       await hold.waitFor({ timeout: 15000 });
-      await waitText(p, '相手の画面でAIマークが出ません。');
+      await waitText(p, '相手の画面にはAIマークが出ません。');
       assert((await hold.getByTestId('ai-mark-preview').count()) === 0, 'the sample shows an AI mark while the mark is off');
       await shot(p, 'ai-mark-off-hold', 'AIマークを非表示にした設定の承認の窓。小さく1行出る');
       await button(p, '送る').click();

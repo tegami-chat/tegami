@@ -50,7 +50,7 @@ async function send(f: typeof fetch, url: string, init: RequestInit): Promise<Re
     return await f(url, init);
   } catch (e) {
     if ((e as { name?: string })?.name === 'AbortError') throw e;
-    throw new ProviderError('other', '通信できませんでした。電波を確かめてください。');
+    throw new ProviderError('other', '通信できませんでした。通信環境を確かめてください。');
   }
 }
 
@@ -65,14 +65,14 @@ async function failIfBad(res: Response) {
     } catch {}
     if (/API key not valid|API_KEY_INVALID/.test(body)) throw new ProviderError('key', KEY_WRONG_TEXT);
   }
-  if (!res.ok) throw new ProviderError('other', `AIの会社から返事をもらえませんでした（エラー${res.status}）。`);
+  if (!res.ok) throw new ProviderError('other', `AIの会社から返事をもらえませんでした（エラー${res.status}）。しばらく待ってから、もう一度試してください。`);
 }
 
 async function readJson<T>(res: Response): Promise<T> {
   try {
     return (await res.json()) as T;
   } catch {
-    throw new ProviderError('other', 'AIの会社からの返事を読み取れませんでした。');
+    throw new ProviderError('other', 'AIの会社からの返事を読み取れませんでした。もう一度試してください。');
   }
 }
 
