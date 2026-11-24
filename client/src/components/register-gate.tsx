@@ -152,7 +152,7 @@ export function RegisterGate() {
       <View ref={box} key={round} />
       {failed && (
         <>
-          <Text style={s.text}>確認できませんでした。通信を確認して、もう一度お試しください。</Text>
+          <Text style={s.text}>確認できませんでした。通信を確認して、もう一度試してください。</Text>
           <Pressable
             role="button"
             onPress={() => {

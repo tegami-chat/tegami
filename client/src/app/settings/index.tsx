@@ -98,7 +98,7 @@ export default function Settings() {
       {push === 'unsupported' && Platform.OS === 'web' && <Text style={s.note}>このブラウザでは通知を使えません。</Text>}
       {Platform.OS !== 'web' && <Text style={s.note}>通知は、iPhoneのアプリではまだ使えません。</Text>}
       {Platform.OS === 'web' && push === 'denied' && <Text style={s.note}>通知が許可されていません。ブラウザか端末の設定で、Tegamiの通知を許可してください。</Text>}
-      {Platform.OS === 'web' && pushFailed && <Text style={s.note}>通知を設定できませんでした。通信を確認して、もう一度お試しください。</Text>}
+      {Platform.OS === 'web' && pushFailed && <Text style={s.note}>通知を設定できませんでした。通信を確認して、もう一度試してください。</Text>}
 
       <Group>
         <LinkRow icon="mail-outline" label="Tegamiへの意見" onPress={feedback} />

@@ -43,7 +43,7 @@ export class ProviderError extends Error {
 }
 
 export const KEY_WRONG_TEXT = 'APIキーが正しくありません。設定の「AIのAPIキー」で入れ直してください。';
-export const LIMIT_TEXT = '使える回数の上限に達しています。しばらく待ってからお試しください。';
+export const LIMIT_TEXT = '使える回数の上限に達しています。しばらく待ってから、もう一度試してください。';
 
 async function send(f: typeof fetch, url: string, init: RequestInit): Promise<Response> {
   try {

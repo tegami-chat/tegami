@@ -317,7 +317,7 @@ export default function Chat() {
           setAiNothing(nothingToReadText(e.reason, contact ? displayName(contact) : ''));
           return;
         }
-        showToast(e instanceof AiNotAllowedError ? 'AIの権限で止めました。設定の「AI」で許可を変えられます。' : '頼めませんでした。もう一度お試しください');
+        showToast(e instanceof AiNotAllowedError ? 'AIの権限で止めました。設定の「AI」で許可を変えられます。' : '頼めませんでした。もう一度試してください。');
       }
     },
     [peer, askAiDraft, showToast, contact],

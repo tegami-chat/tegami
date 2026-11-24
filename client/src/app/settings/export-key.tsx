@@ -69,7 +69,7 @@ export default function ExportKey() {
     short: `パスワードは${MIN_PASSWORD}文字以上にしてください。`,
     mismatch: 'パスワードが一致しません。',
     unverified: '本人確認ができなかったため、書き出しませんでした。もう一度試してください。',
-    failed: '書き出せませんでした。もう一度お試しください。',
+    failed: '書き出せませんでした。もう一度試してください。',
   };
 
   if (!canExportKey) {

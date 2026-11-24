@@ -122,7 +122,7 @@ export function ReportSheet({
             </View>
 
             <Text style={s.notice}>通報したことは相手に伝わりません。</Text>
-            {failed && <Text style={s.error}>通信を確認して、もう一度お試しください。</Text>}
+            {failed && <Text style={s.error}>通信を確認して、もう一度試してください。</Text>}
 
             <View style={s.buttons}>
               <Pressable

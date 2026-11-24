@@ -188,7 +188,7 @@ export default function AccountSettings() {
           <ActionRow label="ほかの端末でも使う" onPress={makeLink} />
         </Group>
       )}
-      {transferFailed && <Text style={s.note}>リンクを作れませんでした。通信を確認して、もう一度お試しください。</Text>}
+      {transferFailed && <Text style={s.note}>リンクを作れませんでした。通信を確認して、もう一度試してください。</Text>}
 
       <Text style={s.heading}>アカウントの復旧</Text>
       {newCode ? (
@@ -220,8 +220,8 @@ export default function AccountSettings() {
         </Group>
       )}
       {recoveryBehind && !newCode && <Text style={s.note}>友だちや設定の最新の変更を、まだ復旧用に保存できていません。通信を確認してください。</Text>}
-      {recoveryFailed === 'make' && <Text style={s.note}>復旧コードを作れませんでした。通信を確認して、もう一度お試しください。</Text>}
-      {recoveryFailed === 'off' && <Text style={s.note}>復旧コードを削除できませんでした。通信を確認して、もう一度お試しください。</Text>}
+      {recoveryFailed === 'make' && <Text style={s.note}>復旧コードを作れませんでした。通信を確認して、もう一度試してください。</Text>}
+      {recoveryFailed === 'off' && <Text style={s.note}>復旧コードを削除できませんでした。通信を確認して、もう一度試してください。</Text>}
 
       <Group>
         <LinkRow label="秘密鍵を書き出す" onPress={() => router.push('/settings/export-key')} />
@@ -232,7 +232,7 @@ export default function AccountSettings() {
         <ActionRow label="この端末から削除" danger onPress={() => setConfirm('here')} disabled={deleting} />
         <ActionRow label={deleting ? '削除しています' : 'アカウントを削除'} danger onPress={() => setConfirm('everywhere')} disabled={deleting} />
       </Group>
-      {deleteFailed && <Text style={s.note}>アカウントを削除できませんでした。通信を確認して、もう一度お試しください。</Text>}
+      {deleteFailed && <Text style={s.note}>アカウントを削除できませんでした。通信を確認して、もう一度試してください。</Text>}
     </SettingsPage>
   );
 }
