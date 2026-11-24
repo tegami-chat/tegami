@@ -1667,6 +1667,8 @@ async function main() {
       // Back to the Tegami server.
       await openCallNetwork(a.page);
       await a.page.getByRole('radio', { name: 'Tegamiのサーバー' }).click();
+      // The setting is written encrypted in the background: wait for it before leaving the page.
+      await a.page.evaluate(() => __tegamiStore.flush());
       await a.page.goto(ORIGIN + '/');
       await openSettings(a.page);
       await waitText(a.page, 'Tegamiのサーバー');
