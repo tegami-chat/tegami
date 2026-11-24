@@ -5,8 +5,14 @@
 //       Shows the AI's invite link with a one-time code as a QR code. Reading it in Tegami
 //       adds the AI, and the app sends the code back: the AI trusts that person and registers.
 //   tegami-agent backend [claude-code | ollama | local | anthropic | openai | gemini | openrouter | command]
-//       [--model <name>] [--url <address>] [--label <shown model>]
+//       [--model <name>] [--url <address>] [--run "<command line>"] [--label <shown model>]
 //       Which AI writes the replies (default: Claude Code). Without a name, shows the current one.
+//       command: any AI's command line, saved with --run. It gets one plain text on stdin
+//       (the instructions, the conversation so far, the new message) and prints the reply.
+//       It runs in an empty folder (command-work) inside the AI friend's folder. Example:
+//         tegami-agent backend command --run "codex exec --skip-git-repo-check --ephemeral --ignore-user-config --ignore-rules -s read-only -" --label "Codex"
+//       If you use a command signed in with a service account (ChatGPT and so on), check
+//       that service's terms yourself.
 //   tegami-agent key [backend] [--remove]
 //       Saves the API key for a backend, typed hidden or piped on stdin.
 //   tegami-agent try [text]
@@ -20,7 +26,7 @@
 //   tegami-agent watch [--command "<cmd>"]
 //       Keeps running. Each message from a trusted contact is answered by the AI.
 //       The backend writes the reply (Claude Code by default: one conversation that continues).
-//       --command: any program that reads the prompt on stdin and prints the reply.
+//       --command: a command line for this run only (instead of the one saved by `backend command --run`).
 //       --log <file>: also write the log to a file (used when started at login).
 //       Only one watcher runs per AI friend; a second one exits (code 3).
 //       Messages that arrived while the watcher was off (up to a day) are answered.
@@ -109,6 +115,7 @@ const WAYS = [
   '  ollama/local A model on this computer. Messages do not leave it.',
   '  anthropic, openai, gemini, openrouter',
   '               Your own API key.',
+  '  command      Any AI command line (backend command --run "<command>").',
 ].join('\n');
 
 const SYSTEM = [
@@ -391,17 +398,18 @@ const commands = {
     const model = flag('model');
     const url = flag('url');
     const label = flag('label');
+    const run = flag('run');
     const type = argv[0];
     if (!type) {
       const b = loadBackend(agent.dir);
       const keys = loadKeys(agent.dir);
-      console.log(`Backend: ${b.type}${b.model ? `  model: ${b.model}` : ''}${b.url ? `  url: ${b.url}` : ''}`);
+      console.log(`Backend: ${b.type}${b.model ? `  model: ${b.model}` : ''}${b.url ? `  url: ${b.url}` : ''}${b.run ? `  run: ${b.run}` : ''}`);
       if (BACKENDS[b.type]?.key) console.log(`API key: ${keys[b.type] ? 'saved' : `not saved (tegami-agent key ${b.type})`}`);
       console.log(`Shown as: ${agent.profile.model || '(nothing)'}`);
       console.log(`\nBackends: ${Object.keys(BACKENDS).join(', ')}`);
       return;
     }
-    const b = saveBackend(agent.dir, { type, model: typeof model === 'string' ? model : undefined, url: typeof url === 'string' ? url : undefined });
+    const b = saveBackend(agent.dir, { type, model: typeof model === 'string' ? model : undefined, url: typeof url === 'string' ? url : undefined, run: typeof run === 'string' ? run : undefined });
     // The model people see (philosophy #93) follows the backend, unless --label says otherwise.
     agent.init({ model: typeof label === 'string' ? label : backendLabel(b) || agent.profile.model });
     console.log(`Backend: ${b.type}${b.model ? ` (${b.model})` : ''}. Shown as: ${agent.profile.model}`);

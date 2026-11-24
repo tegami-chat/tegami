@@ -69,14 +69,18 @@ export function loadBackend(dir) {
  * Checks and saves a backend. Returns the saved config.
  * Throws with a plain message when something is missing or not allowed.
  */
-export function saveBackend(dir, { type, model, url }) {
+export function saveBackend(dir, { type, model, url, run: runLine }) {
   const b = BACKENDS[type];
   if (!b) {
     if (type === 'antigravity' || type === 'agy') throw new Error('Antigravity is not supported: its terms do not allow other programs to use it.');
     throw new Error(`Unknown backend "${type}". Use one of: ${Object.keys(BACKENDS).join(', ')}`);
   }
   const config = { type };
-  if (b.kind !== 'claude-code' && b.kind !== 'command') {
+  if (b.kind === 'command') {
+    const line = typeof runLine === 'string' ? runLine.trim() : '';
+    if (!line) throw new Error('Give the command line: --run "<program that reads the request on stdin and prints the reply>"');
+    config.run = line;
+  } else if (b.kind !== 'claude-code') {
     if (!model) throw new Error(`Give the model name: --model <name> (as ${type} calls it).`);
     config.model = String(model);
     const base = url ?? b.url;
@@ -186,44 +190,86 @@ export function makeResponder({ dir, config, system, draftSystem, checkSystem = 
   // history.json is sealed by the AI friend's vault (vault.mjs). Without one it stays in memory.
   const records = vault ?? new Vault(dir, () => null);
   const { tools = false, remember = true, keepDays = 30 } = settings;
-  if (command) return (prompt) => runCommand(command, prompt, dir);
   const b = BACKENDS[config.type] ?? BACKENDS['claude-code'];
+  const commandLine = command || (b.kind === 'command' ? config.run : '');
+  if (commandLine)
+    return async (prompt, { draft = false, check = false, peer = '', timeout } = {}) => {
+      if (check) draft = true;
+      const instructions = check ? checkSystem : draft ? draftSystem : system;
+      return converse({
+        records, peer, prompt, draft, remember, keepDays,
+        ask: (turns) => runCommand(commandLine, commandInput(instructions, turns), join(dir, 'command-work'), check ? { timeout: timeout ?? CHECK_PROCESS_TIMEOUT } : {}),
+      });
+    };
+  if (b.kind === 'command') throw new Error('The command backend needs a command line: tegami-agent backend command --run "<command>" (or --command "<command>" on watch).');
   if (b.kind === 'claude-code')
     return (prompt, opts = {}) =>
       opts.check
         ? runClaude({ dir, prompt, system, draftSystem: checkSystem, state, saveState, draft: true, check: true, timeout: opts.timeout ?? CHECK_PROCESS_TIMEOUT, tools, remember, keepDays })
         : runClaude({ dir, prompt, system, draftSystem, state, saveState, draft: !!opts.draft, peer: opts.peer ?? '', tools, remember, keepDays });
-  if (b.kind === 'command') throw new Error('The command backend needs --command "<program>" on watch.');
   return async (prompt, { draft = false, check = false, peer = '' } = {}) => {
     if (check) draft = true;
     const keys = loadKeys(dir);
     const key = keys[config.type] ?? '';
     if (b.key === true && !key) throw new Error(`No API key for ${config.type}. Run: tegami-agent key ${config.type}`);
     if (key && !keyMayGo(config.url)) throw new Error('The API key is only sent over https or to this computer.');
-    const now = Math.floor(Date.now() / 1000);
-    const since = now - keepDays * DAY;
-    const keep = !draft && remember && !!peer;
-    const history = keep ? (records.read('history.json', {})[peer] ?? []).filter((t) => (t.at ?? now) >= since) : [];
-    const turns = [...history.map(({ role, text }) => ({ role, text })), { role: 'user', text: prompt }];
-    let text;
-    try {
-      text = await callApi(b.kind, { url: config.url, model: config.model, key, system: check ? checkSystem : draft ? draftSystem : system, turns });
-    } catch (e) {
-      throw new Error(redact(e.message, keys));
-    }
-    if (!check) noteModel(dir, config.model);
-    if (keep) {
-      const all = records.read('history.json', {});
-      // Older than keepDays: gone, for everyone in the file (not only this person).
-      for (const [k, list] of Object.entries(all)) {
-        all[k] = list.filter((t) => (t.at ?? now) >= since);
-        if (!all[k].length) delete all[k];
-      }
-      all[peer] = [...history, { role: 'user', text: prompt, at: now }, { role: 'assistant', text, at: now }].slice(-HISTORY_TURNS * 2);
-      records.write('history.json', all);
-    }
-    return text;
+    return converse({
+      records, peer, prompt, draft, remember, keepDays,
+      ask: async (turns) => {
+        let text;
+        try {
+          text = await callApi(b.kind, { url: config.url, model: config.model, key, system: check ? checkSystem : draft ? draftSystem : system, turns });
+        } catch (e) {
+          throw new Error(redact(e.message, keys));
+        }
+        if (!check) noteModel(dir, config.model);
+        return text;
+      },
+    });
   };
+}
+
+/**
+ * One reply with a conversation kept per person (history.json in the records): shared by the
+ * API backends and the command backend. ask(turns) -> Promise<string> gets the turns, oldest
+ * first, ending with the new message. A draft or a check keeps nothing; without a person
+ * (peer) or with remember off, nothing is kept either.
+ */
+async function converse({ records, peer, prompt, draft, remember, keepDays, ask }) {
+  const now = Math.floor(Date.now() / 1000);
+  const since = now - keepDays * DAY;
+  const keep = !draft && remember && !!peer;
+  const history = keep ? (records.read('history.json', {})[peer] ?? []).filter((t) => (t.at ?? now) >= since) : [];
+  const turns = [...history.map(({ role, text }) => ({ role, text })), { role: 'user', text: prompt }];
+  const text = await ask(turns);
+  if (keep) {
+    const all = records.read('history.json', {});
+    // Older than keepDays: gone, for everyone in the file (not only this person).
+    for (const [k, list] of Object.entries(all)) {
+      all[k] = list.filter((t) => (t.at ?? now) >= since);
+      if (!all[k].length) delete all[k];
+    }
+    all[peer] = [...history, { role: 'user', text: prompt, at: now }, { role: 'assistant', text, at: now }].slice(-HISTORY_TURNS * 2);
+    records.write('history.json', all);
+  }
+  return text;
+}
+
+/**
+ * The one plain text a command gets on stdin: the instructions, the conversation so far (when
+ * there is one), the new message, and a closing line. The words follow the language of the
+ * instructions the agent gives (Japanese).
+ */
+export function commandInput(instructions, turns) {
+  const last = turns[turns.length - 1].text;
+  const before = turns.slice(0, -1);
+  const lines = [instructions, ''];
+  if (before.length) {
+    lines.push('--- これまでの会話 ---');
+    for (const t of before) lines.push(`${t.role === 'user' ? '相手' : 'あなた'}: ${t.text}`);
+  }
+  lines.push('--- 新しいメッセージ ---', last, '', '上の指示に従い、返事の本文だけを書いてください。');
+  return lines.join('\n');
 }
 
 /**
@@ -336,10 +382,18 @@ function killTree(pid) {
   }
 }
 
-async function runCommand(command, prompt, cwd) {
-  const r = await run(command, prompt, cwd);
-  if (r.code !== 0) throw new Error(r.err.trim() || `exit ${r.code}`);
-  return r.out;
+/**
+ * A command of the owner's choice (any AI's command line). It runs in an empty folder of its
+ * own, never in the AI friend's folder where the keys and records are. An exit code other
+ * than 0, or an empty answer, is an error.
+ */
+async function runCommand(command, input, cwd, opts = {}) {
+  mkdirSync(cwd, { recursive: true });
+  const r = await run(command, input, cwd, process.env, opts);
+  if (r.code !== 0) throw new Error(r.err.trim().slice(-300) || `the command exited with code ${r.code}`);
+  const text = r.out.trim();
+  if (!text) throw new Error(r.err.trim().slice(-300) || 'the command printed nothing');
+  return text;
 }
 
 /**

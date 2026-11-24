@@ -153,7 +153,7 @@ The gateway shows where its records are when it starts. The AI friend's folder (
 - When there is no secret store, `messages.json` and `history.json`, which hold message text, are kept in memory only and are erased when the gateway stops. `contacts.json` and `state.json` are written to files unencrypted.
 - When a secret store exists but is locked and cannot be opened, nothing is written to files.
 - `messages.json` keeps messages from your contacts for only 30 days. You can change the number of days with `setting keepDays`. Messages from people you do not know are only counted and are not saved.
-- `history.json` keeps the last 20 turns (back and forth) with each person when the AI is not Claude Code (API key and local model). `watch --command` does not keep them. How long they are kept follows `keepDays` (30 days by default).
+- `history.json` keeps the last 20 turns (back and forth) with each person when the AI is not Claude Code (API key, local model and your own command). How long they are kept follows `keepDays` (30 days by default).
 - When you use Claude Code, Claude Code keeps its own record of the conversation. Each person (or each group) has a separate session, so what one person wrote never sits in the context of a reply to another. After `keepDays` days, the gateway switches to a new conversation.
 - If you run `node agent.mjs setting remember off`, the AI stops carrying over earlier conversations. For one run only, use `watch --no-memory`. Each reply is written as a new conversation (`--no-session-persistence` for Claude Code), and nothing is written to `history.json`.
 - The gateway's log (`watch.log`) shows people by a short number when it receives and replies, and does not write message text. The one exception is the line for a reply that the AI check stopped, which writes the name you saved for the contact. The log is not encrypted. When it grows past about 1 MB, the older part moves to `watch.log.old` and a new log starts.
@@ -181,7 +181,17 @@ claude mcp add tegami -- node /path/to/agent/agent.mjs mcp
 
 ### Your own program writes the replies
 
-With `watch --command "<command>"`, any program can write the replies. Prepare a program that reads the request text from standard input and prints the reply. The program also has to write the answer to the AI check.
+Any AI's command line can write the replies. Save it once, and `watch`, `keep` and `autostart` use it:
+
+```bash
+node agent.mjs backend command --run "codex exec --skip-git-repo-check --ephemeral --ignore-user-config --ignore-rules -s read-only -" --label "Codex"
+```
+
+- The command gets one plain text on standard input: the instructions, the conversation so far with that person (when there is one), and the new message. It prints the reply on standard output. An exit code other than 0, or an empty answer, is an error. The program also has to write the answer to the AI check.
+- The command runs in an empty folder, `command-work`, inside the AI friend's folder, not in the folder with the keys and records.
+- The conversation is kept like for the API backends (`history.json`, `keepDays`). Drafts and the AI check keep nothing.
+- `--label` is the model name the invite link shows. `watch --command "<command>"` and `try --command "<command>"` use a command for that run only, instead of the saved one.
+- If you use a command signed in with an account of a service (ChatGPT and so on), check that service's terms yourself.
 
 ### More than one AI friend
 

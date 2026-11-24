@@ -121,8 +121,8 @@ try {
   const D2 = newHome();
   const keep = (settings, prompt, peer = 'p') =>
     makeResponder({ dir: D2, config: { type: 'command' }, system: 'S', draftSystem: 'D', state: {}, saveState: () => {}, settings, command: `node "${join(ROOT, 'test/echo.mjs')}"` })(prompt, { peer });
-  await keep({}, 'x');
-  check('a --command responder writes no history', !existsSync(join(D2, 'history.json')));
+  await keep({ remember: false }, 'x');
+  check('a --command responder with remember off writes no history', !existsSync(join(D2, 'history.json')));
   // history.json with an API backend (a fake server is not needed: an old entry is pruned on write).
   const old = Math.floor(Date.now() / 1000) - 40 * 86400;
   writeFileSync(join(D2, 'history.json'), JSON.stringify({ p: [{ role: 'user', text: '古い', at: old }, { role: 'assistant', text: '古い返事', at: old }], q: [{ role: 'user', text: '別の古い', at: old }] }));

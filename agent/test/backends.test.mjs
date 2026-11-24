@@ -130,6 +130,38 @@ try {
   check('Claude Code is the default and shows as Anthropic Claude', backendLabel({ type: 'claude-code' }) === 'Anthropic Claude' && loadBackend(mkdtempSync(join(tmpdir(), 'tegami-empty-'))).type === 'claude-code');
   check('the Anthropic API is called directly too', (await callApi('anthropic', { url: `${BASE}/v1`, model: 'm', key: KEY, system: 's', turns: [{ role: 'user', text: 'hi' }] })) === 'anthropic: hi');
 
+
+  // ---------- any AI's command line ----------
+  const ECHO = `node "${join(ROOT, 'test', 'echo-ai.mjs')}"`;
+  const CDIR = mkdtempSync(join(tmpdir(), 'tegami-command-'));
+  const cvault = new Vault(CDIR, () => randomBytes(32));
+  const cstate = { lastRead: 0, replied: [] };
+  const cresp = () => makeResponder({ dir: CDIR, config: loadBackend(CDIR), system: 'SYS', draftSystem: 'DRAFT', checkSystem: 'CHECK', state: cstate, saveState: () => {}, vault: cvault });
+  check('backend command needs --run', (await throws(() => saveBackend(CDIR, { type: 'command' }))).includes('--run'));
+  check('backend command: an empty --run is refused', (await throws(() => saveBackend(CDIR, { type: 'command', run: '  ' }))).includes('--run'));
+  check('backend command: the run line is saved', saveBackend(CDIR, { type: 'command', run: ECHO }).run === ECHO && loadBackend(CDIR).run === ECHO);
+  const r1 = await cresp()('こんにちは', { peer: 'p' });
+  check('command: the instructions and the new message are in the input', r1.startsWith('SYS\n') && r1.includes('--- 新しいメッセージ ---\nこんにちは') && !r1.includes('これまでの会話'));
+  const r2 = await cresp()('2回目', { peer: 'p' });
+  check('command: the 2nd call carries the 1st conversation', r2.includes('--- これまでの会話 ---') && r2.includes('相手: こんにちは') && r2.includes('あなた: SYS') && r2.includes('--- 新しいメッセージ ---\n2回目'));
+  const r3 = await cresp()('別の人', { peer: 'q' });
+  check('command: each person has their own conversation', !r3.includes('これまでの会話') && !r3.includes('こんにちは'));
+  const rc = await cresp()('安全確認', { check: true, peer: 'p', timeout: 20000 });
+  check('command: the check uses its own instructions and no conversation', rc.startsWith('CHECK\n') && !rc.includes('これまでの会話'));
+  const rd = await cresp()('下書き', { draft: true, peer: 'p' });
+  check('command: a draft uses the draft instructions and no conversation', rd.startsWith('DRAFT\n') && !rd.includes('これまでの会話'));
+  const kept = JSON.stringify(cvault.read('history.json', {}));
+  check('command: checks and drafts are not kept', !kept.includes('安全確認') && !kept.includes('下書き') && kept.includes('2回目'));
+  const cwd = r1.split('CWD:')[1].trim();
+  check(`command: runs in command-work, not in the AI friend's folder (${cwd})`, cwd.replace(/\\/g, '/').toLowerCase().endsWith('/command-work') && cwd.toLowerCase() !== CDIR.toLowerCase());
+  check('command: --command on watch beats the saved run', (await cresp()('x', { draft: true })).includes('CWD:') && (await makeResponder({ dir: CDIR, config: { type: 'claude-code' }, system: 'S', draftSystem: 'D', state: cstate, saveState: () => {}, command: ECHO, vault: cvault })('y', { draft: true })).startsWith('D\n'));
+  saveBackend(CDIR, { type: 'command', run: `${ECHO} fail` });
+  check('command: exit code other than 0 is an error', (await throws(() => cresp()('x', { peer: 'z' }))).includes('boom'));
+  saveBackend(CDIR, { type: 'command', run: `${ECHO} empty` });
+  check('command: an empty answer is an error', (await throws(() => cresp()('x', { peer: 'z' }))).includes('printed nothing'));
+  check('command: nothing is kept after an error', !JSON.stringify(cvault.read('history.json', {})).includes('"z"'));
+  rmSync(CDIR, { recursive: true, force: true });
+
   // ---------- the command line ----------
   const HOME = mkdtempSync(join(tmpdir(), 'tegami-agent-'));
   const env = { ...process.env, TEGAMI_AGENT_HOME: HOME, TEGAMI_RELAYS: 'ws://127.0.0.1:1' };
@@ -154,6 +186,10 @@ try {
   cli(['key', 'openai', '--remove']);
   check('key --remove deletes it', !readFileSync(join(HOME, 'keys.json'), 'utf8').includes(KEY));
   check('backend --label overrides what is shown', cli(['backend', 'ollama', '--model', 'gemma', '--label', 'My Gemma']).includes('Shown as: My Gemma'));
+  cli(['backend', 'command', '--run', ECHO, '--label', 'My AI']);
+  const triedCmd = (await promisify(execFile)(process.execPath, [join(ROOT, 'agent.mjs'), 'try', 'コマンドで'], { env, encoding: 'utf8' })).stdout;
+  check('try: runs the run line saved in backend.json', triedCmd.includes('--- 新しいメッセージ ---\nコマンドで') && triedCmd.includes('command-work'));
+  check('backend command: --label is shown', decodeURIComponent(cli(['invite'])).includes('m=My AI'));
   rmSync(HOME, { recursive: true, force: true });
 } finally {
   server.close();
