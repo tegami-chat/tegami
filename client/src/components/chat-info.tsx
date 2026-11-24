@@ -14,7 +14,7 @@ import { pickedBlob } from '@/lib/picked';
 import { useCall } from '@/lib/calls';
 import { useInsets } from '@/lib/insets';
 import { canManage } from '@/lib/groups';
-import { chatName, isGroup, isMyAi, personName, shortId, useTegami } from '@/lib/tegami';
+import { chatName, displayName as contactName, isGroup, isMyAi, isPerson, personName, shortId, useTegami } from '@/lib/tegami';
 
 /**
  * The person (or group) of a chat: video call, block, report, AI permissions, delete the chat.
@@ -44,12 +44,13 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
     setGroupAvatar,
     leaveGroup,
     setMyAi,
+    renameContact,
   } = useTegami();
   const { supported, startCall } = useCall();
 
   const [dialog, setDialog] = useState<null | 'block' | 'unblock' | 'delete' | 'leave' | 'myAi'>(null);
   // A Tegami group (lib/groups.ts): its members, name and picture can change.
-  const [editing, setEditing] = useState<null | 'name' | 'add'>(null);
+  const [editing, setEditing] = useState<null | 'name' | 'add' | 'nickname'>(null);
   const [newName, setNewName] = useState('');
   const [adding, setAdding] = useState<string[]>([]);
   const [removing, setRemoving] = useState<string | null>(null);
@@ -67,7 +68,7 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
     ? group
       ? chatName(peer, contacts, groups)
       : contact
-        ? contact.name
+        ? contactName(contact)
         : shortId(peer)
     : '';
   const groupInfo = group ? groups.find((g) => g.id === peer) : undefined;
@@ -86,6 +87,12 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
   function saveName() {
     if (!peer || !newName.trim()) return;
     renameGroup(peer, newName);
+    setEditing(null);
+  }
+  // An empty nickname goes back to the name in their own card.
+  function saveNickname() {
+    if (!contact) return;
+    renameContact(contact.pubkey, newName.trim());
     setEditing(null);
   }
   function addPicked() {
@@ -137,7 +144,7 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
           <View style={s.profile}>
             <Avatar name={group ? '◎' : displayName} file={group ? groupInfo?.avatar : contact?.avatar} size={76} />
             <Text style={s.name}>{displayName}</Text>
-            {contact?.self?.name && contact.self.name !== contact.name ? <Text style={s.model}>元の名前：{contact.self.name}</Text> : null}
+            {contact?.self?.name && contact.self.name !== contactName(contact) ? <Text style={s.model}>元の名前：{contact.self.name}</Text> : null}
             {peer && contact && (contact.model || isMyAi(contact)) ? (
               <Pressable role="button" onPress={openAbout} style={{ gap: 4, alignItems: 'center' }}>
                 {contact.model ? <ModelTag model={contact.model} style={s.model} center /> : null}
@@ -160,6 +167,22 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
                     <MaterialIcons name="videocam" size={28} color={c.text} />
                   </View>
                   <Text style={s.actionLabel}>ビデオ通話</Text>
+                </Pressable>
+              )}
+
+              {contact && isPerson(contact) && (
+                <Pressable
+                  role="button"
+                  aria-label="呼び名"
+                  onPress={() => {
+                    setNewName(contact.name);
+                    setEditing(editing === 'nickname' ? null : 'nickname');
+                  }}
+                  style={s.actionItem}>
+                  <View style={s.roundIcon}>
+                    <MaterialIcons name="edit" size={28} color={c.text} />
+                  </View>
+                  <Text style={s.actionLabel}>呼び名</Text>
                 </Pressable>
               )}
 
@@ -224,6 +247,25 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
             </View>
           )}
 
+          {!group && contact && isPerson(contact) && editing === 'nickname' && (
+            <View style={[s.card, s.editRow]}>
+              <TextInput
+                style={s.input}
+                value={newName}
+                onChangeText={setNewName}
+                placeholder={contact.profileName || shortId(contact.pubkey)}
+                placeholderTextColor={c.muted}
+                maxLength={40}
+                autoFocus
+                onSubmitEditing={saveNickname}
+                aria-label="呼び名"
+              />
+              <Pressable role="button" style={s.smallButton} onPress={saveNickname}>
+                <Text style={s.smallButtonText}>保存</Text>
+              </Pressable>
+            </View>
+          )}
+
           {group && manage && editing === 'name' && (
             <View style={[s.card, s.editRow]}>
               <TextInput
@@ -252,13 +294,13 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
                     key={x.pubkey}
                     role="checkbox"
                     aria-checked={on}
-                    aria-label={x.name}
+                    aria-label={contactName(x)}
                     style={[s.memberRow, idx > 0 && s.rowBorder]}
                     onPress={() => setAdding((p) => (on ? p.filter((k) => k !== x.pubkey) : [...p, x.pubkey]))}>
                     <View style={[s.box, on && s.boxOn]}>{on && <MaterialIcons name="check" size={16} color={c.onAccent} />}</View>
-                    <Avatar name={x.name} file={x.avatar} size={36} />
+                    <Avatar name={contactName(x)} file={x.avatar} size={36} />
                     <Text style={s.memberName} numberOfLines={1}>
-                      {x.name}
+                      {contactName(x)}
                     </Text>
                   </Pressable>
                 );

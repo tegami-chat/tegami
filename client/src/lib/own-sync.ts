@@ -58,9 +58,10 @@ const validGroupId = (id: string) => id.split(',').length >= 2 && id.split(',').
 /** The current values of one section, as ledger keys and plain values. */
 export function flatten(section: Section, lists: AccountLists): Record<string, unknown> {
   const out: Record<string, unknown> = {};
+  // p: the name in their own profile card (profileName); a device without it keeps its own.
   // y: the contact is my own AI (lib/tegami.tsx setMyAi). Only a mark I made counts, never a model name.
   if (section === 'c')
-    for (const c of lists.contacts) out[`c:${c.pubkey}`] = { n: c.name, ...(c.model ? { m: c.model } : {}), ...(c.mine ? { y: 1 } : {}) };
+    for (const c of lists.contacts) out[`c:${c.pubkey}`] = { n: c.name, ...(c.profileName ? { p: c.profileName } : {}), ...(c.model ? { m: c.model } : {}), ...(c.mine ? { y: 1 } : {}) };
   if (section === 'g') for (const g of lists.groups) if (!isTegamiGroup(g)) out[`g:${g.id}`] = { n: g.name };
   if (section === 'b') for (const p of lists.blocked) out[`b:${p}`] = 1;
   if (section === 'p' && lists.noai) out['p:noai'] = 1;
@@ -137,11 +138,12 @@ export function materialize(ledger: Ledger, current: AccountLists): AccountLists
     Object.entries(ledger)
       .filter(([key, e]) => key.startsWith(prefix) && e.v !== undefined)
       .sort((x, y) => x[1].at - y[1].at);
-  const contactValues = new Map(live('c:').map(([key, e]) => [key.slice(2), e.v as { n: string; m?: string; y?: 1 }]));
+  const contactValues = new Map(live('c:').map(([key, e]) => [key.slice(2), e.v as { n: string; p?: string; m?: string; y?: 1 }]));
   const contacts: Contact[] = [];
-  const contactOf = (pubkey: string, v: { n: string; m?: string; y?: 1 }, avatar?: Contact['avatar'], noai?: true, owner?: Contact['owner'], self?: Contact['self']): Contact => ({
+  const contactOf = (pubkey: string, v: { n: string; p?: string; m?: string; y?: 1 }, avatar?: Contact['avatar'], noai?: true, owner?: Contact['owner'], self?: Contact['self'], profileName?: string): Contact => ({
     pubkey,
     name: v.n,
+    ...(v.p || profileName ? { profileName: v.p || profileName } : {}),
     ...(v.m ? { model: v.m } : {}),
     ...(v.y === 1 ? { mine: true as const } : {}),
     ...(avatar ? { avatar } : {}),
@@ -152,7 +154,7 @@ export function materialize(ledger: Ledger, current: AccountLists): AccountLists
   for (const c of current.contacts) {
     const v = contactValues.get(c.pubkey);
     if (!v) continue;
-    contacts.push(contactOf(c.pubkey, v, c.avatar, c.noai, c.owner, c.self));
+    contacts.push(contactOf(c.pubkey, v, c.avatar, c.noai, c.owner, c.self, c.profileName));
     contactValues.delete(c.pubkey);
   }
   for (const [pubkey, v] of contactValues) contacts.push(contactOf(pubkey, v));
@@ -223,10 +225,11 @@ export function cleanEntries(raw: unknown): Ledger {
 function cleanValue(key: string, v: unknown): unknown {
   const id = key.slice(2);
   if (key.startsWith('c:')) {
-    const c = v as { n?: unknown; m?: unknown; y?: unknown };
+    const c = v as { n?: unknown; p?: unknown; m?: unknown; y?: unknown };
     if (!HEX.test(id) || !c || typeof c.n !== 'string') return undefined;
     const name = c.n.slice(0, 40);
-    return { n: name, ...(typeof c.m === 'string' && c.m ? { m: c.m.slice(0, 80) } : {}), ...(c.y === 1 ? { y: 1 } : {}) };
+    const pn = typeof c.p === 'string' ? c.p.trim().slice(0, 40) : '';
+    return { n: name, ...(pn ? { p: pn } : {}), ...(typeof c.m === 'string' && c.m ? { m: c.m.slice(0, 80) } : {}), ...(c.y === 1 ? { y: 1 } : {}) };
   }
   if (key.startsWith('g:')) {
     const g = v as { n?: unknown };

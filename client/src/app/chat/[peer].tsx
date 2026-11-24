@@ -29,7 +29,7 @@ import { MAX_FILE_BYTES } from '@/lib/files';
 import { tapLight } from '@/lib/haptics';
 import { useInsets } from '@/lib/insets';
 import { INFO_BESIDE_MIN, useWide, type PressState } from '@/lib/layout';
-import { AiConfirmNeededError, AiNotAllowedError, AiNothingToReadError, chatName, clock, isGroup, isMyAi, isPerson, personName, useTegami, type Message, type Stamp as StampItem } from '@/lib/tegami';
+import { AiConfirmNeededError, AiNotAllowedError, AiNothingToReadError, chatName, clock, isGroup, isMyAi, displayName, isPerson, personName, useTegami, type Message, type Stamp as StampItem } from '@/lib/tegami';
 
 const SEND_ERROR = '送れませんでした。もう一度送ってください';
 const VOICE_MAX_MS = 5 * 60 * 1000;
@@ -142,7 +142,6 @@ export default function Chat() {
   const [highlight, setHighlight] = useState<string | null>(null);
   const highlightTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const input = useRef<TextInput>(null);
-  const [newName, setNewName] = useState('');
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -315,7 +314,7 @@ export default function Chat() {
           return;
         }
         if (e instanceof AiNothingToReadError) {
-          setAiNothing(nothingToReadText(e.reason, contact?.name ?? ''));
+          setAiNothing(nothingToReadText(e.reason, contact ? displayName(contact) : ''));
           return;
         }
         showToast(e instanceof AiNotAllowedError ? 'AIの権限で止めました' : '頼めませんでした。もう一度お試しください');
@@ -338,7 +337,7 @@ export default function Chat() {
         contacts,
       );
       if ('refused' in built) {
-        setAiNothing(nothingToReadText(built.refused, contact?.name ?? ''));
+        setAiNothing(nothingToReadText(built.refused, contact ? displayName(contact) : ''));
         return;
       }
       setPhoneBusy(true);
@@ -949,8 +948,8 @@ ${text}` : text));
     ? chatName(peer, contacts, groups)
     : contact
       ? contact.model
-        ? `${contact.name}（${contact.model}）`
-        : contact.name
+        ? `${displayName(contact)}（${contact.model}）`
+        : displayName(contact)
       : peer
         ? personName(peer, contacts)
         : '';
@@ -985,7 +984,7 @@ ${text}` : text));
         {!nativeBar && (
         <View style={[s.header, wide && s.headerWide, { paddingTop: insets.top, minHeight: (wide ? 60 : 48) + insets.top }]}>
           {!wide && <BackButton onPress={() => (router.canGoBack() ? router.back() : router.replace('/' as Href))} />}
-          {wide && peer && <Avatar name={group ? '◎' : (contact?.name ?? title)} file={group ? groupInfo?.avatar : contact?.avatar} size={36} />}
+          {wide && peer && <Avatar name={group ? '◎' : (contact ? displayName(contact) : title)} file={group ? groupInfo?.avatar : contact?.avatar} size={36} />}
           <Text style={[s.headerTitle, wide && s.headerTitleWide]} numberOfLines={1} testID="chat-title">
             {title}
           </Text>
@@ -1038,19 +1037,7 @@ ${text}` : text));
 
         {!group && !contact && peer && !isFeedback(peer) && (
           <View style={s.addBar}>
-            <TextInput
-              style={s.addInput}
-              value={newName}
-              onChangeText={setNewName}
-              placeholder="表示する名前"
-              placeholderTextColor={c.muted}
-              onSubmitEditing={() => newName.trim() && addContact(peer, newName.trim())}
-            />
-            <Pressable
-              style={[s.addButton, !newName.trim() && s.disabled]}
-              disabled={!newName.trim()}
-              onPress={() => addContact(peer, newName.trim())}
-              role="button">
+            <Pressable style={s.addButton} onPress={() => addContact(peer, '')} role="button">
               <Text style={s.sendText}>友だちに追加</Text>
             </Pressable>
           </View>
@@ -1878,7 +1865,7 @@ ${text}` : text));
           title="AIにトークを読ませますか？"
           text={`新しいメッセージを${AI_DRAFT_MESSAGES}通まで、${personName(aiNotice, contacts)}に渡します。暗号化の外に出て、AIの会社に届くことがあります。${
             contact?.noai
-              ? `相手の設定により、${contact.name}さんの文は渡しません。`
+              ? `相手の設定により、${displayName(contact)}さんの文は渡しません。`
               : '「AIに読ませない」の印が付いた文は渡しません。'
           }`}
           onClose={() => setAiNotice(null)}
@@ -1902,7 +1889,7 @@ ${text}` : text));
           title="AIにトークを読ませますか？"
           text={`新しいメッセージを${DRAFT_MESSAGES}通まで、あなたのAPIキーでAIの会社に送ります。AIの会社も読めます。${
             contact?.noai
-              ? `相手の設定により、${contact.name}さんのメッセージは送りません。`
+              ? `相手の設定により、${displayName(contact)}さんのメッセージは送りません。`
               : '「AIに読ませない」の印が付いたメッセージは送りません。'
           }`}
           onClose={() => setPhoneNotice(false)}
@@ -2341,18 +2328,7 @@ const styles = (c: Palette) =>
       borderBottomColor: c.line,
       backgroundColor: c.surface,
     },
-    addInput: {
-      flex: 1,
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: c.line,
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      fontSize: 15,
-      color: c.text,
-      backgroundColor: c.background,
-    },
-    addButton: { backgroundColor: c.accent, borderRadius: 20, paddingHorizontal: 14, minHeight: 44, justifyContent: 'center' },
+    addButton: { flex: 1, alignItems: 'center', backgroundColor: c.accent, borderRadius: 20, paddingHorizontal: 14, minHeight: 44, justifyContent: 'center' },
     error: { fontSize: 13, color: c.danger, paddingHorizontal: 16, paddingBottom: 4 },
     blockedBar: {
       flexDirection: 'row',

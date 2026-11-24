@@ -33,6 +33,7 @@ import { fromB64u, toB64u } from './vault';
 export const SEALED_NAMES: readonly string[] = [
   'messages',
   'contacts',
+  'strangerCards',
   'groups',
   'outbox',
   'blocked',

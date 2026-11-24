@@ -705,6 +705,57 @@ async function main() {
       await u.context.close();
     });
 
+    await test('Friend names: the name comes from their card and follows a change; a nickname wins and an empty one hands it back; a stranger shows by name', async () => {
+      const a = await person(browser, 'あおい');
+      const b = await person(browser, 'ぶんた');
+      const contactOf = (u, hex) =>
+        u.page.evaluate((h) => JSON.parse(__tegamiStore.getItem('tegami.contacts') || '[]').find((c) => c.pubkey === h) ?? null, hex);
+      const waitContact = async (u, hex, test, what) => {
+        for (let i = 0; i < 60; i++) {
+          const c = await contactOf(u, hex);
+          if (c && test(c)) return c;
+          await u.page.waitForTimeout(250);
+        }
+        throw new Error(`contact never became: ${what}`);
+      };
+      // B adds A without typing a name (the add screen has no name field) and writes to A, who has not added B.
+      await befriend(b, a);
+      assert((await b.page.getByPlaceholder('表示する名前').count()) === 0, 'a name field is on the add screen');
+      await b.page.getByPlaceholder('メッセージ').fill('はじめまして');
+      await button(b.page, '送る').click();
+      await a.page.goto(ORIGIN + '/');
+      await waitText(a.page, '知らない人から');
+      await a.page.getByText('知らない人から').click();
+      await waitText(a.page, 'はじめまして');
+      // The stranger shows by the name in their card, not by a short id.
+      await waitText(a.page, 'ぶんた');
+      // A adds B: the name the card gave stays, with no name typed.
+      await befriend(a, b);
+      const bAtA = await waitContact(a, b.hex, (c) => c.profileName === 'ぶんた', 'profileName ぶんた');
+      assert(!bAtA.name, `A's own name for B should be empty: ${JSON.stringify(bAtA)}`);
+      // B shows A by A's name; A changes it and B's screen follows (the card, not the invite link).
+      await waitContact(b, a.hex, (c) => c.profileName === 'あおい', 'profileName あおい');
+      await a.page.goto(ORIGIN + '/add');
+      await waitText(a.page, 'マイQRコード');
+      await a.page.getByPlaceholder('自分の名前').fill('あおいさん');
+      await waitContact(b, a.hex, (c) => c.profileName === 'あおいさん', 'profileName あおいさん');
+      await b.page.goto(`${ORIGIN}/chat/${a.hex}`);
+      await waitText(b.page, 'あおいさん');
+      // B gives a nickname: it wins. An empty one hands the name back.
+      await button(b.page, 'メニュー').click();
+      await button(b.page, '呼び名').click();
+      await b.page.getByRole('textbox', { name: '呼び名' }).fill('あーちゃん');
+      await button(b.page, '保存').click();
+      await waitContact(b, a.hex, (c) => c.name === 'あーちゃん', 'nickname');
+      await waitText(b.page, 'あーちゃん');
+      await button(b.page, '呼び名').click();
+      await b.page.getByRole('textbox', { name: '呼び名' }).fill('');
+      await button(b.page, '保存').click();
+      await waitContact(b, a.hex, (c) => !c.name && c.profileName === 'あおいさん', 'nickname cleared');
+      await waitText(b.page, 'あおいさん');
+      for (const u of [a, b]) await u.context.close();
+    });
+
     await test('Two people: invite link, add, and a message arrives through the relay', async () => {
       const a = await newUser(browser);
       await button(a.page, 'はじめる').click();
@@ -720,8 +771,11 @@ async function main() {
       await button(b.page, 'パスキーを使わずに始める').click();
       await skipName(b.page);
       await waitText(b.page, 'マイQRコード');
-      assert((await b.page.getByPlaceholder('表示する名前').inputValue()) === 'あ', 'name not carried by the invite');
+      assert((await b.page.getByPlaceholder('表示する名前').count()) === 0, 'a name field is still on the add screen');
       await button(b.page, '追加').click();
+      await b.page.getByPlaceholder('メッセージ').waitFor();
+      // The name the invite carried is their own name, shown until their card arrives.
+      assert((await b.page.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.contacts') || '[]')[0]?.profileName)) === 'あ', 'name not carried by the invite');
       await b.page.getByPlaceholder('メッセージ').fill('こんにちは');
       await button(b.page, '送る').click();
       await a.page.goto(ORIGIN + '/');
@@ -1019,7 +1073,7 @@ async function main() {
       await a.page.goto(ORIGIN + '/');
       await button(a.page, '友だち').click();
       await waitText(a.page, 'しー');
-      const contactsOf = (p) => p.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.contacts') || '[]').map((x) => x.name).sort().join(','));
+      const contactsOf = (p) => p.evaluate(() => JSON.parse(__tegamiStore.getItem('tegami.contacts') || '[]').map((x) => x.name || x.profileName).sort().join(','));
       assert((await contactsOf(a.page)) === 'しー,びー', `A's friends: ${await contactsOf(a.page)}`);
 
       // A2 makes a group with B and C: it shows on A.
@@ -1711,7 +1765,7 @@ async function main() {
       assert(!/えー|びー|secretHex|npub/.test(first.data) && first.data.length < 64 * 1024, 'the relay holds readable account data');
       assert(!JSON.stringify(first).includes(aHex), 'the relay row contains the account key');
       const opened = await decrypt(code1, first.data);
-      assert(opened.id === first.id && opened.bundle.myName === 'えー' && opened.bundle.contacts[0]?.name === 'びー', 'backup content');
+      assert(opened.id === first.id && opened.bundle.myName === 'えー' && opened.bundle.contacts[0]?.profileName === 'びー', 'backup content');
       assert(first.pubkey === opened.signerPub, 'the backup is not signed with the key from the code');
       assert(!(await storage(a.page))['tegami.recovery']?.includes(code1.replace(/-/g, '')), 'the code is kept on the device in the clear');
       await button(a.page, '保管しました').click();
@@ -1719,11 +1773,12 @@ async function main() {
       assert(!(await text(a.page)).includes(code1), 'the code is still on the screen');
 
       // Rename the friend: the backup follows (after a short pause).
-      await a.page.goto(bLink);
-      await openIfLocked(a.page, 'マイQRコード');
-      await a.page.getByPlaceholder('表示する名前').fill('びーさん');
-      await button(a.page, '名前を変える').click();
-      await a.page.getByPlaceholder('メッセージ').waitFor();
+      await a.page.goto(`${ORIGIN}/chat/${nip19.decode(bLink.match(/npub1[0-9a-z]+/)[0]).data}`);
+      await openIfLocked(a.page, 'びー');
+      await button(a.page, 'メニュー').click();
+      await button(a.page, '呼び名').click();
+      await a.page.getByPlaceholder(/npub1|びー/).fill('びーさん');
+      await button(a.page, '保存').click();
       await until(async () => {
         const [cur] = await backups();
         return cur && (await decrypt(code1, cur.data)).bundle.contacts[0]?.name === 'びーさん';
@@ -2650,11 +2705,11 @@ async function main() {
         const cRow = (await members()).find((m) => m.pubkey === cHex);
         assert(cRow?.via === 'invite' && cRow.invitedBy === a.hex, `C is ${JSON.stringify(cRow)}`);
         // B adds A with A's full link (with the code): B becomes invited too.
-        // (A is already B's friend: the button renames, and the code still registers B.)
+        // (A is already B's friend: the button only opens the chat, and the code still registers B.)
         await b.page.goto(ORIGIN + '/add');
         await waitText(b.page, 'マイQRコード');
         await b.page.getByPlaceholder('https://app.tegami.chat/i#npub…').fill(a.link);
-        await button(b.page, '名前を変える').click();
+        await button(b.page, 'トークへ').click();
         for (let i = 0; i < 30 && (await via(b.hex)) !== 'invite'; i++) await b.page.waitForTimeout(200);
         assert((await via(b.hex)) === 'invite', "B did not become invited with A's code");
         for (const u of [b, c]) await u.context.close();
@@ -4308,7 +4363,6 @@ async function main() {
       await button(a.page, 'QRコードスキャン').click();
       await a.page.getByTestId('invite-qr').waitFor({ timeout: 10000 });
       assert((await a.page.getByPlaceholder('https://app.tegami.chat/i#npub…').inputValue()) === b.link, 'invite link not filled from QR');
-      assert((await a.page.getByPlaceholder('表示する名前').inputValue()) === 'ばんり', 'friend name not filled from QR');
       for (const u of [a, b]) await u.context.close();
     });
 

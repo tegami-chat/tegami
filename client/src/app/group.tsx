@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { Palette, usePalette } from '@/constants/theme';
-import { useTegami } from '@/lib/tegami';
+import { displayName, useTegami } from '@/lib/tegami';
 
 export default function NewGroup() {
   const c = usePalette();
@@ -49,7 +49,7 @@ export default function NewGroup() {
       </View>
       <View style={s.list}>
         {[...contacts]
-          .sort((a, b) => a.name.localeCompare(b.name))
+          .sort((a, b) => displayName(a).localeCompare(displayName(b)))
           .map((contact) => {
             const on = picked.includes(contact.pubkey);
             return (
@@ -59,9 +59,9 @@ export default function NewGroup() {
                 onPress={() => toggle(contact.pubkey)}
                 role="checkbox"
                 aria-checked={on}
-                aria-label={contact.name}>
+                aria-label={displayName(contact)}>
                 <View style={[s.box, on && s.boxOn]}>{on && <MaterialIcons name="check" size={16} color={c.onAccent} />}</View>
-                <Text style={s.name}>{contact.name}</Text>
+                <Text style={s.name}>{displayName(contact)}</Text>
                 {contact.model ? <Text style={s.model}>{contact.model}</Text> : null}
               </Pressable>
             );

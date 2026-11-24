@@ -181,8 +181,11 @@ export const PROFILE_KIND = 10100;
  *
  * self: for an AI friend, what its newest own message says of it: the name its maker gave it and
  * the model that wrote its last reply. Its own word. Kept on this device only.
+ *
+ * name: what I call them (may be empty). profileName: the name in their own profile card. What
+ * the screen shows is displayName(): my name for them, else their own, else a short id.
  */
-export type Contact = { pubkey: string; name: string; model?: string; avatar?: FileRef; mine?: true; noai?: true; owner?: OwnerMark; self?: AiSelf };
+export type Contact = { pubkey: string; name: string; profileName?: string; model?: string; avatar?: FileRef; mine?: true; noai?: true; owner?: OwnerMark; self?: AiSelf };
 
 /** My own AI (the mark I set), not someone who only says they are an AI. */
 export const isMyAi = (c: Contact) => c.mine === true;
@@ -310,7 +313,9 @@ type TegamiState = {
   setGroupAvatar: (room: string, photo: Blob | null) => Promise<void>;
   /** Leaves a group: the others are told, and the chat is removed from this device. */
   leaveGroup: (room: string) => void;
-  /** My own name, shared through my invite link. Stays on this device otherwise. */
+  /** Names and pictures from cards of people who are not my friends. */
+  strangerCards: Record<string, StrangerCard>;
+  /** My own name, shared through my invite link and my profile card. */
   myName: string;
   setMyName: (name: string) => void;
   /** My「自分の文を相手のAIに読ませない」(lib/ai-optout.ts). Told to friends, synced to my devices. */
@@ -330,7 +335,9 @@ type TegamiState = {
   makeTransferLink: () => Promise<{ link: string; expiresAt: number }>;
   /** Asks for the passkey and opens the account. */
   unlock: () => Promise<void>;
-  addContact: (pubkey: string, name: string, model?: string) => void;
+  addContact: (pubkey: string, name: string, model?: string, profileName?: string) => void;
+  /** Sets what I call a friend (empty: their own name from their card shows again). */
+  renameContact: (pubkey: string, name: string) => void;
   removeContact: (pubkey: string) => void;
   /** Removes every message of this chat (and the group entry for a group) from this device. */
   deleteChat: (room: string) => void;
@@ -514,9 +521,27 @@ export function shortId(pubkey: string) {
   return `${npub.slice(0, 9)}…${npub.slice(-4)}`;
 }
 
-/** What to call a person: their contact name, or a short id. */
+/** What the screen calls a friend: my name for them, else the name in their card, else a short id. */
+export function displayName(c: Contact) {
+  return c.name || c.profileName || shortId(c.pubkey);
+}
+
+const STRANGER_CARDS = 200;
+
+/** Cards from people who are not my friends (name and picture), kept so their chat can show a name. */
+export type StrangerCard = { name?: string; avatar?: FileRef };
+let strangerCardsNow: Record<string, StrangerCard> = {};
+
+/** What to call a person: my name for them, their own name, or a short id. */
 export function personName(pubkey: string, contacts: Contact[]) {
-  return contacts.find((c) => c.pubkey === pubkey)?.name ?? (pubkey === FEEDBACK_PUBKEY ? FEEDBACK_NAME : shortId(pubkey));
+  const c = contacts.find((x) => x.pubkey === pubkey);
+  if (c) return displayName(c);
+  return strangerCardsNow[pubkey]?.name || (pubkey === FEEDBACK_PUBKEY ? FEEDBACK_NAME : shortId(pubkey));
+}
+
+/** The name in a profile card: trimmed and cut at 40. Undefined when the card says nothing about it, '' when it clears it. */
+export function profileNameOf(data: { name?: unknown }): string | undefined {
+  return typeof data.name === 'string' ? data.name.trim().slice(0, 40) : undefined;
 }
 
 /** What to call a chat: the contact, the group's name, or its members' names. */
@@ -606,6 +631,14 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   stampsRef.current = stamps;
   const [stampsUsed, setStampsUsed] = useState<Record<string, number>>({});
   const profileAt = useRef(new Map<string, number>());
+  // Cards from people who are not my friends. Kept on this device (encrypted), at most STRANGER_CARDS.
+  const [strangerCards, setStrangerCards] = useState<Record<string, StrangerCard>>({});
+  const strangerCardsRef = useRef<Record<string, StrangerCard>>({});
+  strangerCardsRef.current = strangerCards;
+  strangerCardsNow = strangerCards;
+  // The name last sent in my profile card (what the debounced effect below compares with).
+  const sentNameRef = useRef<string | null>(null);
+  const sendProfileToRef = useRef<(recipients: string[], avatar: FileRef | null) => Promise<void>>(async () => {});
   const lastProfileAt = useRef(0);
   const [crashReports, setCrashReportsState] = useState(false);
   const [recoveryOn, setRecoveryOn] = useState(false);
@@ -636,6 +669,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     setContacts(loadedContacts);
     const loadedGroups = load<Group[]>(k('groups'), []);
     setGroups(loadedGroups);
+    const loadedCards = load<Record<string, StrangerCard>>(k('strangerCards'), {});
+    strangerCardsRef.current = loadedCards;
+    setStrangerCards(loadedCards);
     const loadedAvatar = load<FileRef | null>(k('avatar'), null);
     myAvatarRef.current = loadedAvatar;
     setMyAvatarState(loadedAvatar);
@@ -724,7 +760,9 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       let setup = load<number>(k('setupAt'), 0);
       if (!setup && (v || device || plain)) save(k('setupAt'), (setup = Math.floor(Date.now() / 1000)));
       setSetupAt(setup);
-      setMyNameState(load<string>(k('myName'), ''));
+      const loadedName = load<string>(k('myName'), '');
+      sentNameRef.current = loadedName;
+      setMyNameState(loadedName);
       // A choice for the whole device, not for one account.
       const crash = load<boolean>('tegami.crashReports', false);
       setCrashReportsState(crash);
@@ -1013,12 +1051,31 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
             return;
           }
           if (rumor.kind === PROFILE_KIND) {
-            if (!contactsRef.current.some((c) => c.pubkey === rumor.pubkey)) return;
+            if (rumor.pubkey === me || blockedRef.current.includes(rumor.pubkey)) return;
             if (rumor.created_at < (profileAt.current.get(rumor.pubkey) ?? 0)) return;
-            const data = JSON.parse(rumor.content) as { avatar?: unknown; noai?: unknown };
+            const data = JSON.parse(rumor.content) as { name?: unknown; avatar?: unknown; noai?: unknown };
             if (!data || typeof data !== 'object') return;
             const avatar = data.avatar === null ? null : validFileRef(data.avatar);
             if (data.avatar !== null && !avatar) return;
+            // A card from before the name was in it says nothing: the name stays as it was.
+            const pname = profileNameOf(data);
+            if (!contactsRef.current.some((c) => c.pubkey === rumor.pubkey)) {
+              // Not a friend: remember the name and picture, so the chat shows them and adding keeps them.
+              profileAt.current.set(rumor.pubkey, rumor.created_at);
+              const prevCard = strangerCardsRef.current[rumor.pubkey];
+              const card: StrangerCard = {
+                ...(pname === undefined ? (prevCard?.name ? { name: prevCard.name } : {}) : pname ? { name: pname } : {}),
+                ...(avatar ? { avatar } : {}),
+              };
+              const { [rumor.pubkey]: _gone, ...others } = strangerCardsRef.current;
+              const keys = Object.keys(others);
+              for (const old of keys.slice(0, Math.max(0, keys.length - (STRANGER_CARDS - 1)))) delete others[old];
+              const nextCards = card.name || card.avatar ? { ...others, [rumor.pubkey]: card } : others;
+              strangerCardsRef.current = nextCards;
+              save(k('strangerCards'), nextCards);
+              setStrangerCards(nextCards);
+              return;
+            }
             // A card from before「AIに読ませない」says nothing: the friend's choice stays as it was.
             const noai = profileNoAi(data);
             profileAt.current.set(rumor.pubkey, rumor.created_at);
@@ -1028,9 +1085,10 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
               if (!prev.some((c) => c.pubkey === rumor.pubkey)) return prev;
               const next = prev.map((c) => {
                 if (c.pubkey !== rumor.pubkey) return c;
-                const { avatar: _, noai: was, ...rest } = c;
+                const { avatar: _, noai: was, profileName: oldName, ...rest } = c;
                 const off = noai ?? was === true;
-                return { ...rest, ...(avatar ? { avatar } : {}), ...(off ? { noai: true as const } : {}) };
+                const shown = pname === undefined ? oldName : pname || undefined;
+                return { ...rest, ...(shown ? { profileName: shown } : {}), ...(avatar ? { avatar } : {}), ...(off ? { noai: true as const } : {}) };
               });
               contactsRef.current = next;
               save(k('contacts'), next);
@@ -1309,6 +1367,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     for (const st of moved.stamps ?? []) {
       void openFile(`stamp:${st.sha256}`, st).catch(() => {});
     }
+    sentNameRef.current = moved.myName;
     setMyNameState(moved.myName);
     setContacts(moved.contacts);
     setGroups(moved.groups);
@@ -1425,6 +1484,19 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     setMyNameState(n);
   }, []);
 
+  // My name changed: tell every friend in my profile card, once I stop typing (setMyName runs per key).
+  useEffect(() => {
+    if (!secret || !loaded || sentNameRef.current === null || sentNameRef.current === myName) return;
+    const timer = setTimeout(() => {
+      sentNameRef.current = myNameRef.current;
+      void sendProfileToRef.current(
+        contactsRef.current.map((c) => c.pubkey),
+        myAvatarRef.current,
+      ).catch(() => {});
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [secret, loaded, myName]);
+
   /** Sends a private profile card to each given contact (never to strangers or groups). */
   const sendProfileTo = useCallback(
     async (recipients: string[], avatar: FileRef | null) => {
@@ -1434,7 +1506,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       const at = Math.max(Math.floor(Date.now() / 1000), lastProfileAt.current + 1);
       lastProfileAt.current = at;
       // noai: my「自分の文を相手のAIに読ませない」(lib/ai-optout.ts), always said, on or off.
-      const content = JSON.stringify({ avatar, noai: myNoAiRef.current });
+      const content = JSON.stringify({ name: myNameRef.current, avatar, noai: myNoAiRef.current });
       await Promise.all(
         targets.map((to) => {
           const rumor = nip59.createRumor({ kind: PROFILE_KIND, content, tags: [['p', to]], created_at: at }, secret);
@@ -1446,6 +1518,8 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     },
     [secret],
   );
+
+  sendProfileToRef.current = sendProfileTo;
 
   const setMyAvatar = useCallback(
     async (photo: Blob | null) => {
@@ -1514,21 +1588,40 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   }, [secret, me, setMyAvatar]);
 
   const addContact = useCallback(
-    (pubkey: string, name: string, model?: string) => {
+    (pubkey: string, name: string, model?: string, profileName?: string) => {
+      // A stranger I add keeps the name and picture their card gave.
+      const card = contactsRef.current.some((c) => c.pubkey === pubkey) ? undefined : strangerCardsRef.current[pubkey];
+      if (card) {
+        const { [pubkey]: _used, ...others } = strangerCardsRef.current;
+        strangerCardsRef.current = others;
+        save(k('strangerCards'), others);
+        setStrangerCards(others);
+        if (card.avatar) void openFile(`avatar:${card.avatar.sha256}`, card.avatar).catch(() => {});
+      }
       setContacts((prev) => {
         const old = prev.find((c) => c.pubkey === pubkey);
         const rest = prev.filter((c) => c.pubkey !== pubkey);
         const m = model ?? old?.model;
-        const avatar = old?.avatar;
-        const next = [...rest, { pubkey, name, ...(m ? { model: m } : {}), ...(avatar ? { avatar } : {}), ...(old?.mine ? { mine: true as const } : {}), ...(old?.owner ? { owner: old.owner } : {}), ...(old?.self ? { self: old.self } : {}) }];
+        const avatar = old?.avatar ?? card?.avatar;
+        const pname = old?.profileName ?? card?.name ?? (profileName?.trim().slice(0, 40) || undefined);
+        const next = [...rest, { pubkey, name, ...(pname ? { profileName: pname } : {}), ...(m ? { model: m } : {}), ...(avatar ? { avatar } : {}), ...(old?.mine ? { mine: true as const } : {}), ...(old?.owner ? { owner: old.owner } : {}), ...(old?.self ? { self: old.self } : {}) }];
         contactsRef.current = next;
         save(k('contacts'), next);
         return next;
       });
-      if (myAvatarRef.current || myNoAiRef.current) void sendProfileTo([pubkey], myAvatarRef.current);
+      if (myNameRef.current || myAvatarRef.current || myNoAiRef.current) void sendProfileTo([pubkey], myAvatarRef.current);
     },
     [sendProfileTo],
   );
+
+  const renameContact = useCallback((pubkey: string, name: string) => {
+    setContacts((prev) => {
+      const next = prev.map((c) => (c.pubkey === pubkey ? { ...c, name: name.slice(0, 40) } : c));
+      contactsRef.current = next;
+      save(k('contacts'), next);
+      return next;
+    });
+  }, []);
 
   /** Marks a friend as my own AI, or takes the mark away (synced to my other devices). */
   const setMyAi = useCallback((pubkey: string, on: boolean) => {
@@ -1640,6 +1733,12 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const block = useCallback((pubkey: string) => {
+    if (strangerCardsRef.current[pubkey]) {
+      const { [pubkey]: _gone, ...others } = strangerCardsRef.current;
+      strangerCardsRef.current = others;
+      save(k('strangerCards'), others);
+      setStrangerCards(others);
+    }
     setBlocked((prev) => {
       if (prev.includes(pubkey)) return prev;
       const next = [...prev, pubkey];
@@ -2376,7 +2475,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
       const chat = messagesRef.current.filter((m) => m.peer === friend);
       const why = nothingToRead(chat, friendContact, me);
       if (why) throw new AiNothingToReadError(why);
-      const { ask, range } = draftAsk(aiReadable(chat, people, me), friend, me, { friend: friendContact.name, me: myName || '自分' });
+      const { ask, range } = draftAsk(aiReadable(chat, people, me), friend, me, { friend: displayName(friendContact), me: myName || '自分' });
       const r = { ai, model: aiContact.model, friend };
       // The gate answers allow, refuse, or (with per-ask permissions) "ask the person first".
       const pass = (answer: unknown, what: string) => {
@@ -2592,7 +2691,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     async (rumor: ReturnType<typeof nip59.createRumor>, ai: Contact) => {
       const ok = await askAi({ ai: ai.pubkey, model: ai.model, action: 'contacts' }, isPersonFriend);
       const friends = ok
-        ? contactsRef.current.filter((c) => isPerson(c) && !blockedRef.current.includes(c.pubkey)).map((c) => ({ pubkey: c.pubkey, name: c.name }))
+        ? contactsRef.current.filter((c) => isPerson(c) && !blockedRef.current.includes(c.pubkey)).map((c) => ({ pubkey: c.pubkey, name: displayName(c) }))
         : undefined;
       void tellAi(ai.pubkey, AI_CONTACTS_KIND, friends ? { re: rumor.id, friends } : { re: rumor.id, stopped: true });
     },
@@ -2714,7 +2813,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
         logAiStop({ ai, model: c.model, action: 'read', friend: isGroup(room) ? undefined : room }, 'stage');
         throw new AiNotAllowedError('not at this stage');
       }
-      await sendAiGroup(room, { t: 'invite', ai, name: c.name, ...(c.model ? { model: c.model } : {}) });
+      await sendAiGroup(room, { t: 'invite', ai, name: displayName(c), ...(c.model ? { model: c.model } : {}) });
     },
     [sendAiGroup, isPersonFriend],
   );
@@ -2842,6 +2941,19 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     if (changed.size) {
       const next = materialize(ledger, current);
       if (changed.has('c')) {
+        // A friend added on my other device: this device may already hold their card as a stranger's.
+        const cards = { ...strangerCardsRef.current };
+        next.contacts = next.contacts.map((c) => {
+          const card = cards[c.pubkey];
+          if (!card || current.contacts.some((o) => o.pubkey === c.pubkey)) return c;
+          delete cards[c.pubkey];
+          return { ...c, ...(card.name ? { profileName: card.name } : {}), ...(card.avatar ? { avatar: card.avatar } : {}) };
+        });
+        if (Object.keys(cards).length !== Object.keys(strangerCardsRef.current).length) {
+          strangerCardsRef.current = cards;
+          save(k('strangerCards'), cards);
+          setStrangerCards(cards);
+        }
         for (const c of current.contacts)
           if (c.avatar?.sha256 && !next.contacts.some((n) => n.pubkey === c.pubkey)) void forgetFile(`avatar:${c.avatar.sha256}`);
         contactsRef.current = next.contacts;
@@ -3091,6 +3203,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     protectedByPasskey: !!vault,
     npub: me ? nip19.npubEncode(me) : null,
     contacts,
+    strangerCards,
     groups,
     blocked,
     block,
@@ -3110,6 +3223,7 @@ export function TegamiProvider({ children }: { children: React.ReactNode }) {
     makeTransferLink,
     unlock,
     addContact,
+    renameContact,
     removeContact,
     deleteChat,
     myName,

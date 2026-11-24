@@ -17,7 +17,7 @@ import { FEEDBACK_NAME, FEEDBACK_PUBKEY, closeFeedback, isFeedback, useFeedbackO
 import { usePhoneKeySaved } from '@/lib/phone-ai/ask';
 import { focusSearch, onFocusSearch, openChat, useListTab, type PressState } from '@/lib/layout';
 import { excerpt, matchesName, searchMessages } from '@/lib/search';
-import { chatName, isGroup, strangers, useTegami, type Contact, type Message } from '@/lib/tegami';
+import { chatName, displayName, isGroup, strangers, useTegami, type Contact, type Message } from '@/lib/tegami';
 
 function when(at: number) {
   const d = new Date(at * 1000);
@@ -70,7 +70,7 @@ export function ChatList({ wide = false }: { wide?: boolean }) {
     (feedbackOpen || messages.some((m) => m.peer === FEEDBACK_PUBKEY)) && !blocked.includes(FEEDBACK_PUBKEY) && !contacts.some((x) => x.pubkey === FEEDBACK_PUBKEY);
   const rows = [
     ...(feedback ? [{ room: FEEDBACK_PUBKEY, name: FEEDBACK_NAME, model: undefined, avatar: undefined, group: false }] : []),
-    ...friends.map((x) => ({ room: x.pubkey, name: x.name, model: x.model, avatar: x.avatar, group: false })),
+    ...friends.map((x) => ({ room: x.pubkey, name: displayName(x), model: x.model, avatar: x.avatar, group: false })),
     ...groups.map((g) => ({ room: g.id, name: chatName(g.id, contacts, groups), model: undefined, avatar: g.avatar, group: true })),
   ]
     .map((r) => ({ ...r, last: lastOf(r.room) }))
@@ -205,10 +205,10 @@ export function ChatList({ wide = false }: { wide?: boolean }) {
                 onPress={() => openChat(contact.pubkey)}
                 onLongPress={() => setFriendMenu(contact)}
                 {...webMenu}>
-                <Avatar name={contact.name} file={contact.avatar} size={36} />
+                <Avatar name={displayName(contact)} file={contact.avatar} size={36} />
                 <View style={s.friendBody}>
                   <Text style={s.friendName} numberOfLines={1}>
-                    {contact.name}
+                    {displayName(contact)}
                     {contact.model ? <Text style={s.friendModel}>  {contact.model}</Text> : null}
                   </Text>
                 </View>
@@ -357,7 +357,7 @@ export function ChatList({ wide = false }: { wide?: boolean }) {
 
       {friendMenu && (
         <MenuSheet
-          title={friendMenu.name}
+          title={displayName(friendMenu)}
           onClose={() => setFriendMenu(null)}
           items={[
             {
@@ -404,7 +404,7 @@ export function ChatList({ wide = false }: { wide?: boolean }) {
 
       {confirmFriend?.kind === 'delete' && (
         <Dialog
-          title={`${confirmFriend.contact.name}を友だちから削除しますか？`}
+          title={`${displayName(confirmFriend.contact)}を友だちから削除しますか？`}
           onClose={() => setConfirmFriend(null)}
           buttons={[
             {
@@ -426,7 +426,7 @@ export function ChatList({ wide = false }: { wide?: boolean }) {
 
       {confirmFriend?.kind === 'block' && (
         <Dialog
-          title={`${confirmFriend.contact.name}をブロックしますか？`}
+          title={`${displayName(confirmFriend.contact)}をブロックしますか？`}
           text="ブロックした相手とはメッセージの送受信ができなくなります。相手には伝わりません。"
           onClose={() => setConfirmFriend(null)}
           buttons={[

@@ -16,8 +16,10 @@ import {
   inviteFromQr,
   inviteLink,
   inviteModel,
+  displayName,
   inviteName,
   parsePubkey,
+  shortId,
   takePendingInvite,
   useTegami,
 } from '@/lib/tegami';
@@ -93,7 +95,6 @@ export default function Add() {
   const [opened] = useState(takePendingInvite);
   const [tab, setTab] = useState<'qr' | 'scan'>('qr');
   const [invite, setInvite] = useState(opened);
-  const [name, setName] = useState(inviteName(opened));
   const [cameraError, setCameraError] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   // A link with a one-time pairing code (tegami-agent pair) makes the AI my own AI, which may
@@ -105,7 +106,9 @@ export default function Add() {
   const peer = parsePubkey(invite);
   const model = inviteModel(invite);
   const known = contacts.find((x) => x.pubkey === peer);
-  const canAdd = !!peer && peer !== me && name.trim().length > 0;
+  // The name an invite link carries is their own name (shown until their card arrives), not mine for them.
+  const invitedName = inviteName(invite);
+  const canAdd = !!peer && peer !== me;
   const myInvite = npub ? inviteLink(npub, myName, inviteCode) : '';
   const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
   const qrUri = useMemo(() => (myInvite ? makeQrPng(myInvite) : ''), [myInvite]);
@@ -135,13 +138,16 @@ export default function Add() {
   function changeInvite(text: string) {
     setInvite(text);
     setAsMine(false);
-    const n = inviteName(text);
-    if (n && !name.trim()) setName(n);
   }
 
   function add() {
     if (!peer || !canAdd) return;
-    addContact(peer, name.trim(), model || undefined);
+    // A friend I already have is only opened (their name stays as it is).
+    // An AI keeps the name it gave itself as its name; a person's name is their own (profileName).
+    if (!known) {
+      if (model || pairCodeOf(invite)) addContact(peer, invitedName || shortId(peer), model || undefined);
+      else addContact(peer, '', undefined, invitedName || undefined);
+    }
     // Registered without an invite: a friend's code makes my messages reach strangers too.
     const code = inviteCodeOf(invite);
     if (code && registration === 'ok' && !trusted) void registerWith({ invite: code });
@@ -162,8 +168,6 @@ export default function Add() {
     // Off even when the code carries a pairing code: a picture someone else handed me must not
     // make their AI mine. Only my own switch turns it on.
     setAsMine(false);
-    const n = inviteName(link);
-    if (n) setName(n);
     setScanError(null);
     setTab('qr');
     return true;
@@ -377,15 +381,7 @@ export default function Add() {
           />
           {invite.length > 0 && !peer && <Text style={s.error}>招待リンクを読み取れません</Text>}
           {peer && peer === me && <Text style={s.error}>自分の招待リンクです</Text>}
-          {known && <Text style={s.error}>{known.name} さんは、もう友だちです</Text>}
-          <TextInput
-            style={s.input}
-            value={name}
-            onChangeText={setName}
-            placeholder="表示する名前"
-            placeholderTextColor={c.muted}
-            onSubmitEditing={add}
-          />
+          {known && <Text style={s.error}>{displayName(known)} さんは、もう友だちです</Text>}
           {peer && model ? <ModelTag model={model} style={s.model} /> : null}
           {peer && pairCodeOf(invite) ? (
             <View style={s.mineRow}>
@@ -404,7 +400,7 @@ export default function Add() {
             </View>
           ) : null}
           <Pressable style={[s.primary, !canAdd && s.disabled]} onPress={add} disabled={!canAdd} role="button">
-            <Text style={s.primaryText}>{known ? '名前を変える' : '追加'}</Text>
+            <Text style={s.primaryText}>{known ? 'トークへ' : '追加'}</Text>
           </Pressable>
         </>
       ) : (

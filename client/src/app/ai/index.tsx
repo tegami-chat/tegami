@@ -25,7 +25,7 @@ import {
   type AiPermissions,
 } from '@/lib/ai-permissions';
 import { openChat } from '@/lib/layout';
-import { isMyAi, useTegami } from '@/lib/tegami';
+import { displayName, isMyAi, useTegami } from '@/lib/tegami';
 
 const LIMIT_LABEL: Record<keyof AiLimits, string> = {
   minute: '1分間に送れる数',
@@ -81,10 +81,10 @@ export default function AiPermissionsScreen() {
           <View style={s.list}>
             {ais.map((x, i) => (
               <Pressable key={x.pubkey} style={[s.row, i > 0 && s.border]} onPress={() => open('ai', x.pubkey)} role="button">
-                <Avatar name={x.name} file={x.avatar} size={36} />
+                <Avatar name={displayName(x)} file={x.avatar} size={36} />
                 <View style={s.rowText}>
                   <Text style={s.label} numberOfLines={1}>
-                    {x.name}
+                    {displayName(x)}
                   </Text>
                   {x.model ? <ModelTag model={x.model} style={s.sub} /> : null}
                 </View>
@@ -131,10 +131,10 @@ export default function AiPermissionsScreen() {
           <View style={s.list}>
             {otherAis.map((x, i) => (
               <Pressable key={x.pubkey} style={[s.row, i > 0 && s.border]} onPress={() => openChat(x.pubkey)} role="button">
-                <Avatar name={x.name} file={x.avatar} size={36} />
+                <Avatar name={displayName(x)} file={x.avatar} size={36} />
                 <View style={s.rowText}>
                   <Text style={s.label} numberOfLines={1}>
-                    {x.name}
+                    {displayName(x)}
                   </Text>
                   <ModelTag model={x.model as string} style={s.sub} />
                 </View>
@@ -169,9 +169,9 @@ export default function AiPermissionsScreen() {
               const n = onCount(p, x.pubkey);
               return (
                 <Pressable key={x.pubkey} style={[s.row, i > 0 && s.border]} onPress={() => open('friend', x.pubkey)} role="button">
-                  <Avatar name={x.name} file={x.avatar} size={36} />
+                  <Avatar name={displayName(x)} file={x.avatar} size={36} />
                   <Text style={s.label} numberOfLines={1}>
-                    {x.name}
+                    {displayName(x)}
                   </Text>
                   <Text style={s.sub}>{n ? `${n}件オン` : 'オフ'}</Text>
                   <MaterialIcons name="chevron-right" size={22} color={c.muted} />
