@@ -363,6 +363,7 @@ export function ChatInfo({ peer, onClose, panel = false }: { peer: string | unde
               <View style={s.linkRow}>
                 <Text style={s.linkText}>自分のAI</Text>
                 <Switch
+                  style={{ alignSelf: 'center' }}
                   trackColor={{ false: c.line, true: c.accent }}
                   thumbColor="#ffffff"
                   {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}

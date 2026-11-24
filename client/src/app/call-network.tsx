@@ -51,6 +51,7 @@ export default function CallNetworkScreen() {
       <View style={[s.card, s.rowPlain]}>
         <Text style={s.label}>通話を常に中継する</Text>
         <Switch
+          style={{ alignSelf: 'center' }}
           trackColor={{ false: c.line, true: c.accent }}
           thumbColor="#ffffff"
           {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}

@@ -390,6 +390,7 @@ export default function Add() {
                 <Text style={s.model}>自分のパソコンに出たQRコードのときだけオン</Text>
               </View>
               <Switch
+                style={{ alignSelf: 'center' }}
                 trackColor={{ false: c.line, true: c.accent }}
                 thumbColor="#ffffff"
                 {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}

@@ -103,6 +103,7 @@ export function ReportSheet({
               <View style={s.attachRow}>
                 <Text style={s.attachLabel}>メッセージを添える</Text>
                 <Switch
+                  style={{ alignSelf: 'center' }}
                   trackColor={{ false: c.line, true: c.accent }}
                   thumbColor="#ffffff"
                   {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}

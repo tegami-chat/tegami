@@ -91,6 +91,7 @@ export function SwitchRow({ label, value, onChange, disabled, icon }: { label: s
       {icon ? <MaterialIcons name={icon} size={22} color={c.muted} /> : null}
       <Text style={s.label}>{label}</Text>
       <Switch
+        style={{ alignSelf: 'center' }}
         trackColor={{ false: c.line, true: c.accent }}
         thumbColor="#ffffff"
         {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}

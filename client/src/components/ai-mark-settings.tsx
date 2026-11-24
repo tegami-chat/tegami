@@ -26,6 +26,7 @@ export function AiMarkAll() {
       <View style={s.row}>
         <Text style={s.label}>{label}</Text>
         <Switch
+          style={{ alignSelf: 'center' }}
           trackColor={{ false: c.line, true: c.accent }}
           thumbColor="#ffffff"
           {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}

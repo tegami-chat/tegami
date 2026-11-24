@@ -39,6 +39,7 @@ export default function NewGroup() {
       <View style={[s.list, s.row, s.switchRow]}>
         <Text style={s.name}>管理者だけがメンバーを変更できる</Text>
         <Switch
+          style={{ alignSelf: 'center' }}
           trackColor={{ false: c.line, true: c.accent }}
           thumbColor="#ffffff"
           {...({ activeThumbColor: '#ffffff', activeTrackColor: c.accent } as object)}
